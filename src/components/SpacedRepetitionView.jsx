@@ -1,660 +1,545 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
+  RotateCcw,
+  Eye,
+  BookOpen,
+  Check,
+} from 'lucide-react';
+import {
+  FLASHCARDS,
   INITIAL_FLASHCARDS,
-  BOX_INTERVALS_DAYS,
-  getDueCards,
-} from '../engine/spacedRepetition.js';
-import { LESSONS } from '../data/learningPath2026.js';
-import { formatInlineText } from '../utils/formatText.jsx';
+  CARD_LESSON_MAP,
+} from '../data/flashcards.js';
 import {
-  Button,
-  Card,
-  Chip,
-  EmptyState,
-  Illustration,
-  Kbd,
-  ProgressBar,
-  STAGE_THEMES,
-  getStageNumber,
-  getStageTheme,
-} from './ui/index.js';
+  Rating,
+  State,
+  createFSRSCard,
+  previewCardRatings,
+  gradeCard,
+  getDueCards,
+} from '../engine/review.js';
+import { MODULES_BY_ID } from '../data/catalog/modules.js';
+import { LESSONS_BY_ID } from '../data/lessons/index.js';
+import {
+  useStore,
+  useProgress,
+  useReview,
+  reviewFlashcard,
+  flushSave,
+} from '../state/store.js';
+import { Button, Segmented, Kbd } from './ui/index.js';
 
-export const CARD_LESSON_MAP = {
-  'fc-01': 'l1-joins-fanout',
-  'fc-02': 'l2-window-functions',
-  'fc-03': 'l3-asof-lateral-ctes',
-  'fc-04': 'l4-star-schema-obt',
-  'fc-05': 'l5-scd2-history',
-  'fc-06': 'l6-metrics-simpson',
-  'fc-07': 'l6-metrics-simpson',
-  'fc-08': 'l7-columnar-parquet',
-  'fc-09': 'l8-arrow-lance-vortex',
-  'fc-10': 'l9-duckdb-polars-marimo',
-  'fc-11': 'l9-duckdb-polars-marimo',
-  'fc-12': 'l10-iceberg-v3-medallion',
-  'fc-13': 'l10-iceberg-v3-medallion',
-  'fc-14': 'l11-dbt-sqlmesh-dag',
-  'fc-15': 'l12-contracts-semantic-layer',
-  'fc-16': 'l12-contracts-semantic-layer',
-  'fc-17': 'l14-ab-testing-cuped',
-  'fc-18': 'l14-ab-testing-cuped',
-  'fc-19': 'l15-bi-tufte-code',
-  'fc-20': 'l15-bi-tufte-code',
-  'fc-21': 'l16-cdc-kafka-streaming',
-  'fc-22': 'l17-flink-watermarks-mv',
-  'fc-23': 'l18-mcp-semantic-ai-rag',
-  'fc-24': 'l18-mcp-semantic-ai-rag',
-};
+export { FLASHCARDS, INITIAL_FLASHCARDS, CARD_LESSON_MAP };
 
-const GRADE_OPTIONS = [
+const TRACK_FILTER_ITEMS = [
+  { id: 'all', label: 'Todas' },
+  { id: 'core', label: 'Tronco común' },
+  { id: 'de', label: 'DE', track: 'de' },
+  { id: 'da', label: 'DA', track: 'da' },
+  { id: 'bi', label: 'BI', track: 'bi' },
+];
+
+const FSRS_BUTTONS = [
   {
+    rating: Rating.Again,
     key: '1',
-    quality: 'again',
-    label: '1 · Otra vez',
-    intervalLabel: '1 día',
-    variantClass: 'sr-grade-btn--again',
+    field: 'again',
+    label: 'Otra vez',
+    tone: 'again',
   },
   {
+    rating: Rating.Hard,
     key: '2',
-    quality: 'hard',
-    label: '2 · Difícil',
-    intervalLabel: '3 días',
-    variantClass: 'sr-grade-btn--hard',
+    field: 'hard',
+    label: 'Difícil',
+    tone: 'hard',
   },
   {
+    rating: Rating.Good,
     key: '3',
-    quality: 'good',
-    label: '3 · Bien',
-    intervalLabel: '7 días',
-    variantClass: 'sr-grade-btn--good',
+    field: 'good',
+    label: 'Bien',
+    tone: 'good',
   },
   {
+    rating: Rating.Easy,
     key: '4',
-    quality: 'easy',
-    label: '4 · Fácil',
-    intervalLabel: '14 días',
-    variantClass: 'sr-grade-btn--easy',
+    field: 'easy',
+    label: 'Fácil',
+    tone: 'easy',
   },
 ];
 
+const FSRS_STATE_NAMES = {
+  [State.New]: 'Nueva',
+  [State.Learning]: 'En aprendizaje',
+  [State.Review]: 'En repaso',
+  [State.Relearning]: 'Reaprendizaje',
+};
+
+const TRACK_NAMES = {
+  core: 'Tronco común',
+  de: 'Ingeniería de Datos (DE)',
+  da: 'Análisis de Datos (DA)',
+  bi: 'Business Intelligence (BI)',
+};
+
 export function SpacedRepetitionView({
   leitnerState = {},
-  completedIds,
-  lessonSteps,
-  onReviewCard = () => {},
-  onResetDeck = () => {},
-  onOpenLesson = () => {},
+  onReviewCard,
+  onResetDeck,
+  onOpenLesson,
+  onNavigate,
+  lessons = [],
 }) {
-  const [disciplineFilter, setDisciplineFilter] = useState('ALL');
-  const [stageFilter, setStageFilter] = useState('ALL');
-  const [selectedBox, setSelectedBox] = useState(null);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [flipped, setFlipped] = useState(false);
-  const [practiceFullDeck, setPracticeFullDeck] = useState(false);
-  const [sessionGrades, setSessionGrades] = useState([]);
-  const [sessionCompleted, setSessionCompleted] = useState(false);
+  const fullState = useStore();
+  const progress = useProgress();
+  const review = useReview();
 
-  const effectiveCompletedIds = useMemo(() => {
-    if (Array.isArray(completedIds)) return completedIds;
-    try {
-      const saved = localStorage.getItem('ruta_datos_2026_completed');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  }, [completedIds]);
+  const [trackFilter, setTrackFilter] = useState('all');
+  const [practiceAllMode, setPracticeAllMode] = useState(false);
+  const [showAnswer, setShowAnswer] = useState(false);
+  const [cursorIndex, setCursorIndex] = useState(0);
+  const [sessionReviewed, setSessionReviewed] = useState([]);
 
-  const effectiveLessonSteps = useMemo(() => {
-    if (lessonSteps && typeof lessonSteps === 'object') return lessonSteps;
-    try {
-      const saved = localStorage.getItem('manual_datos_lesson_step');
-      return saved ? JSON.parse(saved) : {};
-    } catch {
-      return {};
-    }
-  }, [lessonSteps]);
-
-  const unlockedLessonIds = useMemo(() => {
-    const set = new Set(effectiveCompletedIds);
-    Object.keys(effectiveLessonSteps || {}).forEach((lessonId) => {
-      if (lessonId) set.add(lessonId);
-    });
-    return set;
-  }, [effectiveCompletedIds, effectiveLessonSteps]);
-
-  const unlockedStageIds = useMemo(() => {
-    const set = new Set();
-    LESSONS.forEach((lesson) => {
-      if (unlockedLessonIds.has(lesson.id)) {
-        set.add(lesson.stageId);
+  // Determinar qué lecciones ha iniciado o completado el usuario
+  const startedLessonIds = useMemo(() => {
+    const ids = new Set();
+    for (const [id, entry] of Object.entries(progress?.lessons || {})) {
+      if (!entry) continue;
+      if (
+        entry.status === 'in_progress' ||
+        entry.status === 'completed' ||
+        entry.status === 'known' ||
+        Number(entry.stepIndex || 0) > 0 ||
+        Object.keys(entry.checks || {}).length > 0 ||
+        Boolean(entry.practice?.solved)
+      ) {
+        ids.add(id);
+        const mapped = LESSONS_BY_ID[id];
+        if (mapped?.id) ids.add(mapped.id);
+        if (mapped?.legacyId) ids.add(mapped.legacyId);
       }
-    });
-    return set;
-  }, [unlockedLessonIds]);
-
-  const cardsMap = useMemo(() => {
-    if (leitnerState && typeof leitnerState.cards === 'object') {
-      return leitnerState.cards;
     }
-    return leitnerState || {};
-  }, [leitnerState]);
+    return ids;
+  }, [progress?.lessons]);
 
-  const boxCounts = useMemo(() => {
-    const counts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-    INITIAL_FLASHCARDS.forEach((c) => {
-      const box = cardsMap[c.id]?.box || 1;
-      counts[box] = (counts[box] || 0) + 1;
+  const hasStartedAnyLesson = startedLessonIds.size > 0;
+
+  // Combinar catálogo completo de 75 tarjetas FSRS con el estado persistido
+  const enrichedCatalog = useMemo(() => {
+    const now = new Date();
+    const storedCards = {
+      ...(leitnerState || {}),
+      ...(review?.cards || {}),
+    };
+
+    const sourceCards =
+      Array.isArray(FLASHCARDS) && FLASHCARDS.length > 0
+        ? FLASHCARDS
+        : INITIAL_FLASHCARDS;
+
+    return sourceCards.map((fc) => {
+      const saved = storedCards[fc.id] || createFSRSCard(new Date(0), fc.id);
+      const dueMs = Date.parse(saved.due);
+      const isUnlockedByProgress =
+        startedLessonIds.has(fc.lessonId) ||
+        (fc.legacyLessonId && startedLessonIds.has(fc.legacyLessonId));
+      const hasBeenReviewed = Number(saved.reps || 0) > 0;
+      const isDueNow =
+        (isUnlockedByProgress || hasBeenReviewed) &&
+        (Number.isNaN(dueMs) || dueMs <= now.getTime());
+
+      const previews = previewCardRatings(saved, now);
+      const lessonObj =
+        LESSONS_BY_ID[fc.lessonId] ||
+        (fc.legacyLessonId && LESSONS_BY_ID[fc.legacyLessonId]) ||
+        lessons.find(
+          (l) => l.id === fc.legacyLessonId || l.v2Id === fc.lessonId
+        ) ||
+        null;
+      const moduleObj = MODULES_BY_ID[fc.moduleId] || null;
+
+      return {
+        ...fc,
+        question: fc.front || fc.question,
+        answer: fc.back || fc.answer,
+        fsrs: saved,
+        isUnlocked: isUnlockedByProgress || hasBeenReviewed,
+        isDue: isDueNow,
+        previews,
+        lessonObj,
+        moduleObj,
+      };
     });
-    return counts;
-  }, [cardsMap]);
+  }, [leitnerState, review?.cards, startedLessonIds, lessons]);
 
-  const dueCards = useMemo(
-    () => getDueCards(cardsMap, disciplineFilter),
-    [cardsMap, disciplineFilter]
+  // También sincronizar con getDueCards del motor cuando hay progreso
+  const engineDueCount = useMemo(
+    () => getDueCards(fullState, 'ALL').length,
+    [fullState]
   );
 
-  const pedagogicallyUnlockedDueCards = useMemo(() => {
-    if (unlockedLessonIds.size === 0) return [];
-    return dueCards.filter((card) => {
-      const mappedLesson = card.lessonId || CARD_LESSON_MAP[card.id];
-      if (mappedLesson) return unlockedLessonIds.has(mappedLesson);
-      return unlockedStageIds.has(card.stageId);
-    });
-  }, [dueCards, unlockedLessonIds, unlockedStageIds]);
+  // Filtrar por área seleccionada
+  const filteredByTrack = useMemo(() => {
+    if (trackFilter === 'all') return enrichedCatalog;
+    return enrichedCatalog.filter((c) => c.track === trackFilter);
+  }, [enrichedCatalog, trackFilter]);
 
-  const filteredCards = useMemo(() => {
-    const baseList = practiceFullDeck
-      ? INITIAL_FLASHCARDS
-      : pedagogicallyUnlockedDueCards;
-    return baseList.filter((c) => {
-      const matchRole =
-        disciplineFilter === 'ALL' || c.discipline === disciplineFilter;
-      const matchStage =
-        stageFilter === 'ALL' || c.stageId === stageFilter;
-      const cardBox = cardsMap[c.id]?.box || 1;
-      const matchBox = selectedBox === null || cardBox === selectedBox;
-      return matchRole && matchStage && matchBox;
-    });
-  }, [
-    cardsMap,
-    disciplineFilter,
-    stageFilter,
-    selectedBox,
-    practiceFullDeck,
-    pedagogicallyUnlockedDueCards,
-  ]);
+  // Cola de tarjetas vencidas hoy (o catálogo en modo práctica libre)
+  const activeQueue = useMemo(() => {
+    const reviewedSet = new Set(sessionReviewed);
+    if (practiceAllMode) {
+      return filteredByTrack.filter((c) => !reviewedSet.has(c.id));
+    }
+    return filteredByTrack.filter((c) => c.isDue && !reviewedSet.has(c.id));
+  }, [filteredByTrack, practiceAllMode, sessionReviewed]);
 
-  const totalQueueCount = filteredCards.length + (practiceFullDeck ? 0 : sessionGrades.length);
-  const activeCard =
-    !sessionCompleted && filteredCards.length > 0
-      ? filteredCards[currentIndex % filteredCards.length]
-      : null;
-  const activeBox = activeCard ? cardsMap[activeCard.id]?.box || 1 : 1;
-  const activeStageNum = activeCard ? getStageNumber(activeCard.stageId) : 1;
-  const activeStageTheme = getStageTheme(activeStageNum);
+  const totalDueInCatalog = useMemo(
+    () => enrichedCatalog.filter((c) => c.isDue).length,
+    [enrichedCatalog]
+  );
 
-  const sessionPosition = practiceFullDeck
-    ? Math.min(filteredCards.length, currentIndex + 1)
-    : Math.min(totalQueueCount, sessionGrades.length + 1);
-  const sessionTotal = practiceFullDeck
-    ? filteredCards.length
-    : Math.max(filteredCards.length, totalQueueCount);
-  const sessionPct =
-    sessionTotal > 0 ? Math.round((sessionPosition / sessionTotal) * 100) : 0;
+  const safeCursor =
+    activeQueue.length > 0 ? Math.min(cursorIndex, activeQueue.length - 1) : 0;
+  const activeCard = activeQueue[safeCursor] || null;
 
-  const handleStartFullDeck = useCallback(() => {
-    setSelectedBox(null);
-    setPracticeFullDeck(true);
-    setCurrentIndex(0);
-    setFlipped(false);
-    setSessionGrades([]);
-    setSessionCompleted(false);
-  }, []);
+  // Emitir conteo actualizado hacia AppShell
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('manual_datos_due_count', {
+          detail: totalDueInCatalog,
+        })
+      );
+    }
+  }, [totalDueInCatalog, engineDueCount]);
 
   const handleGrade = useCallback(
-    (quality) => {
+    (ratingValue) => {
       if (!activeCard) return;
-      onReviewCard(activeCard.id, quality);
-      const nextGrades = [...sessionGrades, { cardId: activeCard.id, quality }];
-      setSessionGrades(nextGrades);
-      setFlipped(false);
-
-      if (practiceFullDeck) {
-        if (currentIndex + 1 >= filteredCards.length) {
-          setSessionCompleted(true);
-        } else {
-          setCurrentIndex((i) => i + 1);
-        }
+      const now = new Date();
+      // Calcular el nuevo estado FSRS con gradeCard y persistir en el store
+      gradeCard(activeCard.fsrs, ratingValue, now);
+      if (typeof onReviewCard === 'function') {
+        onReviewCard(activeCard.id, ratingValue);
       } else {
-        if (filteredCards.length <= 1) {
-          setSessionCompleted(true);
-        } else {
-          setCurrentIndex(0);
-        }
+        reviewFlashcard(activeCard.id, ratingValue, now);
       }
+      flushSave();
+      setSessionReviewed((prev) =>
+        prev.includes(activeCard.id) ? prev : [...prev, activeCard.id]
+      );
+      setShowAnswer(false);
+      setCursorIndex(0);
     },
-    [activeCard, onReviewCard, sessionGrades, practiceFullDeck, currentIndex, filteredCards.length]
+    [activeCard, onReviewCard]
   );
 
+  // Atajos de teclado: Space / Enter para voltear, 1..4 para calificar con FSRS
   useEffect(() => {
-    const handleKeyDown = (e) => {
-      const tag = document.activeElement?.tagName?.toLowerCase();
-      if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
-      if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const onKeyDown = (event) => {
       if (!activeCard) return;
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      const target = event.target;
+      const tag = target?.tagName;
+      if (
+        tag === 'INPUT' ||
+        tag === 'TEXTAREA' ||
+        tag === 'SELECT' ||
+        target?.isContentEditable
+      ) {
+        return;
+      }
 
-      if (e.key === '1') {
-        e.preventDefault();
-        handleGrade('again');
-      } else if (e.key === '2') {
-        e.preventDefault();
-        handleGrade('hard');
-      } else if (e.key === '3') {
-        e.preventDefault();
-        handleGrade('good');
-      } else if (e.key === '4') {
-        e.preventDefault();
-        handleGrade('easy');
-      } else if (e.key === ' ' && !flipped) {
-        e.preventDefault();
-        setFlipped(true);
+      if (event.code === 'Space' || event.key === ' ') {
+        event.preventDefault();
+        setShowAnswer((prev) => !prev);
+        return;
+      }
+
+      if (event.key === 'Enter' && !showAnswer && tag !== 'BUTTON') {
+        event.preventDefault();
+        setShowAnswer(true);
+        return;
+      }
+
+      if (event.key === '1') {
+        event.preventDefault();
+        handleGrade(Rating.Again);
+      } else if (event.key === '2') {
+        event.preventDefault();
+        handleGrade(Rating.Hard);
+      } else if (event.key === '3') {
+        event.preventDefault();
+        handleGrade(Rating.Good);
+      } else if (event.key === '4') {
+        event.preventDefault();
+        handleGrade(Rating.Easy);
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeCard, flipped, handleGrade]);
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [activeCard, showAnswer, handleGrade]);
 
-  const goodOrEasyCount = sessionGrades.filter(
-    (g) => g.quality === 'good' || g.quality === 'easy'
-  ).length;
-  const againOrHardCount = sessionGrades.length - goodOrEasyCount;
-  const retentionRate =
-    sessionGrades.length > 0
-      ? Math.round((goodOrEasyCount / sessionGrades.length) * 100)
-      : 0;
+  const handleFilterChange = (nextTrack) => {
+    setTrackFilter(nextTrack);
+    setCursorIndex(0);
+    setShowAnswer(false);
+  };
 
   return (
-    <div className="sec-view">
+    <div className="sec-view review-view" data-view="review">
       <header className="sec-header">
-        <div>
-          <div className="sec-header__eyebrow tabular">
-            Sistema Leitner · 5 cajas de memoria
+        <div className="sec-header__top">
+          <div>
+            <span className="sec-kicker tabular">
+              REPETICIÓN ESPACIADA FSRS · {totalDueInCatalog} PENDIENTES HOY ·{' '}
+              {sessionReviewed.length} REPASADAS EN SESIÓN
+            </span>
+            <h1 className="sec-title">Repaso</h1>
+            <p className="sec-lead">
+              Cada tarjeta se programa según su estabilidad y dificultad de recuerdo. Pulsa{' '}
+              <Kbd>Espacio</Kbd> para mostrar la respuesta y <Kbd>1</Kbd>–<Kbd>4</Kbd>{' '}
+              para calificar.
+            </p>
           </div>
-          <h1 className="sec-header__title">Repaso espaciado</h1>
-          <p className="sec-header__lead">
-            Consolida conceptos clave de Ingeniería (DE), Análisis (DA) y BI de
-            las lecciones que ya empezaste. Califica cada tarjeta con los botones
-            o los atajos <Kbd>1</Kbd>–<Kbd>4</Kbd>.
-          </p>
+
+          <div className="sec-actions">
+            {practiceAllMode ? (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  setPracticeAllMode(false);
+                  setShowAnswer(false);
+                  setCursorIndex(0);
+                }}
+              >
+                Solo vencidas hoy ({totalDueInCatalog})
+              </Button>
+            ) : (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  setPracticeAllMode(true);
+                  setSessionReviewed([]);
+                  setShowAnswer(false);
+                  setCursorIndex(0);
+                }}
+              >
+                Practicar catálogo ({filteredByTrack.length})
+              </Button>
+            )}
+            {typeof onResetDeck === 'function' && (
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={RotateCcw}
+                onClick={() => {
+                  onResetDeck();
+                  setSessionReviewed([]);
+                  setShowAnswer(false);
+                  setCursorIndex(0);
+                }}
+              >
+                Reiniciar calendario
+              </Button>
+            )}
+          </div>
         </div>
 
-        <div className="sec-header__actions">
-          {['ALL', 'DE', 'DA', 'BI'].map((role) => (
-            <Chip
-              key={role}
-              variant={role === 'ALL' ? 'neutral' : 'role'}
-              role={role === 'ALL' ? undefined : role}
-              active={disciplineFilter === role}
-              onClick={() => {
-                setDisciplineFilter(role);
-                setCurrentIndex(0);
-                setFlipped(false);
-                setSessionCompleted(false);
-              }}
-            >
-              {role === 'ALL' ? `Todas (${INITIAL_FLASHCARDS.length})` : role}
-            </Chip>
-          ))}
-          <Button
-            variant={practiceFullDeck ? 'primary' : 'secondary'}
+        <div className="review-toolbar">
+          <Segmented
+            ariaLabel="Filtrar tarjetas por área"
+            items={TRACK_FILTER_ITEMS}
+            value={trackFilter}
+            onChange={handleFilterChange}
             size="sm"
-            onClick={() => {
-              if (practiceFullDeck) {
-                setPracticeFullDeck(false);
-                setCurrentIndex(0);
-                setFlipped(false);
-                setSessionGrades([]);
-                setSessionCompleted(false);
-              } else {
-                handleStartFullDeck();
-              }
-            }}
-          >
-            {practiceFullDeck
-              ? 'Ver solo para hoy'
-              : `Practicar mazo completo (${INITIAL_FLASHCARDS.length} tarjetas)`}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              onResetDeck();
-              setPracticeFullDeck(false);
-              setStageFilter('ALL');
-              setSelectedBox(null);
-              setCurrentIndex(0);
-              setFlipped(false);
-              setSessionGrades([]);
-              setSessionCompleted(false);
-            }}
-          >
-            Reiniciar mazo
-          </Button>
+          />
+          <span className="review-toolbar__counter tabular">
+            {activeQueue.length > 0
+              ? `Tarjeta ${safeCursor + 1} de ${activeQueue.length}`
+              : '0 tarjetas en cola'}
+          </span>
         </div>
       </header>
 
-      {/* Filtro por etapa: las 6 etapas reconocibles por su color data-stage */}
-      <div className="glos-stage-filters" aria-label="Filtrar tarjetas por etapa">
-        <Chip
-          variant="neutral"
-          active={stageFilter === 'ALL'}
-          onClick={() => {
-            setStageFilter('ALL');
-            setCurrentIndex(0);
-            setFlipped(false);
-            setSessionCompleted(false);
-          }}
+      {activeCard ? (
+        <section
+          className="review-stage"
+          aria-label="Tarjeta de repaso activa"
+          data-testid="fsrs-active-card"
         >
-          Todas las etapas
-        </Chip>
-        {STAGE_THEMES.map((st) => (
-          <Chip
-            key={st.id}
-            variant="stage"
-            stage={st.number}
-            active={stageFilter === st.id}
-            onClick={() => {
-              setStageFilter((prev) => (prev === st.id ? 'ALL' : st.id));
-              setCurrentIndex(0);
-              setFlipped(false);
-              setSessionCompleted(false);
-            }}
-          >
-            Etapa {st.number} · {st.shortName}
-          </Chip>
-        ))}
-      </div>
-
-      {/* Distribución en las 5 cajas Leitner */}
-      <div
-        className="sr-boxes-grid"
-        aria-label="Distribución en las 5 cajas de memoria"
-      >
-        {[1, 2, 3, 4, 5].map((b) => {
-          const isSelected = selectedBox === b;
-          const count = boxCounts[b] || 0;
-          return (
-            <button
-              key={b}
-              type="button"
-              className={`sr-box-btn ${isSelected ? 'sr-box-btn--active' : ''}`.trim()}
-              onClick={() => {
-                setSelectedBox((prev) => (prev === b ? null : b));
-                setCurrentIndex(0);
-                setFlipped(false);
-                setSessionCompleted(false);
-              }}
-            >
-              <div className="sr-box-btn__head">
-                <span>Caja {b}</span>
-                <span className="tabular">cada {BOX_INTERVALS_DAYS[b]}d</span>
-              </div>
-              <div className="sr-box-btn__count tabular">
-                {count} {count === 1 ? 'tarjeta' : 'tarjetas'}
-              </div>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Pantalla de sesión completada con resumen */}
-      {sessionCompleted && sessionGrades.length > 0 ? (
-        <div className="sr-center-wrap">
-          <Card className="sr-summary-card">
-            <Illustration name="empty-reviews" size="md" />
-            <div>
-              <h2 className="sr-summary-card__title">
-                Sesión completada · Nada que repasar hoy
-              </h2>
-              <p className="sr-summary-card__desc">
-                Has calificado las {sessionGrades.length} tarjetas de tu cola de
-                estudio. Los intervalos de repetición espaciada se han actualizado.
-              </p>
-            </div>
-
-            <div className="sr-summary-stats">
-              <div className="sr-summary-stat">
-                <span className="sr-summary-stat__val tabular">
-                  {sessionGrades.length}
-                </span>
-                <span className="sr-summary-stat__label">Tarjetas repasadas</span>
-              </div>
-              <div className="sr-summary-stat">
-                <span className="sr-summary-stat__val tabular">
-                  {goodOrEasyCount}
-                </span>
-                <span className="sr-summary-stat__label">Bien / Fácil</span>
-              </div>
-              <div className="sr-summary-stat">
-                <span className="sr-summary-stat__val tabular">
-                  {againOrHardCount}
-                </span>
-                <span className="sr-summary-stat__label">Otra vez / Difícil</span>
-              </div>
-              <div className="sr-summary-stat">
-                <span className="sr-summary-stat__val tabular">
-                  {retentionRate}%
-                </span>
-                <span className="sr-summary-stat__label">Precisión sesión</span>
-              </div>
-            </div>
-
-            <div className="sr-empty-actions">
-              <Button
-                variant="secondary"
-                size="md"
-                onClick={handleStartFullDeck}
-              >
-                Practicar mazo completo ({INITIAL_FLASHCARDS.length} tarjetas)
-              </Button>
-              <Button
-                variant="ghost"
-                size="md"
-                onClick={() => {
-                  setSessionCompleted(false);
-                  setSessionGrades([]);
-                  setPracticeFullDeck(false);
-                  setCurrentIndex(0);
-                }}
-              >
-                Volver a cola de hoy
-              </Button>
-            </div>
-          </Card>
-        </div>
-      ) : !activeCard ? (
-        <div className="sr-center-wrap">
-          <EmptyState
-            illustration={<Illustration name="empty-reviews" />}
-            title="Nada que repasar hoy"
-            description={
-              selectedBox !== null
-                ? `No tienes tarjetas pendientes hoy en la Caja ${selectedBox}. Completa o avanza en una lección para desbloquear sus tarjetas de memoria.`
-                : 'Completa o avanza en una lección para desbloquear sus tarjetas de memoria.'
-            }
-            action={
-              <div className="sr-empty-actions">
-                <Button
-                  variant="secondary"
-                  size="md"
-                  onClick={handleStartFullDeck}
+          <article className="fsrs-card">
+            <header className="fsrs-card__header">
+              <div className="fsrs-card__meta">
+                <span
+                  className={`fsrs-card__track fsrs-card__track--${activeCard.track}`}
                 >
-                  Practicar mazo completo ({INITIAL_FLASHCARDS.length} tarjetas)
-                </Button>
-                {selectedBox !== null && (
-                  <Button
-                    variant="ghost"
-                    size="md"
-                    onClick={() => {
-                      setSelectedBox(null);
-                      setCurrentIndex(0);
-                    }}
-                  >
-                    Ver todas las cajas
-                  </Button>
+                  <span
+                    className={`fsrs-card__dot fsrs-card__dot--${activeCard.track}`}
+                    aria-hidden="true"
+                  />
+                  {TRACK_NAMES[activeCard.track] || 'Tronco común'}
+                </span>
+                {activeCard.moduleObj && (
+                  <>
+                    <span className="fsrs-card__sep" aria-hidden="true">·</span>
+                    <span className="fsrs-card__module">
+                      Nivel {activeCard.moduleObj.level} · {activeCard.moduleObj.title}
+                    </span>
+                  </>
                 )}
               </div>
-            }
-          />
-        </div>
-      ) : (
-        <div className="sr-center-wrap">
-          {/* Barra de sesión "X de Y" arriba */}
-          <div className="sr-session-bar" data-stage={activeStageNum}>
-            <div className="sr-session-bar__top">
-              <div className="sr-session-bar__label">
+
+              <div className="fsrs-card__stats tabular">
                 <span>
-                  {practiceFullDeck
-                    ? 'Sesión de práctica · Mazo completo'
-                    : 'Sesión de repaso · Para hoy'}
+                  {FSRS_STATE_NAMES[activeCard.fsrs?.state] || 'Nueva'}
                 </span>
-                <Chip variant="stage" stage={activeStageNum}>
-                  Etapa {activeStageNum} · {activeStageTheme.shortName}
-                </Chip>
+                {Number(activeCard.fsrs?.stability || 0) > 0 && (
+                  <>
+                    <span aria-hidden="true">·</span>
+                    <span>
+                      Estabilidad: {Number(activeCard.fsrs.stability).toFixed(1)} d
+                    </span>
+                  </>
+                )}
               </div>
-              <span
-                className="sr-session-bar__count tabular"
-                aria-label={`Tarjeta ${sessionPosition} de ${sessionTotal}`}
-              >
-                {sessionPosition} de {sessionTotal}
-              </span>
+            </header>
+
+            <div className="fsrs-card__question-block">
+              <span className="fsrs-card__section-label">PREGUNTA</span>
+              <h2 className="fsrs-card__question" data-testid="fsrs-card-front">
+                {activeCard.question}
+              </h2>
             </div>
-            <ProgressBar
-              value={sessionPct}
-              stage={activeStageNum}
-              tone="stage"
-              size="sm"
-              label={`Progreso de sesión: ${sessionPosition} de ${sessionTotal}`}
-            />
-          </div>
 
-          {/* Flashcard grande centrada con data-stage y volteo 3D */}
-          <div className="sr-flashcard-scene">
-            <Card
-              stage={activeStageNum}
-              className={`sr-flashcard ${flipped ? 'sr-flashcard--flipped' : ''}`.trim()}
-            >
-              <div className="sr-flashcard__meta">
-                <div className="sr-flashcard__chips">
-                  <Chip variant="role" role={activeCard.discipline}>
-                    {activeCard.discipline}
-                  </Chip>
-                  <Chip variant="stage" stage={activeStageNum}>
-                    Etapa {activeStageNum} · {activeStageTheme.shortName}
-                  </Chip>
-                  <Chip variant="neutral">
-                    Caja {activeBox} · {BOX_INTERVALS_DAYS[activeBox]}d
-                  </Chip>
-                  {activeCard.bloomLevel && (
-                    <Chip variant="neutral">Bloom: {activeCard.bloomLevel}</Chip>
-                  )}
-                </div>
+            {!showAnswer ? (
+              <div className="fsrs-card__reveal">
+                <Button
+                  variant="primary"
+                  size="md"
+                  icon={Eye}
+                  shortcut="Espacio"
+                  onClick={() => setShowAnswer(true)}
+                  data-testid="fsrs-reveal-btn"
+                >
+                  Mostrar respuesta
+                </Button>
               </div>
+            ) : (
+              <div
+                className="fsrs-card__answer-block"
+                data-testid="fsrs-card-back"
+              >
+                <span className="fsrs-card__section-label">RESPUESTA</span>
+                <p className="fsrs-card__answer">{activeCard.answer}</p>
 
-              <div>
-                <div className="sr-flashcard__eyebrow">
-                  Pregunta de recuerdo activo
-                </div>
-                <h2 className="sr-flashcard__question">
-                  {formatInlineText(activeCard.question)}
-                </h2>
-              </div>
-
-              {!flipped ? (
-                <div className="sr-flashcard__front-footer">
-                  <div className="sr-flashcard__front-actions">
-                    <Button
-                      variant="stage"
-                      stage={activeStageNum}
-                      size="md"
-                      onClick={() => setFlipped(true)}
-                    >
-                      <span>Mostrar respuesta</span>
-                      <Kbd>Espacio</Kbd>
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="md"
-                      onClick={() => {
-                        setFlipped(false);
-                        setCurrentIndex((i) => i + 1);
-                      }}
-                    >
-                      Siguiente tarjeta
-                    </Button>
-                  </div>
-
-                  {activeCard.stageId && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
+                {activeCard.lessonObj && (
+                  <div className="fsrs-card__lesson-ref">
+                    <span className="fsrs-card__lesson-label">
+                      Lección vinculada: {activeCard.lessonObj.title}
+                    </span>
+                    <button
+                      type="button"
+                      className="fsrs-card__lesson-link"
                       onClick={() =>
-                        onOpenLesson(
-                          CARD_LESSON_MAP[activeCard.id] || activeCard.stageId
+                        onOpenLesson?.(
+                          activeCard.lessonObj.stageId,
+                          activeCard.lessonObj.id
                         )
                       }
                     >
-                      Abrir lección relacionada
-                    </Button>
-                  )}
-                </div>
-              ) : (
-                <div className="sr-flashcard__back">
-                  <div className="sr-flashcard__answer">
-                    {formatInlineText(activeCard.answer)}
+                      <BookOpen size={14} aria-hidden="true" />
+                      <span>Abrir lección</span>
+                    </button>
                   </div>
+                )}
 
-                  <div className="sr-grade-block">
-                    <div className="sr-grade-block__head">
-                      <span>Califica tu recordación (atajos de teclado 1–4):</span>
-                      <span className="sr-grade-block__kbds tabular">
-                        <Kbd>1</Kbd> <Kbd>2</Kbd> <Kbd>3</Kbd> <Kbd>4</Kbd>
-                      </span>
-                    </div>
-
-                    <div className="sr-grade-grid">
-                      {GRADE_OPTIONS.map((opt) => (
-                        <button
-                          key={opt.key}
-                          type="button"
-                          className={`sr-grade-btn ${opt.variantClass}`.trim()}
-                          onClick={() => handleGrade(opt.quality)}
-                        >
-                          <div className="sr-grade-btn__top">
-                            <strong className="sr-grade-btn__label">
-                              {opt.label}
-                            </strong>
-                            <Kbd>{opt.key}</Kbd>
-                          </div>
-                          <span className="sr-grade-btn__interval tabular">
-                            Siguiente: {opt.intervalLabel}
+                <div
+                  className="fsrs-rating-grid"
+                  role="group"
+                  aria-label="Calificar recuerdo de la tarjeta (1 a 4)"
+                  data-testid="fsrs-rating-buttons"
+                >
+                  {FSRS_BUTTONS.map((btn) => {
+                    const intervalLabel =
+                      activeCard.previews?.[btn.field]?.intervalLabel || '1 d';
+                    return (
+                      <button
+                        key={btn.key}
+                        type="button"
+                        className={`fsrs-rating-btn fsrs-rating-btn--${btn.tone}`}
+                        onClick={() => handleGrade(btn.rating)}
+                        data-rating={btn.rating}
+                        data-testid={`fsrs-rate-${btn.key}`}
+                      >
+                        <div className="fsrs-rating-btn__top">
+                          <span className="fsrs-rating-btn__label">
+                            {btn.label}
                           </span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {activeCard.codeSnippet && (
-                    <pre className="code-block-dark tabular sr-flashcard__code">
-                      <code>{activeCard.codeSnippet}</code>
-                    </pre>
-                  )}
+                          <kbd className="fsrs-rating-btn__kbd">{btn.key}</kbd>
+                        </div>
+                        <span
+                          className="fsrs-rating-btn__interval tabular"
+                          data-testid={`fsrs-interval-${btn.key}`}
+                        >
+                          {intervalLabel}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
-              )}
-            </Card>
+              </div>
+            )}
+          </article>
+        </section>
+      ) : (
+        <section
+          className="review-empty-box"
+          role="status"
+          data-testid="fsrs-empty-state"
+        >
+          <div className="review-empty-box__head">
+            <Check size={18} aria-hidden="true" className="review-empty-box__icon" />
+            <h2 className="review-empty-box__title">
+              {hasStartedAnyLesson
+                ? 'No tienes tarjetas pendientes por hoy en este filtro'
+                : 'Aún no hay tarjetas programadas para hoy'}
+            </h2>
           </div>
-        </div>
+          <p className="review-empty-box__desc">
+            {hasStartedAnyLesson
+              ? `Has completado las revisiones vencidas (${sessionReviewed.length} repasadas en esta sesión). Puedes practicar el mazo completo o continuar con tu siguiente lección.`
+              : 'Las tarjetas FSRS se activan automáticamente conforme avanzas por las lecciones de tu ruta. También puedes practicar el mazo completo ahora mismo.'}
+          </p>
+          <div className="review-empty-box__actions">
+            <Button
+              variant="primary"
+              size="md"
+              onClick={() => {
+                setPracticeAllMode(true);
+                setSessionReviewed([]);
+                setShowAnswer(false);
+                setCursorIndex(0);
+              }}
+            >
+              Practicar mazo ({filteredByTrack.length} tarjetas)
+            </Button>
+            {typeof onNavigate === 'function' && (
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={() => onNavigate('home')}
+              >
+                Ir a Hoy
+              </Button>
+            )}
+          </div>
+        </section>
       )}
     </div>
   );
