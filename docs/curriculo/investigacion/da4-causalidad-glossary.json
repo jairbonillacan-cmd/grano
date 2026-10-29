@@ -1,0 +1,247 @@
+[
+  {
+    "id": "diferencias-en-diferencias",
+    "term": "Diferencias en diferencias (DiD)",
+    "englishTerm": "Difference-in-Differences (DiD)",
+    "track": "da",
+    "definition": "Diseño cuasiexperimental que estima el efecto causal restando el cambio temporal del grupo de control al cambio temporal observado en el grupo tratado.",
+    "formula": "\\hat{\\tau}_{\\text{DiD}} = (\\bar{Y}_{T,\\text{post}} - \\bar{Y}_{T,\\text{pre}}) - (\\bar{Y}_{C,\\text{post}} - \\bar{Y}_{C,\\text{pre}})",
+    "relatedLessons": [
+      "da4-causalidad-01-diferencias-en-diferencias-did",
+      "da4-causalidad-04-memo-analitico-supuestos"
+    ],
+    "relatedTerms": [
+      "tendencias-paralelas",
+      "prueba-de-placebo"
+    ],
+    "sources": [
+      {
+        "title": "Causal Inference: The Mixtape — Difference-in-Differences",
+        "url": "https://mixtape.scunning.com/09-Difference_in_Differences.html",
+        "publisher": "Yale University Press / Scott Cunningham",
+        "accessed": "2026-10-29",
+        "supports": "Definición y estimador 2x2 de diferencias en diferencias."
+      }
+    ]
+  },
+  {
+    "id": "tendencias-paralelas",
+    "term": "Supuesto de tendencias paralelas",
+    "englishTerm": "Parallel trends assumption",
+    "track": "da",
+    "definition": "Condición de identificación según la cual, sin tratamiento, el grupo tratado habría seguido la misma evolución temporal media que el grupo de control.",
+    "formula": "E[Y_{i,\\text{post}}(0) - Y_{i,\\text{pre}}(0) \\mid D_i = 1] = E[Y_{i,\\text{post}}(0) - Y_{i,\\text{pre}}(0) \\mid D_i = 0]",
+    "relatedLessons": [
+      "da4-causalidad-01-diferencias-en-diferencias-did",
+      "da4-causalidad-04-memo-analitico-supuestos"
+    ],
+    "relatedTerms": [
+      "diferencias-en-diferencias",
+      "prueba-de-placebo"
+    ],
+    "sources": [
+      {
+        "title": "The Effect — Chapter 18: Difference-in-Differences",
+        "url": "https://theeffectbook.net/ch-DifferenceinDifference.html",
+        "publisher": "Chapman & Hall / Nick Huntington-Klein",
+        "accessed": "2026-10-29",
+        "supports": "Formulación contrafactual del supuesto de tendencias paralelas."
+      }
+    ]
+  },
+  {
+    "id": "prueba-de-placebo",
+    "term": "Prueba de placebo",
+    "englishTerm": "Placebo test",
+    "track": "da",
+    "definition": "Verificación de falsación que estima un efecto en periodos previos o unidades no tratadas donde el impacto causal verdadero debe ser cero.",
+    "formula": "\\hat{\\tau}_{\\text{placebo}} = (\\bar{Y}_{T,t_{-1}} - \\bar{Y}_{T,t_{-2}}) - (\\bar{Y}_{C,t_{-1}} - \\bar{Y}_{C,t_{-2}}) \\approx 0",
+    "relatedLessons": [
+      "da4-causalidad-01-diferencias-en-diferencias-did",
+      "da4-causalidad-03-control-sintetico-emparejamiento"
+    ],
+    "relatedTerms": [
+      "diferencias-en-diferencias",
+      "tendencias-paralelas"
+    ],
+    "sources": [
+      {
+        "title": "Causal Inference: The Mixtape — Difference-in-Differences",
+        "url": "https://mixtape.scunning.com/09-Difference_in_Differences.html",
+        "publisher": "Yale University Press / Scott Cunningham",
+        "accessed": "2026-10-29",
+        "supports": "Pruebas de falsación preintervención y en el espacio de donantes."
+      }
+    ]
+  },
+  {
+    "id": "regresion-discontinua",
+    "term": "Regresión discontinua (RDD)",
+    "englishTerm": "Regression Discontinuity Design (RDD)",
+    "track": "da",
+    "definition": "Diseño que identifica el efecto causal local comparando observaciones situadas justo por debajo y justo por encima de un umbral administrativo de elegibilidad.",
+    "formula": "\\tau_{\\text{RDD}} = \\lim_{x \\downarrow c} E[Y_i \\mid X_i = x] - \\lim_{x \\uparrow c} E[Y_i \\mid X_i = x]",
+    "relatedLessons": [
+      "da4-causalidad-02-regresion-discontinua-rdd",
+      "da4-causalidad-04-memo-analitico-supuestos"
+    ],
+    "relatedTerms": [
+      "variable-de-asignacion",
+      "ancho-de-banda-rdd"
+    ],
+    "sources": [
+      {
+        "title": "Causal Inference: The Mixtape — Regression Discontinuity",
+        "url": "https://mixtape.scunning.com/06-Regression_Discontinuity.html",
+        "publisher": "Yale University Press / Scott Cunningham",
+        "accessed": "2026-10-29",
+        "supports": "Identificación del efecto causal local en el punto de corte."
+      }
+    ]
+  },
+  {
+    "id": "variable-de-asignacion",
+    "term": "Variable de asignación (running variable)",
+    "englishTerm": "Running variable (forcing variable)",
+    "track": "da",
+    "definition": "Métrica continua observable, como el subtotal de compra o puntaje crediticio, cuyo cruce por un punto de corte activa o cambia la elegibilidad.",
+    "formula": "D_i = \\mathbb{I}(X_i \\ge c)",
+    "relatedLessons": [
+      "da4-causalidad-02-regresion-discontinua-rdd"
+    ],
+    "relatedTerms": [
+      "regresion-discontinua",
+      "ancho-de-banda-rdd"
+    ],
+    "sources": [
+      {
+        "title": "The Effect — Chapter 20: Regression Discontinuity",
+        "url": "https://theeffectbook.net/ch-RegressionDiscontinuity.html",
+        "publisher": "Chapman & Hall / Nick Huntington-Klein",
+        "accessed": "2026-10-29",
+        "supports": "Papel de la variable de asignación y centrado en el umbral."
+      }
+    ]
+  },
+  {
+    "id": "ancho-de-banda-rdd",
+    "term": "Ancho de banda (bandwidth)",
+    "englishTerm": "Bandwidth",
+    "track": "da",
+    "definition": "Semiamplitud del intervalo alrededor del umbral dentro del cual se incluyen observaciones para equilibrar sesgo de especificación y varianza muestral en regresión discontinua.",
+    "formula": "X_i \\in [c - h,\\, c + h]",
+    "relatedLessons": [
+      "da4-causalidad-02-regresion-discontinua-rdd"
+    ],
+    "relatedTerms": [
+      "regresion-discontinua",
+      "variable-de-asignacion"
+    ],
+    "sources": [
+      {
+        "title": "RD Packages — Regression Discontinuity Software and Foundations",
+        "url": "https://rdpackages.github.io/",
+        "publisher": "Cattaneo, Idrobo & Titiunik",
+        "accessed": "2026-10-29",
+        "supports": "Selección de ventana local y compromiso entre sesgo y varianza."
+      }
+    ]
+  },
+  {
+    "id": "emparejamiento-exacto",
+    "term": "Emparejamiento (matching)",
+    "englishTerm": "Matching",
+    "track": "da",
+    "definition": "Técnica que construye un grupo de comparación emparejando cada unidad tratada con unidades no tratadas que comparten valores equivalentes en covariables previas observables.",
+    "formula": "\\hat{\\tau}_{\\text{ATT}} = \\sum_{s} w_s \\left( \\bar{Y}_{T,s} - \\bar{Y}_{C,s} \\right), \\quad w_s = \\frac{N_{T,s}}{N_T}",
+    "relatedLessons": [
+      "da4-causalidad-03-control-sintetico-emparejamiento"
+    ],
+    "relatedTerms": [
+      "control-sintetico",
+      "diferencias-en-diferencias"
+    ],
+    "sources": [
+      {
+        "title": "The Effect — Chapter 14: Matching",
+        "url": "https://theeffectbook.net/ch-Matching.html",
+        "publisher": "Chapman & Hall / Nick Huntington-Klein",
+        "accessed": "2026-10-29",
+        "supports": "Emparejamiento por estratos, soporte común y ponderación ATT."
+      }
+    ]
+  },
+  {
+    "id": "control-sintetico",
+    "term": "Control sintético",
+    "englishTerm": "Synthetic control",
+    "track": "da",
+    "definition": "Método que estima el contrafactual de una unidad agregada tratada mediante un promedio ponderado convexo de unidades donantes ajustado en el periodo preintervención.",
+    "formula": "\\hat{Y}_{1t}^{N} = \\sum_{j=2}^{J+1} w_j Y_{jt}, \\quad \\sum_{j=2}^{J+1} w_j = 1, \\; w_j \\ge 0",
+    "relatedLessons": [
+      "da4-causalidad-03-control-sintetico-emparejamiento"
+    ],
+    "relatedTerms": [
+      "emparejamiento-exacto",
+      "prueba-de-placebo"
+    ],
+    "sources": [
+      {
+        "title": "Causal Inference: The Mixtape — Synthetic Control",
+        "url": "https://mixtape.scunning.com/11-Synthetic_Control.html",
+        "publisher": "Yale University Press / Scott Cunningham",
+        "accessed": "2026-10-29",
+        "supports": "Pesos convexos del grupo donante y ajuste preintervención."
+      }
+    ]
+  },
+  {
+    "id": "principio-de-la-piramide",
+    "term": "Principio de la pirámide (SCQA)",
+    "englishTerm": "Pyramid Principle (SCQA)",
+    "track": "da",
+    "definition": "Estructura narrativa ejecutiva que abre con la conclusión gobernante tras situar contexto, complicación y pregunta, respaldada por argumentos mutuamente excluyentes y evidencia verificable.",
+    "relatedLessons": [
+      "da4-causalidad-04-memo-analitico-supuestos",
+      "da4-causalidad-05-presentacion-direccion-decisiones"
+    ],
+    "relatedTerms": [
+      "matriz-de-decision",
+      "diferencias-en-diferencias"
+    ],
+    "sources": [
+      {
+        "title": "The Effect — Chapter 5: Identification",
+        "url": "https://theeffectbook.net/ch-Identification.html",
+        "publisher": "Chapman & Hall / Nick Huntington-Klein",
+        "accessed": "2026-10-29",
+        "supports": "Articulación transparente de supuestos de identificación y diseño."
+      }
+    ]
+  },
+  {
+    "id": "matriz-de-decision",
+    "term": "Matriz de decisión bajo incertidumbre",
+    "englishTerm": "Decision matrix under uncertainty",
+    "track": "da",
+    "definition": "Regla explícita que vincula los límites del intervalo de confianza, el costo de equilibrio y las métricas guardarraíl con opciones operativas de despliegue.",
+    "formula": "\\text{Desplegar si } \\text{IC}_{95\\%,\\text{inf}} \\ge C_{\\text{umbral}} \\text{ y guardarraíles intactos}",
+    "relatedLessons": [
+      "da4-causalidad-05-presentacion-direccion-decisiones",
+      "da4-causalidad-04-memo-analitico-supuestos"
+    ],
+    "relatedTerms": [
+      "principio-de-la-piramide",
+      "diferencias-en-diferencias"
+    ],
+    "sources": [
+      {
+        "title": "Trustworthy Online Controlled Experiments — Companion Guide",
+        "url": "https://experimentguide.com/",
+        "publisher": "Cambridge University Press / Kohavi, Tang & Xu",
+        "accessed": "2026-10-29",
+        "supports": "Criterios de lanzamiento, métricas guardarraíl y umbrales de rentabilidad."
+      }
+    ]
+  }
+]
