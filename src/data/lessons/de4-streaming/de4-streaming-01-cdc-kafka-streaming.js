@@ -1,87 +1,240 @@
-// Lección migrada al esquema v2 mediante scripts/migrate-legacy.mjs
-const lesson = {
+export const lesson = {
   "id": "de4-streaming-01-cdc-kafka-streaming",
   "moduleId": "de4-streaming",
+  "legacyId": "l16-cdc-kafka-streaming",
+  "legacyOrder": 16,
+  "order": 1,
+  "title": "Captura de cambios (CDC) con Debezium y Kafka",
+  "subtitle": "Lectura del registro transaccional (WAL), patrón transactional outbox y consolidación CDC",
   "tracks": [
     "de"
   ],
   "level": 4,
-  "order": 1,
-  "title": "Captura de cambios (CDC) con Debezium y Kafka",
   "minutes": 30,
   "prerequisites": [
-    "de3-lakehouse-01-iceberg-v3-medallion"
+    "de3-lakehouse-01-iceberg-v3-medallion",
+    "de3-transformacion-01-dbt-sqlmesh-dag"
   ],
-  "contentVersion": 1,
-  "hook": "En Mercado Brisa (empresa ficticia), un script extraía pedidos ejecutando `SELECT * FROM orders WHERE updated_at >= NOW() - INTERVAL '1 minute'` cada 30 segundos contra la base PostgreSQL primaria. Durante un día de ofertas, esa consulta saturó el disco de producción y además 1 400 pedidos fraudulentos eliminados con `DELETE` físico nunca desaparecieron del almacén analítico, inflando las ventas en 210 000 USD. ¿Cómo capturas inserciones, actualizaciones y borrados sin consultar las tablas de producción?",
+  "contentVersion": 2,
+  "needsReview": false,
+  "dataset": "Mercado Brisa (empresa ficticia) — tablas customer_changes y customers",
+  "block": "Bloque 4 · Flujos en tiempo real y CDC",
+  "badge": "CDC & Kafka",
+  "HookType": "Fallo de producción",
+  "hook": "El motor de promociones de Mercado Brisa (empresa ficticia) consulta PostgreSQL cada cinco minutos mediante SELECT filtrando por fecha de actualización. En pleno pico de ventas, esa consulta agota las conexiones, ignora filas borradas con DELETE y aplica descuentos caducados cuando ocurren dos cambios en el mismo minuto. ¿Cómo capturar cada inserción, actualización y borrado desde el registro de transacciones (WAL) sin sobrecargar el motor operativo ni perder el orden de los eventos?",
   "objectives": [
-    "Reemplazar la extracción por consulta (query-based polling) por captura de cambios basada en el log transaccional (WAL) con Debezium.",
-    "Interpretar la estructura de un evento CDC (`op: c, u, d, r`, estados `before` y `after`) para propagar borrados físicos.",
-    "Evitar el problema de escrituras dobles (dual writes) aplicando el patrón Transactional Outbox."
+    "Distinguir la captura de cambios basada en registro transaccional (Log-Based CDC sobre el WAL de PostgreSQL) frente al sondeo por consultas (query-based polling) y sus puntos ciegos.",
+    "Interpretar la estructura de un evento Debezium (before, after, op y bloque source con lsn) y prevenir el llenado de disco por replication slots inactivos.",
+    "Implementar el patrón Transactional Outbox para eliminar el problema de doble escritura entre la base de datos operativa y Apache Kafka.",
+    "Consolidar un historial de eventos de cambio en SQL mediante funciones de ventana sobre customer_changes para reconstruir el estado vigente de cada cliente."
   ],
   "sections": [
     {
-      "id": "criterios-tecnicos-y-de-costo-entre-streaming-y-",
-      "heading": "Criterios técnicos y de costo entre streaming y micro-lotes",
-      "body": "El error arquitectónico más caro en ingeniería de datos es construir un pipeline de streaming con estado complejo para alimentar un dashboard que el comité ejecutivo solo mira los lunes a las 9:00 AM.\nEn producción aplicamos la **Regla del Accionador (Human-in-the-loop vs. Machine-in-the-loop)**:\n- **Latencia > 5 minutos (Humano decide)**: Usa ingesta incremental o micro-batch cada 5–15 minutos hacia **Apache Iceberg v3** con **DuckDB / SQLMesh / dbt**. Es 5 veces más barato, fácil de reprocesar (backfill) y suficiente para el 85% del BI corporativo.\n- **Latencia < 5 segundos (Máquina u Operación Crítica decide)**: Usa **Streaming Real-Time (CDC + Kafka/WarpStream + Flink/Arroyo)** cuando una acción automatizada depende del evento: bloqueo de tarjeta por fraude en 150 ms, precios dinámicos (surge pricing), alerta operativa de caída de pasarela de pago o inventario en vivo.",
+      "heading": "Captura basada en el registro (WAL) frente a sondeo por consultas",
+      "body": "Extraer cambios de una base operativa ejecutando consultas periódicas `SELECT * FROM customers WHERE updated_at > :corte` introduce tres defectos graves. Primero, compite por CPU, memoria y bloqueos de lectura con las compras reales de los clientes. Segundo, pierde cualquier estado intermedio si una fila cambia tres veces entre dos ejecuciones del lote. Tercero, no detecta eliminaciones físicas (`DELETE`), porque la fila desaparece de la tabla antes del siguiente barrido.\n\nLa **captura de cambios basada en registro** (*Log-Based CDC*) resuelve esto leyendo directamente el **Write-Ahead Log** (`WAL`) en PostgreSQL. Para exponer los cambios por fila, el parámetro `wal_level` debe configurarse en `logical`. El conector **Debezium** abre una sesión de replicación mediante el plugin nativo `pgoutput` y se suscribe a un *replication slot*. Ese *slot* guarda el último `LSN` (*Log Sequence Number*) confirmado. Si el conector cae, PostgreSQL retiene los archivos WAL en disco. Por ello, es obligatorio configurar `max_slot_wal_keep_size` para evitar que el disco primario se llene por completo.",
       "interactive": {
-        "component": "streaming-watermark-lab",
-        "caption": "Simulador interactivo: Captura de cambios (CDC) con Debezium y Kafka"
-      }
-    },
-    {
-      "id": "extraccion-por-consulta-frente-a-captura-del-log",
-      "heading": "Extracción por consulta frente a captura del log con Debezium",
-      "body": "Consultar una base de datos OLTP periódicamente con `WHERE updated_at > ...` (*Query-Based Polling*) sufre cuatro defectos fatales en producción:\n1) Sobrecarga el CPU y los índices de la base transaccional que atiende a tus clientes.\n2) Es completamente ciego a los `DELETE` físicos (la fila ya no existe para el `SELECT`).\n3) Pierde estados intermedios: si un pedido pasa de `PENDING → AUTHORIZED → SHIPPED` en 10 segundos y consultas cada 5 minutos, solo ves `SHIPPED`, destruyendo el análisis de tiempos de embudo para DA.\n4) Depende de que ningún desarrollador olvide actualizar el campo `updated_at`.\n**Log-Based CDC (Debezium)** conecta un lector de replicación al registro binario interno de la base de datos (**Write-Ahead Log — WAL** en PostgreSQL o **Binlog** en MySQL). Cada `INSERT` (`op: \"c\"`), `UPDATE` (`op: \"u\"`) y `DELETE` (`op: \"d\"`) ya fue escrito secuencialmente en el WAL por el motor para su propia durabilidad ACID; Debezium simplemente lee ese flujo secuencial con impacto cercano a cero y publica el estado anterior (`before`) y posterior (`after`) en milisegundos.",
+        "component": "cdc-log-stream",
+        "caption": "Simulador interactivo del flujo WAL de PostgreSQL hacia Debezium y particiones de Apache Kafka."
+      },
       "example": {
         "language": "sql",
-        "code": "-- EXCELENTE: Consumir el log CDC de Debezium (op: 'c'=create, 'u'=update, 'd'=delete)\n-- y aplicar MERGE idempotente en Apache Iceberg v3 usando el LSN (Log Sequence Number)\nWITH latest_cdc_per_key AS (\n  SELECT\n    COALESCE(after.order_id, before.order_id) AS order_id,\n    after.customer_id,\n    after.order_status,\n    after.amount_usd,\n    op AS cdc_operation,\n    source.lsn AS wal_lsn\n  FROM bronze.debezium_orders_cdc\n  WHERE ingested_date = CURRENT_DATE\n  QUALIFY ROW_NUMBER() OVER (\n    PARTITION BY COALESCE(after.order_id, before.order_id)\n    ORDER BY source.lsn DESC\n  ) = 1\n)\nMERGE INTO silver.orders_current t\nUSING latest_cdc_per_key s ON t.order_id = s.order_id\nWHEN MATCHED AND s.cdc_operation = 'd' THEN DELETE\nWHEN MATCHED THEN UPDATE SET\n  order_status = s.order_status, amount_usd = s.amount_usd, last_wal_lsn = s.wal_lsn\nWHEN NOT MATCHED AND s.cdc_operation <> 'd' THEN INSERT\n  (order_id, customer_id, order_status, amount_usd, last_wal_lsn)\n  VALUES (s.order_id, s.customer_id, s.order_status, s.amount_usd, s.wal_lsn);",
+        "code": "-- Inspección de clientes con múltiples eventos de cambio en Mercado Brisa\nSELECT customer_id,\n       COUNT(*) AS total_cdc_events,\n       MIN(valid_from)::VARCHAR AS first_event_ts,\n       MAX(valid_from)::VARCHAR AS latest_event_ts\nFROM customer_changes\nGROUP BY customer_id\nHAVING COUNT(*) >= 3\nORDER BY total_cdc_events DESC, customer_id ASC\nLIMIT 5;",
         "expectedOutput": [
           {
-            "impacto_oltp": "<1% CPU (Lectura secuencial WAL)",
-            "ordenes_borradas": "Eliminadas al instante vía Deletion Vector",
-            "exactitud_financiera": "100% Reconciliada con base primaria"
+            "customer_id": 1,
+            "total_cdc_events": 3,
+            "first_event_ts": "2023-05-12 08:00:00",
+            "latest_event_ts": "2023-12-02 08:00:00"
+          },
+          {
+            "customer_id": 2,
+            "total_cdc_events": 3,
+            "first_event_ts": "2024-04-30 08:00:00",
+            "latest_event_ts": "2025-02-02 08:00:00"
+          },
+          {
+            "customer_id": 3,
+            "total_cdc_events": 3,
+            "first_event_ts": "2024-04-13 08:00:00",
+            "latest_event_ts": "2024-12-23 08:00:00"
+          },
+          {
+            "customer_id": 4,
+            "total_cdc_events": 3,
+            "first_event_ts": "2023-07-26 08:00:00",
+            "latest_event_ts": "2024-04-15 08:00:00"
+          },
+          {
+            "customer_id": 5,
+            "total_cdc_events": 3,
+            "first_event_ts": "2024-03-24 08:00:00",
+            "latest_event_ts": "2025-01-02 08:00:00"
           }
         ]
-      }
+      },
+      "id": "de4-streaming-01-cdc-kafka-streaming-sec-1"
     },
     {
-      "id": "patron-transactional-outbox-contra-escrituras-do",
-      "heading": "Patrón transactional outbox contra escrituras dobles",
-      "body": "Cuando un microservicio guarda un pedido en PostgreSQL y en la línea siguiente de código intenta publicar un evento en Kafka (`producer.send()`), existe una condición de carrera letal conocida como **Dual-Write**: si la base de datos hace `COMMIT` pero la red hacia Kafka parpadea un milisegundo después, el pedido existe en la base pero el evento jamás llega a analítica ni a los sistemas downstream.\nEl **Patrón Transactional Outbox** resuelve esto con elegancia: el microservicio inserta el pedido en `orders` y el evento de dominio estructurado en una tabla `outbox_events` **dentro de la misma transacción ACID local de Postgres**. Luego, **Debezium** lee el WAL de `outbox_events` y lo entrega a Kafka con garantía *At-Least-Once*, respetando el Contrato de Datos (ODCS) sin acoplar el CDC a las tablas internas privadas del microservicio."
+      "heading": "Anatomía del sobre Debezium y compactación por clave en Kafka",
+      "body": "Cuando Debezium decodifica una transacción confirmada en el WAL, emite un mensaje estructurado con cuatro bloques: `before`, `after`, `op` y `source`. El bloque `before` contiene el estado anterior de la fila y `after` contiene el estado nuevo. El bloque `source` aporta metadatos de auditoría como `lsn`, `txId` y `ts_ms`. El campo `op` identifica la operación: `r` para instantánea inicial (*snapshot*), `c` para inserción (`INSERT`), `u` para actualización (`UPDATE`) y `d` para borrado (`DELETE`). En un borrado `d`, el campo `before` conserva la última foto conocida y `after` viaja como `null`.\n\nJusto después del evento de borrado, Debezium emite un segundo mensaje llamado **tombstone**. Este mensaje conserva la misma clave primaria pero lleva el cuerpo nulo (`value = null`). En **Apache Kafka**, cuando un tópico usa `cleanup.policy = compact`, el compactador retiene solo la última versión de cada clave. El *tombstone* le indica a Kafka que debe borrar esa clave tras cumplirse el tiempo `delete.retention.ms`.",
+      "example": {
+        "language": "sql",
+        "code": "-- Evolución de nivel (tier) y segmento para los clientes 2 y 8 en customer_changes\nSELECT customer_id,\n       change_id,\n       tier,\n       segment,\n       valid_from::VARCHAR AS valid_from_ts,\n       is_current\nFROM customer_changes\nWHERE customer_id IN (2, 8)\nORDER BY customer_id ASC, valid_from ASC;",
+        "expectedOutput": [
+          {
+            "customer_id": 2,
+            "change_id": 4,
+            "tier": "bronce",
+            "segment": "retail",
+            "valid_from_ts": "2024-04-30 08:00:00",
+            "is_current": false
+          },
+          {
+            "customer_id": 2,
+            "change_id": 5,
+            "tier": "plata",
+            "segment": "pro_barista",
+            "valid_from_ts": "2024-09-24 08:00:00",
+            "is_current": false
+          },
+          {
+            "customer_id": 2,
+            "change_id": 6,
+            "tier": "oro",
+            "segment": "pro_barista",
+            "valid_from_ts": "2025-02-02 08:00:00",
+            "is_current": true
+          },
+          {
+            "customer_id": 8,
+            "change_id": 22,
+            "tier": "bronce",
+            "segment": "retail",
+            "valid_from_ts": "2023-09-20 08:00:00",
+            "is_current": false
+          },
+          {
+            "customer_id": 8,
+            "change_id": 23,
+            "tier": "plata",
+            "segment": "pro_barista",
+            "valid_from_ts": "2024-01-06 08:00:00",
+            "is_current": false
+          },
+          {
+            "customer_id": 8,
+            "change_id": 24,
+            "tier": "oro",
+            "segment": "cafeteria_b2b",
+            "valid_from_ts": "2024-07-14 08:00:00",
+            "is_current": true
+          }
+        ]
+      },
+      "id": "de4-streaming-01-cdc-kafka-streaming-sec-2"
     },
     {
-      "id": "almacenamiento-por-niveles-en-kafka-sobre-almace",
-      "heading": "Almacenamiento por niveles en Kafka sobre almacenamiento S3",
-      "body": "Hasta 2023, operar Apache Kafka en la nube era ruinoso por dos motivos: los brokers acoplaban cómputo con discos SSD locales caros (replicados 3x) y las transferencias entre zonas de disponibilidad (Cross-AZ networking) representaban hasta el 65% de la factura.\nEn producción dominan dos evoluciones:\n1) **Kafka Tiered Storage (KIP-405)** y **Redpanda**: mantienen solo las últimas horas en NVMe local y descargan automáticamente los segmentos históricos a almacenamiento de objetos barato (S3/GCS).\n2) **Arquitecturas Zero-Disk / BYOC como WarpStream**: eliminan por completo los discos locales en los brokers y escriben directamente sobre S3 con agentes sin estado (*stateless*) alineados por zona de disponibilidad, eliminando el 100% del costo de red Cross-AZ y permitiendo retención infinita a precio de S3 (~$0.023/GB-mes). Además, **Tableflow** materializa automáticamente cualquier tópico Kafka como tabla **Apache Iceberg v3** lista para consultar."
+      "heading": "Patrón Transactional Outbox y consolidación determinista en destino",
+      "body": "Un error frecuente en microservicios consiste en actualizar la base de datos local y luego publicar un mensaje en Kafka desde el código. Esta **doble escritura** (*dual write*) no es atómica. Si la red falla después del `COMMIT` en PostgreSQL pero antes de publicar en Kafka, el almacén analítico pierde el evento. El patrón **Transactional Outbox** evita esta falla escribiendo el cambio de negocio y el evento en una tabla `outbox` dentro de la misma transacción ACID.\n\nDespués, Debezium lee el WAL de la tabla `outbox` y usa la transformación `Outbox Event Router` para enviar el evento a Kafka. En el destino analítico, el consumidor puede recibir varias versiones de un mismo cliente por actualizaciones sucesivas o reintentos. Para obtener la foto actual sin duplicados, aplicamos `ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY valid_from DESC, change_id DESC)`. Al filtrar la fila con rango `1`, consolidamos el estado vigente de cada cliente.",
+      "example": {
+        "language": "sql",
+        "code": "-- Consolidación del último estado por cliente a partir del flujo customer_changes\nWITH latest_cdc AS (\n  SELECT customer_id,\n         change_id,\n         tier AS cdc_tier,\n         segment AS cdc_segment,\n         ROW_NUMBER() OVER (\n           PARTITION BY customer_id\n           ORDER BY valid_from DESC, change_id DESC\n         ) AS rn\n  FROM customer_changes\n)\nSELECT customer_id, change_id, cdc_tier, cdc_segment\nFROM latest_cdc\nWHERE rn = 1 AND customer_id IN (2, 8)\nORDER BY customer_id ASC;",
+        "expectedOutput": [
+          {
+            "customer_id": 2,
+            "change_id": 6,
+            "cdc_tier": "oro",
+            "cdc_segment": "pro_barista"
+          },
+          {
+            "customer_id": 8,
+            "change_id": 24,
+            "cdc_tier": "oro",
+            "cdc_segment": "cafeteria_b2b"
+          }
+        ]
+      },
+      "id": "de4-streaming-01-cdc-kafka-streaming-sec-3"
     }
   ],
   "workedExample": {
-    "title": "Ejemplo guiado: Captura de cambios (CDC) con Debezium y Kafka",
-    "description": "Compara el antipatrón de hacer polling SQL por `updated_at` contra el procesamiento idempotente de un flujo CDC de Debezium (con soporte de `INSERT`, `UPDATE` y `DELETE`):",
-    "audit": "",
+    "title": "Reconstrucción y auditoría CDC de niveles de fidelidad en Mercado Brisa",
+    "description": "El equipo de ingeniería de datos de Mercado Brisa (empresa ficticia) recibe el registro histórico customer_changes (4 100 eventos para 2 400 clientes) y necesita verificar paso a paso que el último evento por cliente coincida al 100 % con la tabla maestra customers.",
+    "audit": "Verificado con DuckDB sobre public/datasets/customer_changes.parquet (4 100 filas) y public/datasets/customers.parquet (2 400 filas).",
     "steps": [
       {
-        "label": "Antipatrón: consulta periódica por updated_at ciega a borrados",
-        "explanation": "Compara el antipatrón de hacer polling SQL por `updated_at` contra el procesamiento idempotente de un flujo CDC de Debezium (con soporte de `INSERT`, `UPDATE` y `DELETE`):",
-        "code": "-- MAL: Consulta repetitiva cada 30s sobre la base OLTP de producción.\n-- 1) No detecta filas borradas con DELETE FROM orders WHERE order_id = 'ORD-88'\n-- 2) Pierde todas las transiciones intermedias de estado\nSELECT\n  order_id,\n  customer_id,\n  order_status,\n  amount_usd,\n  updated_at\nFROM prod_oltp.public.orders\nWHERE updated_at >= NOW() - INTERVAL '30 seconds';",
+        "label": "Paso 1 · Cuantificar el volumen de cambios frente a clientes únicos",
+        "explanation": "Antes de consolidar un flujo CDC, inspeccionamos cuántos eventos totales existen en `customer_changes` y cuántos clientes distintos han sufrido transiciones de nivel o segmento.",
+        "code": "SELECT COUNT(*) AS total_changes,\n       COUNT(DISTINCT customer_id) AS distinct_customers,\n       SUM(CASE WHEN is_current THEN 1 ELSE 0 END) AS flagged_current_rows\nFROM customer_changes;",
         "expectedOutput": [
           {
-            "impacto_oltp": "CPU Postgres al 92% en hora pico",
-            "ordenes_borradas": "Ignoradas ($210K fantasma en BI)",
-            "estados_intermedios": "Perdidos (Solo ve el último estado)"
+            "total_changes": 4100,
+            "distinct_customers": 2400,
+            "flagged_current_rows": 2400
           }
         ]
       },
       {
-        "label": "Solución óptima: flujo CDC de Debezium hacia Iceberg v3",
-        "explanation": "Compara ahora la consulta corregida y verifica cómo las filas y totales coinciden con la auditoría.",
-        "code": "-- EXCELENTE: Consumir el log CDC de Debezium (op: 'c'=create, 'u'=update, 'd'=delete)\n-- y aplicar MERGE idempotente en Apache Iceberg v3 usando el LSN (Log Sequence Number)\nWITH latest_cdc_per_key AS (\n  SELECT\n    COALESCE(after.order_id, before.order_id) AS order_id,\n    after.customer_id,\n    after.order_status,\n    after.amount_usd,\n    op AS cdc_operation,\n    source.lsn AS wal_lsn\n  FROM bronze.debezium_orders_cdc\n  WHERE ingested_date = CURRENT_DATE\n  QUALIFY ROW_NUMBER() OVER (\n    PARTITION BY COALESCE(after.order_id, before.order_id)\n    ORDER BY source.lsn DESC\n  ) = 1\n)\nMERGE INTO silver.orders_current t\nUSING latest_cdc_per_key s ON t.order_id = s.order_id\nWHEN MATCHED AND s.cdc_operation = 'd' THEN DELETE\nWHEN MATCHED THEN UPDATE SET\n  order_status = s.order_status, amount_usd = s.amount_usd, last_wal_lsn = s.wal_lsn\nWHEN NOT MATCHED AND s.cdc_operation <> 'd' THEN INSERT\n  (order_id, customer_id, order_status, amount_usd, last_wal_lsn)\n  VALUES (s.order_id, s.customer_id, s.order_status, s.amount_usd, s.wal_lsn);",
+        "label": "Paso 2 · Ordenar eventos por marca temporal y secuencia de cambio",
+        "explanation": "En un flujo CDC, no debemos depender únicamente de una bandera booleana si llegan eventos reenviados; ordenamos por `valid_from DESC` y desempatamos con el identificador secuencial `change_id DESC` dentro de cada `customer_id`.",
+        "code": "WITH ranked_changes AS (\n  SELECT customer_id,\n         change_id,\n         tier AS cdc_tier,\n         segment AS cdc_segment,\n         ROW_NUMBER() OVER (\n           PARTITION BY customer_id\n           ORDER BY valid_from DESC, change_id DESC\n         ) AS rn\n  FROM customer_changes\n)\nSELECT customer_id, change_id, cdc_tier, cdc_segment\nFROM ranked_changes\nWHERE rn = 1 AND customer_id <= 5\nORDER BY customer_id ASC;",
         "expectedOutput": [
           {
-            "impacto_oltp": "<1% CPU (Lectura secuencial WAL)",
-            "ordenes_borradas": "Eliminadas al instante vía Deletion Vector",
-            "exactitud_financiera": "100% Reconciliada con base primaria"
+            "customer_id": 1,
+            "change_id": 3,
+            "cdc_tier": "platino",
+            "cdc_segment": "pro_barista"
+          },
+          {
+            "customer_id": 2,
+            "change_id": 6,
+            "cdc_tier": "oro",
+            "cdc_segment": "pro_barista"
+          },
+          {
+            "customer_id": 3,
+            "change_id": 9,
+            "cdc_tier": "platino",
+            "cdc_segment": "pro_barista"
+          },
+          {
+            "customer_id": 4,
+            "change_id": 12,
+            "cdc_tier": "oro",
+            "cdc_segment": "cafeteria_b2b"
+          },
+          {
+            "customer_id": 5,
+            "change_id": 15,
+            "cdc_tier": "platino",
+            "cdc_segment": "pro_barista"
+          }
+        ]
+      },
+      {
+        "label": "Paso 3 · Cruzar la vista consolidada con la tabla operativa customers",
+        "explanation": "Unimos la versión ganadora (`rn = 1`) con `customers` para comprobar que tanto `current_tier` como `segment` coinciden exactamente en los 2 400 registros activos e inactivos.",
+        "code": "WITH latest_cdc AS (\n  SELECT customer_id,\n         tier AS cdc_tier,\n         segment AS cdc_segment,\n         ROW_NUMBER() OVER (\n           PARTITION BY customer_id\n           ORDER BY valid_from DESC, change_id DESC\n         ) AS rn\n  FROM customer_changes\n)\nSELECT l.cdc_tier,\n       COUNT(*) AS total_customers,\n       SUM(CASE WHEN l.cdc_tier = c.current_tier AND l.cdc_segment = c.segment THEN 1 ELSE 0 END) AS synced_customers\nFROM latest_cdc l\nJOIN customers c ON c.customer_id = l.customer_id\nWHERE l.rn = 1\nGROUP BY l.cdc_tier\nORDER BY total_customers DESC;",
+        "expectedOutput": [
+          {
+            "cdc_tier": "oro",
+            "total_customers": 1017,
+            "synced_customers": 1017
+          },
+          {
+            "cdc_tier": "plata",
+            "total_customers": 816,
+            "synced_customers": 816
+          },
+          {
+            "cdc_tier": "bronce",
+            "total_customers": 367,
+            "synced_customers": 367
+          },
+          {
+            "cdc_tier": "platino",
+            "total_customers": 200,
+            "synced_customers": 200
           }
         ]
       }
@@ -89,257 +242,349 @@ const lesson = {
   },
   "checks": [
     {
-      "id": "c1",
+      "id": "chk-de4-01-wal",
       "type": "mcq",
-      "prompt": "Un equipo de ingeniería de datos usa Debezium sobre PostgreSQL en producción, pero un viernes detienen el consumidor de Kafka durante 48 horas por mantenimiento sin borrar ni monitorear el Replication Slot de Postgres. ¿Cuál es el riesgo crítico en producción y cómo se previene?",
+      "prompt": "¿Qué parámetro de configuración en PostgreSQL es obligatorio para que Debezium extraiga eventos de cambio por fila mediante el plugin nativo pgoutput?",
       "options": [
         {
           "id": "a",
-          "text": "PostgreSQL retendrá todos los archivos WAL en disco esperando a que el slot de replicación de Debezium los confirme, llenando el disco del servidor primario hasta causar una caída total de la base de datos; se previene configurando alertas de `replication_slot_lag` y el parámetro `max_slot_wal_keep_size`.",
-          "correct": true,
-          "feedback": "Exacto. Este es el incidente #1 de producción con CDC en PostgreSQL: un slot de replicación inactivo impide que Postgres recicle los segmentos WAL. Configurar `max_slot_wal_keep_size` y alertas de lag protege la disponibilidad del sistema OLTP."
+          "text": "wal_level = replica, ya que transmite bloques físicos de disco hacia las réplicas de lectura.",
+          "correct": false,
+          "feedback": "El nivel replica solo transmite cambios físicos a nivel de página de disco; no permite decodificación lógica por tabla y fila."
         },
         {
           "id": "b",
-          "text": "No ocurre absolutamente nada; PostgreSQL guarda los archivos WAL en la memoria RAM del navegador del analista de BI.",
-          "correct": false,
-          "feedback": "Los segmentos WAL se almacenan en el disco del servidor primario de PostgreSQL hasta que todos los slots de replicación activos los consumen."
+          "text": "wal_level = logical, acompañado de un replication slot supervisado con max_slot_wal_keep_size.",
+          "correct": true,
+          "feedback": "Exacto. El nivel logical registra la información necesaria para que pgoutput reconstruya tuplas before/after, y max_slot_wal_keep_size protege el disco primario."
         },
         {
           "id": "c",
-          "text": "Debezium borrará automáticamente todas las tablas de clientes en PostgreSQL si pasa más de 1 hora desconectado.",
+          "text": "wal_level = minimal, combinándolo con un trigger AFTER UPDATE que inserte en una tabla temporal.",
           "correct": false,
-          "feedback": "Debezium solo tiene permisos de lectura de replicación; nunca borra tablas en el origen, pero su slot inactivo sí bloquea la limpieza del WAL si no se limita."
+          "feedback": "El nivel minimal ni siquiera soporta replicación continua, y los triggers añaden sobrecarga síncrona a cada transacción OLTP."
+        },
+        {
+          "id": "d",
+          "text": "synchronous_commit = off, para que el conector lea transacciones antes de que se escriban en el WAL.",
+          "correct": false,
+          "feedback": "Debezium solo emite transacciones ya confirmadas en el WAL; desactivar synchronous_commit no habilita la decodificación lógica."
         }
       ],
-      "explanation": "Exacto. Este es el incidente #1 de producción con CDC en PostgreSQL: un slot de replicación inactivo impide que Postgres recicle los segmentos WAL. Configurar `max_slot_wal_keep_size` y alertas de lag protege la disponibilidad del sistema OLTP."
+      "explanation": "La decodificación lógica en PostgreSQL requiere wal_level = logical en postgresql.conf para enriquecer el Write-Ahead Log con metadatos de relación y tupla consumibles por pgoutput."
     },
     {
-      "id": "c2",
+      "id": "chk-de4-01-tombstone",
       "type": "mcq",
-      "prompt": "Un microservicio de pagos ejecuta `db.save(payment)` y en la línea siguiente `kafka.send(event)`. Si la base de datos confirma el commit pero el proceso muere por un corte de red un milisegundo antes de `kafka.send()`, ¿qué ocurre?",
+      "prompt": "Cuando se ejecuta un DELETE físico en la base origen, Debezium emite un evento con op = \"d\" seguido de un mensaje tombstone (key = K, value = null). ¿Qué función cumple ese tombstone en Kafka?",
       "options": [
         {
           "id": "a",
-          "text": "El pago queda cobrado en la base de datos pero el evento jamás llega a Kafka, dejando inconsistentes a todos los sistemas aguas abajo.",
-          "correct": true,
-          "feedback": "Correcto: dos sistemas externos no comparten una transacción atómica sin un patrón como Transactional Outbox."
+          "text": "Reiniciar el offset de todos los grupos de consumidores suscritos a la partición.",
+          "correct": false,
+          "feedback": "Los mensajes con valor nulo no alteran ni reinician los offsets confirmados por los grupos de consumidores."
         },
         {
           "id": "b",
-          "text": "PostgreSQL hace rollback automático cuando nota que Kafka no recibió el mensaje.",
-          "correct": false,
-          "feedback": "Incorrecto: una vez ejecutado el COMMIT en PostgreSQL, la base de datos desconoce qué haga la aplicación con la red."
+          "text": "Indicar al compactador de logs de Kafka que puede eliminar definitivamente la clave K tras cumplirse delete.retention.ms.",
+          "correct": true,
+          "feedback": "Correcto. Sin el mensaje tombstone, un tópico con cleanup.policy = compact retendría el evento op = \"d\" para siempre como último valor de la clave."
         },
         {
           "id": "c",
-          "text": "Kafka adivina el pago leyendo la memoria del contenedor caído.",
+          "text": "Bloquear la partición para impedir nuevas inserciones con la misma clave primaria.",
           "correct": false,
-          "feedback": "Incorrecto: Kafka solo almacena los mensajes que el productor logró enviar y confirmar por red."
+          "feedback": "Kafka permite publicar nuevas inserciones para cualquier clave en cualquier momento sin bloquear la partición."
+        },
+        {
+          "id": "d",
+          "text": "Confirmar la transacción en PostgreSQL mediante un acuse de recibo inverso hacia el replication slot.",
+          "correct": false,
+          "feedback": "La confirmación del LSN hacia PostgreSQL ocurre por el protocolo de replicación de Kafka Connect, no mediante mensajes tombstone."
         }
       ],
-      "explanation": "El problema de la escritura doble se elimina insertando el registro de negocio y el mensaje en una tabla `outbox` dentro del mismo `BEGIN ... COMMIT` y dejando que Debezium lea el WAL."
+      "explanation": "En tópicos compactados de Kafka, un registro con clave no nula y payload nulo actúa como marcador de borrado (tombstone) para que el hilo limpiador purgue la clave."
     },
     {
-      "id": "c3",
+      "id": "chk-de4-01-outbox",
       "type": "mcq",
-      "prompt": "Al aplicar un flujo CDC sobre una tabla destino en el almacén mediante `MERGE INTO`, ¿qué acción debe disparar un registro cuyo campo `op` es `\"d\"`?",
+      "prompt": "¿Cómo resuelve el patrón Transactional Outbox el riesgo de inconsistencia por doble escritura entre un microservicio y Apache Kafka?",
       "options": [
         {
           "id": "a",
-          "text": "Eliminar la fila en el destino (WHEN MATCHED AND src.op = 'd' THEN DELETE) o marcarla como borrada usando la clave de `before`.",
-          "correct": true,
-          "feedback": "Correcto: en un evento de borrado, `after` es nulo y la clave primaria que debe eliminarse viaja en el objeto `before` o en la key del mensaje."
+          "text": "Publicando primero en Kafka con acks=0 y ejecutando después el COMMIT en la base de datos local.",
+          "correct": false,
+          "feedback": "Si el COMMIT en la base de datos falla tras haber publicado en Kafka, los consumidores recibirán un evento fantasma que nunca ocurrió."
         },
         {
           "id": "b",
-          "text": "Ignorar el mensaje porque `after` viene en NULL.",
-          "correct": false,
-          "feedback": "Incorrecto: ignorar los eventos op = \"d\" deja filas fantasma en el almacén que ya fueron borradas en producción."
+          "text": "Insertando el evento en una tabla outbox dentro de la misma transacción ACID local y delegando a Debezium su lectura desde el WAL.",
+          "correct": true,
+          "feedback": "Exacto. Al compartir la transacción local, o se confirman ambos cambios (tabla de negocio y tabla outbox) o se revierte todo atómicamente."
         },
         {
           "id": "c",
-          "text": "Insertar una fila con todas las columnas en NULL.",
+          "text": "Reemplazando la base de datos relacional por lecturas directas desde los segmentos remotos de Kafka.",
           "correct": false,
-          "feedback": "Incorrecto: ensuciaría la tabla destino con registros vacíos en lugar de retirar la entidad eliminada."
+          "feedback": "El patrón Outbox mantiene la base transaccional OLTP intacta y utiliza una tabla auxiliar dentro del mismo esquema."
         }
       ],
-      "explanation": "En Debezium, los eventos de borrado (`op = \"d\"`) llevan `after: null` y conservan en `before` (y en la clave del mensaje Kafka) el identificador necesario para propagar la baja."
+      "explanation": "El patrón Transactional Outbox aprovecha la atomicidad ACID del motor relacional local: el cambio operativo y la fila outbox se confirman en un único COMMIT y Debezium los propaga desde el WAL."
+    },
+    {
+      "id": "chk-de4-01-predict",
+      "type": "predict-output",
+      "prompt": "En Mercado Brisa, el cliente con customer_id = 2 tiene tres filas en customer_changes: change_id 4 (bronce, 2024-04-30), change_id 5 (plata, 2024-09-24) y change_id 6 (oro, 2025-02-02). Si aplicas ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY valid_from DESC, change_id DESC) y filtras rn = 1, ¿qué fila obtienes?",
+      "options": [
+        {
+          "id": "a",
+          "text": "change_id = 4, tier = bronce",
+          "correct": false,
+          "feedback": "Ese sería el resultado si ordenaras de forma ascendente (valid_from ASC), recuperando el primer evento histórico."
+        },
+        {
+          "id": "b",
+          "text": "change_id = 6, tier = oro",
+          "correct": true,
+          "feedback": "Correcto. Al ordenar descendentemente por valid_from y desempatar por change_id DESC, la fila más reciente recibe rn = 1."
+        },
+        {
+          "id": "c",
+          "text": "Las tres filas del cliente 2 numeradas del 1 al 3.",
+          "correct": false,
+          "feedback": "El predicado WHERE rn = 1 descarta las versiones históricas 2 y 3, dejando solo el estado vigente."
+        }
+      ],
+      "explanation": "Ordenar por valid_from DESC, change_id DESC asigna rn = 1 al último cambio registrado para cada customer_id, colapsando el flujo de eventos en su estado actual."
     }
   ],
   "practice": {
-    "type": "fill-blanks",
-    "title": "Consolidación de eventos CDC con Debezium",
+    "type": "sql",
+    "title": "Auditoría de paridad entre el flujo CDC customer_changes y la tabla customers",
     "language": "sql",
-    "prompt": "Completa la consulta que consolida un lote de eventos CDC de Debezium (`op` en `\"c\"`, `\"u\"`, `\"d\"`). Cuando un registro se borra (`op = \"d\"`), el objeto `after` viene en `NULL` y la clave primaria solo existe en `before.order_id`. Debes extraer la clave de forma segura, ordenar por el número de secuencia del log (`source_lsn DESC`) y filtrar los registros eliminados en la vista activa.",
-    "starterCode": "WITH ranked_cdc AS (\n  SELECT\n    {{b1}} AS order_id,\n    after_customer_id AS customer_id,\n    after_amount_usd AS amount_usd,\n    op,\n    source_lsn\n  FROM bronze.orders_cdc_stream\n  QUALIFY ROW_NUMBER() OVER (\n    PARTITION BY COALESCE(after_order_id, before_order_id)\n    ORDER BY {{b2}}\n  ) = 1\n)\nSELECT\n  order_id,\n  customer_id,\n  amount_usd,\n  source_lsn\nFROM ranked_cdc\nWHERE {{b3}};",
-    "expected": "WITH ranked_cdc AS (\n  SELECT\n    {{b1}} AS order_id,\n    after_customer_id AS customer_id,\n    after_amount_usd AS amount_usd,\n    op,\n    source_lsn\n  FROM bronze.orders_cdc_stream\n  QUALIFY ROW_NUMBER() OVER (\n    PARTITION BY COALESCE(after_order_id, before_order_id)\n    ORDER BY {{b2}}\n  ) = 1\n)\nSELECT\n  order_id,\n  customer_id,\n  amount_usd,\n  source_lsn\nFROM ranked_cdc\nWHERE {{b3}};",
+    "prompt": "Construye una consulta SQL en DuckDB que consolide el último evento de cambio por `customer_id` en la tabla `customer_changes` (ordenando por `valid_from DESC, change_id DESC`) y lo una con la tabla maestra `customers`. Agrupa el resultado por el nivel obtenido del flujo CDC (`cdc_tier`) y por el estado de actividad (`is_active`), calculando dos métricas: `total_customers` (total de clientes en ese grupo) y `synced_customers` (clientes cuyo `cdc_tier` coincide con `customers.current_tier` y cuyo `cdc_segment` coincide con `customers.segment`). Ordena por `total_customers DESC, cdc_tier ASC`.",
+    "starterCode": "WITH latest_cdc AS (\n  SELECT customer_id,\n         tier AS cdc_tier,\n         segment AS cdc_segment,\n         -- TODO: asigna ROW_NUMBER() particionando por customer_id y ordenando por valid_from DESC, change_id DESC\n         1 AS rn\n  FROM customer_changes\n)\nSELECT l.cdc_tier,\n       c.is_active,\n       COUNT(*) AS total_customers,\n       -- TODO: suma 1 cuando l.cdc_tier = c.current_tier AND l.cdc_segment = c.segment\n       0 AS synced_customers\nFROM latest_cdc l\nJOIN customers c ON c.customer_id = l.customer_id\nWHERE l.rn = 1\nGROUP BY l.cdc_tier, c.is_active\nORDER BY total_customers DESC, l.cdc_tier ASC;",
+    "solution": "WITH latest_cdc AS (\n  SELECT customer_id,\n         tier AS cdc_tier,\n         segment AS cdc_segment,\n         ROW_NUMBER() OVER (\n           PARTITION BY customer_id\n           ORDER BY valid_from DESC, change_id DESC\n         ) AS rn\n  FROM customer_changes\n)\nSELECT l.cdc_tier,\n       c.is_active,\n       COUNT(*) AS total_customers,\n       SUM(CASE WHEN l.cdc_tier = c.current_tier AND l.cdc_segment = c.segment THEN 1 ELSE 0 END) AS synced_customers\nFROM latest_cdc l\nJOIN customers c ON c.customer_id = l.customer_id\nWHERE l.rn = 1\nGROUP BY l.cdc_tier, c.is_active\nORDER BY total_customers DESC, l.cdc_tier ASC;",
+    "solutionExplanation": "La CTE latest_cdc numera las versiones de cada cliente desde la más reciente hasta la más antigua usando valid_from DESC, change_id DESC. Al filtrar WHERE l.rn = 1 pasamos de 4 100 eventos históricos a exactamente 2 400 clientes únicos y verificamos que los 2 400 registros están sincronizados con la tabla customers.",
     "orderMatters": true,
     "hints": [
-      "Extraer order_id incluso en eventos DELETE: En un `DELETE` (`op = \"d\"`), `after_order_id` es `NULL`, por lo que debes usar `COALESCE` con `before_order_id`.",
-      "Ordenar por secuencia exacta del WAL: El `source_lsn` (Log Sequence Number de Postgres) garantiza el orden estricto de confirmación transaccional; quédate con el más reciente (`DESC`).",
-      "Excluir órdenes eliminadas en el origen: Filtra las filas cuya última operación en el log no fue un borrado (`op <> 'd'`)."
+      "En la CTE latest_cdc, reemplaza 1 AS rn por ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY valid_from DESC, change_id DESC) AS rn.",
+      "Si no aplicas correctamente ROW_NUMBER() y el filtro WHERE l.rn = 1, el conteo sumará los 4 100 cambios históricos en lugar de los 2 400 clientes.",
+      "Para synced_customers utiliza SUM(CASE WHEN l.cdc_tier = c.current_tier AND l.cdc_segment = c.segment THEN 1 ELSE 0 END)."
     ],
-    "solution": "WITH ranked_cdc AS (\n  SELECT\n    {{b1}} AS order_id,\n    after_customer_id AS customer_id,\n    after_amount_usd AS amount_usd,\n    op,\n    source_lsn\n  FROM bronze.orders_cdc_stream\n  QUALIFY ROW_NUMBER() OVER (\n    PARTITION BY COALESCE(after_order_id, before_order_id)\n    ORDER BY {{b2}}\n  ) = 1\n)\nSELECT\n  order_id,\n  customer_id,\n  amount_usd,\n  source_lsn\nFROM ranked_cdc\nWHERE {{b3}};",
-    "solutionExplanation": "Extrae la clave primaria usando `COALESCE(after_id, before_id)` para no perder el identificador en eventos `DELETE`. Ordena por el número de secuencia transaccional del log (`source_lsn DESC`) en lugar de relojes de ingesta inexactos. Filtra o aplica correctamente los eventos `op = \"d\"` para evitar registros fantasma en Analytics y BI.",
-    "blanks": [
-      {
-        "id": "b1",
-        "placeholder": "Extraer order_id incluso en eventos DELETE",
-        "acceptedAnswers": [
-          "COALESCE(after_order_id, before_order_id)",
-          "IFNULL(after_order_id, before_order_id)"
-        ],
-        "hint": "En un `DELETE` (`op = \"d\"`), `after_order_id` es `NULL`, por lo que debes usar `COALESCE` con `before_order_id`."
-      },
-      {
-        "id": "b2",
-        "placeholder": "Ordenar por secuencia exacta del WAL",
-        "acceptedAnswers": [
-          "source_lsn DESC",
-          "source_lsn desc"
-        ],
-        "hint": "El `source_lsn` (Log Sequence Number de Postgres) garantiza el orden estricto de confirmación transaccional; quédate con el más reciente (`DESC`)."
-      },
-      {
-        "id": "b3",
-        "placeholder": "Excluir órdenes eliminadas en el origen",
-        "acceptedAnswers": [
-          "op <> 'd'",
-          "op IN ('c', 'u', 'r')"
-        ],
-        "hint": "Filtra las filas cuya última operación en el log no fue un borrado (`op <> 'd'`)."
-      }
-    ],
+    "expected": "8 filas (cdc_tier, is_active, total_customers, synced_customers)",
     "expectedOutputTable": [
       {
-        "order_id": "ORD-501",
-        "customer_id": "CUST-19",
-        "amount_usd": "$180.00",
-        "source_lsn": 94810244
+        "cdc_tier": "oro",
+        "is_active": true,
+        "total_customers": 974,
+        "synced_customers": 974
       },
       {
-        "order_id": "ORD-503",
-        "customer_id": "CUST-42",
-        "amount_usd": "$450.00",
-        "source_lsn": 94810299
+        "cdc_tier": "plata",
+        "is_active": true,
+        "total_customers": 786,
+        "synced_customers": 786
+      },
+      {
+        "cdc_tier": "bronce",
+        "is_active": true,
+        "total_customers": 293,
+        "synced_customers": 293
+      },
+      {
+        "cdc_tier": "platino",
+        "is_active": true,
+        "total_customers": 187,
+        "synced_customers": 187
+      },
+      {
+        "cdc_tier": "bronce",
+        "is_active": false,
+        "total_customers": 74,
+        "synced_customers": 74
+      },
+      {
+        "cdc_tier": "oro",
+        "is_active": false,
+        "total_customers": 43,
+        "synced_customers": 43
+      },
+      {
+        "cdc_tier": "plata",
+        "is_active": false,
+        "total_customers": 30,
+        "synced_customers": 30
+      },
+      {
+        "cdc_tier": "platino",
+        "is_active": false,
+        "total_customers": 13,
+        "synced_customers": 13
       }
     ],
-    "rubricCriteria": [
-      "Extrae la clave primaria usando `COALESCE(after_id, before_id)` para no perder el identificador en eventos `DELETE`.",
-      "Ordena por el número de secuencia transaccional del log (`source_lsn DESC`) en lugar de relojes de ingesta inexactos.",
-      "Filtra o aplica correctamente los eventos `op = \"d\"` para evitar registros fantasma en Analytics y BI."
-    ]
+    "expectedOutput": {
+      "columns": [
+        "cdc_tier",
+        "is_active",
+        "total_customers",
+        "synced_customers"
+      ],
+      "rows": [
+        [
+          "oro",
+          true,
+          974,
+          974
+        ],
+        [
+          "plata",
+          true,
+          786,
+          786
+        ],
+        [
+          "bronce",
+          true,
+          293,
+          293
+        ],
+        [
+          "platino",
+          true,
+          187,
+          187
+        ],
+        [
+          "bronce",
+          false,
+          74,
+          74
+        ],
+        [
+          "oro",
+          false,
+          43,
+          43
+        ],
+        [
+          "plata",
+          false,
+          30,
+          30
+        ],
+        [
+          "platino",
+          false,
+          13,
+          13
+        ]
+      ]
+    }
+  },
+  "pipelineChallenge": {
+    "title": "Secuencia de arquitectura: captura de cambios desde PostgreSQL hasta la tabla consolidada",
+    "description": "Ordena los pasos técnicos que recorre una mutación de cliente desde la transacción ACID en PostgreSQL hasta su materialización analítica sin duplicados.",
+    "steps": [
+      {
+        "id": "step-wal-commit",
+        "label": "1. Escritura atómica en el WAL de PostgreSQL (wal_level = logical)",
+        "text": "1. Escritura atómica en el WAL de PostgreSQL (wal_level = logical)",
+        "role": "Motor OLTP",
+        "detail": "La transacción confirma el cambio de negocio y escribe las tuplas en el Write-Ahead Log con un LSN monótono."
+      },
+      {
+        "id": "step-debezium-slot",
+        "label": "2. Decodificación lógica mediante pgoutput y replication slot",
+        "text": "2. Decodificación lógica mediante pgoutput y replication slot",
+        "role": "Conector CDC",
+        "detail": "Debezium lee el flujo del replication slot y construye el sobre con before, after, op y source.lsn."
+      },
+      {
+        "id": "step-kafka-keyed",
+        "label": "3. Publicación en tópico de Kafka particionado por customer_id",
+        "text": "3. Publicación en tópico de Kafka particionado por customer_id",
+        "role": "Transporte de eventos",
+        "detail": "Todos los cambios de un mismo cliente aterrizan en la misma partición, preservando el orden secuencial y los tombstones."
+      },
+      {
+        "id": "step-dedup-merge",
+        "label": "4. Deduplicación por ventana (ROW_NUMBER) y consolidación en destino",
+        "text": "4. Deduplicación por ventana (ROW_NUMBER) y consolidación en destino",
+        "role": "Almacén analítico",
+        "detail": "El motor SQL ordena por valid_from DESC, change_id DESC y retiene rn = 1 para materializar la foto vigente."
+      }
+    ],
+    "correctOrder": [
+      "step-wal-commit",
+      "step-debezium-slot",
+      "step-kafka-keyed",
+      "step-dedup-merge"
+    ],
+    "hint": "El flujo comienza en el registro transaccional del motor OLTP, pasa por la decodificación de Debezium, se transporta ordenado por clave en Kafka y termina deduplicándose en el almacén."
   },
   "roleNotes": {
-    "de": "Despliega conectores Debezium sobre slots de replicación PostgreSQL con monitoreo estricto de `replication_slot_lag` para evitar que un conector detenido llene el disco WAL de producción (configurando `max_slot_wal_keep_size`). Implementa el patrón Transactional Outbox junto a ingeniería de software y registra esquemas Avro/Protobuf en Schema Registry con compatibilidad `BACKWARD_TRANSITIVE`. Adopta colas Zero-Disk (WarpStream) o Kafka Tiered Storage con compactación automática hacia Apache Iceberg v3 (Deletion Vectors para eventos `op = \"d\"`).",
-    "da": "Aprovecha los payloads `before` y `after` del flujo CDC para reconstruir cada transición de estado (`PENDING → PAID → REFUNDED`) y medir tiempos exactos de ciclo operativo. Audita que los eventos de borrado (`op = \"d\"`) y los tombstones se reflejen como bajas lógicas o ajustes contables en Silver, evitando que pedidos cancelados inflen el LTV.",
-    "bi": "Separa claramente los **Tableros Operativos en Vivo** (monitoreo de pasarelas, inventario minuto a minuto) de los **Tableros Financieros Auditados** (que consumen snapshots cerrados de Iceberg). Muestra en la cabecera del dashboard un indicador explícito de frescura y salud del pipeline CDC (`Latencia extremo a extremo: 1.8 s · Último evento WAL recibido`)."
+    "de": "Supervisa el retraso de cada replication slot en pg_replication_slots y configura max_slot_wal_keep_size en PostgreSQL. Un conector Debezium detenido sin cota de retención llenará el disco del nodo primario y provocará una caída de producción.",
+    "da": "Al consultar tablas alimentadas por CDC en bruto (capa Bronze), recuerda que cada UPDATE genera una nueva fila de evento. Filtra siempre la versión más reciente con ROW_NUMBER() antes de agregar clientes o pedidos.",
+    "bi": "Distingue entre la tabla de dimensión actual (customers) y el registro de auditoría temporal (customer_changes). Para atribuir ventas al nivel que tenía el cliente en la fecha del pedido, cruza con los intervalos valid_from y valid_to."
   },
   "summary": [
-    "El polling por updated_at sobrecarga la base primaria y es ciego ante borrados físicos (DELETE).",
-    "Debezium lee el registro transaccional (WAL/binlog) de forma secuencial sin bloquear las tablas.",
-    "El patrón Transactional Outbox guarda el cambio y el evento en la misma transacción ACID local.",
-    "El almacenamiento por niveles en Kafka separa el cómputo de los brokers del historial en S3."
+    "La captura basada en log (Log-Based CDC) lee el WAL con wal_level = logical sin penalizar las tablas operativas y detecta borrados físicos.",
+    "Un evento Debezium contiene before, after, op y source.lsn; tras un DELETE emite un tombstone nulo para compactar en Kafka.",
+    "El patrón Transactional Outbox evita la doble escritura insertando el evento en una tabla local dentro de la misma transacción ACID.",
+    "La consolidación en SQL con ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY valid_from DESC, change_id DESC) reconstruye el estado actual sin duplicados."
   ],
   "flashcards": [
     {
-      "id": "fc-de4-cdc-01",
-      "front": "¿Cuáles son las dos fallas técnicas del polling por `WHERE updated_at > ...` frente al CDC basado en el WAL?",
-      "back": "1) Impone carga de lectura repetida sobre el motor OLTP y 2) no detecta filas eliminadas con DELETE físico (no dejan updated_at)."
+      "id": "fc-de4-01-wal",
+      "front": "¿Por qué el CDC por consulta (SELECT ... WHERE updated_at > X) pierde eliminaciones físicas?",
+      "back": "Porque una sentencia DELETE elimina la fila de la tabla antes del siguiente barrido; en cambio, esa eliminación sí queda registrada como evento en el WAL."
     },
     {
-      "id": "fc-de4-cdc-02",
-      "front": "¿Qué resuelve el patrón Transactional Outbox en un microservicio?",
-      "back": "Evita la escritura doble inconsistente (guardar en Postgres y publicar en Kafka por separado); escribe ambos en la misma transacción de base de datos y CDC publica la tabla outbox."
+      "id": "fc-de4-01-slot",
+      "front": "¿Qué riesgo operativo implica un replication slot de PostgreSQL cuyo conector Debezium queda detenido?",
+      "back": "PostgreSQL retiene todos los segmentos WAL desde el último LSN confirmado por el slot; sin max_slot_wal_keep_size, el disco del servidor primario puede llenarse por completo."
     },
     {
-      "id": "fc-de4-cdc-03",
-      "front": "¿Qué representan los códigos `op` = `c`, `u`, `d`, `r` en un mensaje de Debezium?",
-      "back": "c = create (INSERT), u = update (UPDATE con before y after), d = delete (DELETE con los datos previos en before), r = read (snapshot inicial)."
+      "id": "fc-de4-01-outbox",
+      "front": "¿En qué consiste el patrón Transactional Outbox?",
+      "back": "En insertar el evento de dominio en una tabla outbox dentro de la misma transacción ACID local que modifica la entidad de negocio, para que Debezium lo publique en Kafka desde el WAL."
+    },
+    {
+      "id": "fc-de4-01-tombstone",
+      "front": "¿Qué es un mensaje tombstone en Kafka y por qué lo emite Debezium tras un evento op = \"d\"?",
+      "back": "Es un mensaje con la clave primaria del registro eliminado y payload nulo (value = null) que permite al compactador de Kafka borrar definitivamente esa clave."
     }
   ],
   "glossaryTerms": [
-    "c26-bi-as-code",
-    "c18-iceberg-v3"
+    "captura-cambios-log-wal",
+    "patron-transactional-outbox",
+    "particionamiento-hash-kafka"
   ],
   "sources": [
     {
-      "title": "Debezium Official Documentation — Architecture and PostgreSQL Connector (WAL Logical Decoding)",
-      "url": "https://debezium.io/documentation/reference/stable/architecture.html",
-      "publisher": "Debezium / Red Hat",
+      "title": "Debezium Connector for PostgreSQL Documentation",
+      "url": "https://debezium.io/documentation/reference/stable/connectors/postgresql.html",
+      "publisher": "Red Hat / Debezium Community",
       "accessed": "2026-10-29",
-      "supports": "Lectura del registro de transacciones y estructura de sobres de eventos CDC (before, after, op)."
+      "supports": "Lectura del WAL con pgoutput, estructura de eventos before/after/op/source y gestión de replication slots."
     },
     {
-      "title": "Debezium Documentation — Outbox Event Router Pattern",
+      "title": "Debezium Outbox Event Router SMT",
       "url": "https://debezium.io/documentation/reference/stable/transformations/outbox-event-router.html",
-      "publisher": "Debezium / Red Hat",
+      "publisher": "Red Hat / Debezium Community",
       "accessed": "2026-10-29",
-      "supports": "Implementación del patrón Transactional Outbox para evitar escrituras dobles."
+      "supports": "Implementación del patrón Transactional Outbox mediante Kafka Connect Single Message Transform."
     },
     {
-      "title": "Apache Kafka Documentation — Tiered Storage and Log Compaction",
-      "url": "https://kafka.apache.org/documentation/#tiered_storage",
-      "publisher": "Apache Software Foundation",
+      "title": "PostgreSQL Documentation — Chapter 47: Logical Decoding Concepts",
+      "url": "https://www.postgresql.org/docs/current/logicaldecoding-explanation.html",
+      "publisher": "The PostgreSQL Global Development Group",
       "accessed": "2026-10-29",
-      "supports": "Separación de almacenamiento local en brokers y retención histórica en almacenamiento de objetos."
+      "supports": "Fundamentos de decodificación lógica del Write-Ahead Log, orden por LSN y durabilidad de replication slots."
     }
   ],
-  "aiNotes": "Asegúrate de que el alumno distinga por qué en un evento `op = \"d\"` el bloque `after` viene en `null` (por lo que en SQL debe tomarse el ID con `COALESCE(after.id, before.id)`).",
-  "needsReview": true,
-  "legacyId": "l16-cdc-kafka-streaming",
-  "legacyOrder": 16,
-  "stageId": "stage-6",
-  "subtitle": "Lectura del registro transaccional, patrón outbox y criterios para elegir entre lotes y flujo continuo.",
-  "goal": "Evaluar cuándo un caso de negocio justifica la complejidad del streaming frente a micro-batches sobre Iceberg, implementar Change Data Capture (CDC) leyendo el WAL/Binlog con Debezium y diseñar arquitecturas Kafka Zero-Disk (WarpStream / Tiered Storage) con el patrón Transactional Outbox.",
-  "pipelineChallenge": {
-    "title": "Captura CDC con patrón outbox e Iceberg",
-    "scenario": "Ordena los 5 pasos arquitectónicos para capturar transacciones de un microservicio de pagos hacia analítica en tiempo real sin golpear la base de datos con queries pesados ni sufrir pérdida de mensajes por Dual-Write.",
-    "steps": [
-      {
-        "id": "cdc-1",
-        "label": "1. Escritura atómica en tabla de negocio y tabla transactional outbox en Postgres",
-        "role": "DE",
-        "detail": "El microservicio inserta la orden y el evento tipado dentro de la misma transacción ACID local, evitando el antipatrón Dual-Write."
-      },
-      {
-        "id": "cdc-2",
-        "label": "2. Captura secuencial del WAL con conector Debezium y registro de esquemas",
-        "role": "DE",
-        "detail": "Debezium lee el Write-Ahead Log binario sin ejecutar SELECTs costosos y valida el esquema contra el contrato ODCS."
-      },
-      {
-        "id": "cdc-3",
-        "label": "3. Transporte en tópico particionado por clave en WarpStream o Kafka",
-        "role": "DE",
-        "detail": "Los eventos viajan particionados por `order_id` garantizando el orden estricto de estados sobre almacenamiento S3 Zero-Disk."
-      },
-      {
-        "id": "cdc-4",
-        "label": "4. Compactación MERGE y vectores de borrado en Apache Iceberg v3 (Silver)",
-        "role": "DA",
-        "detail": "Se deduplica por LSN preservando la tabla de historial completo de transiciones (`order_state_transitions`) y la tabla de estado actual."
-      },
-      {
-        "id": "cdc-5",
-        "label": "5. Exposición de métricas reconciliadas e indicador de latencia en BI",
-        "role": "BI",
-        "detail": "El dashboard financiero consume la Capa Semántica libre de órdenes borradas y muestra el SLA de frescura del flujo CDC."
-      }
-    ],
-    "explanation": "El patrón Transactional Outbox + Debezium WAL + Kafka/WarpStream + Iceberg v3 garantiza que cada transacción comprometida en producción llegue exactamente en orden al Lakehouse y a BI, incluyendo borrados físicos y sin degradar el checkout."
-  },
-  "relatedLessons": [
-    {
-      "id": "l17-flink-watermarks-mv",
-      "reason": "Una vez que los eventos CDC están en Kafka/WarpStream, aprende a procesarlos en ventanas temporales con Flink y Watermarks."
-    },
-    {
-      "id": "l10-iceberg-v3-medallion",
-      "reason": "Descubre cómo los eventos de cambio CDC aterrizan en tablas Apache Iceberg v3 usando Deletion Vectors."
-    }
-  ]
+  "aiNotes": "Guía al estudiante sobre la diferencia entre el registro de cambios customer_changes (4 100 eventos) y la tabla actual customers (2 400 clientes) de Mercado Brisa. Si su consulta duplica clientes, indícale que debe particionar por customer_id en ROW_NUMBER() ordenando por valid_from DESC, change_id DESC y filtrar rn = 1 antes de agrupar."
 };
 
 export default lesson;
