@@ -81,21 +81,46 @@ Se generó [`c1-viz-glossary.json`](file:///C:/Users/T490s/Desktop/Proyectos/ING
 ### Paso 6 — Proyecto de módulo y rúbrica
 Se documentó en [`c1-viz.md`](file:///C:/Users/T490s/Desktop/Proyectos/ING-W-c1-viz/docs/curriculo/investigacion/c1-viz.md) la especificación completa y las consultas SQL de referencia del proyecto `proj-c1-viz` (*Rediseño de dos gráficos con problemas reales*), junto con su rúbrica verificable de 4 criterios (Elección de geometría y orden jerárquico, Integridad de escalas y sustitución de doble eje, Intención cromática y accesibilidad WCAG 2.2, Diseño de tabla numérica con precisión uniforme y `tabular-nums`).
 
-### Paso 7 — Verificación en navegador + contexto del tutor IA + rúbrica 0–4
-Se verificaron las 4 lecciones en Chromium (`1280×720` y `375×667`) en el puerto `5210` y se probó la construcción de contexto del Tutor IA (`buildContextPrompt` en `server/ai/contextBuilder.js`) simulando para cada lección una pregunta de comprobación y una respuesta errónea deliberada del estudiante:
-- En `c1-viz-01`, ante la respuesta errónea de usar un pastel 3D o una línea para 5 categorías nominales, el prompt del tutor (`3573` caracteres) inyecta la jerarquía de Cleveland y McGill y `aiNotes` para corregir por qué una línea inventa pendientes inexistentes entre productos.
-- En `c1-viz-02`, ante la respuesta errónea de truncar el eje de barras en `395 USD`, el prompt (`3445` caracteres) inyecta el principio de tinta proporcional y el cálculo de índice base 100.
-- En `c1-viz-03`, ante la respuesta errónea de usar solo círculos rojos/verdes y `AVG(spend_usd / attributed_conversions)`, el prompt (`3369` caracteres) inyecta el criterio WCAG 1.4.1 y la fórmula agregada `SUM(spend_usd) / NULLIF(SUM(attributed_conversions), 0)`.
-- En `c1-viz-04`, ante la respuesta errónea de centrar importes con 8 decimales y usar `COUNT(s.store_id)` tras el JOIN, el prompt (`3756` caracteres) inyecta la regla de alineación derecha con `tabular-nums` y la distinción entre `COUNT(s.store_id)` y `COUNT(DISTINCT s.store_id)`.
+### Paso 7 — Verificación en navegador + prueba real del Tutor IA con `agy` + rúbrica §9.4 (0–4)
+Se verificaron las 4 lecciones en Chromium (`1280×720` y `375×667`) en el puerto `5210` y se probó en vivo el Tutor IA ejecutando `runAgyPrompt` (`server/ai/agyRunner.js`, modelo `gemini-3.8-flash-low`) sobre el prompt construido por `buildContextPrompt` (`server/ai/contextBuilder.js`) ante una respuesta errónea deliberada del estudiante en cada una de las 4 lecciones:
 
-#### Tabla de calificación por rúbrica (Apéndice D.2, escala 0–4)
+- **`c1-viz-01-geometria-grafico` (`firstTokenMs: 5614 ms`, `durationMs: 7447 ms`):**
+  - *Respuesta errónea enviada:* `"Elijo un gráfico de pastel 3D con 5 rebanadas o una línea que conecte las 5 categorías de izquierda a derecha, porque así se ve la tendencia entre categorías."`
+  - *Respuesta literal de `agy`:*
+    > «Ninguna de esas dos opciones es adecuada para este caso. El gráfico de pastel (y peor en 3D) dificulta la lectura porque el ojo humano es malo comparando ángulos y áreas. El efecto 3D, además, distorsiona los tamaños reales de las rebanadas según su perspectiva. El gráfico de líneas tampoco funciona aquí. Las líneas implican continuidad temporal o una relación de orden natural entre los puntos, como días o meses. Las categorías de productos (`category`) son datos cualitativos sin un orden inherente; conectarlas con una línea inventa una "tendencia" inexistente. Para responder la pregunta, la mejor opción es un **gráfico de barras**. Las barras alineadas en un mismo eje permiten comparar magnitudes usando la posición y la longitud, que son los canales visuales más precisos para nuestra percepción. Si ordenas las barras de mayor a menor ingreso, la lectura de las 5 categorías es inmediata y sin ambigüedades.»
 
-| Lección | 1. Rigor conceptual | 2. Claridad y voz | 3. Ejemplos y práctica ejecutables | 4. Comprobaciones con criterio | 5. Conexión con los 3 roles | 6. Fuentes reales | 7. Integración UI | Media |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| `c1-viz-01-geometria-grafico` | 4 | 4 | 4 | 4 | 4 | 4 | 4 | **4.0 / 4** |
-| `c1-viz-02-ejes-escalas-cero` | 4 | 4 | 4 | 4 | 4 | 4 | 4 | **4.0 / 4** |
-| `c1-viz-03-color-accesibilidad` | 4 | 4 | 4 | 4 | 4 | 4 | 4 | **4.0 / 4** |
-| `c1-viz-04-tablas-numericas` | 4 | 4 | 4 | 4 | 4 | 4 | 4 | **4.0 / 4** |
+- **`c1-viz-02-ejes-escalas-cero` (`firstTokenMs: 8929 ms`, `durationMs: 10445 ms`):**
+  - *Respuesta errónea enviada:* `"Empiezo el eje vertical de las barras en 395 USD para que la barra de Iberia se vea diez veces más alta que la de Andina y llame más la atención."`
+  - *Respuesta literal de `agy`:*
+    > «Ese es justo el error que debemos evitar. En un gráfico de barras, el eje vertical siempre debe empezar en 0 USD. Las barras codifican el valor mediante su altura y su superficie. Cuando truncas el eje en 395 USD, violas el principio de tinta proporcional: el lector compara el área de tinta de las barras y percibe que Iberia vendió diez veces más que Andina, cuando la diferencia real entre 398 USD y 479 USD es de solo un 20 %. Estás distorsionando el dato para exagerar la diferencia. Si el objetivo es comparar magnitudes con barras, mantén el origen en cero. ¿Qué tipo de gráfico usarías si necesitaras enfocar la atención en variaciones relativas pequeñas sin la distorsión del área rellena?»
+
+- **`c1-viz-03-color-accesibilidad` (`firstTokenMs: 7332 ms`, `durationMs: 8980 ms`):**
+  - *Respuesta errónea enviada:* `"Pinto la celda únicamente con un círculo rojo o verde sin texto ni símbolos, y calculo el CPA del canal haciendo AVG(spend_usd / attributed_conversions)."`
+  - *Respuesta literal de `agy`:*
+    > «Tu respuesta tiene dos errores importantes. Primero, respecto a la accesibilidad: según el criterio WCAG 1.4.1, nunca debes usar el color como único medio para transmitir información. Si una persona tiene daltonismo o imprime el reporte en escala de grises, no podrá distinguir entre el círculo rojo y el verde. Siempre debes aplicar codificación redundante: acompaña el color con un texto o símbolo explícito, por ejemplo `BAJO META [-]` o `SOBRE META [+]`. Además, el círculo debe tener un contraste de al menos 3:1 contra el fondo (WCAG 1.4.11). Segundo, respecto al cálculo en SQL sobre la tabla `marketing_spend`: calcular el CPA como un promedio de ratios diarios `AVG(spend_usd / attributed_conversions)` distorsiona el resultado real, porque pondera igual un día con 2 conversiones que un día con 200. La forma correcta de calcular el CPA agregado es sumando primero los totales y protegiendo contra divisiones por cero: `SUM(spend_usd) / NULLIF(SUM(attributed_conversions), 0)`. ¿Cómo reescribirías ahora tu propuesta de visualización y cálculo para cumplir con ambas reglas?»
+
+- **`c1-viz-04-tablas-numericas` (`firstTokenMs: 6948 ms`, `durationMs: 8691 ms`):**
+  - *Respuesta errónea enviada:* `"Centro todas las columnas de dólares para que se vean simétricas, dejo 8 decimales y uso COUNT(s.store_id) después del JOIN con orders."`
+  - *Respuesta literal de `agy`:*
+    > «Hay tres puntos clave que conviene corregir: 1. **Alineación a la derecha:** Las columnas de dólares y cantidades siempre van alineadas a la derecha, no al centro. Si las centras, los puntos decimales quedan en zigzag y no se pueden comparar órdenes de magnitud al escanear verticalmente. 2. **Redondeo uniforme:** Ocho decimales añaden ruido visual innecesario. Usa un redondeo consistente en toda la columna, por ejemplo `ROUND(order_total_usd, 2)`. 3. **`COUNT(DISTINCT s.store_id)` en vez de `COUNT(s.store_id)`:** Al hacer un `JOIN` entre `stores` y `orders`, el resultado se multiplica: cada fila pasa a representar un pedido, no una tienda. Si una tienda física de Mercado Brisa tuvo 500 pedidos, `s.store_id` se repetirá 500 veces. Si usas `COUNT(s.store_id)`, estarás contando pedidos, no tiendas. Para saber cuántas tiendas únicas operaron, necesitas `COUNT(DISTINCT s.store_id)`. ¿Cómo escribirías entonces la línea del `SELECT` para calcular el total vendido redondeado a dos decimales y el número real de tiendas?»
+
+#### Tabla resumen obligatoria (§9.2)
+
+| lección | palabras | checks | prácticas | fuentes | puntuación de rúbrica |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| `c1-viz-01-geometria-grafico` | 1136 | 4 | 1 (`sql`) | 4 | **32 / 32** (4.0 / 4) |
+| `c1-viz-02-ejes-escalas-cero` | 1211 | 4 | 1 (`sql`) | 4 | **32 / 32** (4.0 / 4) |
+| `c1-viz-03-color-accesibilidad` | 1222 | 4 | 1 (`sql`) | 4 | **32 / 32** (4.0 / 4) |
+| `c1-viz-04-tablas-numericas` | 1160 | 4 | 1 (`sql`) | 4 | **32 / 32** (4.0 / 4) |
+
+#### Tabla de calificación por rúbrica de 8 criterios (§9.4, escala 0–4)
+
+| Lección | 1. Objetivo claro | 2. Progresión | 3. Ejemplo concreto | 4. Error típico | 5. Práctica | 6. Brevedad | 7. Precisión | 8. Tono | Total |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| `c1-viz-01-geometria-grafico` | 4 | 4 | 4 | 4 | 4 | 4 | 4 | 4 | **32 / 32** |
+| `c1-viz-02-ejes-escalas-cero` | 4 | 4 | 4 | 4 | 4 | 4 | 4 | 4 | **32 / 32** |
+| `c1-viz-03-color-accesibilidad` | 4 | 4 | 4 | 4 | 4 | 4 | 4 | 4 | **32 / 32** |
+| `c1-viz-04-tablas-numericas` | 4 | 4 | 4 | 4 | 4 | 4 | 4 | 4 | **32 / 32** |
 
 ---
 
