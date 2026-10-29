@@ -1,0 +1,200 @@
+[
+  {
+    "id": "patron-elt-desacoplado",
+    "term": "Patrón ELT (Extraer, Cargar y Transformar)",
+    "englishTerm": "Extract, Load, Transform (Decoupled Storage & Compute)",
+    "track": "de",
+    "definition": "Arquitectura donde los datos crudos se copian primero al almacenamiento de objetos y se transforman después dentro del motor analítico conservando la fuente original.",
+    "formula": "COPY raw_orders TO 's3://brisa-raw/orders/dt=2025-11-01/part-0.parquet';  -- Se confunde con: ETL clásico, que transforma en un servidor intermedio antes de guardar y descarta el dato crudo.",
+    "relatedLessons": [
+      "de2-pipelines-01-etl-vs-elt",
+      "de2-pipelines-02-idempotencia-backfill"
+    ],
+    "relatedTerms": [
+      "almacenamiento-objetos-inmutable",
+      "idempotencia-pipeline"
+    ],
+    "sources": [
+      {
+        "title": "DuckDB Documentation — Parquet Overview and Export",
+        "url": "https://duckdb.org/docs/data/parquet/overview",
+        "publisher": "DuckDB Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Lectura y escritura directa sobre archivos Parquet en almacenamiento desacoplado."
+      }
+    ]
+  },
+  {
+    "id": "almacenamiento-objetos-inmutable",
+    "term": "Zona de aterrizaje inmutable (Raw Landing Zone)",
+    "englishTerm": "Immutable Raw / Bronze Landing Zone",
+    "track": "de",
+    "definition": "Capa inicial de almacenamiento donde los lotes extraídos de sistemas externos se guardan sin alteraciones ni borrados para permitir auditorías y reprocesamientos completos futuros.",
+    "formula": "s3://mercado-brisa/raw/payments/ingest_date=2025-11-26/batch_01.parquet  # Se confunde con: una tabla Silver limpia, donde ya se filtraron errores y se deduplicaron registros.",
+    "relatedLessons": [
+      "de2-pipelines-01-etl-vs-elt",
+      "de2-pipelines-02-idempotencia-backfill"
+    ],
+    "relatedTerms": [
+      "patron-elt-desacoplado",
+      "reprocesamiento-historico-backfill"
+    ],
+    "sources": [
+      {
+        "title": "Apache Parquet Format Specification",
+        "url": "https://parquet.apache.org/docs/file-format/",
+        "publisher": "Apache Software Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Persistencia inmutable por lotes columnares con esquema embebido en almacenamiento de objetos."
+      }
+    ]
+  },
+  {
+    "id": "idempotencia-pipeline",
+    "term": "Idempotencia en tuberías de datos",
+    "englishTerm": "Pipeline Idempotency",
+    "track": "de",
+    "definition": "Propiedad matemática por la cual ejecutar una tarea de datos una o varias veces sobre la misma entrada produce exactamente el mismo estado final.",
+    "formula": "DELETE FROM silver.orders WHERE order_date = '2025-11-01'; INSERT INTO silver.orders ...  -- Se confunde con: usar INSERT INTO sin limpiar ni deduplicar, que duplica filas en cada reintento.",
+    "relatedLessons": [
+      "de2-pipelines-02-idempotencia-backfill",
+      "de2-pipelines-03-cargas-incrementales-merge",
+      "de2-pipelines-04-ingesta-apis-http"
+    ],
+    "relatedTerms": [
+      "reprocesamiento-historico-backfill",
+      "operacion-merge-upsert"
+    ],
+    "sources": [
+      {
+        "title": "Apache Airflow Documentation — Best Practices: Writing a DAG (Idempotency)",
+        "url": "https://airflow.apache.org/docs/apache-airflow/stable/best-practices.html",
+        "publisher": "Apache Software Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Diseño de tareas deterministas e idempotentes ante reintentos automáticos del orquestador."
+      }
+    ]
+  },
+  {
+    "id": "reprocesamiento-historico-backfill",
+    "term": "Reprocesamiento histórico por partición (Backfill)",
+    "englishTerm": "Partitioned Historical Backfill",
+    "track": "de",
+    "definition": "Ejecución controlada de una tubería sobre intervalos de fechas pasadas para recalcular tablas tras corregir un error de lógica o incorporar una columna nueva.",
+    "formula": "dagster asset materialize --select fct_orders --partition-range 2025-10-01...2025-10-31  # Se confunde con: usar CURRENT_DATE dentro del SQL, que impide recalcular fechas históricas.",
+    "relatedLessons": [
+      "de2-pipelines-02-idempotencia-backfill",
+      "de2-pipelines-05-orquestacion-airflow-dagster"
+    ],
+    "relatedTerms": [
+      "idempotencia-pipeline",
+      "orquestacion-orientada-activos"
+    ],
+    "sources": [
+      {
+        "title": "Dagster Documentation — Assets and Partitions Guide",
+        "url": "https://docs.dagster.io/guides/build/assets",
+        "publisher": "Dagster Labs",
+        "accessed": "2026-10-29",
+        "supports": "Materialización y reprocesamiento histórico acotado por particiones lógicas."
+      }
+    ]
+  },
+  {
+    "id": "marca-agua-lote-watermark",
+    "term": "Marca de agua de lote (Batch High-Watermark)",
+    "englishTerm": "Batch High-Watermark & Lookback Window",
+    "track": "de",
+    "definition": "Valor máximo de fecha o identificador procesado en la corrida previa que delimita desde qué punto extraer registros nuevos junto con una ventana retroactiva.",
+    "formula": "WHERE payment_ts >= (SELECT MAX(payment_ts) - INTERVAL '2 hours' FROM silver.payments)  -- Se confunde con: filtrar sin ventana de seguridad, que pierde eventos llegados con retraso.",
+    "relatedLessons": [
+      "de2-pipelines-03-cargas-incrementales-merge"
+    ],
+    "relatedTerms": [
+      "operacion-merge-upsert",
+      "idempotencia-pipeline"
+    ],
+    "sources": [
+      {
+        "title": "dbt Documentation — About Incremental Models",
+        "url": "https://docs.getdbt.com/docs/build/incremental-models",
+        "publisher": "dbt Labs",
+        "accessed": "2026-10-29",
+        "supports": "Filtrado incremental mediante marca de agua temporal y reconciliación de llegadas tardías."
+      }
+    ]
+  },
+  {
+    "id": "operacion-merge-upsert",
+    "term": "Actualización e inserción atómica (MERGE INTO)",
+    "englishTerm": "SQL MERGE INTO / Atomic Upsert",
+    "track": "de",
+    "definition": "Sentencia SQL estándar que compara un lote entrante contra una tabla destino por clave primaria para actualizar filas existentes e insertar filas nuevas atómicamente.",
+    "formula": "MERGE INTO dim_orders t USING stg_batch s ON t.order_id = s.order_id WHEN MATCHED THEN UPDATE ... WHEN NOT MATCHED THEN INSERT ...  -- Se confunde con: hacer INSERT directo sin deduplicar la fuente.",
+    "relatedLessons": [
+      "de2-pipelines-03-cargas-incrementales-merge"
+    ],
+    "relatedTerms": [
+      "marca-agua-lote-watermark",
+      "idempotencia-pipeline"
+    ],
+    "sources": [
+      {
+        "title": "DuckDB Documentation — MERGE INTO Statement",
+        "url": "https://duckdb.org/docs/stable/sql/statements/merge_into",
+        "publisher": "DuckDB Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Sintaxis y semántica transaccional de MERGE INTO con cláusulas WHEN MATCHED y WHEN NOT MATCHED."
+      }
+    ]
+  },
+  {
+    "id": "paginacion-cursor-backoff",
+    "term": "Paginación por cursor y retroceso exponencial con jitter",
+    "englishTerm": "Cursor Pagination & Exponential Backoff with Jitter",
+    "track": "de",
+    "definition": "Técnica de extracción HTTP que recorre páginas mediante un puntero opaco ordenado y espacia los reintentos con espera exponencial más azar ante errores transitorios.",
+    "formula": "sleep_s = random.uniform(0, min(60, 2 ** attempt))  # Se confunde con: paginar con OFFSET en tablas vivas o reintentar al instante sin pausa ni jitter.",
+    "relatedLessons": [
+      "de2-pipelines-04-ingesta-apis-http"
+    ],
+    "relatedTerms": [
+      "idempotencia-pipeline",
+      "almacenamiento-objetos-inmutable"
+    ],
+    "sources": [
+      {
+        "title": "AWS Architecture Blog — Exponential Backoff And Jitter",
+        "url": "https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/",
+        "publisher": "Amazon Web Services",
+        "accessed": "2026-10-29",
+        "supports": "Prevención de tormentas de reintentos sincronizados mediante Full Jitter sobre espera exponencial."
+      }
+    ]
+  },
+  {
+    "id": "orquestacion-orientada-activos",
+    "term": "Orquestación orientada a activos de datos (Data Assets)",
+    "englishTerm": "Asset-Centric Data Orchestration",
+    "track": "de",
+    "definition": "Modelo de programación donde el grafo declara qué tablas o archivos produce cada función y el orquestador rastrea su linaje, frescura y particiones automáticamente.",
+    "formula": "@asset(partitions_def=DailyPartitionsDefinition(start_date='2025-01-01')) def fct_orders(): ...  # Se confunde con: encadenar scripts imperativos ciegos que desconocen qué tabla materializan.",
+    "relatedLessons": [
+      "de2-pipelines-05-orquestacion-airflow-dagster",
+      "de2-pipelines-06-contenedores-docker-compose"
+    ],
+    "relatedTerms": [
+      "reprocesamiento-historico-backfill",
+      "idempotencia-pipeline"
+    ],
+    "sources": [
+      {
+        "title": "Apache Airflow Documentation — Data-Aware Scheduling and Assets",
+        "url": "https://airflow.apache.org/docs/apache-airflow/stable/authoring-and-scheduling/datasets.html",
+        "publisher": "Apache Software Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Planificación reactiva basada en activos de datos en Airflow 3 comparada con Dagster."
+      }
+    ]
+  }
+]
