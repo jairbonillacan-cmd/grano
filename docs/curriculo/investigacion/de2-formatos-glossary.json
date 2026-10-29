@@ -1,0 +1,347 @@
+[
+  {
+    "id": "parquet-row-group",
+    "term": "Grupo de filas en Parquet (Row Group)",
+    "englishTerm": "Parquet Row Group & Column Chunk",
+    "track": "de",
+    "definition": "Partición horizontal física dentro de un archivo Parquet que agrupa columnas contiguas en bloques independientes con estadísticas propias en el pie del archivo.",
+    "formula": "Row Group (10k–1M filas) = Σ Column Chunks (1 por columna) → Data Pages (1 MB). Se confunde con: partición de directorio Hive en disco.",
+    "relatedLessons": [
+      "de2-formatos-01-columnar-parquet",
+      "de2-formatos-04-codificacion-compresion-zstd",
+      "de2-formatos-05-particionado-archivos-pequenos"
+    ],
+    "relatedTerms": [
+      "zone-map",
+      "parquet-page-index"
+    ],
+    "sources": [
+      {
+        "title": "Apache Parquet File Format Specification",
+        "url": "https://parquet.apache.org/docs/file-format/",
+        "publisher": "Apache Software Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Jerarquía física de Row Groups, Column Chunks, Data Pages y FileMetaData en el pie del archivo."
+      }
+    ]
+  },
+  {
+    "id": "parquet-page-index",
+    "term": "Índice de páginas en Parquet (ColumnIndex y OffsetIndex)",
+    "englishTerm": "Parquet Page Index (ColumnIndex / OffsetIndex)",
+    "track": "de",
+    "definition": "Estructura de Parquet que almacena valores mínimo y máximo junto con desplazamientos de bytes por página para omitir lecturas dentro del Row Group.",
+    "formula": "ColumnIndex (min/max/null_counts por Data Page) + OffsetIndex (offset + compressed_page_size). Se confunde con: el zone map de nivel Row Group.",
+    "relatedLessons": [
+      "de2-formatos-01-columnar-parquet",
+      "de2-formatos-04-codificacion-compresion-zstd"
+    ],
+    "relatedTerms": [
+      "parquet-row-group",
+      "zone-map"
+    ],
+    "sources": [
+      {
+        "title": "Apache Parquet Page Index Layout",
+        "url": "https://parquet.apache.org/docs/file-format/pageindex/",
+        "publisher": "Apache Software Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Especificación de ColumnIndex y OffsetIndex para filtrado fino a nivel de página."
+      }
+    ]
+  },
+  {
+    "id": "zone-map",
+    "term": "Mapa de zonas (Zone Map / Estadísticas Min-Max)",
+    "englishTerm": "Zone Map (Min/Max/Null Count Statistics)",
+    "track": "de",
+    "definition": "Resumen estadístico que guarda el valor mínimo, el valor máximo y el conteo de nulos de cada bloque para descartar lecturas sin descomprimir páginas.",
+    "formula": "Si constante < stats_min_value OR constante > stats_max_value → saltar Row Group o Data Page completa.",
+    "relatedLessons": [
+      "de2-formatos-01-columnar-parquet",
+      "de2-formatos-05-particionado-archivos-pequenos"
+    ],
+    "relatedTerms": [
+      "parquet-row-group",
+      "bloom-filter"
+    ],
+    "sources": [
+      {
+        "title": "Apache Parquet File Format Specification",
+        "url": "https://parquet.apache.org/docs/file-format/",
+        "publisher": "Apache Software Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Estadísticas min, max y null_count almacenadas en ColumnMetaData."
+      }
+    ]
+  },
+  {
+    "id": "bloom-filter",
+    "term": "Filtro de Bloom por bloques divididos (Split Block Bloom Filter)",
+    "englishTerm": "Parquet Split Block Bloom Filter",
+    "track": "de",
+    "definition": "Estructura probabilística de bits basada en hashes xxHash64 que descarta bloques donde un valor puntual de alta cardinalidad no existe con cero falsos negativos.",
+    "formula": "Bloque = 256 bits (8 palabras de 32 bits alineadas a SIMD). Si algún bit == 0 → el valor definitivamente no está en el Row Group.",
+    "relatedLessons": [
+      "de2-formatos-01-columnar-parquet"
+    ],
+    "relatedTerms": [
+      "zone-map",
+      "predicate-pushdown"
+    ],
+    "sources": [
+      {
+        "title": "Apache Parquet Split Block Bloom Filter Specification",
+        "url": "https://parquet.apache.org/docs/file-format/bloomfilter/",
+        "publisher": "Apache Software Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Especificación de bloques de 256 bits y función hash xxHash64 en Parquet."
+      }
+    ]
+  },
+  {
+    "id": "predicate-pushdown",
+    "term": "Empuje de predicados (Predicate Pushdown)",
+    "englishTerm": "Predicate Pushdown",
+    "track": "de",
+    "definition": "Optimización donde el motor traslada los filtros de la consulta hasta el lector de almacenamiento para descartar bloques y páginas antes de materializar filas.",
+    "formula": "SELECT ... WHERE status = 'completed' → el lector Parquet evalúa el predicado contra zone maps, diccionarios y filtros de Bloom en disco.",
+    "relatedLessons": [
+      "de2-formatos-01-columnar-parquet",
+      "de2-formatos-03-duckdb-polars-marimo"
+    ],
+    "relatedTerms": [
+      "zone-map",
+      "bloom-filter"
+    ],
+    "sources": [
+      {
+        "title": "Polars User Guide — Lazy API and Query Optimization",
+        "url": "https://docs.pola.rs/user-guide/lazy/",
+        "publisher": "Polars Project",
+        "accessed": "2026-10-29",
+        "supports": "Empuje de predicados y proyecciones hacia el escáner Parquet."
+      }
+    ]
+  },
+  {
+    "id": "zero-copy",
+    "term": "Transferencia sin copia en memoria (Zero-Copy)",
+    "englishTerm": "Zero-Copy Memory Sharing",
+    "track": "de",
+    "definition": "Intercambio de datos entre motores o lenguajes compartiendo directamente las direcciones de memoria de los búferes existentes sin duplicar ni serializar bytes.",
+    "formula": "Costo de transferencia = O(1) (intercambio de punteros a RecordBatches de Apache Arrow en la misma máquina).",
+    "relatedLessons": [
+      "de2-formatos-02-arrow-lance-vortex",
+      "de2-formatos-03-duckdb-polars-marimo"
+    ],
+    "relatedTerms": [
+      "arrow-c-data-interface",
+      "vectorized-execution"
+    ],
+    "sources": [
+      {
+        "title": "Apache Arrow Columnar Format Specification",
+        "url": "https://arrow.apache.org/docs/format/Columnar.html",
+        "publisher": "Apache Software Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Disposición de búferes contiguos alineados a 64 bytes para lectura sin copia."
+      }
+    ]
+  },
+  {
+    "id": "arrow-c-data-interface",
+    "term": "Interfaz C de datos de Apache Arrow",
+    "englishTerm": "Arrow C Data Interface & C Stream Interface",
+    "track": "de",
+    "definition": "ABI estándar basada en dos estructuras de C que permite transferir vectores columnares entre procesos o lenguajes mediante punteros de memoria sin serializar datos.",
+    "formula": "struct ArrowSchema + struct ArrowArray (buffers: [validity_bitmap, offsets, values]). Se confunde con: Arrow IPC / Feather en disco o red.",
+    "relatedLessons": [
+      "de2-formatos-02-arrow-lance-vortex",
+      "de2-formatos-03-duckdb-polars-marimo"
+    ],
+    "relatedTerms": [
+      "zero-copy",
+      "vectorized-execution"
+    ],
+    "sources": [
+      {
+        "title": "Apache Arrow C Data Interface Specification",
+        "url": "https://arrow.apache.org/docs/format/CDataInterface.html",
+        "publisher": "Apache Software Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Intercambio de memoria sin copia en el mismo proceso mediante estructuras C ligeras."
+      }
+    ]
+  },
+  {
+    "id": "late-materialization",
+    "term": "Materialización tardía (Late Materialization)",
+    "englishTerm": "Late Materialization",
+    "track": "de",
+    "definition": "Estrategia que evalúa primero los filtros sobre columnas escalares ligeras y reconstruye las columnas pesadas únicamente para las posiciones de fila que califican.",
+    "formula": "Paso 1: filtrar columna angosta → lista de row_ids. Paso 2: extraer payload_json solo en esos row_ids.",
+    "relatedLessons": [
+      "de2-formatos-02-arrow-lance-vortex"
+    ],
+    "relatedTerms": [
+      "lance-vortex-acceso-aleatorio",
+      "predicate-pushdown"
+    ],
+    "sources": [
+      {
+        "title": "Lance Columnar Format Specification",
+        "url": "https://github.com/lancedb/lance",
+        "publisher": "LanceDB",
+        "accessed": "2026-10-29",
+        "supports": "Materialización diferida de columnas anchas mediante búsqueda por índice de fila."
+      }
+    ]
+  },
+  {
+    "id": "lance-vortex-acceso-aleatorio",
+    "term": "Formatos columnares de acceso aleatorio (Lance y Vortex)",
+    "englishTerm": "Random-Access & Compressed-Execution Columnar Formats",
+    "track": "de",
+    "definition": "Formatos columnares que separan índices de desplazamiento del almacenamiento de valores para recuperar filas puntuales en microsegundos y ejecutar operaciones sin descomprimir páginas completas.",
+    "formula": "Lookup(row_id) = O(1) vía tabla de offsets (Lance) vs descompresión secuencial de Data Page en Parquet. Vortex aplica cascadas de codificación (FastLanes/ALP/FSST).",
+    "relatedLessons": [
+      "de2-formatos-02-arrow-lance-vortex"
+    ],
+    "relatedTerms": [
+      "zero-copy",
+      "late-materialization"
+    ],
+    "sources": [
+      {
+        "title": "Vortex Documentation — Extensible Columnar Format",
+        "url": "https://docs.vortex.dev/",
+        "publisher": "Linux Foundation / SpiralDB",
+        "accessed": "2026-10-29",
+        "supports": "Ejecución directa sobre vectores comprimidos y compatibilidad con Apache Arrow."
+      }
+    ]
+  },
+  {
+    "id": "vectorized-execution",
+    "term": "Ejecución vectorizada por lotes (DataChunks)",
+    "englishTerm": "Vectorized Push-Based Execution",
+    "track": "de",
+    "definition": "Modelo de procesamiento que aplica operadores sobre lotes de miles de valores contiguos que caben en la caché del procesador usando instrucciones SIMD.",
+    "formula": "DataChunk (2 048 filas en DuckDB) cabe en caché L1/L2, reemplazando la invocación fila por fila del modelo Volcano.",
+    "relatedLessons": [
+      "de2-formatos-03-duckdb-polars-marimo"
+    ],
+    "relatedTerms": [
+      "zero-copy",
+      "arrow-c-data-interface"
+    ],
+    "sources": [
+      {
+        "title": "DuckDB — Why DuckDB: Vectorized Execution",
+        "url": "https://duckdb.org/why_duckdb.html",
+        "publisher": "DuckDB Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Procesamiento en lotes vectorizados que maximizan la localidad de caché en CPU."
+      }
+    ]
+  },
+  {
+    "id": "marimo-dag-reactivo",
+    "term": "Grafo acíclico dirigido reactivo en Marimo",
+    "englishTerm": "Marimo Reactive Directed Acyclic Graph (DAG)",
+    "track": "de",
+    "definition": "Grafo estático de dependencias entre celdas de código en archivos Python puros que recalcula automáticamente las vistas dependientes e impide estados ocultos en memoria.",
+    "formula": "Celda A (define df_eventos) → Celda B (consume df_eventos). Prohibido redefinir la misma variable global en dos celdas distintas.",
+    "relatedLessons": [
+      "de2-formatos-03-duckdb-polars-marimo"
+    ],
+    "relatedTerms": [
+      "vectorized-execution",
+      "predicate-pushdown"
+    ],
+    "sources": [
+      {
+        "title": "Marimo Documentation — Reactivity and Execution Model",
+        "url": "https://docs.marimo.io/guides/reactivity/",
+        "publisher": "Marimo Team",
+        "accessed": "2026-10-29",
+        "supports": "Análisis estático de referencias entre celdas y garantía de reproducibilidad en scripts Python."
+      }
+    ]
+  },
+  {
+    "id": "codificacion-diccionario-rle",
+    "term": "Codificación por diccionario y RLE híbrido (RLE_DICTIONARY)",
+    "englishTerm": "Dictionary Encoding & Hybrid Run-Length / Bit-Packing",
+    "track": "de",
+    "definition": "Técnica que reemplaza valores repetidos por identificadores enteros y comprime rachas consecutivas idénticas mediante longitudes de secuencia antes de aplicar compresión general.",
+    "formula": "['web','web','web','app'] → Dictionary {0:'web', 1:'app'} + RLE [(run=3, id=0), (run=1, id=1)].",
+    "relatedLessons": [
+      "de2-formatos-04-codificacion-compresion-zstd",
+      "de2-formatos-05-particionado-archivos-pequenos"
+    ],
+    "relatedTerms": [
+      "empaquetado-delta-zstd",
+      "parquet-row-group"
+    ],
+    "sources": [
+      {
+        "title": "Apache Parquet Encodings Specification",
+        "url": "https://parquet.apache.org/docs/file-format/data-pages/encodings/",
+        "publisher": "Apache Software Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Especificación de PLAIN_DICTIONARY, RLE_DICTIONARY y bit-packing híbrido."
+      }
+    ]
+  },
+  {
+    "id": "empaquetado-delta-zstd",
+    "term": "Empaquetado binario delta y compresión Zstandard",
+    "englishTerm": "Delta Binary Packing & Zstandard (RFC 8878)",
+    "track": "de",
+    "definition": "Combinación que almacena diferencias entre enteros o marcas temporales sucesivas con ancho de bits mínimo y comprime los bloques resultantes mediante el algoritmo Zstandard.",
+    "formula": "Δ_i = x_i - x_{i-1}; bits_por_valor = ceil(log2(max(Δ) - min(Δ) + 1)) + compresión ZSTD (LZ77 + ANS/Huffman).",
+    "relatedLessons": [
+      "de2-formatos-04-codificacion-compresion-zstd"
+    ],
+    "relatedTerms": [
+      "codificacion-diccionario-rle",
+      "parquet-row-group"
+    ],
+    "sources": [
+      {
+        "title": "RFC 8878 — Zstandard Compression and the 'application/zstd' Media Type",
+        "url": "https://datatracker.ietf.org/doc/html/rfc8878",
+        "publisher": "IETF",
+        "accessed": "2026-10-29",
+        "supports": "Especificación del algoritmo Zstandard basado en LZ77, Finite State Entropy (ANS) y codificación Huffman."
+      }
+    ]
+  },
+  {
+    "id": "particionado-hive-small-files",
+    "term": "Particionado físico Hive y problema de archivos pequeños",
+    "englishTerm": "Hive Directory Partitioning & Small Files Problem",
+    "track": "de",
+    "definition": "Degradación de lectura cuando un particionado excesivo fragmenta una tabla en miles de archivos diminutos cuya apertura supera el tiempo de escaneo.",
+    "formula": "cardinalidad_particion = Π |col_i|; bytes_promedio_por_archivo = bytes_totales / archivos_creados. Si < 16 MB, la sobrecarga de metadatos supera el I/O.",
+    "relatedLessons": [
+      "de2-formatos-05-particionado-archivos-pequenos"
+    ],
+    "relatedTerms": [
+      "parquet-row-group",
+      "codificacion-diccionario-rle",
+      "zone-map"
+    ],
+    "sources": [
+      {
+        "title": "DuckDB Documentation — Hive Partitioning",
+        "url": "https://duckdb.org/docs/stable/data/partitioning/hive_partitioning.html",
+        "publisher": "DuckDB Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Poda de directorios clave=valor con hive_partitioning y escritura particionada con COPY ... PARTITION_BY."
+      }
+    ]
+  }
+]
