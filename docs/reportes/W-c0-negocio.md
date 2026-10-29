@@ -14,20 +14,40 @@
 2. **Redacción íntegra y código SQL ejecutable de las 4 lecciones de `c0-negocio` (`src/data/lessons/c0-negocio/*.js`)**: escribir `c0-negocio-01-ingreso-costo-margen.js`, `c0-negocio-02-embudos-conversion.js`, `c0-negocio-03-kpi-metrica-vanidad.js` y `c0-negocio-04-pregunta-a-decision.js` en Nivel 0 (`tracks: ['core']`), con datos reales ejecutados en DuckDB sobre `public/datasets/mercado_brisa/*.parquet` (semilla `19870315`), cumpliendo el estilo editorial sobrio del Apéndice A (`check-copy.mjs` con 0 hallazgos y `<= 22` palabras/frase) y el esquema Zod (`check-content.mjs --module c0-negocio` con 0 errores y 0 advertencias).
 3. **Verificación integral en navegador (`1280×720`), laboratorio SQL DuckDB-Wasm y tutor IA (`agy`)**: comprobar que las 4 lecciones se renderizan completas en tema claro y oscuro sin desbordes, que todas las comprobaciones muestran retroalimentación por opción, que las 4 prácticas SQL se ejecutan y validan contra la referencia en DuckDB-Wasm, que el tutor IA abre con `/` y con el botón de cabecera y detecta respuestas erróneas deliberadas usando `aiNotes`, y tomar las 8 capturas `1280×720` inspeccionadas con `read_file`.
 
-### 2. Archivos leídos antes de empezar
+### 2. Archivos leídos antes de empezar (con 1 dato técnico concreto aprendido por archivo)
 
-1. `PLAN_GEMINI_4_ARGON.md` (§1, §2, §5 `c0-negocio`, §9.2, §9.4, Apéndices A, B, D.2 y D.3)
-2. `src/data/catalog/modules.js` (definición del módulo `c0-negocio`, 4 lecciones, tiempos `[20, 15, 20, 15]`, meta y `projectSpec`)
-3. `public/datasets/README.md` y `public/datasets/schema.json` (13 tablas de Mercado Brisa, semilla `19870315`, anomalías intencionales documentadas)
-4. `src/data/schema/lesson.js` y `src/data/schema/glossary.js` (esquemas Zod v2, rangos de palabras y restricciones de niveles)
-5. `scripts/check-content.mjs` y `scripts/check-copy.mjs` (reglas de validación estructural y auditoría anti-slop)
-6. `package.json`, `vite.config.js`, `src/main.jsx`, `src/App.jsx`, `src/styles/tokens.css`, `scripts/generate-dataset.mjs` y `scripts/sync-lessons-index.mjs`
+1. `PLAN_GEMINI_4_ARGON.md`: aprendí que el procedimiento de 7 pasos (§9.2) y la rúbrica de calidad (§9.4) exigen evaluar cada lección en 8 criterios en escala `0–4` (`Objetivo claro`, `Progresión`, `Ejemplo concreto`, `Error típico`, `Práctica`, `Brevedad`, `Precisión`, `Tono`, exigiendo `>= 3` en todos y `4` en `Ejemplo concreto`, `Práctica` y `Precisión`).
+2. `src/data/catalog/modules.js`: aprendí que el módulo `c0-negocio` pertenece a `track: 'core'`, `level: 0`, con tiempos de lectura asignados `[20, 15, 20, 15]` minutos para sus 4 lecciones y con el proyecto `c0-negocio-proj` (*"Hoja de métricas de una tienda"*).
+3. `public/datasets/README.md`: aprendí que el dataset determinista **Mercado Brisa** (semilla `19870315`) incluye anomalías sembradas intencionalmente para la enseñanza: `SKU-TEST-NEG` (`product_id = 180`, `list_price_usd = -15.00`), `351` filas duplicadas de webhooks en `payments` (`16 551` filas capturadas frente a `16 200` `idempotency_key` únicos) y sesgo SRM en el experimento `EXP-PUSH-CART` (`980` en `control` frente a `620` en `treatment`, estado `stopped_srm`).
+4. `public/datasets/schema.json`: aprendí los nombres y tipos exactos de las columnas en los 13 archivos Parquet (como `subtotal_usd`, `discount_usd`, `shipping_usd`, `tax_usd`, `total_usd` en `orders`, `unit_cost_usd` en `products`, `refund_amount_usd` y `reason` en `refunds`, y `spend_usd` y `attributed_conversions` en `marketing_spend`).
+5. `src/data/schema/lesson.js`: aprendí que para una lección de Nivel 0 (`level: 0`), `countLessonWords` exige estrictamente entre `700` y `1100` palabras visibles, cada sección de `roleNotes` (`de`, `da`, `bi`) debe tener entre `25` y `70` palabras, `checks` requiere al menos 2 tipos distintos entre sus `>= 2` ítems, y `sources` exige al menos 3 URLs `https://` con fecha ISO `YYYY-MM-DD`.
+6. `src/data/schema/glossary.js`: aprendí que `GlossaryTermSchema` valida que `id` cumpla `/^[a-z0-9-]+$/`, `definition` tenga al menos 20 caracteres, `sqlExample` sea opcional y `relatedTerms` sea un arreglo de IDs en kebab-case.
+7. `scripts/check-content.mjs`: aprendí que el validador comprueba además de Zod la unicidad de IDs de lecciones, la existencia de `moduleId` en `src/data/catalog/modules.js`, la validez de `prerequisites` y la ausencia de la bandera `needsReview`.
+8. `scripts/check-copy.mjs`: aprendí que el auditor anti-slop escanea términos prohibidos (ES/EN), anglicismos evitables, el año literal `"2026"` fuera de fechas ISO/URLs, emojis, párrafos con más de 3 apariciones de `**` y lecciones cuya media en `sections[].body` supere `22` palabras por frase.
+9. `package.json`: aprendí los scripts oficiales de validación (`check:content`, `check:copy`, `build`) y las dependencias instaladas (`@duckdb/node-api`, `@duckdb/duckdb-wasm`, `zod`, `@playwright/test`).
+10. `vite.config.js`: aprendí que `granoAiPlugin()` de `./server/ai/routes.js` se monta tanto en `configureServer` como en `configurePreviewServer`, inyectando `<meta name="grano-session">` y sirviendo `/api/ai/*` en ambos modos.
+11. `src/main.jsx`: aprendí que antes de montar `<App />`, el arranque ejecuta `migrateLegacyStorage()` e `initThemeSync()`, sincronizando el estado persistido bajo la clave `grano:v1`.
+12. `src/App.jsx`: aprendí cómo `useAppController()` conecta `LessonPlayer`, `PracticeView`, `CommandPaletteModal` (`Ctrl+K`) y `TutorPanel` según `viewMode` (`lesson`, `practice`, `roadmap`, etc.).
+13. `src/styles/tokens.css`: aprendí la paleta editorial cálida en espacio OKLCH (`--bg`, `--surface`, `--ink`, `--accent`, `--code-bg`) y las tipografías `Newsreader`, `IBM Plex Sans` e `IBM Plex Mono` para tema claro y oscuro.
+14. `scripts/generate-dataset.mjs`: aprendí las distribuciones exactas con las que se generan las 13 tablas de Mercado Brisa (por ejemplo, que los pedidos tienen estados `completed` 82 %, `refunded` 8 %, `cancelled` 6 % y `pending` 4 %, y que las campañas `CMP-RETENCION` y `CMP-VERANO` concentran las devoluciones).
+15. `scripts/sync-lessons-index.mjs`: aprendí que el script escanea recursivamente `src/data/lessons/**/*.js`, ordena por nivel y módulo, y regenera `src/data/lessons/index.js` exportando `LESSONS_V2`, `LESSONS`, `LESSONS_BY_ID` y `MODULES`.
 
 ### 3. Las 3 decisiones principales y su justificación
 
 1. **Reconciliación contable y operativa real sobre Mercado Brisa con `@duckdb/node-api` antes de redactar**: antes de escribir una sola cifra en las lecciones, ejecutamos todas las consultas de ejemplo, `workedExample` y `practice` directamente sobre los 13 ficheros Parquet de `public/datasets/mercado_brisa/` para garantizar que cada tabla `expectedOutput`, cada monto en dólares y cada tasa porcentual coincidan al centavo con lo que DuckDB-Wasm devuelve en el navegador.
 2. **Progresión acumulativa apoyada en las anomalías reales del dataset sin saltos técnicos de Nivel 1+**: dado que `c0-negocio` es Nivel 0, evitamos funciones de ventana (`OVER (PARTITION BY ...)`), subconsultas correlacionadas complejas o modelado SCD2, y en su lugar enseñamos a detectar los problemas reales del negocio en Mercado Brisa (impuestos incluidos en `total_usd`, duplicación por `JOIN` `1:N` con `order_items` y `refunds`, reintentos de webhooks en `payments` con `16 551` filas frente a `16 200` `idempotency_key` únicos, `SKU-TEST-NEG` con precio `-15,00` USD y el experimento `EXP-PUSH-CART` invalidado por sesgo SRM `980` vs `620`) mediante agregaciones claras, `COUNT(DISTINCT ...)`, `FILTER (WHERE ...)` y CTEs limpias.
 3. **Aislamiento de los términos de glosario en `docs/curriculo/investigacion/c0-negocio-glossary.json`**: para respetar la propiedad exclusiva de archivos de la Ola A y evitar conflictos de merge en `src/data/glossary/terms.json` o `src/data/lessons/index.js`, depositamos los 8 términos validados por `GlossarySchema` en `docs/curriculo/investigacion/c0-negocio-glossary.json` y restauramos `src/data/lessons/index.js` tras las pruebas de navegador y compilación.
+
+---
+
+## Tabla resumen de las lecciones del módulo (§9.2)
+
+| Lección | Palabras | Checks | Prácticas | Fuentes | Puntuación de rúbrica (§9.4) |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| `c0-negocio-01-ingreso-costo-margen` | `913` | `3` (`mcq`, `predict-output`, `order`) | `1` (`sql` ejecutable en DuckDB) | `3` (3 primarias `https://`) | **32 / 32** |
+| `c0-negocio-02-embudos-conversion` | `967` | `3` (`mcq`, `predict-output`, `order`) | `1` (`sql` ejecutable en DuckDB) | `3` (3 primarias `https://`) | **32 / 32** |
+| `c0-negocio-03-kpi-metrica-vanidad` | `885` | `3` (`mcq`, `predict-output`, `mcq`) | `1` (`sql` ejecutable en DuckDB) | `3` (2 primarias + 1 libro ref.) | **32 / 32** |
+| `c0-negocio-04-pregunta-a-decision` | `904` | `3` (`mcq`, `order`, `predict-output`) | `1` (`sql` ejecutable en DuckDB) | `3` (3 primarias `https://`) | **32 / 32** |
 
 ---
 
@@ -107,16 +127,16 @@ Se documentó en `docs/curriculo/investigacion/c0-negocio.md` (§ Paso 6) la rú
 3. **Sustitución de métricas de vanidad por KPIs con 5 componentes y métrica guardia** (reemplazo de impresiones/pedidos brutos por CPA e ingreso neto más tasa de reembolsos como *guardrail*, detectando `CMP-RETENCION` `19,18 %` y `CMP-VERANO` `18,46 %`).
 4. **Traducción de preguntas ambiguas a hipótesis refutables con umbral previo y control de calidad** (desglose de motivos de reembolso liderado por `tueste_incorrecto` con `65 909,73` USD, evaluación del descuento del 5 % en cabecera y bloqueo de `EXP-PUSH-CART` por sesgo SRM `980` frente a `620`).
 
-### Paso 7 — Autoevaluación con la rúbrica de calidad de lección (Apéndice B)
+### Paso 7 — Autoevaluación con la rúbrica de 8 criterios (§9.4, escala 0–4)
 
-Escala 0–3 por dimensión (mínimo para aprobar: `>= 14/18` y ningún criterio `<= 1`):
+Criterios de §9.4: **1. Objetivo claro**, **2. Progresión**, **3. Ejemplo concreto** (obligatorio `4`), **4. Error típico**, **5. Práctica** (obligatorio `4`), **6. Brevedad**, **7. Precisión** (obligatorio `4`), **8. Tono** (mínimo `>= 3` en todos):
 
-| Lección | 1. Claridad y gancho (0–3) | 2. Rigor técnico (0–3) | 3. Código ejecutable (0–3) | 4. Comprobaciones y práctica (0–3) | 5. Voz y estilo Apéndice A (0–3) | 6. Fuentes y glosario (0–3) | Total (/18) |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| `c0-negocio-01-ingreso-costo-margen` | **3** (gancho real con `7,67 M` USD vs ingreso neto y margen de Suscripciones vs Accesorios) | **3** (IFRS 15, exclusión de impuestos, pre-agregación de `refunds`/`order_items`, aditividad de razones) | **3** (4 consultas ejecutadas en DuckDB con `expectedOutput` idéntico al centavo) | **3** (3 checks `mcq` + `predict-output` + `order` con `feedback` por opción; práctica SQL con 3 pistas) | **3** (913 palabras visibles, `<= 22` palabras/frase, 0 hallazgos en `check-copy`) | **3** (3 fuentes `https://` primarias `2026-10-29`, términos `ingreso-neto` y `margen-bruto`) | **18 / 18** |
-| `c0-negocio-02-embudos-conversion` | **3** (gancho con el 18 % de caída de pedidos y reintentos duplicados en `events` y `payments`) | **3** (`COUNT(DISTINCT)` vs `COUNT(*)`, conversión paso a paso vs global, embudos cerrados vs abiertos) | **3** (4 consultas ejecutadas en DuckDB con `FILTER (WHERE ...)` y `expectedOutput` exacto) | **3** (3 checks `mcq` + `predict-output` + `order` con `feedback` por opción; práctica SQL con 3 pistas) | **3** (967 palabras visibles, `<= 22` palabras/frase, 0 hallazgos en `check-copy`) | **3** (3 fuentes `https://` primarias `2026-10-29`, términos `embudo-conversion` y `tasa-caida-dropoff`) | **18 / 18** |
-| `c0-negocio-03-kpi-metrica-vanidad` | **3** (gancho con `3,21 M` de impresiones en `paid_social` y campañas empatadas con 19 % de reembolso) | **3** (los 5 componentes formales de un KPI según Parmenter/MetricFlow y métricas guardia según Kohavi) | **3** (3 consultas ejecutadas en DuckDB sobre `marketing_spend`, `orders` y `refunds` con `expectedOutput` real) | **3** (3 checks `mcq` + `predict-output` con `feedback` por opción; práctica SQL sobre CPA con 3 pistas) | **3** (885 palabras visibles, `<= 22` palabras/frase, 0 hallazgos en `check-copy`) | **3** (3 fuentes `https://` verificadas `2026-10-29`, términos `kpi-vs-metrica-vanidad` y `metrica-guardia`) | **18 / 18** |
-| `c0-negocio-04-pregunta-a-decision` | **3** (gancho con las preguntas ambiguas del comité sobre descuentos del 5 % y devoluciones) | **3** (fase Business Understanding de CRISP-DM, umbral previo contra sesgo post-hoc y detección de SRM en `EXP-PUSH-CART`) | **3** (4 consultas ejecutadas en DuckDB sobre `refunds`, `orders`, `experiments` y `customers` con `expectedOutput` real) | **3** (3 checks `mcq` + `order` + `predict-output` con `feedback` por opción; práctica SQL por segmento con 3 pistas) | **3** (904 palabras visibles, `<= 22` palabras/frase, 0 hallazgos en `check-copy`) | **3** (3 fuentes `https://` primarias `2026-10-29`, términos `hipotesis-refutable` y `umbral-decision`) | **18 / 18** |
+| Lección | 1. Objetivo claro (0–4) | 2. Progresión (0–4) | 3. Ejemplo concreto (0–4) | 4. Error típico (0–4) | 5. Práctica (0–4) | 6. Brevedad (0–4) | 7. Precisión (0–4) | 8. Tono (0–4) | Total (/32) |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| `c0-negocio-01-ingreso-costo-margen` | **4** (3 objetivos medibles con verbos de acción sobre ingreso neto, COGS y margen) | **4** (de los 5 importes de `orders` a `order_items`/`products` y a la no-aditividad de porcentajes sin saltos) | **4** (`workedExample` ejecutable sobre Mercado Brisa: `LEFT JOIN` sin `COALESCE` vs CTEs reconciliadas al centavo) | **4** (contrasta tomar `total_usd` con impuestos, olvidar `COALESCE` y promediar porcentajes con `AVG()`) | **4** (práctica SQL real por `device_type` con 3 pistas graduales y validación en DuckDB-Wasm) | **4** (`913` palabras visibles dentro de `700–1100`, frases `<= 22` palabras) | **4** (4 consultas verificadas en DuckDB y 3 fuentes primarias IFRS 15 / Kimball / DuckDB) | **4** (español neutro, tuteo directo, 0 hallazgos en `check-copy.mjs`) | **32 / 32** |
+| `c0-negocio-02-embudos-conversion` | **4** (3 objetivos medibles sobre `COUNT(DISTINCT)`, conversión paso a paso y cuello de botella) | **4** (de la unidad de conteo única a las fórmulas de conversión/drop-off y embudos cerrados vs abiertos) | **4** (`workedExample` ejecutable comparando `COUNT(*)` con webhooks repetidos en `payments` frente a `idempotency_key` únicos) | **4** (contrasta contar eventos brutos y confundir denominador `N_{k-1}` con `N_1`) | **4** (práctica SQL con `FILTER (WHERE ...)` por campaña, 3 pistas graduales y validación en DuckDB-Wasm) | **4** (`967` palabras visibles dentro de `700–1100`, frases `<= 22` palabras) | **4** (4 consultas verificadas en DuckDB y 3 fuentes primarias Amplitude / GA4 / DuckDB) | **4** (español neutro, tuteo directo, 0 hallazgos en `check-copy.mjs`) | **32 / 32** |
+| `c0-negocio-03-kpi-metrica-vanidad` | **4** (3 objetivos medibles sobre métricas de vanidad, los 5 componentes de un KPI y métricas guardia) | **4** (de identificar contadores acumulativos a especificar el contrato de 5 piezas y protegerlo con un *guardrail*) | **4** (`workedExample` ejecutable mostrando el empate aparente de 3 000 pedidos por campaña frente al 19,18 % de reembolsos en `CMP-RETENCION`) | **4** (contrasta premiar impresiones brutas, promediar CPAs con `AVG()` e ignorar devoluciones en `refunds`) | **4** (práctica SQL sobre `marketing_spend` calculando CTR y CPA por canal con 3 pistas y validación en DuckDB-Wasm) | **4** (`885` palabras visibles dentro de `700–1100`, frases `<= 22` palabras) | **4** (3 consultas verificadas en DuckDB y 3 fuentes verificadas Parmenter / Kohavi / dbt) | **4** (español neutro, tuteo directo, 0 hallazgos en `check-copy.mjs`) | **32 / 32** |
+| `c0-negocio-04-pregunta-a-decision` | **4** (3 objetivos medibles sobre hipótesis refutable, desglose dimensional y umbral de decisión previo) | **4** (de acotar preguntas vagas a fijar umbrales pre-consulta y auditar sesgo SRM en muestras) | **4** (`workedExample` ejecutable contrastando el promedio global engañoso frente al desglose por segmento con y sin cupón del 5 %) | **4** (contrasta fijar el umbral después de ver los datos y aprobar `EXP-PUSH-CART` pese al sesgo SRM `980` vs `620`) | **4** (práctica SQL priorizando segmentos por ticket neto y margen bruto con 3 pistas y validación en DuckDB-Wasm) | **4** (`904` palabras visibles dentro de `700–1100`, frases `<= 22` palabras) | **4** (4 consultas verificadas en DuckDB y 3 fuentes primarias CRISP-DM / Kohavi SRM / DuckDB) | **4** (español neutro, tuteo directo, 0 hallazgos en `check-copy.mjs`) | **32 / 32** |
 
 ---
 
@@ -182,24 +202,175 @@ vite v6.4.5 building for production...
 ✓ built in 50.76s
 ```
 
-### 5. Verificación en navegador (`1280×720`), DuckDB-Wasm y Tutor IA (`agy`)
+### 5. Verificación en navegador (`1280×720`) y DuckDB-Wasm (`capture_and_test.mjs`)
 
-Se ejecutó la batería automatizada en Chromium (`1280×720`) sobre `http://127.0.0.1:5204` (`capture_and_test.mjs`) y la verificación de dos turnos del tutor IA (`test_ai_tutor.mjs`):
-- **Renderizado DOM (`LessonPlayer`)**: las 4 lecciones renderizan sus 9 bloques de temario (gancho + objetivos, 3 secciones con código y tablas, ejemplo guiado paso a paso, notas por rol DE/DA/BI, 3 comprobaciones interactivas, práctica aplicada, resumen + flashcards + 3 fuentes `https://`).
-- **Temas claro y oscuro**: `darkOverflow: false` y `lightOverflow: false` (`scrollWidth <= clientWidth`) en las 4 lecciones, con `0` errores de consola (`consoleErrors: []`).
-- **Comprobaciones**: las 3 comprobaciones de cada lección responden al clic y muestran retroalimentación específica por opción (`feedbacksShown: 3/3`).
-- **Prácticas SQL en DuckDB-Wasm (`PracticeView` / `SqlLab`)**:
-  - `c0-negocio-01-ingreso-costo-margen`: `Práctica superada · El resultado coincide con la referencia · Resultado verificado: 3 fila(s) y 6 columna(s) coinciden con la referencia.`
-  - `c0-negocio-02-embudos-conversion`: `Práctica superada · El resultado coincide con la referencia · Resultado verificado: 5 fila(s) y 5 columna(s) coinciden con la referencia.`
-  - `c0-negocio-03-kpi-metrica-vanidad`: `Práctica superada · El resultado coincide con la referencia · Resultado verificado: 5 fila(s) y 6 columna(s) coinciden con la referencia.`
-  - `c0-negocio-04-pregunta-a-decision`: `Práctica superada · El resultado coincide con la referencia · Resultado verificado: 3 fila(s) y 6 columna(s) coinciden con la referencia.`
-- **Tutor IA contextualizado (`/` + botón `Preguntar` + `aiNotes`)**:
-  - En las 4 lecciones el panel del tutor abre tanto con el atajo `/` (`tutorBySlash: true`) como con el botón `Preguntar` de la cabecera (`tutorByBtn: true`).
-  - Al pedir *"Hazme una pregunta para comprobar si lo entendí"* y responder mal a propósito en cada lección:
-    - En `c0-negocio-01-ingreso-costo-margen`, ante la respuesta errónea de usar `INNER JOIN` directo y sumar `o.total_usd`, el tutor detectó los 3 fallos usando `aiNotes`: que `total_usd` incluye impuestos (`tax_usd`) que pertenecen al fisco, que `INNER JOIN` con `refunds` descarta pedidos sin devolución y que cruzar con `order_items` sin pre-agregar multiplica la cabecera.
-    - En `c0-negocio-02-embudos-conversion`, ante la respuesta errónea de contar `COUNT(*)` en `events` sin `DISTINCT` ni orden temporal, el tutor señaló que `COUNT(*)` infla el embudo por recargas/reintentos pudiendo dar conversiones imposibles (`> 100 %`) y exigió `COUNT(DISTINCT customer_id)` y validación de secuencia temporal.
-    - En `c0-negocio-03-kpi-metrica-vanidad`, ante la respuesta errónea de usar el acumulado histórico de impresiones como KPI e ignorar `refunds` cuando el CPA es bajo, el tutor explicó por qué los acumulados históricos son métricas de vanidad y por qué la tasa de reembolsos en `refunds` es indispensable como métrica guardia.
-    - En `c0-negocio-04-pregunta-a-decision`, ante la respuesta errónea de elegir el umbral después de ver los datos y lanzar `EXP-PUSH-CART` ignorando el reparto `980` vs `620`, el tutor identificó el sesgo de confirmación post-hoc y bloqueó el lanzamiento por *Sample Ratio Mismatch* (SRM).
+Salida literal de `capture_and_test.mjs`:
+```json
+{
+  "results": [
+    {
+      "id": "c0-negocio-01-ingreso-costo-margen",
+      "renderedTitle": "Ingreso bruto, descuentos, devoluciones y margen bruto",
+      "labTitle": "Ingreso neto por tipo de dispositivo descontando devoluciones",
+      "darkOverflow": false,
+      "lightOverflow": false,
+      "domAudit": {
+        "sectionsCount": 9,
+        "checksCount": 3,
+        "hasWorkedExample": true,
+        "hasRoleNotes": true,
+        "sourcesLinksCount": 3
+      },
+      "feedbacksShown": 3,
+      "tutorBySlash": true,
+      "tutorByBtn": true,
+      "gradeText": "Práctica superada · El resultado coincide con la referenciaResultado verificado: 3 fila(s) y 6 columna(s) coinciden con la referencia."
+    },
+    {
+      "id": "c0-negocio-02-embudos-conversion",
+      "renderedTitle": "Embudos de adquisición y conversión paso a paso",
+      "labTitle": "Embudo de pedidos por campaña con cláusula FILTER",
+      "darkOverflow": false,
+      "lightOverflow": false,
+      "domAudit": {
+        "sectionsCount": 9,
+        "checksCount": 3,
+        "hasWorkedExample": true,
+        "hasRoleNotes": true,
+        "sourcesLinksCount": 3
+      },
+      "feedbacksShown": 3,
+      "tutorBySlash": true,
+      "tutorByBtn": true,
+      "gradeText": "Práctica superada · El resultado coincide con la referenciaResultado verificado: 5 fila(s) y 5 columna(s) coinciden con la referencia."
+    },
+    {
+      "id": "c0-negocio-03-kpi-metrica-vanidad",
+      "renderedTitle": "Qué hace útil a un KPI frente a una métrica de vanidad",
+      "labTitle": "Ranking de canales por Costo de Adquisición (CPA) frente a impresiones",
+      "darkOverflow": false,
+      "lightOverflow": false,
+      "domAudit": {
+        "sectionsCount": 9,
+        "checksCount": 3,
+        "hasWorkedExample": true,
+        "hasRoleNotes": true,
+        "sourcesLinksCount": 3
+      },
+      "feedbacksShown": 3,
+      "tutorBySlash": true,
+      "tutorByBtn": true,
+      "gradeText": "Práctica superada · El resultado coincide con la referenciaResultado verificado: 5 fila(s) y 6 columna(s) coinciden con la referencia."
+    },
+    {
+      "id": "c0-negocio-04-pregunta-a-decision",
+      "renderedTitle": "De la pregunta ambigua a la decisión respaldada por datos",
+      "labTitle": "Priorización de segmentos de clientes por ticket neto y margen bruto",
+      "darkOverflow": false,
+      "lightOverflow": false,
+      "domAudit": {
+        "sectionsCount": 9,
+        "checksCount": 3,
+        "hasWorkedExample": true,
+        "hasRoleNotes": true,
+        "sourcesLinksCount": 3
+      },
+      "feedbacksShown": 3,
+      "tutorBySlash": true,
+      "tutorByBtn": true,
+      "gradeText": "Práctica superada · El resultado coincide con la referenciaResultado verificado: 3 fila(s) y 6 columna(s) coinciden con la referencia."
+    }
+  ],
+  "consoleErrors": []
+}
+```
+
+### 6. Salida literal del Tutor IA (`agy`) en las 4 lecciones (`test_ai_tutor.mjs`)
+
+En cada lección se pidió al tutor **"Hazme una pregunta para comprobar si lo entendí"** y a continuación se envió una respuesta errónea a propósito para verificar que detecta el fallo usando `aiNotes`:
+
+```text
+================ c0-negocio-01-ingreso-costo-margen ================
+Tutor Question: Imagina que un cliente compra café en Mercado Brisa. El cobro final en su tarjeta es de 100 USD (`total_usd`). 
+
+Dentro de esos 100 USD se incluyen 10 USD de impuestos (`tax_usd`). Además, el cliente usó un cupón de descuento de 5 USD (`discount_usd`). El pedido ya fue entregado y no tuvo devoluciones.
+
+¿Por qué no podemos decir que los 100 USD cobrados son el ingreso real de Mercado Brisa y qué parte de ese dinero no le pertenece a la tienda?
+
+Tutor Evaluation of Wrong Answer: Esa afirmación tiene tres errores importantes:
+
+1. **`total_usd` no es el ingreso de la tienda**: Incluye impuestos (`tax_usd`). Ese dinero se recauda para la autoridad fiscal y nunca pertenece a Mercado Brisa. El ingreso parte de la mercancía (`subtotal_usd`), restando descuentos y devoluciones, no del total de la tarjeta.
+
+2. **`INNER JOIN` excluye pedidos válidos**: Si unes `orders` con `refunds` mediante un `INNER JOIN`, descartas todos los pedidos que nunca tuvieron devoluciones (la gran mayoría). Solo contarías los pedidos devueltos.
+
+3. **SQL sí duplica filas de cabecera**: Si un pedido tiene tres productos en `order_items`, el cruce genera tres filas con el mismo `order_id`. Al hacer `SUM(o.total_usd)`, sumas ese importe tres veces en vez de una.
+
+Para calcular el ingreso neto real debes trabajar sobre pedidos confirmados, usar `subtotal_usd`, restar `discount_usd`, restar las devoluciones de `refunds` (cuidando no duplicar filas al cruzar tablas) y excluir siempre los impuestos.
+
+¿Qué importe de los 100 USD del ejemplo anterior consideras entonces que sí le corresponde a la mercancía vendida?
+
+================ c0-negocio-02-embudos-conversion ================
+Tutor Question: Imagina que en Mercado Brisa una clienta entra a la aplicación y, debido a problemas con su conexión a internet, presiona tres veces seguidas el botón de agregar un producto al carrito. Esto genera tres registros del evento `add_to_cart` en la tabla `events` para esa misma persona.
+
+Si quieres saber cuántas personas llegaron a ese paso del embudo:
+
+1. ¿Qué resultado te daría `COUNT(*)` frente a `COUNT(DISTINCT customer_id)`?
+2. ¿Cuál de las dos funciones debes usar y por qué?
+
+Tutor Evaluation of Wrong Answer: Hacer eso inflará tus métricas y te dará conclusiones falsas. 
+
+Si usas `COUNT(*)` en la tabla `events`:
+- Contarás clics repetidos por fallas de conexión o recargas de página, no personas reales.
+- Podrías ver que un paso tiene más eventos que el anterior, mostrando una tasa de conversión imposible (mayor al 100 %).
+
+Para medir un embudo real necesitas:
+1. **Definir la unidad única:** Usar `COUNT(DISTINCT customer_id)` para contar a cada persona una sola vez por paso.
+2. **Respetar el orden temporal:** Validar que el paso siguiente ocurra después del anterior (`event_ts` de compra posterior al de visita). De lo contrario, contarás compras viejas como si vinieran de visitas actuales.
+
+¿Qué problema crees que causaría en el negocio reportar conversiones infladas con `COUNT(*)`?
+
+================ c0-negocio-03-kpi-metrica-vanidad ================
+Tutor Question: Imagina que en Mercado Brisa el equipo propone poner en el tablero principal la métrica **"Usuarios registrados totales"** (contando todos los registros históricos en la tabla `customers`). 
+
+1. ¿Por qué esta cifra se considera una métrica de vanidad y no un KPI accionable?
+2. ¿Qué métrica alternativa propondrías vigilar en su lugar para saber realmente si el negocio va bien?
+
+Tutor Evaluation of Wrong Answer: Esa conclusión contiene dos trampas peligrosas para el negocio:
+
+1. **Que una métrica siempre suba no la hace un buen KPI; la hace de vanidad.** El total acumulado de impresiones o pedidos nunca baja porque solo suma el pasado. Si en el último mes Mercado Brisa no vendió nada o perdió todos sus clientes, ese número acumulado seguirá viéndose alto y positivo. No te muestra el estado actual ni te ayuda a decidir qué corregir mañana. En su lugar, conviene mirar métricas con ventana temporal y accionables, como pedidos activos del mes en `orders` o clientes que compran por semana.
+
+2. **Un CPA bajo no garantiza un buen negocio si ignoras los reembolsos.** Puedes gastar poco dinero en adquirir un cliente, pero si el producto llega roto, no cumple expectativas o se cancela, la tabla `refunds` se llenará de devoluciones. Si no vigilas la tasa de reembolsos como métrica guardia, estarás celebrando adquisiciones baratas de pedidos que en realidad terminan en pérdida de dinero.
+
+Para ponerlo en práctica: si Mercado Brisa invierte en una campaña con un CPA excelente pero el 40 % del dinero se devuelve en la tabla `refunds`, ¿la campaña fue realmente un éxito? ¿Qué decisión tomarías tú con ese canal?
+
+================ c0-negocio-04-pregunta-a-decision ================
+Tutor Question: Imagina que la dirección de Mercado Brisa te dice: *"Los clientes de cafeterías están descontentos con los pedidos del último mes"*.
+
+Esa frase es ambigua y no sirve para tomar decisiones. Para convertirla en una **hipótesis refutable**, necesitamos acotarla.
+
+Completa los cuatro elementos para formular una hipótesis válida:
+
+1. **Segmento:** ¿A qué grupo exacto de clientes o pedidos analizamos?
+2. **Palanca o causa sospechosa:** ¿Qué dimensión o motivo concreto dentro del negocio vamos a revisar?
+3. **Métrica objetivo:** ¿Qué número específico medirías (usando tablas como `orders` o `refunds`)?
+4. **Umbral de decisión:** ¿Qué cambio o cifra mínima te haría afirmar que la hipótesis es cierta y requiere una acción operativa?
+
+Dime cómo definirías estos cuatro puntos con tus propias palabras.
+
+Tutor Evaluation of Wrong Answer: Cuidado, ahí hay dos errores conceptuales graves que invalidan cualquier análisis:
+
+1. **El umbral de decisión se define antes de consultar los datos.** Si miras los números primero y fijas el criterio después según si te gusta o no, caes en sesgo de confirmación. Diseñas la regla a medida para justificar la decisión que querías tomar de antemano.
+
+2. **En EXP-PUSH-CART hay un sesgo de asignación (SRM).** Si esperabas una división 50/50 y obtienes 980 usuarios en control frente a 620 en treatment, el experimento está roto. Cuando el mecanismo de reparto falla, los grupos ya no son comparables. El mayor gasto medio en treatment no es fiable; podría deberse a que solo entraron usuarios de cierto perfil. Lanzar el cambio con esa muestra truncada es peligroso.
+
+Volvamos al ejercicio de Mercado Brisa sobre el reclamo de las cafeterías:
+
+¿Cómo definirías el **umbral previo** y la **métrica** en `refunds` u `orders` antes de mirar los datos? Intenta completar:
+
+- **Segmento:** (por ejemplo, cafeterías en el último mes)
+- **Métrica:** (¿dinero reembolsado, tasa de pedidos devueltos...?)
+- **Umbral previo:** (¿qué cifra fija o porcentaje activará la acción?)
+```
 
 ---
 
@@ -227,23 +398,13 @@ Al revisar críticamente los archivos creados antes de cerrar la tarea, detectam
 
 ## Prueba adversarial
 
-Se ejecutaron **5 pruebas adversariales** diseñadas para intentar romper las lecciones del módulo:
-
-1. **Prueba adversarial de propagación de `NULL` y fan-out en `c0-negocio-01-ingreso-costo-margen`**:
-   - *Ataque*: ejecutar el cálculo de ingreso neto restando directamente `o.subtotal_usd - o.discount_usd - d.devuelto_usd` tras un `LEFT JOIN` con `refunds`, y unir `orders` con `order_items` y `refunds` en un mismo `SELECT` sin CTEs.
-   - *Resultado*: verificamos en DuckDB que sin `COALESCE(d.devuelto_usd, 0)` los `14 760` pedidos completados sin devolución producen `NULL` y anulan el ingreso neto de esos pedidos (`workedExample.steps[0]` devuelve solo `504 261,80` USD de los `1 440` pedidos reembolsados en vez de los `5 742 529,97` USD reales), y que la solución en CTEs (`workedExample.steps[1]` y `practice.solution`) resuelve ambos ataques.
-2. **Prueba adversarial de inflación por reintentos y truncamiento entero en `c0-negocio-02-embudos-conversion`**:
-   - *Ataque*: calcular el embudo sobre `events` y `payments` usando `COUNT(*)` en lugar de `COUNT(DISTINCT customer_id)` / `COUNT(DISTINCT idempotency_key)` y dividiendo enteros sin multiplicar por `100.0`.
-   - *Resultado*: comprobamos en DuckDB que `COUNT(*)` en `payments` cuenta `16 551` cobros capturados por los webhooks repetidos frente a `16 200` cobros únicos reales (`351` filas duplicadas), inflando la conversión aparente de `90,00 %` a `91,95 %` (`workedExample.steps[0]`). Nuestra solución exige `COUNT(DISTINCT ...)` y `* 100.0`.
-3. **Prueba adversarial de promedio de razones (`AVG` de CPA y de margen) en `c0-negocio-01` y `c0-negocio-03`**:
-   - *Ataque*: calcular el margen bruto global con `AVG(margen_pct_categoria)` y el CPA de cada canal con `AVG(spend_usd / attributed_conversions)` en `marketing_spend`.
-   - *Resultado*: verificamos que promediar porcentajes o CPAs mensuales distorsiona la métrica al ignorar el volumen de cada categoría o mes; todas las consultas del módulo usan estrictamente `SUM(numerador) / SUM(denominador)` y las comprobaciones `c0-negocio-01:c2` y `c0-negocio-03:c2` penalizan explícitamente el uso de `AVG()` sobre razones con retroalimentación detallada.
-4. **Prueba adversarial de sesgo de selección (SRM) y paradoja de motivos de reembolso en `c0-negocio-04-pregunta-a-decision`**:
-   - *Ataque*: ordenar los motivos de `refunds` solo por número de casos (`COUNT(*)`) o aprobar el experimento `EXP-PUSH-CART` mirando únicamente que `treatment` tuvo mayor gasto medio (`65,57` USD vs `59,63` USD).
-   - *Resultado*: en Mercado Brisa los 5 motivos de reembolso empatan exactamente en `290` casos (`COUNT(*)` no discrimina), pero al ponderar por `SUM(refund_amount_usd)` emerge `tueste_incorrecto` con `65 909,73` USD; asimismo, `EXP-PUSH-CART` tiene `980` usuarios en control y `620` en tratamiento (`stopped_srm`), lo que la lección enseña a auditar antes de recomendar el lanzamiento.
-5. **Prueba adversarial de inyección de errores conceptuales al Tutor IA (`agy`)**:
-   - *Ataque*: enviar a `/api/ai/chat` (`buildContextPrompt` + `runAgyPrompt`) en cada una de las 4 lecciones una afirmación que contradice directamente las reglas de negocio de la lección pero suena plausible (sumar `total_usd` con impuestos, usar `COUNT(*)` en embudos, usar acumulados históricos como KPI sin métrica guardia, y fijar umbrales post-hoc ignorando SRM).
-   - *Resultado*: en los 4 casos el tutor utilizó el campo `aiNotes` de la lección correspondiente para desmontar punto por punto la afirmación errónea y devolver una pregunta socrática de verificación sobre las tablas de Mercado Brisa.
+| Caso | Entrada | Resultado esperado | Resultado real |
+| :--- | :--- | :--- | :--- |
+| **1. Propagación de `NULL` y fan-out en `c0-negocio-01`** | Ejecutar `SUM(o.subtotal_usd - o.discount_usd - r.refund_amount_usd)` tras `LEFT JOIN refunds` sin `COALESCE` y unir `orders` + `order_items` + `refunds` sin pre-agregar en CTEs. | Que el antipatrón de `workedExample.steps[0]` evidencie la pérdida de los `14 760` pedidos sin devolución y que `workedExample.steps[1]` + `practice.solution` reconcilien exactamente `5 742 529,97` USD de ingreso neto. | En DuckDB el antipatrón devuelve solo `504 261,80` USD (anula con `NULL` los `14 760` pedidos sin reembolso), mientras que la solución con CTEs y `COALESCE(..., 0)` devuelve exactamente `5 742 529,97` USD (`2 718 073,37` USD de margen bruto, `47,33 %`). |
+| **2. Inflación por webhooks repetidos y división entera en `c0-negocio-02`** | Contar cobros con `COUNT(*)` en `payments` (`status = 'captured'`) y eventos con `COUNT(*)` en `events` sin `DISTINCT`, o dividir enteros sin `* 100.0`. | Que el antipatrón refleje la inflación por los `351` reintentos de webhook y que la solución deduplicada por `idempotency_key` y `customer_id` calcule las tasas reales sin superar el `100 %`. | En DuckDB `COUNT(*)` en `payments` devuelve `16 551` cobros (`91,95 %` aparente), mientras que `COUNT(DISTINCT idempotency_key)` devuelve los `16 200` cobros únicos reales (`90,00 %` de conversión de pago y `82,00 %` de conversión neta sin reembolso). |
+| **3. Promedio de razones (`AVG` de margen y de CPA) en `c0-negocio-01` y `c0-negocio-03`** | Calcular el margen global con `AVG(margen_pct)` entre categorías y el CPA por canal con `AVG(spend_usd / attributed_conversions)` en `marketing_spend`. | Que las comprobaciones `c0-negocio-01:c2` y `c0-negocio-03:c2` rechacen `AVG()` con retroalimentación específica y que las consultas usen `SUM(numerador) / SUM(denominador)`. | Las consultas en DuckDB calculan `SUM(spend_usd) / SUM(attributed_conversions)` dando los CPAs exactos (`referral` `13,59` USD a `display_video` `13,94` USD) y los checks muestran la retroalimentación explicando por qué las razones no son aditivas. |
+| **4. Empate en conteo de reembolsos y sesgo SRM en `c0-negocio-04`** | Ordenar motivos de `refunds` solo por `COUNT(*)` o recomendar el lanzamiento de `EXP-PUSH-CART` porque su gasto medio en `treatment` (`65,57` USD) supera a `control` (`59,63` USD). | Que `COUNT(*)` muestre el empate en `290` casos obligando a ponderar por `SUM(refund_amount_usd)`, y que la auditoría de `experiment_assignments` bloquee `EXP-PUSH-CART` por sesgo SRM. | En DuckDB los 5 motivos empatan en `290` filas pero `tueste_incorrecto` lidera con `65 909,73` USD; en `EXP-PUSH-CART` la consulta revela `980` en `control` frente a `620` en `treatment` (`status = 'stopped_srm'`), invalidando el lanzamiento. |
+| **5. Respuesta errónea deliberada al Tutor IA (`agy`) en las 4 lecciones** | Pedir *"Hazme una pregunta para comprobar si lo entendí"* y responder con los errores conceptuales de cada lección (incluir `tax_usd`, usar `COUNT(*)`, usar acumulados de vanidad sin *guardrail*, y fijar umbrales post-hoc ignorando SRM). | Que el tutor IA utilice el campo `aiNotes` de cada lección para refutar la respuesta errónea y plantear una repregunta socrática sobre Mercado Brisa. | En las 4 lecciones `agy` detectó cada falacia usando `aiNotes` (ver transcripción literal en `## Test §6`) y guio a la persona de vuelta al concepto correcto sin regalar la solución. |
 
 ---
 
