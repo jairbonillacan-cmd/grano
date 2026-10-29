@@ -171,71 +171,20 @@ const lesson = {
     }
   ],
   "practice": {
-    "type": "fill-blanks",
-    "title": "Escritura ordenada y lectura con zone maps",
+    "type": "sql",
+    "title": "Projection y Predicate Pushdown sobre Parquet",
     "language": "sql",
-    "prompt": "Completa el pipeline en DuckDB SQL para: 1) Ordenar físicamente la tabla por fecha y país al exportar a Parquet v2 con compresión `ZSTD`, y 2) Consultar únicamente las columnas requeridas usando un predicado temporal directo que aproveche los Zone Maps.",
-    "starterCode": "-- Paso 1: Materializar el archivo Parquet optimizado para lectura analítica\nCOPY (\n  SELECT event_ts, country_code, order_id, revenue_usd\n  FROM silver.fact_telemetry\n  {{b1}}\n) TO 'gold_telemetry_opt.parquet'\n  (FORMAT PARQUET, COMPRESSION {{b2}}, ROW_GROUP_SIZE 1000000);\n\n-- Paso 2: Consulta con Projection Pushdown y Predicate Pushdown\nSELECT\n  country_code,\n  COUNT(order_id) AS total_orders,\n  SUM(revenue_usd) AS net_revenue_usd\nFROM read_parquet('gold_telemetry_opt.parquet')\nWHERE {{b3}} >= TIMESTAMP '2026-10-01 00:00:00'\nGROUP BY country_code;",
-    "expected": "-- Paso 1: Materializar el archivo Parquet optimizado para lectura analítica\nCOPY (\n  SELECT event_ts, country_code, order_id, revenue_usd\n  FROM silver.fact_telemetry\n  {{b1}}\n) TO 'gold_telemetry_opt.parquet'\n  (FORMAT PARQUET, COMPRESSION {{b2}}, ROW_GROUP_SIZE 1000000);\n\n-- Paso 2: Consulta con Projection Pushdown y Predicate Pushdown\nSELECT\n  country_code,\n  COUNT(order_id) AS total_orders,\n  SUM(revenue_usd) AS net_revenue_usd\nFROM read_parquet('gold_telemetry_opt.parquet')\nWHERE {{b3}} >= TIMESTAMP '2026-10-01 00:00:00'\nGROUP BY country_code;",
+    "prompt": "Escribe una consulta con predicados SARGables directos sobre `orders` (`order_date >= DATE '2025-01-01' AND status = 'completed'`) unida con `customers` para calcular por `country_code`: `total_orders`, `unique_customers` y `net_revenue_usd`, ordenado por `net_revenue_usd DESC`.",
+    "starterCode": "SELECT\n  c.country_code,\n  COUNT(o.order_id) AS total_orders,\n  COUNT(DISTINCT o.customer_id) AS unique_customers,\n  ROUND(SUM(o.total_usd), 2) AS net_revenue_usd\nFROM orders o\nJOIN customers c ON o.customer_id = c.customer_id\n-- TODO: Filtra con predicado directo sobre o.order_date >= DATE '2025-01-01' y o.status = 'completed'\nWHERE o.status = 'completed'\nGROUP BY c.country_code\nORDER BY net_revenue_usd DESC;",
+    "expected": "SELECT\n  c.country_code,\n  COUNT(o.order_id) AS total_orders,\n  COUNT(DISTINCT o.customer_id) AS unique_customers,\n  ROUND(SUM(o.total_usd), 2) AS net_revenue_usd\nFROM orders o\nJOIN customers c ON o.customer_id = c.customer_id\nWHERE o.order_date >= DATE '2025-01-01'\n  AND o.status = 'completed'\nGROUP BY c.country_code\nORDER BY net_revenue_usd DESC;",
     "orderMatters": true,
     "hints": [
-      "Cláusula de ordenamiento físico: Ordena las filas por `event_ts, country_code` antes de escribir el Parquet para que cada Row Group tenga un rango min/max estrecho.",
-      "Algoritmo de compresión moderno: En 2026 el estándar recomendado por su ratio de compresión y velocidad de descompresión es `ZSTD` (Zstandard).",
-      "Columna temporal sin funciones envolventes: Compara directamente la columna `event_ts` sin aplicar funciones `CAST` o `STRFTIME` para que el motor evalúe los Zone Maps del Footer."
+      "Compara directamente la columna `o.order_date >= DATE '2025-01-01'` sin envolverla en funciones `CAST` ni `STRFTIME` para aprovechar los Zone Maps.",
+      "Combina el filtro temporal con `AND o.status = 'completed'`.",
+      "Mantén `GROUP BY c.country_code` y `ORDER BY net_revenue_usd DESC`."
     ],
-    "solution": "-- Paso 1: Materializar el archivo Parquet optimizado para lectura analítica\nCOPY (\n  SELECT event_ts, country_code, order_id, revenue_usd\n  FROM silver.fact_telemetry\n  {{b1}}\n) TO 'gold_telemetry_opt.parquet'\n  (FORMAT PARQUET, COMPRESSION {{b2}}, ROW_GROUP_SIZE 1000000);\n\n-- Paso 2: Consulta con Projection Pushdown y Predicate Pushdown\nSELECT\n  country_code,\n  COUNT(order_id) AS total_orders,\n  SUM(revenue_usd) AS net_revenue_usd\nFROM read_parquet('gold_telemetry_opt.parquet')\nWHERE {{b3}} >= TIMESTAMP '2026-10-01 00:00:00'\nGROUP BY country_code;",
-    "solutionExplanation": "Aplica `ORDER BY event_ts, country_code` al escribir el archivo para maximizar la localidad de datos en los Zone Maps. Selecciona compresión `ZSTD` con un tamaño de Row Group equilibrado (~1 millón de filas). Usa un predicado SARGable directo sobre `event_ts` y proyecta únicamente las columnas requeridas por la agregación.",
-    "blanks": [
-      {
-        "id": "b1",
-        "placeholder": "Cláusula de ordenamiento físico",
-        "acceptedAnswers": [
-          "ORDER BY event_ts, country_code",
-          "ORDER BY event_ts",
-          "ORDER BY 1, 2"
-        ],
-        "hint": "Ordena las filas por `event_ts, country_code` antes de escribir el Parquet para que cada Row Group tenga un rango min/max estrecho."
-      },
-      {
-        "id": "b2",
-        "placeholder": "Algoritmo de compresión moderno",
-        "acceptedAnswers": [
-          "ZSTD",
-          "'ZSTD'"
-        ],
-        "hint": "En 2026 el estándar recomendado por su ratio de compresión y velocidad de descompresión es `ZSTD` (Zstandard)."
-      },
-      {
-        "id": "b3",
-        "placeholder": "Columna temporal sin funciones envolventes",
-        "acceptedAnswers": [
-          "event_ts"
-        ],
-        "hint": "Compara directamente la columna `event_ts` sin aplicar funciones `CAST` o `STRFTIME` para que el motor evalúe los Zone Maps del Footer."
-      }
-    ],
-    "expectedOutputTable": [
-      {
-        "country_code": "MX",
-        "total_orders": 142500,
-        "net_revenue_usd": "$4,987,500.00"
-      },
-      {
-        "country_code": "CO",
-        "total_orders": 89400,
-        "net_revenue_usd": "$2,860,800.00"
-      },
-      {
-        "country_code": "ES",
-        "total_orders": 118200,
-        "net_revenue_usd": "$5,319,000.00"
-      }
-    ],
-    "rubricCriteria": [
-      "Aplica `ORDER BY event_ts, country_code` al escribir el archivo para maximizar la localidad de datos en los Zone Maps.",
-      "Selecciona compresión `ZSTD` con un tamaño de Row Group equilibrado (~1 millón de filas).",
-      "Usa un predicado SARGable directo sobre `event_ts` y proyecta únicamente las columnas requeridas por la agregación."
-    ]
+    "solution": "SELECT\n  c.country_code,\n  COUNT(o.order_id) AS total_orders,\n  COUNT(DISTINCT o.customer_id) AS unique_customers,\n  ROUND(SUM(o.total_usd), 2) AS net_revenue_usd\nFROM orders o\nJOIN customers c ON o.customer_id = c.customer_id\nWHERE o.order_date >= DATE '2025-01-01'\n  AND o.status = 'completed'\nGROUP BY c.country_code\nORDER BY net_revenue_usd DESC;",
+    "solutionExplanation": "Proyecta únicamente las columnas requeridas de `orders` y `customers` y aplica un predicado directo sobre `o.order_date >= DATE '2025-01-01'` que permite a DuckDB evaluar las estadísticas min/max del archivo Parquet."
   },
   "roleNotes": {
     "de": "Configura compresión `ZSTD` (mejor balance ratio/velocidad en 2026 que Snappy o Gzip) y ordena las tablas (`ORDER BY` o `Z-ORDER`) por las claves de filtro más frecuentes antes de escribir Parquet. Habilita `bloom_filter_columns` sobre llaves de alta cardinalidad (`user_id`, `order_id`, `trace_id`) y ejecuta jobs de compactación para mantener archivos entre 128 MB y 512 MB.",

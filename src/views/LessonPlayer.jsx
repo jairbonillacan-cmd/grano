@@ -1,1356 +1,1530 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import {
-  AlertCircle,
-  AlertOctagon,
-  CheckCircle2,
-  Columns2,
-  MousePointerClick,
-  PanelLeftClose,
-  Sparkles,
-  X,
-  XCircle,
-} from 'lucide-react';
-import {
-  AnswerOption,
-  Badge,
-  Button,
-  Callout,
-  Card,
-  Chip,
-  Kbd,
-  ProgressBar,
-  ProgressRing,
-  Sheet,
-  Stepper,
-  Tabs,
-  getRoleMeta,
-  getStageNumber,
-} from '../components/ui/index.js';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import LessonVisualizer from '../components/LessonVisualizers.jsx';
-import { AuthenticCodeLab } from '../components/AuthenticCodeLab.jsx';
-import { PipelineOrderChallenge } from '../components/PipelineOrderChallenge.jsx';
+import AuthenticCodeLab from '../components/AuthenticCodeLab.jsx';
+import PipelineOrderChallenge from '../components/PipelineOrderChallenge.jsx';
+import ProgressBar from '../components/ui/ProgressBar.jsx';
+import Dialog from '../components/ui/Dialog.jsx';
+import Sheet from '../components/ui/Sheet.jsx';
+import Kbd from '../components/ui/Kbd.jsx';
 import {
-  formatInlineText,
   stripSectionNumber,
+  formatInlineText,
   renderProseBody,
-  splitGoalIntoChecks,
-  isNumericCell,
 } from '../utils/formatText.jsx';
+import {
+  useProfile,
+  useProgress,
+  useTutorState,
+  startLesson,
+  setLessonStep,
+  answerCheck as storeAnswerCheck,
+  solvePractice as storeSolvePractice,
+} from '../state/store.js';
+import { LESSONS_BY_ID } from '../data/lessons/index.js';
+import {
+  normalizeLessonV2,
+  buildLessonSyllabusItems,
+  resolvePrerequisiteMeta,
+} from './lesson/normalizeLessonV2.js';
+import {
+  InlineCodeExample,
+  LessonWorkedExample,
+} from './lesson/LessonWorkedExample.jsx';
+import { LessonRoleNotes } from './lesson/LessonRoleNotes.jsx';
+import { LessonCheckCard } from './lesson/LessonCheckCard.jsx';
 
 export const LESSON_STEP_LABELS = [
-  'Contexto',
-  'Simulador',
-  'Antipatrón vs. solución',
-  'Los tres roles',
-  'Comprueba lo aprendido',
-  'Práctica',
-  'Resumen',
+  'Contexto y objetivos',
+  'Desarrollo y simulador',
+  'Ejemplo paso a paso',
+  'Desde tu área',
+  'Comprobaciones',
+  'Práctica aplicada',
+  'Resumen y fuentes',
 ];
 
-export const LESSON_STEPS = LESSON_STEP_LABELS.map((label, idx) => ({
-  id: `step-${idx}`,
-  number: idx + 1,
-  label,
-}));
+export const LESSON_STEPS = [
+  { id: 'contexto', label: 'Contexto y objetivos' },
+  { id: 'desarrollo', label: 'Desarrollo y simulador' },
+  { id: 'ejemplo-guiado', label: 'Ejemplo paso a paso' },
+  { id: 'areas', label: 'Desde tu área' },
+  { id: 'comprobaciones', label: 'Comprobaciones' },
+  { id: 'practica', label: 'Práctica aplicada' },
+  { id: 'resumen', label: 'Resumen y fuentes' },
+];
 
-const SIMULATOR_INSTRUCTIONS = {
-  'join-fanout-visualizer':
-    'Cambia el modo de ejecución entre JOIN directo y CTE pre-agregada y observa el impacto en los ingresos.',
-  'window-function-stepper':
-    'Selecciona cada fila de la tabla para inspeccionar su partición y el valor devuelto por LAG().',
-  'asof-join-timeline':
-    'Alterna entre INNER JOIN exacto y ASOF JOIN y haz clic en cada compra para ver qué tarifa hereda.',
-  'star-vs-obt-sim':
-    'Cambia entre Esquema Estrella y One Big Table y compara el costo de actualización frente a lectura.',
-  'scd2-timeline-builder':
-    'Alterna entre SCD Tipo 1 y SCD Tipo 2 para observar cómo cambia la atribución histórica de ingresos.',
-  'simpsons-paradox-explorer':
-    'Desliza el porcentaje de tráfico móvil en octubre y observa cuándo se invierte el signo de la conversión global.',
-  'row-vs-columnar-storage':
-    'Compara el almacenamiento por filas frente a Parquet columnar y observa qué bloques de disco se saltan.',
-  'arrow-zero-copy-sim':
-    'Alterna entre serialización tradicional y Apache Arrow Zero-Copy e inspecciona cada salto en memoria.',
-  'iceberg-v3-snapshot-explorer':
-    'Cambia entre el Snapshot #1 y el Snapshot #2 para ver cómo operan los vectores de borrado en Iceberg v3.',
-  'dbt-sqlmesh-dag-explorer':
-    'Selecciona cada capa del grafo de transformación para inspeccionar las garantías que aplica.',
-  'cohort-retention-sim':
-    'Alterna entre la vista global mezclada y la matriz por cohorte y ajusta la mejora de onboarding día 7.',
-  'ab-test-cuped-simulator':
-    'Activa o desactiva el ajuste de varianza CUPED y observa cómo se estrecha el intervalo de confianza al 95%.',
-  'bi-anti-slop-comparator':
-    'Alterna entre el reporte tradicional saturado y el diseño de alta densidad dato-tinta.',
-  'streaming-watermark-lab':
-    'Compara el agrupamiento por hora de llegada (Processing Time) frente a tiempo de evento con Watermark.',
-  'mcp-semantic-vs-raw-sql':
-    'Compara una consulta directa del LLM sobre tablas crudas frente al acceso gobernado vía servidor MCP.',
-};
-
-function useViewportWidth() {
-  const [width, setWidth] = useState(() =>
-    typeof window !== 'undefined' ? window.innerWidth : 1440
-  );
-
-  useEffect(() => {
-    const handleResize = () => setWidth(window.innerWidth);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  return width;
-}
-
-function extractTakeawayString(item) {
-  if (!item) return '';
-  if (typeof item === 'string') return item;
-  if (typeof item === 'object') {
-    if (item.title && item.description) {
-      return `**${item.title}:** ${item.description}`;
-    }
-    return item.description || item.title || item.criterion || item.text || '';
-  }
-  return String(item);
-}
-
-function buildKeyTakeaways(lesson) {
-  if (!lesson) return [];
-  if (Array.isArray(lesson.keyTakeaways) && lesson.keyTakeaways.length >= 3) {
-    return lesson.keyTakeaways
-      .slice(0, 3)
-      .map(extractTakeawayString)
-      .filter(Boolean);
-  }
-  const items = [];
-  if (lesson.goal) {
-    const g = extractTakeawayString(lesson.goal);
-    if (g) items.push(g);
-  }
-  if (Array.isArray(lesson.codeChallenge?.rubricCriteria)) {
-    lesson.codeChallenge.rubricCriteria.forEach((c) => {
-      const str = extractTakeawayString(c);
-      if (str && items.length < 3) items.push(str);
-    });
-  }
-  ['DE', 'DA', 'BI'].forEach((role) => {
-    const pt = extractTakeawayString(lesson.triadPerspectives?.[role]?.points?.[0]);
-    if (pt && items.length < 3) {
-      items.push(pt);
-    }
-  });
-  (lesson.sections || []).forEach((sec) => {
-    if (items.length < 3 && sec.heading) {
-      items.push(stripSectionNumber(sec.heading));
-    }
-  });
-  return items.slice(0, 3);
-}
-
-function readStoredSteps() {
-  try {
-    const raw = localStorage.getItem('manual_datos_lesson_step');
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
-}
-
-function writeStoredStep(lessonId, stepIdx) {
-  if (!lessonId) return;
-  try {
-    const current = readStoredSteps();
-    const updated = { ...current, [lessonId]: stepIdx };
-    localStorage.setItem('manual_datos_lesson_step', JSON.stringify(updated));
-  } catch {}
+function prefersReducedMotion() {
+  if (typeof window === 'undefined' || !window.matchMedia) return false;
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
 export function LessonPlayer({
   lessons = [],
   currentLesson,
-  currentStage,
-  prevLesson = null,
-  nextLesson = null,
-  currentStep = 0,
-  onStepChange = () => {},
+  prevLesson,
+  nextLesson,
   completedIds = [],
   quizAnswers = {},
   completedLabIds = [],
   completedPipelineIds = [],
-  onSelectQuizOption = () => {},
-  onToggleCompleteLesson = () => {},
-  onSolveLab = () => {},
-  onSolvePipeline = () => {},
-  onOpenLesson = () => {},
-  onNavigate = () => {},
-  onAskTutor = () => {},
-  onOpenTutor = () => {},
+  onSelectQuizOption,
+  onToggleCompleteLesson,
+  onSolveLab,
+  onSolvePipeline,
+  onOpenLesson,
+  onNavigate,
+  onAskTutor,
+  onOpenTutor,
 }) {
-  const viewportWidth = useViewportWidth();
-  const [codeTab, setCodeTab] = useState('bad');
-  const [activeRoleSlide, setActiveRoleSlide] = useState('DE');
-  const [desktopRailCollapsed, setDesktopRailCollapsed] = useState(false);
-  const [syllabusOverlayOpen, setSyllabusOverlayOpen] = useState(false);
-  const [pendingQuizId, setPendingQuizId] = useState(null);
-  const [quizChecked, setQuizChecked] = useState(false);
-  const rolesCarouselRef = useRef(null);
+  const profile = useProfile();
+  const progress = useProgress();
+  const tutorState = useTutorState();
 
-  const safeStep = Math.min(
-    LESSON_STEPS.length - 1,
-    Math.max(0, Number(currentStep) || 0)
+  const [overrideTick, setOverrideTick] = useState(0);
+  useEffect(() => {
+    const handleCustomOverride = () => setOverrideTick((t) => t + 1);
+    window.addEventListener('grano:lesson-override', handleCustomOverride);
+    return () => window.removeEventListener('grano:lesson-override', handleCustomOverride);
+  }, []);
+
+  const lesson = useMemo(
+    () => normalizeLessonV2(currentLesson),
+    [currentLesson, overrideTick]
   );
 
-  // Sync quiz state when lesson changes
-  useEffect(() => {
-    if (!currentLesson) return;
-    const savedAns = quizAnswers[currentLesson.id] || null;
-    setPendingQuizId(savedAns);
-    setQuizChecked(Boolean(savedAns));
-  }, [currentLesson?.id, quizAnswers]);
+  const lessonId = lesson?.id || '';
+  const storedLessonProgress = progress?.lessons?.[lessonId] || null;
 
-  // Reset side-by-side tab if viewport shrinks below 1280px
+  // Estado local de respuestas de comprobaciones (sincronizado con store y props legacy)
+  const [localCheckAnswers, setLocalCheckAnswers] = useState({});
+  const [hasReachedReadingEnd, setHasReachedReadingEnd] = useState(false);
+  const [hasSubmittedPractice, setHasSubmittedPractice] = useState(false);
+  const [completionBlockedMsg, setCompletionBlockedMsg] = useState('');
+
+  // Estado de navegación y paneles
+  const [activeSectionId, setActiveSectionId] = useState('contexto');
+  const [scrollPercent, setScrollPercent] = useState(8);
+  const [isSyllabusOpen, setIsSyllabusOpen] = useState(true);
+  const [isMobileSyllabusOpen, setIsMobileSyllabusOpen] = useState(false);
+  const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
+  const [viewportWidth, setViewportWidth] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth : 1440
+  );
+
+  // Estado para selección de texto -> botón flotante "Preguntar" (Paso 5)
+  const [selectionPopup, setSelectionPopup] = useState(null);
+
+  const readingColRef = useRef(null);
+  const readingEndSentinelRef = useRef(null);
+  const programmaticScrollUntilRef = useRef(0);
+
   useEffect(() => {
-    if (viewportWidth < 1280 && codeTab === 'split') {
-      setCodeTab('bad');
+    if (!lessonId) return;
+    startLesson(lessonId);
+    setCompletionBlockedMsg('');
+    setSelectionPopup(null);
+
+    try {
+      const savedEnd = window.sessionStorage.getItem(`grano_read_end_${lessonId}`);
+      setHasReachedReadingEnd(savedEnd === '1');
+      const savedPrac = window.sessionStorage.getItem(`grano_prac_sub_${lessonId}`);
+      setHasSubmittedPractice(savedPrac === '1');
+    } catch {
+      setHasReachedReadingEnd(false);
+      setHasSubmittedPractice(false);
     }
-  }, [viewportWidth, codeTab]);
+  }, [lessonId, startLesson]);
 
-  // Close overlay drawer on Escape
   useEffect(() => {
-    if (!syllabusOverlayOpen) return undefined;
-    const handleEsc = (e) => {
-      if (e.key === 'Escape') setSyllabusOverlayOpen(false);
+    const onResize = () => setViewportWidth(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  // Combinar respuestas guardadas en store + local + quizAnswers legacy
+  const effectiveCheckAnswers = useMemo(() => {
+    const combined = {
+      ...(storedLessonProgress?.checksAnswered || {}),
+      ...(localCheckAnswers[lessonId] || {}),
     };
-    window.addEventListener('keydown', handleEsc);
-    return () => window.removeEventListener('keydown', handleEsc);
-  }, [syllabusOverlayOpen]);
+    const checks = lesson?.checks || [];
+    if (
+      checks.length > 0 &&
+      quizAnswers &&
+      quizAnswers[lessonId] !== undefined &&
+      !combined[checks[0].id]
+    ) {
+      const firstCheck = checks[0];
+      const optIdx = quizAnswers[lessonId];
+      const opt = firstCheck.options?.[optIdx];
+      if (opt) {
+        combined[firstCheck.id] = {
+          answered: true,
+          optionId: opt.id || `opt-${optIdx}`,
+          optionIndex: optIdx,
+          optionText: opt.text,
+          correct: opt.id
+            ? opt.id === firstCheck.correctOptionId
+            : Boolean(opt.correct),
+        };
+      }
+    }
+    return combined;
+  }, [storedLessonProgress, localCheckAnswers, lessonId, lesson, quizAnswers]);
 
-  // Persist current step in localStorage under manual_datos_lesson_step
+  const totalChecksCount = Array.isArray(lesson?.checks) ? lesson.checks.length : 0;
+  const answeredChecksCount = useMemo(() => {
+    if (!Array.isArray(lesson?.checks)) return 0;
+    return lesson.checks.filter((chk) => Boolean(effectiveCheckAnswers[chk.id]?.answered)).length;
+  }, [lesson, effectiveCheckAnswers]);
+
+  const isLessonCompleted = completedIds.includes(lessonId) || storedLessonProgress?.status === 'completed';
+  const isLabSolved =
+    completedLabIds.includes(lessonId) || Boolean(storedLessonProgress?.practiceSolved);
+  const isPipelineSolved = completedPipelineIds.includes(lessonId);
+
+  const hasPracticeBlock = Boolean(lesson?.practice);
+  const isPracticeSubmittedEffective =
+    !hasPracticeBlock || isLabSolved || hasSubmittedPractice || isLessonCompleted;
+  const isReadingEndEffective = hasReachedReadingEnd || isLessonCompleted;
+  const allChecksAnswered = answeredChecksCount >= totalChecksCount;
+
+  const canCompleteLesson =
+    isReadingEndEffective && allChecksAnswered && isPracticeSubmittedEffective;
+
+  const syllabusItems = useMemo(
+    () =>
+      buildLessonSyllabusItems(lesson, {
+        answeredChecksCount,
+        isPracticeSubmitted: isPracticeSubmittedEffective,
+      }),
+    [lesson, answeredChecksCount, isPracticeSubmittedEffective]
+  );
+
+  // Determinar si el temario cabe inline sin apretar la columna de lectura por debajo de 640px
+  const isTutorOpen = Boolean(tutorState?.isOpen);
+  const canShowInlineSyllabus =
+    viewportWidth >= 1200 && (!isTutorOpen || viewportWidth >= 1600);
+
+  const scrollToSection = useCallback(
+    (sectionId, focusHeading = false) => {
+      const item =
+        syllabusItems.find((it) => it.id === sectionId || it.domId === sectionId) ||
+        null;
+      const domId = item ? item.domId : `sec-${sectionId}`;
+      const el = document.getElementById(domId);
+      if (!el) return;
+
+      const cleanId = item ? item.id : sectionId;
+      programmaticScrollUntilRef.current = Date.now() + 700;
+      setActiveSectionId(cleanId);
+
+      const behavior = prefersReducedMotion() ? 'auto' : 'smooth';
+      el.scrollIntoView({ behavior, block: 'start' });
+      const itemIdx = syllabusItems.findIndex((it) => it.id === cleanId);
+      if (lessonId && itemIdx >= 0) {
+        setLessonStep(lessonId, itemIdx, cleanId);
+      }
+
+      if (cleanId === 'resumen') {
+        setHasReachedReadingEnd(true);
+        try {
+          window.sessionStorage.setItem(`grano_read_end_${lessonId}`, '1');
+        } catch {
+          // ignore
+        }
+      }
+
+      if (focusHeading) {
+        const heading = el.querySelector('h2, h1, h3');
+        if (heading) {
+          heading.focus({ preventScroll: true });
+        }
+      }
+    },
+    [syllabusItems, lessonId, setLessonStep]
+  );
+
+  // Observar secciones visibles y el centinela de fin de lectura
   useEffect(() => {
-    if (!currentLesson?.id) return;
-    writeStoredStep(currentLesson.id, safeStep);
-  }, [currentLesson?.id, safeStep]);
+    if (typeof IntersectionObserver === 'undefined') return undefined;
 
-  const handleSelectStep = (idx) => {
-    if (!currentLesson) return;
-    const clamped = Math.min(LESSON_STEPS.length - 1, Math.max(0, idx));
-    writeStoredStep(currentLesson.id, clamped);
-    onStepChange(currentLesson.id, clamped);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+    const sectionElements = Array.from(
+      document.querySelectorAll('.lp-reading-col [data-section-id]')
+    );
+    if (sectionElements.length === 0) return undefined;
 
-  // Keyboard navigation ← / → (ignoring input/textarea/select)
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (Date.now() < programmaticScrollUntilRef.current) {
+          return;
+        }
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+
+        if (visible.length > 0) {
+          const topId = visible[0].target.getAttribute('data-section-id');
+          if (topId) {
+            setActiveSectionId(topId);
+            if (topId === 'resumen') {
+              setHasReachedReadingEnd(true);
+              try {
+                window.sessionStorage.setItem(`grano_read_end_${lessonId}`, '1');
+              } catch {
+                // ignore
+              }
+            }
+          }
+        }
+      },
+      {
+        rootMargin: '-12% 0px -62% 0px',
+        threshold: [0, 0.15, 0.5],
+      }
+    );
+
+    sectionElements.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, [lessonId, syllabusItems.length]);
+
   useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (!currentLesson) return;
-      const tag = e.target?.tagName?.toLowerCase();
-      if (
-        tag === 'input' ||
-        tag === 'textarea' ||
-        tag === 'select' ||
-        e.target?.isContentEditable
-      ) {
+    if (typeof IntersectionObserver === 'undefined' || !readingEndSentinelRef.current) {
+      return undefined;
+    }
+    const endObserver = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setHasReachedReadingEnd(true);
+          try {
+            window.sessionStorage.setItem(`grano_read_end_${lessonId}`, '1');
+          } catch {
+            // ignore
+          }
+        }
+      },
+      { rootMargin: '0px 0px 120px 0px', threshold: 0.05 }
+    );
+    endObserver.observe(readingEndSentinelRef.current);
+    return () => endObserver.disconnect();
+  }, [lessonId]);
+
+  // Actualizar barra única de progreso de lectura (2px) al hacer scroll
+  useEffect(() => {
+    const updateScrollProgress = () => {
+      if (!readingColRef.current) return;
+      const rect = readingColRef.current.getBoundingClientRect();
+      const totalScrollable = Math.max(1, rect.height - window.innerHeight * 0.65);
+      const scrolled = Math.max(0, -rect.top + window.innerHeight * 0.25);
+      const ratio = Math.min(100, Math.max(6, Math.round((scrolled / totalScrollable) * 100)));
+      setScrollPercent(ratio);
+      if (ratio >= 92) {
+        setHasReachedReadingEnd(true);
+        try {
+          window.sessionStorage.setItem(`grano_read_end_${lessonId}`, '1');
+        } catch {
+          // ignore
+        }
+      }
+    };
+
+    updateScrollProgress();
+    window.addEventListener('scroll', updateScrollProgress, { passive: true });
+    return () => window.removeEventListener('scroll', updateScrollProgress);
+  }, [lessonId]);
+
+  // Invocar al tutor contextualizado
+  const triggerTutor = useCallback(
+    (payload = {}) => {
+      const fullPayload = {
+        mode: payload.mode || 'tutor',
+        lessonId,
+        sectionId: payload.sectionId || activeSectionId || 'contexto',
+        selection: payload.selection || '',
+        code: payload.code || '',
+        result: payload.result || '',
+        prefill: payload.prefill || '',
+      };
+
+      if (onOpenTutor) {
+        onOpenTutor(fullPayload);
+      } else if (onAskTutor) {
+        onAskTutor(fullPayload.prefill || fullPayload.selection || '');
+      }
+    },
+    [lessonId, activeSectionId, onOpenTutor, onAskTutor]
+  );
+
+  // Paso 5 — Selección de texto -> botón flotante "Preguntar"
+  useEffect(() => {
+    const handleSelectionCheck = () => {
+      if (typeof window === 'undefined' || !window.getSelection) return;
+      const sel = window.getSelection();
+      if (!sel || sel.isCollapsed || sel.rangeCount === 0) {
+        setSelectionPopup(null);
         return;
       }
-      if (e.ctrlKey || e.metaKey || e.altKey) return;
 
-      if (e.key === 'ArrowLeft' && safeStep > 0) {
+      const rawText = sel.toString().trim();
+      if (rawText.length < 4 || rawText.length > 600) {
+        setSelectionPopup(null);
+        return;
+      }
+
+      const range = sel.getRangeAt(0);
+      const container = readingColRef.current;
+      if (!container || !container.contains(range.commonAncestorContainer)) {
+        setSelectionPopup(null);
+        return;
+      }
+
+      const rect = range.getBoundingClientRect();
+      if (rect.width === 0 && rect.height === 0) {
+        setSelectionPopup(null);
+        return;
+      }
+
+      const clampedX = Math.min(
+        Math.max(rect.left + rect.width / 2, 88),
+        window.innerWidth - 110
+      );
+      const posY = rect.top > 72 ? rect.top - 10 : rect.bottom + 36;
+
+      setSelectionPopup({
+        text: rawText,
+        x: Math.round(clampedX),
+        y: Math.round(posY),
+      });
+    };
+
+    const handleMouseUp = () => {
+      setTimeout(handleSelectionCheck, 15);
+    };
+
+    const handleScrollHide = () => {
+      setSelectionPopup((prev) => (prev ? null : prev));
+    };
+
+    document.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('scroll', handleScrollHide, { passive: true });
+    return () => {
+      document.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('scroll', handleScrollHide);
+    };
+  }, []);
+
+  // Paso 7 — Atajos de teclado de la lección (J/K, T, /, ?)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      const target = e.target;
+      const isEditable =
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.isContentEditable);
+
+      if (e.key === 'Escape' && selectionPopup) {
+        setSelectionPopup(null);
+        return;
+      }
+
+      if (isEditable || e.metaKey || e.ctrlKey || e.altKey) {
+        return;
+      }
+
+      if (e.key === 'j' || e.key === 'J') {
         e.preventDefault();
-        handleSelectStep(safeStep - 1);
-      } else if (e.key === 'ArrowRight' && safeStep < LESSON_STEPS.length - 1) {
+        const curIdx = syllabusItems.findIndex((it) => it.id === activeSectionId);
+        const nextIdx = Math.min(
+          syllabusItems.length - 1,
+          curIdx >= 0 ? curIdx + 1 : 1
+        );
+        if (syllabusItems[nextIdx]) {
+          scrollToSection(syllabusItems[nextIdx].id, true);
+        }
+        return;
+      }
+
+      if (e.key === 'k' || e.key === 'K') {
         e.preventDefault();
-        handleSelectStep(safeStep + 1);
+        const curIdx = syllabusItems.findIndex((it) => it.id === activeSectionId);
+        const prevIdx = Math.max(0, curIdx > 0 ? curIdx - 1 : 0);
+        if (syllabusItems[prevIdx]) {
+          scrollToSection(syllabusItems[prevIdx].id, true);
+        }
+        return;
+      }
+
+      if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        if (canShowInlineSyllabus) {
+          setIsSyllabusOpen((prev) => !prev);
+        } else {
+          setIsMobileSyllabusOpen((prev) => !prev);
+        }
+        return;
+      }
+
+      if (e.key === '/') {
+        e.preventDefault();
+        triggerTutor({
+          mode: 'tutor',
+          sectionId: activeSectionId,
+        });
+        setTimeout(() => {
+          const input = document.querySelector('.tutor-input-textarea');
+          if (input) input.focus();
+        }, 60);
+        return;
+      }
+
+      if (e.key === '?') {
+        e.preventDefault();
+        setIsShortcutsOpen((prev) => !prev);
       }
     };
+
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentLesson?.id, safeStep]);
-
-  const stageLessons = useMemo(() => {
-    if (!currentLesson) return [];
-    return lessons.filter((l) => l.stageId === currentLesson.stageId);
-  }, [lessons, currentLesson]);
-
-  const storedStepsMap = useMemo(
-    () => readStoredSteps(),
-    [currentLesson?.id, safeStep]
-  );
-
-  const keyTakeaways = useMemo(
-    () => buildKeyTakeaways(currentLesson),
-    [currentLesson]
-  );
-
-  const goalChecks = useMemo(
-    () => splitGoalIntoChecks(currentLesson?.goal, currentLesson?.sections),
-    [currentLesson]
-  );
-
-  if (!currentLesson) return null;
-
-  const stageNum = getStageNumber(currentStage || currentLesson);
-  const isLessonCompleted = completedIds.includes(currentLesson.id);
-  const isLabSolved = completedLabIds.includes(currentLesson.id);
-  const isPipelineSolved = completedPipelineIds.includes(currentLesson.id);
-
-  const isStageCompleted =
-    stageLessons.length > 0 &&
-    stageLessons.every((l) => completedIds.includes(l.id));
-
-  const activeQuizOptionId = pendingQuizId ?? quizAnswers[currentLesson.id];
-  const selectedQuizObj = currentLesson.checkpoint?.options?.find(
-    (o) => o.id === activeQuizOptionId
-  );
-
-  const stepProgressPct = isLessonCompleted
-    ? 100
-    : Math.round(((safeStep + 1) / LESSON_STEPS.length) * 100);
-
-  const businessCaseText =
-    currentLesson.businessCase || currentLesson.storyContext || '';
-
-  const simulatorInstruction =
-    SIMULATOR_INSTRUCTIONS[currentLesson.visualType] ||
-    'Cambia el modo de ejecución en los controles y observa el impacto en los resultados.';
-
-  const isWideStep =
-    safeStep === 1 ||
-    safeStep === 3 ||
-    (safeStep === 2 && codeTab === 'split');
-
-  const isDesktopTier = viewportWidth >= 1280;
-  const isTabletTier = viewportWidth >= 1024 && viewportWidth < 1280;
-  const isMobileSheetTier = viewportWidth < 1024;
+  }, [
+    syllabusItems,
+    activeSectionId,
+    canShowInlineSyllabus,
+    scrollToSection,
+    triggerTutor,
+    selectionPopup,
+  ]);
 
   const handleToggleSyllabus = () => {
-    if (isDesktopTier) {
-      setDesktopRailCollapsed((c) => !c);
+    if (canShowInlineSyllabus) {
+      setIsSyllabusOpen((prev) => !prev);
     } else {
-      setSyllabusOverlayOpen((o) => !o);
+      setIsMobileSyllabusOpen((prev) => !prev);
     }
   };
 
-  const handleCheckQuiz = () => {
-    if (!selectedQuizObj) return;
-    setQuizChecked(true);
-    onSelectQuizOption(currentLesson.id, selectedQuizObj);
+  const handleAnswerCheck = (checkId, answerPayload) => {
+    setLocalCheckAnswers((prev) => ({
+      ...prev,
+      [lessonId]: {
+        ...(prev[lessonId] || {}),
+        [checkId]: answerPayload,
+      },
+    }));
+
+    storeAnswerCheck(lessonId, checkId, {
+      optionId: answerPayload.optionId,
+      correct: answerPayload.correct,
+    });
+
+    // Sincronizar con el primer check legacy para estadísticas globales
+    if (
+      onSelectQuizOption &&
+      lesson?.checks?.[0]?.id === checkId &&
+      typeof answerPayload.optionIndex === 'number'
+    ) {
+      onSelectQuizOption(lessonId, answerPayload.optionIndex);
+    }
   };
 
-  const handleRevealQuizAnswer = () => {
-    const correctOpt = (currentLesson.checkpoint?.options || []).find(
-      (o) => o.correct
+  const markPracticeAttempted = useCallback(() => {
+    setHasSubmittedPractice(true);
+    try {
+      window.sessionStorage.setItem(`grano_prac_sub_${lessonId}`, '1');
+    } catch {
+      // ignore
+    }
+  }, [lessonId]);
+
+  const handleSolvePracticeLab = () => {
+    markPracticeAttempted();
+    storeSolvePractice(lessonId);
+    if (onSolveLab) {
+      onSolveLab(lessonId);
+    }
+  };
+
+  const handleAttemptCompleteLesson = () => {
+    if (isLessonCompleted) {
+      if (onToggleCompleteLesson) {
+        onToggleCompleteLesson(lessonId);
+      }
+      return;
+    }
+
+    const missing = [];
+    if (!isReadingEndEffective) {
+      missing.push('llegar al resumen final de la lectura');
+    }
+    if (!allChecksAnswered) {
+      const remaining = totalChecksCount - answeredChecksCount;
+      missing.push(
+        `responder ${remaining} ${remaining === 1 ? 'comprobación pendiente' : 'comprobaciones pendientes'}`
+      );
+    }
+    if (!isPracticeSubmittedEffective) {
+      missing.push('enviar un intento en la práctica aplicada');
+    }
+
+    if (missing.length > 0) {
+      setCompletionBlockedMsg(
+        `Para marcar esta lección como completada falta: ${missing.join(', ')}.`
+      );
+      return;
+    }
+
+    setCompletionBlockedMsg('');
+    if (onToggleCompleteLesson) {
+      onToggleCompleteLesson(lessonId);
+    }
+  };
+
+  // Construir objeto challenge compatible con AuthenticCodeLab si lesson.practice existe
+  const codeLabChallenge = useMemo(() => {
+    if (!lesson || !lesson.practice) return null;
+    const rawBlanks = Array.isArray(lesson.practice.blanks) ? lesson.practice.blanks : [];
+    if (rawBlanks.length === 0) return null;
+
+    const templateSql = String(
+      lesson.practice.starterCode ||
+        lesson.practice.templateCode ||
+        lesson.practice.solution ||
+        ''
     );
-    if (correctOpt) {
-      setPendingQuizId(correctOpt.id);
-      setQuizChecked(true);
-      onSelectQuizOption(currentLesson.id, correctOpt);
-    }
-  };
+    const blanks = rawBlanks.map((b, idx) => {
+      const num = idx + 1;
+      const blankId = b.id || `b${num}`;
+      const accepted = Array.isArray(b.acceptedAnswers)
+        ? b.acceptedAnswers
+        : b.answer
+          ? [b.answer]
+          : [];
+      return {
+        id: blankId,
+        placeholder: b.placeholder || b.label || `Espacio ${num}`,
+        acceptedAnswers: accepted,
+        hint: b.hint || lesson.practice.hints?.[idx] || '',
+      };
+    });
 
-  const handleRolesScroll = (e) => {
-    const el = e.currentTarget;
-    if (!el || el.clientWidth === 0) return;
-    const index = Math.round(el.scrollLeft / (el.clientWidth * 0.85));
-    const keys = ['DE', 'DA', 'BI'];
-    const targetRole = keys[Math.min(2, Math.max(0, index))];
-    if (targetRole && targetRole !== activeRoleSlide) {
-      setActiveRoleSlide(targetRole);
-    }
-  };
+    return {
+      title: lesson.practice.title || 'Completa la consulta SQL',
+      language: lesson.practice.language || 'sql',
+      instruction: lesson.practice.prompt || lesson.practice.instruction || '',
+      description: lesson.practice.prompt || lesson.practice.description || '',
+      templateCode: templateSql,
+      template: templateSql,
+      blanks,
+      expectedOutput: lesson.practice.solutionExplanation || '',
+      expectedOutputTable: Array.isArray(lesson.practice.expectedOutputTable)
+        ? lesson.practice.expectedOutputTable
+        : Array.isArray(lesson.practice.expectedOutput)
+          ? lesson.practice.expectedOutput
+          : [],
+      rubricCriteria: Array.isArray(lesson.practice.rubricCriteria)
+        ? lesson.practice.rubricCriteria
+        : [],
+    };
+  }, [lesson]);
 
-  const scrollToRoleCard = (roleKey, idx) => {
-    setActiveRoleSlide(roleKey);
-    const container = rolesCarouselRef.current;
-    if (container && container.children[idx]) {
-      container.children[idx].scrollIntoView({
-        behavior: 'smooth',
-        inline: 'center',
-        block: 'nearest',
-      });
-    }
-  };
+  if (!lesson) {
+    return (
+      <div className="lesson-player">
+        <p className="prose-p">Selecciona una lección para comenzar.</p>
+      </div>
+    );
+  }
 
-  const renderSyllabusContent = ({
-    onAfterSelect,
-    showCollapseBtn = false,
-    showCloseBtn = false,
-    hideHeader = false,
-  } = {}) => (
-    <>
-      {!hideHeader && (
-        <div className="lp-syllabus-head">
-          <div className="lp-syllabus-head__top">
-            <span className="lp-stage-kicker tabular">
-              Etapa {stageNum} de 6
-            </span>
-            {showCollapseBtn && (
-              <Button
-                variant="ghost"
-                size="sm"
-                icon={PanelLeftClose}
-                ariaLabel="Ocultar temario"
-                onClick={() => setDesktopRailCollapsed(true)}
-              />
-            )}
-            {showCloseBtn && (
-              <Button
-                variant="ghost"
-                size="sm"
-                icon={X}
-                ariaLabel="Cerrar temario"
-                onClick={() => setSyllabusOverlayOpen(false)}
-              />
-            )}
-          </div>
-          <h2 className="lp-stage-title">{currentStage?.title}</h2>
-        </div>
-      )}
+  const activeSyllabusIndex = Math.max(
+    0,
+    syllabusItems.findIndex((it) => it.id === activeSectionId)
+  );
+  const activeSyllabusItem = syllabusItems[activeSyllabusIndex] || syllabusItems[0];
 
-      <ul className="lp-syllabus-list">
-        {stageLessons.map((lesson) => {
-          const isCurrent = lesson.id === currentLesson.id;
-          const isDone = completedIds.includes(lesson.id);
-          const savedStep = Number(storedStepsMap[lesson.id] || 0);
-          const isInProgress = !isDone && (isCurrent || savedStep > 0);
-
+  const renderSyllabusNav = (onItemClick) => (
+    <nav className="lp-syllabus-nav" aria-label="Temario de la lección">
+      <div className="lp-syllabus-nav__head">
+        <span className="lp-syllabus-nav__title">En esta lección</span>
+        <span className="lp-syllabus-nav__count tabular">
+          {activeSyllabusIndex + 1}/{syllabusItems.length}
+        </span>
+      </div>
+      <ol className="lp-syllabus-list">
+        {syllabusItems.map((item, idx) => {
+          const isCurrent = item.id === activeSectionId;
           return (
-            <li
-              key={lesson.id}
-              className={`lp-lesson-item ${
-                isCurrent ? 'lp-lesson-item--active' : ''
-              }`.trim()}
-            >
+            <li key={item.id} className="lp-syllabus-list__item">
               <button
                 type="button"
-                className="lp-lesson-btn"
+                className={`lp-syllabus-link${isCurrent ? ' is-active' : ''}${
+                  item.isDone ? ' is-done' : ''
+                }`}
+                aria-current={isCurrent ? 'location' : undefined}
                 onClick={() => {
-                  if (!isCurrent) {
-                    onOpenLesson(lesson.id);
-                  }
-                  if (typeof onAfterSelect === 'function') {
-                    onAfterSelect();
-                  }
+                  scrollToSection(item.id, true);
+                  if (onItemClick) onItemClick();
                 }}
-                aria-current={isCurrent ? 'page' : undefined}
               >
-                <div className="lp-lesson-btn__info">
-                  <div className="lp-lesson-btn__meta tabular">
-                    Lección {String(lesson.order).padStart(2, '0')} · {lesson.duration}
-                  </div>
-                  <div className="lp-lesson-btn__title">{lesson.title}</div>
-                </div>
-
-                <span
-                  className={`lp-lesson-status ${
-                    isDone
-                      ? 'lp-lesson-status--done'
-                      : isInProgress
-                        ? 'lp-lesson-status--active'
-                        : 'lp-lesson-status--pending'
-                  }`}
-                >
-                  {isDone ? '✓' : isInProgress ? 'En curso' : 'Pendiente'}
+                <span className="lp-syllabus-link__num tabular">
+                  {String(idx + 1).padStart(2, '0')}
                 </span>
+                <span className="lp-syllabus-link__label">{item.label}</span>
+                {item.meta ? (
+                  <span className="lp-syllabus-link__meta tabular">{item.meta}</span>
+                ) : item.hasInteractive ? (
+                  <span className="lp-syllabus-link__tag">Lab</span>
+                ) : null}
               </button>
-
-              {isCurrent && (
-                <ol
-                  className="lp-nested-steps"
-                  aria-label="Pasos de la lección activa"
-                >
-                  {LESSON_STEPS.map((st, sIdx) => {
-                    const isStepActive = sIdx === safeStep;
-                    const isStepDone = isLessonCompleted || sIdx < safeStep;
-                    return (
-                      <li key={st.id}>
-                        <button
-                          type="button"
-                          className={`lp-nested-step-btn ${
-                            isStepActive
-                              ? 'lp-nested-step-btn--active'
-                              : isStepDone
-                                ? 'lp-nested-step-btn--done'
-                                : ''
-                          }`.trim()}
-                          onClick={() => {
-                            handleSelectStep(sIdx);
-                            if (typeof onAfterSelect === 'function') {
-                              onAfterSelect();
-                            }
-                          }}
-                          aria-current={isStepActive ? 'step' : undefined}
-                        >
-                          <span
-                            className={`lp-nested-step-num tabular ${
-                              isStepDone && !isStepActive
-                                ? 'lp-nested-step-num--done'
-                                : ''
-                            }`.trim()}
-                          >
-                            {isStepDone && !isStepActive ? '✓' : `${st.number}.`}
-                          </span>
-                          <span>{st.label}</span>
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ol>
-              )}
             </li>
           );
         })}
-      </ul>
-    </>
+      </ol>
+    </nav>
   );
 
-  const renderCodeComparisonPane = (mode) => {
-    const isBad = mode === 'bad';
-    const playground = currentLesson.playground || {};
-    const title = isBad
-      ? playground.badQueryLabel || 'Código con error'
-      : playground.goodQueryLabel || 'Código correcto';
-    const summaryText = isBad
-      ? 'Este antipatrón compromete la exactitud de las métricas o degrada el rendimiento del motor.'
-      : 'Esta solución preserva el grano, las invariantes del contrato y la eficiencia de lectura.';
-    const queryText = isBad ? playground.badQuery : playground.goodQuery;
-    const rows = (isBad ? playground.badResult : playground.goodResult) || [];
+  return (
+    <div className="lesson-player">
+      {/* Barra superior compacta + 1 único indicador de progreso de 2px */}
+      <header className="lp-topbar">
+        <div className="lp-topbar__row">
+          <div className="lp-topbar__left">
+            <button
+              type="button"
+              className="lp-topbar__btn"
+              onClick={() => (onNavigate ? onNavigate('roadmap') : null)}
+            >
+              ← Ruta
+            </button>
+            <button
+              type="button"
+              className={`lp-topbar__btn${
+                (canShowInlineSyllabus && isSyllabusOpen) || isMobileSyllabusOpen
+                  ? ' is-active'
+                  : ''
+              }`}
+              aria-expanded={
+                canShowInlineSyllabus ? isSyllabusOpen : isMobileSyllabusOpen
+              }
+              onClick={handleToggleSyllabus}
+            >
+              <span>Temario</span>
+              <Kbd>T</Kbd>
+            </button>
+          </div>
 
-    return (
-      <div className="lp-code-pane" key={mode}>
-        <Callout tone={isBad ? 'danger' : 'success'} title={title}>
-          <p className="lp-callout-summary">{summaryText}</p>
-        </Callout>
+          <div className="lp-topbar__center">
+            <span className="lp-topbar__section-indicator tabular">
+              Sección {activeSyllabusIndex + 1} de {syllabusItems.length}
+              {activeSyllabusItem ? ` · ${activeSyllabusItem.label}` : ''}
+            </span>
+          </div>
 
-        <pre className="lp-code-block tabular">
-          <code>{queryText}</code>
-        </pre>
+          <div className="lp-topbar__right">
+            <button
+              type="button"
+              className="lp-topbar__btn"
+              onClick={() =>
+                triggerTutor({
+                  mode: 'tutor',
+                  sectionId: activeSectionId,
+                })
+              }
+            >
+              <span>Preguntar</span>
+              <Kbd>/</Kbd>
+            </button>
+            <button
+              type="button"
+              className="lp-topbar__btn lp-topbar__btn--icon"
+              aria-label="Atajos de teclado de la lección"
+              title="Atajos de teclado (?)"
+              onClick={() => setIsShortcutsOpen(true)}
+            >
+              <Kbd>?</Kbd>
+            </button>
+          </div>
+        </div>
 
-        <div className="viz-table-label">Tabla de resultados</div>
-        <div className="lp-table-scroll">
-          <table className="viz-table tabular">
+        <div className="lp-topbar__progress">
+          <ProgressBar
+            value={isLessonCompleted ? 100 : scrollPercent}
+            max={100}
+            thickness={2}
+            label="Progreso de lectura de la lección"
+          />
+        </div>
+      </header>
+
+      {/* Área de trabajo principal: Temario colapsable + Columna central de lectura */}
+      <div
+        className={`lp-workspace${
+          canShowInlineSyllabus && isSyllabusOpen ? ' has-inline-syllabus' : ''
+        }`}
+      >
+        {canShowInlineSyllabus && isSyllabusOpen ? (
+          <aside className="lp-syllabus-rail">
+            {renderSyllabusNav()}
+          </aside>
+        ) : null}
+
+        <article
+          ref={readingColRef}
+          className="lp-reading-col"
+          aria-label={lesson.title}
+        >
+          {/* Cabecera editorial sobria */}
+          <header className="lp-header">
+            <div className="lp-breadcrumb">
+              <button
+                type="button"
+                className="lp-breadcrumb__link"
+                onClick={() => (onNavigate ? onNavigate('roadmap') : null)}
+              >
+                {lesson.trackMeta?.shortName || 'Ruta'}
+              </button>
+              <span className="lp-breadcrumb__sep" aria-hidden="true">
+                ›
+              </span>
+              <span className="lp-breadcrumb__current">
+                {lesson.moduleMeta?.title || 'Módulo técnico'}
+              </span>
+            </div>
+
+            <h1 className="lp-title">{lesson.title}</h1>
+
+            <div className="lp-meta-line tabular">
+              <span>{lesson.minutes} min</span>
+              <span aria-hidden="true">·</span>
+              <span>
+                Nivel {lesson.level} ({lesson.levelName})
+              </span>
+              {lesson.prerequisites.length > 0 ? (
+                <>
+                  <span aria-hidden="true">·</span>
+                  <span className="lp-meta-prereq">
+                    Recomendado antes:{' '}
+                    {lesson.prerequisites.map((prereqId, idx) => {
+                      const prereqMeta = resolvePrerequisiteMeta(prereqId);
+                      if (!prereqMeta) return null;
+                      return (
+                        <React.Fragment key={prereqId}>
+                          {idx > 0 ? ', ' : ''}
+                          {prereqMeta.isAvailable ? (
+                            <button
+                              type="button"
+                              className="lp-inline-lesson-link"
+                              onClick={() =>
+                                onOpenLesson ? onOpenLesson(prereqMeta.id) : null
+                              }
+                            >
+                              {prereqMeta.title}
+                            </button>
+                          ) : (
+                            <span className="lp-meta-prereq__text">
+                              {prereqMeta.title}
+                            </span>
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
+                  </span>
+                </>
+              ) : null}
+            </div>
+          </header>
+
+          {/* Bloque 1: Contexto (Hook completo sin truncar) y Objetivos */}
+          <section
+            id="sec-contexto"
+            data-section-id="contexto"
+            className="lp-section lp-intro-section"
+            aria-label="Contexto y objetivos de aprendizaje"
+          >
+            {lesson.hook ? (
+              <div className="lp-hook">
+                <span className="lp-hook__kicker">Escenario real</span>
+                <p className="lp-hook__text">
+                  {formatInlineText(lesson.hook, 'lp-hook')}
+                </p>
+              </div>
+            ) : null}
+
+            {Array.isArray(lesson.objectives) && lesson.objectives.length > 0 ? (
+              <div className="lp-objectives">
+                <h2 className="lp-objectives__title" tabIndex={-1}>
+                  Objetivos de la lección
+                </h2>
+                <ul className="lp-objectives__list">
+                  {lesson.objectives.map((obj, idx) => (
+                    <li key={`obj-${idx}`} className="lp-objectives__item">
+                      <span className="lp-objectives__num tabular">
+                        0{idx + 1}
+                      </span>
+                      <span className="lp-objectives__text">
+                        {formatInlineText(obj, `obj-txt-${idx}`)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </section>
+
+          {/* Bloque 2: Secciones continuas con prosa, glosario, simulador y ejemplo */}
+          {(lesson.sections || []).map((sec, idx) => {
+            const secId = sec.id || `seccion-${idx + 1}`;
+            const cleanHeading =
+              stripSectionNumber(sec.heading || sec.title) || `Sección ${idx + 1}`;
+
+            return (
+              <section
+                key={secId}
+                id={`sec-${secId}`}
+                data-section-id={secId}
+                className="lp-section"
+                aria-labelledby={`heading-${secId}`}
+              >
+                <div className="lp-section__head">
+                  <div className="lp-section__title-row">
+                    <span className="lp-section__num tabular">
+                      Sección {String(idx + 1).padStart(2, '0')}
+                    </span>
+                    <h2
+                      id={`heading-${secId}`}
+                      className="lp-section__title"
+                      tabIndex={-1}
+                    >
+                      {cleanHeading}
+                    </h2>
+                  </div>
+                  <button
+                    type="button"
+                    className="lp-ghost-action"
+                    onClick={() =>
+                      triggerTutor({
+                        mode: 'tutor',
+                        sectionId: secId,
+                        selection: cleanHeading,
+                        prefill: `Tengo una duda sobre la sección "${cleanHeading}" de la lección "${lesson.title}".`,
+                      })
+                    }
+                  >
+                    Preguntar sobre esta sección
+                  </button>
+                </div>
+
+                <div className="lp-prose">
+                  {renderProseBody(sec.body, `sec-body-${secId}`, {
+                    enableGlossary: true,
+                    glossaryTerms: lesson.glossaryTerms,
+                  })}
+                </div>
+
+                {sec.interactive?.component ? (
+                  <div className="lp-wide-block lp-simulator-frame">
+                    <div className="lp-simulator-frame__head">
+                      <div className="lp-simulator-frame__titles">
+                        <span className="lp-simulator-frame__kicker">
+                          Simulador interactivo en línea
+                        </span>
+                        {sec.interactive.caption ? (
+                          <p className="lp-simulator-frame__caption">
+                            {formatInlineText(
+                              sec.interactive.caption,
+                              `sim-cap-${secId}`
+                            )}
+                          </p>
+                        ) : null}
+                      </div>
+                      <button
+                        type="button"
+                        className="lp-ghost-action"
+                        onClick={() =>
+                          triggerTutor({
+                            mode: 'free',
+                            sectionId: secId,
+                            selection:
+                              sec.interactive.caption || cleanHeading,
+                            prefill: `Explícame qué observar en el simulador interactivo de la sección "${cleanHeading}".`,
+                          })
+                        }
+                      >
+                        Guiarme en el simulador
+                      </button>
+                    </div>
+                    <div className="lp-simulator-frame__body">
+                      <LessonVisualizer visualType={sec.interactive.component} />
+                    </div>
+                  </div>
+                ) : null}
+
+                {sec.example?.code ? (
+                  <InlineCodeExample
+                    example={sec.example}
+                    sectionId={secId}
+                    onAskTutor={triggerTutor}
+                  />
+                ) : null}
+              </section>
+            );
+          })}
+
+          {/* Bloque 3: Ejemplo guiado paso a paso (antipatrón vs. solución) */}
+          {lesson.workedExample?.steps?.length > 0 ? (
+            <LessonWorkedExample
+              workedExample={lesson.workedExample}
+              onAskTutor={triggerTutor}
+            />
+          ) : null}
+
+          {/* Bloque 4: Paso 4 — Perspectiva por rol ("Desde tu área") */}
+          <LessonRoleNotes
+            roleNotes={lesson.roleNotes}
+            profileTrack={profile?.track}
+          />
+
+          {/* Bloque 5: Paso 3 — Comprobaciones integradas en el flujo */}
+          {Array.isArray(lesson.checks) && lesson.checks.length > 0 ? (
+            <section
+              id="sec-comprobaciones"
+              data-section-id="comprobaciones"
+              className="lp-section lp-checks-section"
+              aria-labelledby="lp-checks-heading"
+            >
+              <div className="lp-section__head">
+                <div className="lp-section__title-row">
+                  <span className="lp-section__kicker">
+                    Verificación conceptual
+                  </span>
+                  <h2
+                    id="lp-checks-heading"
+                    className="lp-section__title"
+                    tabIndex={-1}
+                  >
+                    Comprueba lo aprendido
+                  </h2>
+                </div>
+                <span className="lp-checks-counter tabular">
+                  {answeredChecksCount} de {lesson.checks.length} respondidas
+                </span>
+              </div>
+
+              <div className="lp-checks-stack">
+                {lesson.checks.map((chk, chkIdx) => (
+                  <LessonCheckCard
+                    key={chk.id || `chk-${chkIdx}`}
+                    check={chk}
+                    index={chkIdx}
+                    total={lesson.checks.length}
+                    savedAnswer={effectiveCheckAnswers[chk.id]}
+                    onAnswer={handleAnswerCheck}
+                    onAskTutor={triggerTutor}
+                  />
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          {/* Bloque 6: Práctica aplicada */}
+          {lesson.practice || lesson.pipelineChallenge ? (
+            <section
+              id="sec-practica"
+              data-section-id="practica"
+              className="lp-section lp-practice-section"
+              aria-labelledby="lp-practice-heading"
+              onClickCapture={(e) => {
+                const btn = e.target?.closest?.('button');
+                if (
+                  btn &&
+                  /ejecutar|verificar|comprobar|validar|enviar/i.test(
+                    btn.textContent || ''
+                  )
+                ) {
+                  markPracticeAttempted();
+                }
+              }}
+            >
+              <div className="lp-section__head">
+                <div className="lp-section__title-row">
+                  <span className="lp-section__kicker">
+                    Resolución práctica
+                  </span>
+                  <h2
+                    id="lp-practice-heading"
+                    className="lp-section__title"
+                    tabIndex={-1}
+                  >
+                    Práctica aplicada
+                  </h2>
+                </div>
+                <span className="lp-checks-counter tabular">
+                  {isLabSolved
+                    ? 'Resuelta correctamente'
+                    : isPracticeSubmittedEffective
+                      ? 'Intento registrado'
+                      : 'Pendiente de envío'}
+                </span>
+              </div>
+
+              {codeLabChallenge && codeLabChallenge.blanks?.length > 0 ? (
+                <div className="lp-wide-block">
+                  <AuthenticCodeLab
+                    challenge={codeLabChallenge}
+                    onSolve={handleSolvePracticeLab}
+                    onAskAiTutor={(promptText) =>
+                      triggerTutor({
+                        mode: 'hint',
+                        sectionId: 'practica',
+                        selection: lesson.practice?.prompt || '',
+                        code: lesson.practice?.starterCode || '',
+                        prefill: promptText,
+                      })
+                    }
+                  />
+                </div>
+              ) : lesson.practice ? (
+                <div className="lp-custom-practice-card">
+                  <p className="lp-custom-practice-card__prompt">
+                    {formatInlineText(
+                      lesson.practice.prompt || 'Resuelve el ejercicio práctico.',
+                      'prac-custom-prompt'
+                    )}
+                  </p>
+                  {lesson.practice.starterCode ? (
+                    <pre className="lp-code-example__pre">
+                      <code>{lesson.practice.starterCode}</code>
+                    </pre>
+                  ) : null}
+                  <div className="lp-custom-practice-card__actions">
+                    <button
+                      type="button"
+                      className="lp-btn lp-btn--primary"
+                      onClick={handleSolvePracticeLab}
+                    >
+                      {isPracticeSubmittedEffective
+                        ? 'Práctica enviada'
+                        : 'Enviar solución de práctica'}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
+              {lesson.pipelineChallenge ? (
+                <div className="lp-wide-block lp-pipeline-wrap">
+                  <PipelineOrderChallenge
+                    challenge={lesson.pipelineChallenge}
+                    onComplete={() => {
+                      markPracticeAttempted();
+                      if (onSolvePipeline) onSolvePipeline(lessonId);
+                    }}
+                  />
+                </div>
+              ) : null}
+            </section>
+          ) : null}
+
+          {/* Bloque 7: Resumen, Fuentes y Cierre honesto */}
+          <section
+            id="sec-resumen"
+            data-section-id="resumen"
+            className="lp-section lp-summary-section"
+            aria-labelledby="lp-summary-heading"
+          >
+            <div className="lp-section__head">
+              <div className="lp-section__title-row">
+                <span className="lp-section__kicker">Síntesis técnica</span>
+                <h2
+                  id="lp-summary-heading"
+                  className="lp-section__title"
+                  tabIndex={-1}
+                >
+                  Lo que debes recordar
+                </h2>
+              </div>
+            </div>
+
+            {Array.isArray(lesson.summary) && lesson.summary.length > 0 ? (
+              <ol className="lp-summary-list">
+                {lesson.summary.map((point, idx) => (
+                  <li key={`sum-${idx}`} className="lp-summary-list__item">
+                    <span className="lp-summary-list__num tabular">
+                      0{idx + 1}
+                    </span>
+                    <span className="lp-summary-list__text">
+                      {formatInlineText(point, `sum-txt-${idx}`)}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            ) : null}
+
+            {Array.isArray(lesson.relatedLessons) &&
+            lesson.relatedLessons.length > 0 ? (
+              <div className="lp-related-block">
+                <h3 className="lp-related-block__title">
+                  Lecciones conectadas en el catálogo
+                </h3>
+                <div className="lp-related-block__links">
+                  {lesson.relatedLessons.map((relEntry, idx) => {
+                    const relId =
+                      typeof relEntry === 'string'
+                        ? relEntry
+                        : relEntry?.id || '';
+                    const relReason =
+                      typeof relEntry === 'object' && relEntry?.reason
+                        ? relEntry.reason
+                        : '';
+                    if (!relId) return null;
+                    const relLesson =
+                      LESSONS_BY_ID[relId] ||
+                      lessons.find(
+                        (l) => l.id === relId || l.legacyId === relId
+                      );
+                    if (!relLesson) return null;
+                    const targetId = relLesson.legacyId || relLesson.id;
+                    return (
+                      <button
+                        key={`${relId}-${idx}`}
+                        type="button"
+                        className="lp-related-chip"
+                        onClick={() =>
+                          onOpenLesson ? onOpenLesson(targetId) : null
+                        }
+                      >
+                        <span className="lp-related-chip__body">
+                          <span className="lp-related-chip__title">
+                            {relLesson.title}
+                          </span>
+                          {relReason ? (
+                            <span className="lp-related-chip__reason">
+                              {relReason}
+                            </span>
+                          ) : null}
+                        </span>
+                        <span className="lp-related-chip__arrow" aria-hidden="true">
+                          →
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+
+            {Array.isArray(lesson.sources) && lesson.sources.length > 0 ? (
+              <details className="lp-sources">
+                <summary className="lp-sources__summary">
+                  <span>
+                    Fuentes y documentación oficial ({lesson.sources.length})
+                  </span>
+                </summary>
+                <ul className="lp-sources__list">
+                  {lesson.sources.map((src, idx) => (
+                    <li key={`src-${idx}`} className="lp-sources__item">
+                      <div className="lp-sources__row">
+                        <a
+                          href={src.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="lp-sources__link"
+                        >
+                          {src.title}
+                        </a>
+                        {src.publisher ? (
+                          <span className="lp-sources__pub">
+                            {src.publisher}
+                          </span>
+                        ) : null}
+                      </div>
+                      {src.supports ? (
+                        <p className="lp-sources__supports">{src.supports}</p>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            ) : null}
+
+            <div
+              ref={readingEndSentinelRef}
+              className="lp-reading-sentinel"
+              aria-hidden="true"
+            />
+          </section>
+
+          {/* Pie de lección con regla honesta de completado (Paso 8) */}
+          <footer className="lp-footer" aria-label="Cierre y navegación de lección">
+            <div className="lp-completion-box">
+              <div className="lp-completion-box__info">
+                <h3 className="lp-completion-box__title">
+                  {isLessonCompleted
+                    ? 'Lección completada'
+                    : 'Requisitos para completar la lección'}
+                </h3>
+                <ul className="lp-completion-reqs">
+                  <li
+                    className={`lp-completion-req${
+                      isReadingEndEffective ? ' is-done' : ''
+                    }`}
+                  >
+                    <span className="lp-completion-req__dot" aria-hidden="true">
+                      {isReadingEndEffective ? '✓' : '·'}
+                    </span>
+                    <span>Lectura hasta el final</span>
+                  </li>
+                  {totalChecksCount > 0 ? (
+                    <li
+                      className={`lp-completion-req${
+                        allChecksAnswered ? ' is-done' : ''
+                      }`}
+                    >
+                      <span className="lp-completion-req__dot" aria-hidden="true">
+                        {allChecksAnswered ? '✓' : '·'}
+                      </span>
+                      <span className="tabular">
+                        Comprobaciones ({answeredChecksCount}/{totalChecksCount})
+                      </span>
+                    </li>
+                  ) : null}
+                  {hasPracticeBlock ? (
+                    <li
+                      className={`lp-completion-req${
+                        isPracticeSubmittedEffective ? ' is-done' : ''
+                      }`}
+                    >
+                      <span className="lp-completion-req__dot" aria-hidden="true">
+                        {isPracticeSubmittedEffective ? '✓' : '·'}
+                      </span>
+                      <span>Práctica enviada</span>
+                    </li>
+                  ) : null}
+                </ul>
+              </div>
+
+              <div className="lp-completion-box__action">
+                <button
+                  type="button"
+                  className={`lp-btn ${
+                    isLessonCompleted
+                      ? 'lp-btn--completed'
+                      : canCompleteLesson
+                        ? 'lp-btn--primary'
+                        : 'lp-btn--secondary'
+                  }`}
+                  onClick={handleAttemptCompleteLesson}
+                >
+                  {isLessonCompleted
+                    ? 'Completada ✓'
+                    : 'Completar lección'}
+                </button>
+              </div>
+            </div>
+
+            {completionBlockedMsg && !isLessonCompleted ? (
+              <div className="lp-completion-alert" role="status">
+                <p className="lp-completion-alert__text">
+                  {completionBlockedMsg}
+                </p>
+                <div className="lp-completion-alert__links">
+                  {!allChecksAnswered ? (
+                    <button
+                      type="button"
+                      className="lp-ghost-action"
+                      onClick={() => scrollToSection('comprobaciones', true)}
+                    >
+                      Ir a comprobaciones ({answeredChecksCount}/{totalChecksCount})
+                    </button>
+                  ) : null}
+                  {!isPracticeSubmittedEffective ? (
+                    <button
+                      type="button"
+                      className="lp-ghost-action"
+                      onClick={() => scrollToSection('practica', true)}
+                    >
+                      Ir a la práctica
+                    </button>
+                  ) : null}
+                  {!isReadingEndEffective ? (
+                    <button
+                      type="button"
+                      className="lp-ghost-action"
+                      onClick={() => scrollToSection('resumen', true)}
+                    >
+                      Ir al resumen
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+
+            <div className="lp-footer__nav">
+              {prevLesson ? (
+                <button
+                  type="button"
+                  className="lp-footer__nav-btn"
+                  onClick={() =>
+                    onOpenLesson ? onOpenLesson(prevLesson.id) : null
+                  }
+                >
+                  <span className="lp-footer__nav-dir">← Lección anterior</span>
+                  <strong className="lp-footer__nav-title">
+                    {prevLesson.title}
+                  </strong>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="lp-footer__nav-btn"
+                  onClick={() => (onNavigate ? onNavigate('roadmap') : null)}
+                >
+                  <span className="lp-footer__nav-dir">← Volver</span>
+                  <strong className="lp-footer__nav-title">
+                    Mapa curricular completo
+                  </strong>
+                </button>
+              )}
+
+              {nextLesson ? (
+                <button
+                  type="button"
+                  className="lp-footer__nav-btn lp-footer__nav-btn--next"
+                  onClick={() =>
+                    onOpenLesson ? onOpenLesson(nextLesson.id) : null
+                  }
+                >
+                  <span className="lp-footer__nav-dir">Siguiente lección →</span>
+                  <strong className="lp-footer__nav-title">
+                    {nextLesson.title}
+                  </strong>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="lp-footer__nav-btn lp-footer__nav-btn--next"
+                  onClick={() => (onNavigate ? onNavigate('roadmap') : null)}
+                >
+                  <span className="lp-footer__nav-dir">Final de ruta →</span>
+                  <strong className="lp-footer__nav-title">
+                    Ver progreso en el mapa
+                  </strong>
+                </button>
+              )}
+            </div>
+          </footer>
+        </article>
+      </div>
+
+      {/* Paso 5 — Botón flotante "Preguntar" al seleccionar texto */}
+      {selectionPopup ? (
+        <div
+          className="lp-selection-popover"
+          style={{
+            '--sel-x': `${selectionPopup.x}px`,
+            '--sel-y': `${selectionPopup.y}px`,
+          }}
+        >
+          <button
+            type="button"
+            className="lp-selection-ask-btn"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const chosenText = selectionPopup.text;
+              setSelectionPopup(null);
+              triggerTutor({
+                mode: 'free',
+                sectionId: activeSectionId,
+                selection: chosenText,
+                prefill: `Explica este fragmento de la lección "${lesson.title}":\n\n"${chosenText}"`,
+              });
+            }}
+          >
+            Preguntar al tutor
+          </button>
+        </div>
+      ) : null}
+
+      {/* Drawer de Temario para móvil / pantallas donde no cabe inline */}
+      <Sheet
+        open={isMobileSyllabusOpen}
+        onClose={() => setIsMobileSyllabusOpen(false)}
+        side="left"
+        title="Temario de la lección"
+        description={lesson.title}
+      >
+        {renderSyllabusNav(() => setIsMobileSyllabusOpen(false))}
+      </Sheet>
+
+      {/* Paso 7 — Diálogo de atajos de teclado (?) */}
+      <Dialog
+        open={isShortcutsOpen}
+        onClose={() => setIsShortcutsOpen(false)}
+        title="Atajos de teclado en la lección"
+        description="Navega por las secciones, abre el tutor o responde comprobaciones sin levantar las manos del teclado."
+        size="md"
+      >
+        <div className="lp-shortcuts-table-wrap">
+          <table className="md-table lp-shortcuts-table">
             <thead>
               <tr>
-                {Object.entries(rows[0] || {}).map(([col, sampleVal]) => (
-                  <th
-                    key={col}
-                    className={isNumericCell(sampleVal) ? 'num' : ''}
-                  >
-                    {col}
-                  </th>
-                ))}
+                <th className="md-table__th">Tecla</th>
+                <th className="md-table__th">Acción</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((row, idx) => (
-                <tr key={idx}>
-                  {Object.values(row).map((val, vIdx) => (
-                    <td
-                      key={vIdx}
-                      className={isNumericCell(val) ? 'num' : ''}
-                    >
-                      {String(val)}
-                    </td>
-                  ))}
-                </tr>
-              ))}
+              <tr>
+                <td className="md-table__td">
+                  <Kbd>J</Kbd> / <Kbd>K</Kbd>
+                </td>
+                <td className="md-table__td">
+                  Ir a la sección siguiente / anterior
+                </td>
+              </tr>
+              <tr>
+                <td className="md-table__td">
+                  <Kbd>T</Kbd>
+                </td>
+                <td className="md-table__td">
+                  Mostrar u ocultar el temario de la lección
+                </td>
+              </tr>
+              <tr>
+                <td className="md-table__td">
+                  <Kbd>/</Kbd>
+                </td>
+                <td className="md-table__td">
+                  Abrir el tutor contextualizado y enfocar el campo de pregunta
+                </td>
+              </tr>
+              <tr>
+                <td className="md-table__td">
+                  <Kbd>1</Kbd> – <Kbd>4</Kbd>
+                </td>
+                <td className="md-table__td">
+                  Seleccionar opción en la tarjeta de comprobación enfocada
+                </td>
+              </tr>
+              <tr>
+                <td className="md-table__td">
+                  <Kbd>?</Kbd>
+                </td>
+                <td className="md-table__td">
+                  Abrir o cerrar esta ventana de atajos
+                </td>
+              </tr>
+              <tr>
+                <td className="md-table__td">
+                  <Kbd>Esc</Kbd>
+                </td>
+                <td className="md-table__td">
+                  Cerrar popovers de glosario, selección o diálogos
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
-      </div>
-    );
-  };
-
-  const codeTabsItems = useMemo(() => {
-    const base = [
-      { id: 'bad', label: 'Con error', icon: AlertOctagon },
-      { id: 'good', label: 'Correcto', icon: CheckCircle2 },
-    ];
-    if (viewportWidth >= 1280) {
-      base.push({ id: 'split', label: 'Lado a lado', icon: Columns2 });
-    }
-    return base;
-  }, [viewportWidth]);
-
-  return (
-    <div className="lesson-player" data-stage={stageNum}>
-      {/* NIVEL 2 (1024-1279px): Panel deslizable desde la izquierda */}
-      {isTabletTier && syllabusOverlayOpen && (
-        <div
-          className="lp-drawer-backdrop"
-          onClick={() => setSyllabusOverlayOpen(false)}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Temario de la etapa actual"
-        >
-          <aside
-            className="lp-left-drawer"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {renderSyllabusContent({
-              onAfterSelect: () => setSyllabusOverlayOpen(false),
-              showCloseBtn: true,
-            })}
-          </aside>
-        </div>
-      )}
-
-      {/* NIVEL 3 (< 1024px): Sheet inferior */}
-      {isMobileSheetTier && (
-        <Sheet
-          open={syllabusOverlayOpen}
-          onClose={() => setSyllabusOverlayOpen(false)}
-          side="bottom"
-          title={`Etapa ${stageNum} · ${currentStage?.title || ''}`}
-          subtitle="Temario de la etapa y pasos de la lección"
-          data-stage={stageNum}
-        >
-          {renderSyllabusContent({
-            onAfterSelect: () => setSyllabusOverlayOpen(false),
-            hideHeader: true,
-          })}
-        </Sheet>
-      )}
-
-      <div
-        className={`lp-layout ${
-          desktopRailCollapsed || !isDesktopTier
-            ? 'lp-layout--rail-collapsed'
-            : ''
-        }`.trim()}
-      >
-        {/* NIVEL 1 (>= 1280px): Temario de la etapa a la izquierda (280px, colapsable) */}
-        {isDesktopTier && !desktopRailCollapsed && (
-          <aside
-            className="lp-left-rail"
-            aria-label="Temario de la etapa actual"
-          >
-            {renderSyllabusContent({ showCollapseBtn: true })}
-          </aside>
-        )}
-
-        {/* ZONA CENTRAL */}
-        <div className="lp-center-zone">
-          {/* CABECERA COMPACTA Y ÚNICA (56px + ProgressBar 4px = 60px <= 64px) */}
-          <div className="lp-sticky-header">
-            <div className="lp-header-bar">
-              <div className="lp-header-actions">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="lp-header-btn"
-                  onClick={() => onNavigate('roadmap')}
-                >
-                  ← Salir
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="lp-header-btn"
-                  onClick={handleToggleSyllabus}
-                  aria-expanded={
-                    isDesktopTier ? !desktopRailCollapsed : syllabusOverlayOpen
-                  }
-                >
-                  Temario
-                </Button>
-                {/* En móvil la cabecera de la app no tiene botón del tutor */}
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="lp-header-btn lp-header-btn--tutor"
-                  onClick={onOpenTutor}
-                >
-                  Preguntar
-                </Button>
-              </div>
-
-              <span className="lp-header-title" title={currentLesson.title}>
-                {currentLesson.title}
-              </span>
-
-              <div className="lp-header-stepper-wrap">
-                <Stepper
-                  variant="compact"
-                  stage={stageNum}
-                  steps={LESSON_STEPS}
-                  activeStep={safeStep}
-                  completedSteps={
-                    isLessonCompleted
-                      ? LESSON_STEPS.map((_, i) => i)
-                      : Array.from({ length: safeStep }, (_, i) => i)
-                  }
-                  onStepClick={(idx) => handleSelectStep(idx)}
-                  ariaLabel="Pasos de la lección"
-                />
-                <span className="lp-header-step-count tabular">
-                  {safeStep + 1}/{LESSON_STEPS.length}
-                </span>
-              </div>
-            </div>
-
-            <div className="lp-header-progress">
-              <ProgressBar
-                value={stepProgressPct}
-                size="sm"
-                tone={isLessonCompleted ? 'success' : 'stage'}
-                stage={stageNum}
-                ariaLabel={`Progreso de la lección ${currentLesson.title}`}
-              />
-            </div>
-          </div>
-
-          {/* CONTENIDO DEL PASO ACTUAL */}
-          <div
-            className={`lp-step-container ${
-              isWideStep ? 'lp-step-container--wide' : ''
-            }`.trim()}
-          >
-            {/* PASO 1: CONTEXTO */}
-            {safeStep === 0 && (
-              <div
-                key={`step-${currentLesson.id}-0`}
-                className="lesson-step-panel lp-step-animate"
-              >
-                <header className="lesson-player__header">
-                  <div className="lesson-player__meta tabular">
-                    <Chip variant="stage" stage={stageNum}>
-                      Etapa {stageNum} · Lección {currentLesson.order}
-                    </Chip>
-                    <Chip variant="neutral">{currentLesson.duration}</Chip>
-                    {(currentLesson.coreFocus || ['DE', 'DA', 'BI']).map(
-                      (role) => (
-                        <Chip key={role} variant="role" role={role}>
-                          {role}
-                        </Chip>
-                      )
-                    )}
-                  </div>
-                  <h1 className="lesson-player__title">
-                    {currentLesson.title}
-                  </h1>
-                  <p className="lesson-player__subtitle">
-                    {currentLesson.subtitle}
-                  </p>
-                </header>
-
-                {businessCaseText && (
-                  <div
-                    className="lp-problem-card"
-                    role="note"
-                    aria-label="El problema"
-                  >
-                    <span className="lp-problem-card__icon" aria-hidden="true">
-                      <AlertCircle size={20} />
-                    </span>
-                    <div className="lp-problem-card__content">
-                      <h2 className="lp-problem-card__title">El problema</h2>
-                      <p className="lp-problem-card__text">
-                        {formatInlineText(businessCaseText)}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {goalChecks.length > 0 && (
-                  <div
-                    className="lp-goal-card"
-                    aria-label="Objetivo de la lección"
-                  >
-                    <h2 className="lp-goal-card__title">Objetivo</h2>
-                    <ul className="lp-goal-checks">
-                      {goalChecks.map((checkItem, idx) => (
-                        <li key={idx} className="lp-goal-checks__item">
-                          <span
-                            className="lp-goal-checks__icon"
-                            aria-hidden="true"
-                          >
-                            <CheckCircle2 size={18} />
-                          </span>
-                          <span>{formatInlineText(checkItem)}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                <article className="lesson-prose">
-                  {(currentLesson.sections || []).map((sec, idx) => (
-                    <section key={idx} className="lesson-prose__section">
-                      <h3 className="lesson-prose__heading">
-                        {stripSectionNumber(sec.heading)}
-                      </h3>
-                      {renderProseBody(sec.body)}
-                    </section>
-                  ))}
-                </article>
-              </div>
-            )}
-
-            {/* PASO 2: SIMULADOR */}
-            {safeStep === 1 && (
-              <div
-                key={`step-${currentLesson.id}-1`}
-                className="lesson-step-panel lp-step-animate"
-              >
-                <div className="lp-try-this-card">
-                  <span className="lp-try-this-card__badge">
-                    <MousePointerClick size={15} aria-hidden="true" />
-                    <span>Prueba esto</span>
-                  </span>
-                  <p className="lp-try-this-card__text">
-                    {formatInlineText(simulatorInstruction)}
-                  </p>
-                </div>
-
-                <div className="lp-visualizer-shell">
-                  <LessonVisualizer
-                    visualType={currentLesson.visualType}
-                    stage={stageNum}
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* PASO 3: ANTIPATRÓN VS. SOLUCIÓN */}
-            {safeStep === 2 && (
-              <div
-                key={`step-${currentLesson.id}-2`}
-                className="lesson-step-panel lp-step-animate"
-              >
-                {currentLesson.playground ? (
-                  <Card>
-                    <div className="lp-code-header">
-                      <div className="lp-code-header__titles">
-                        <h2 className="lp-section-title">
-                          Antipatrón vs. solución
-                        </h2>
-                        <p className="lp-section-subtitle">
-                          {formatInlineText(
-                            currentLesson.playground.description
-                          )}
-                        </p>
-                      </div>
-
-                      <Tabs
-                        items={codeTabsItems}
-                        activeId={codeTab}
-                        onChange={(id) => setCodeTab(id)}
-                        variant="pills"
-                        stage={stageNum}
-                        ariaLabel="Comparador de código"
-                        className="lp-code-tabs"
-                      />
-                    </div>
-
-                    {codeTab === 'split' && viewportWidth >= 1280 ? (
-                      <div className="lp-code-compare-grid">
-                        {renderCodeComparisonPane('bad')}
-                        {renderCodeComparisonPane('good')}
-                      </div>
-                    ) : (
-                      renderCodeComparisonPane(
-                        codeTab === 'good' ? 'good' : 'bad'
-                      )
-                    )}
-
-                    <div className="lp-tutor-row">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() =>
-                          onAskTutor(
-                            `Explica línea por línea el ${
-                              codeTab === 'good'
-                                ? 'Código correcto'
-                                : 'Código con error'
-                            } de la lección "${currentLesson.title}".`
-                          )
-                        }
-                      >
-                        Pedir al Tutor IA que desglose este código →
-                      </Button>
-                    </div>
-                  </Card>
-                ) : (
-                  <Callout tone="info" title="Sin bloque comparativo">
-                    Avanza al siguiente paso para revisar las perspectivas por
-                    rol.
-                  </Callout>
-                )}
-              </div>
-            )}
-
-            {/* PASO 4: LOS TRES ROLES (DE / DA / BI) */}
-            {safeStep === 3 && (
-              <div
-                key={`step-${currentLesson.id}-3`}
-                className="lesson-step-panel lp-step-animate"
-              >
-                <div>
-                  <h2 className="lp-section-title">
-                    Responsabilidades por rol: DE, DA y BI
-                  </h2>
-                  <p className="lp-section-subtitle">
-                    Cómo colaboran Ingeniería de Datos, Análisis de Datos y
-                    Business Intelligence sobre este concepto.
-                  </p>
-                </div>
-
-                <div
-                  className="lp-roles-grid"
-                  ref={rolesCarouselRef}
-                  onScroll={handleRolesScroll}
-                >
-                  {['DE', 'DA', 'BI'].map((roleKey) => {
-                    const block = currentLesson.triadPerspectives?.[roleKey];
-                    if (!block) return null;
-                    const roleMeta = getRoleMeta(roleKey);
-                    const bullets = (block.points || []).slice(0, 3);
-
-                    return (
-                      <Card
-                        key={roleKey}
-                        className={`lp-role-card lp-role-card--${roleKey.toLowerCase()}`}
-                      >
-                        <div className="lp-role-card__header">
-                          <Chip variant="role" role={roleKey}>
-                            {roleMeta.short} · {roleMeta.label}
-                          </Chip>
-                        </div>
-                        <h3 className="lp-role-card__title">
-                          {formatInlineText(block.title)}
-                        </h3>
-                        <ul className="lp-role-card__list">
-                          {bullets.map((pt, i) => (
-                            <li key={i} className="lp-role-card__item">
-                              {formatInlineText(pt)}
-                            </li>
-                          ))}
-                        </ul>
-                      </Card>
-                    );
-                  })}
-                </div>
-
-                <div
-                  className="lp-role-carousel-dots"
-                  role="tablist"
-                  aria-label="Indicadores de rol"
-                >
-                  {['DE', 'DA', 'BI'].map((roleKey, idx) => {
-                    const isActive = activeRoleSlide === roleKey;
-                    return (
-                      <button
-                        key={roleKey}
-                        type="button"
-                        role="tab"
-                        aria-selected={isActive}
-                        aria-label={`Ver rol ${roleKey}`}
-                        className={`lp-role-carousel-dot lp-role-carousel-dot--${roleKey.toLowerCase()} ${
-                          isActive ? 'lp-role-carousel-dot--active' : ''
-                        }`.trim()}
-                        onClick={() => scrollToRoleCard(roleKey, idx)}
-                      />
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* PASO 5: COMPRUEBA LO APRENDIDO (QUIZ ESTILO BRILLIANT / DUOLINGO) */}
-            {safeStep === 4 && (
-              <div
-                key={`step-${currentLesson.id}-4`}
-                className="lesson-step-panel lp-step-animate"
-              >
-                <Card>
-                  <div className="lp-quiz-header">
-                    <div>
-                      <Chip variant="stage" stage={stageNum}>
-                        Pregunta de verificación
-                      </Chip>
-                    </div>
-                    <h2 className="lp-section-title">Comprueba lo aprendido</h2>
-                  </div>
-
-                  <p className="lp-quiz-question">
-                    {formatInlineText(currentLesson.checkpoint?.question)}
-                  </p>
-
-                  <div className="checkpoint-options-list">
-                    {(currentLesson.checkpoint?.options || []).map(
-                      (opt, optIdx) => {
-                        const isSelected = activeQuizOptionId === opt.id;
-                        const optState = quizChecked
-                          ? isSelected
-                            ? opt.correct
-                              ? 'correct'
-                              : 'incorrect'
-                            : 'idle'
-                          : isSelected
-                            ? 'selected'
-                            : 'idle';
-
-                        return (
-                          <AnswerOption
-                            key={opt.id}
-                            index={optIdx}
-                            letter={opt.id.toUpperCase()}
-                            state={optState}
-                            onClick={() => {
-                              setPendingQuizId(opt.id);
-                              setQuizChecked(false);
-                            }}
-                          >
-                            {formatInlineText(opt.text)}
-                          </AnswerOption>
-                        );
-                      }
-                    )}
-                  </div>
-                </Card>
-              </div>
-            )}
-
-            {/* PASO 6: PRÁCTICA */}
-            {safeStep === 5 && (
-              <div
-                key={`step-${currentLesson.id}-5`}
-                className="lesson-step-panel lp-step-animate"
-              >
-                <div className="lp-practice-chips">
-                  {currentLesson.codeChallenge && (
-                    <Chip
-                      variant={isLabSolved ? 'success' : 'stage'}
-                      stage={stageNum}
-                    >
-                      {isLabSolved
-                        ? 'Laboratorio SQL superado ✓'
-                        : 'Laboratorio SQL pendiente'}
-                    </Chip>
-                  )}
-                  {currentLesson.pipelineChallenge && (
-                    <Chip
-                      variant={isPipelineSolved ? 'success' : 'stage'}
-                      stage={stageNum}
-                    >
-                      {isPipelineSolved
-                        ? 'Secuencia de pipeline superada ✓'
-                        : 'Secuencia de pipeline pendiente'}
-                    </Chip>
-                  )}
-                </div>
-
-                {currentLesson.codeChallenge && (
-                  <Card className="lp-practice-card">
-                    <AuthenticCodeLab
-                      key={`codelab-${currentLesson.id}`}
-                      challenge={currentLesson.codeChallenge}
-                      stage={stageNum}
-                      onSolve={() => onSolveLab(currentLesson.id)}
-                      onAskAiTutor={(prompt) => onAskTutor(prompt)}
-                    />
-                  </Card>
-                )}
-
-                {currentLesson.pipelineChallenge && (
-                  <Card className="lp-practice-card">
-                    <PipelineOrderChallenge
-                      key={`pipe-${currentLesson.id}`}
-                      challenge={currentLesson.pipelineChallenge}
-                      stage={stageNum}
-                      onComplete={() => onSolvePipeline(currentLesson.id)}
-                    />
-                  </Card>
-                )}
-
-                {!currentLesson.codeChallenge &&
-                  !currentLesson.pipelineChallenge && (
-                    <Callout tone="info" title="Sin laboratorio adicional">
-                      Continúa al paso de Resumen para consolidar las ideas
-                      clave de la lección.
-                    </Callout>
-                  )}
-              </div>
-            )}
-
-            {/* PASO 7: RESUMEN (PANTALLA DE CELEBRACIÓN) */}
-            {safeStep === 6 && (
-              <div
-                key={`step-${currentLesson.id}-6`}
-                className="lesson-step-panel lp-step-animate"
-              >
-                <div className="lp-summary-hero">
-                  <ProgressRing
-                    size={64}
-                    value={100}
-                    celebrate
-                    stage={stageNum}
-                    tone="stage"
-                  />
-                  <Chip
-                    variant={isLessonCompleted ? 'success' : 'stage'}
-                    stage={stageNum}
-                  >
-                    Etapa {stageNum} · Lección {currentLesson.order}
-                  </Chip>
-                  <h2 className="lp-summary-hero__title">Lección completada</h2>
-                  <p className="lp-summary-hero__subtitle">
-                    {currentLesson.title}
-                  </p>
-                </div>
-
-                {isStageCompleted && (
-                  <div className="lp-stage-badge-wrap anim-pop">
-                    <Badge stage={stageNum} unlocked />
-                  </div>
-                )}
-
-                <div className="lp-srs-banner">
-                  <div className="lp-srs-banner__left">
-                    <span className="lp-srs-banner__icon" aria-hidden="true">
-                      <Sparkles size={20} />
-                    </span>
-                    <div>
-                      <div className="lp-srs-banner__title">
-                        +4 tarjetas añadidas a tu repaso
-                      </div>
-                      <div className="lp-srs-banner__desc">
-                        Disponibles en tu sistema Leitner de memoria espaciada
-                        para DE, DA y BI.
-                      </div>
-                    </div>
-                  </div>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => onNavigate('practice')}
-                  >
-                    Ir a Repaso
-                  </Button>
-                </div>
-
-                <div className="lp-takeaways-section">
-                  <h3 className="lp-takeaways-heading">
-                    3 ideas clave de la lección
-                  </h3>
-                  <div className="lp-takeaway-grid">
-                    {keyTakeaways.map((idea, idx) => (
-                      <div key={idx} className="lp-takeaway-card">
-                        <span className="lp-takeaway-card__num tabular">
-                          0{idx + 1}
-                        </span>
-                        <p className="lp-takeaway-card__text">
-                          {formatInlineText(idea)}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="lp-summary-actions">
-                  <Button
-                    variant="secondary"
-                    size="md"
-                    onClick={() => onNavigate('roadmap')}
-                  >
-                    Volver a la ruta
-                  </Button>
-
-                  <div className="lp-summary-actions__primary">
-                    <Button
-                      variant={isLessonCompleted ? 'secondary' : 'primary'}
-                      size="md"
-                      onClick={() => onToggleCompleteLesson(currentLesson.id)}
-                    >
-                      {isLessonCompleted
-                        ? '✓ Lección completada (desmarcar)'
-                        : 'Marcar como completada'}
-                    </Button>
-
-                    {nextLesson ? (
-                      <Button
-                        variant="primary"
-                        size="md"
-                        onClick={() => {
-                          if (!isLessonCompleted) {
-                            onToggleCompleteLesson(currentLesson.id);
-                          }
-                          onOpenLesson(nextLesson.id);
-                        }}
-                      >
-                        Siguiente lección →
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="primary"
-                        size="md"
-                        onClick={() => onNavigate('capstones')}
-                      >
-                        Ir a proyectos integradores →
-                      </Button>
-                    )}
-                  </div>
-                </div>
-
-                {Array.isArray(currentLesson.relatedLessons) &&
-                  currentLesson.relatedLessons.length > 0 && (
-                    <Card>
-                      <h3 className="lp-takeaways-heading">
-                        Lecciones relacionadas
-                      </h3>
-                      <ul className="lp-related-list">
-                        {currentLesson.relatedLessons.map((rel) => {
-                          const target = lessons.find((l) => l.id === rel.id);
-                          if (!target) return null;
-                          return (
-                            <li key={rel.id}>
-                              <button
-                                type="button"
-                                className="text-action-btn"
-                                onClick={() => onOpenLesson(target.id)}
-                              >
-                                Lección {target.order}: {target.title}
-                              </button>
-                              <span> — {formatInlineText(rel.reason)}</span>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </Card>
-                  )}
-              </div>
-            )}
-          </div>
-
-          {/* PIE FIJO DE NAVEGACIÓN ENTRE PASOS O BARRA INFERIOR DE FEEDBACK EN QUIZ */}
-          {safeStep === 4 && quizChecked && selectedQuizObj ? (
-            <div
-              className={`lp-quiz-feedback-bar ${
-                selectedQuizObj.correct
-                  ? 'lp-quiz-feedback-bar--correct'
-                  : 'lp-quiz-feedback-bar--incorrect'
-              }`}
-              role="status"
-              aria-live="polite"
-            >
-              <div className="lp-quiz-feedback-bar__main">
-                <span
-                  className="lp-quiz-feedback-bar__icon"
-                  aria-hidden="true"
-                >
-                  {selectedQuizObj.correct ? (
-                    <CheckCircle2 size={22} />
-                  ) : (
-                    <XCircle size={22} />
-                  )}
-                </span>
-                <div className="lp-quiz-feedback-bar__body">
-                  <h3 className="lp-quiz-feedback-bar__title">
-                    {selectedQuizObj.correct ? 'Correcto' : 'No es esa'}
-                  </h3>
-                  <p className="lp-quiz-feedback-bar__text">
-                    {formatInlineText(selectedQuizObj.feedback)}
-                  </p>
-                </div>
-              </div>
-
-              <div className="lp-quiz-feedback-bar__actions">
-                {selectedQuizObj.correct ? (
-                  <Button
-                    variant="success"
-                    size="md"
-                    onClick={() => handleSelectStep(5)}
-                  >
-                    Continuar →
-                  </Button>
-                ) : (
-                  <>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => {
-                        setQuizChecked(false);
-                        setPendingQuizId(null);
-                      }}
-                    >
-                      Intentar de nuevo
-                    </Button>
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      onClick={handleRevealQuizAnswer}
-                    >
-                      Ver la respuesta
-                    </Button>
-                  </>
-                )}
-              </div>
-            </div>
-          ) : (
-            <footer
-              className="lp-sticky-bottom"
-              aria-label="Navegación entre pasos"
-            >
-              <Button
-                variant="ghost"
-                size="md"
-                disabled={safeStep === 0 && !prevLesson}
-                onClick={() => {
-                  if (safeStep > 0) {
-                    handleSelectStep(safeStep - 1);
-                  } else if (prevLesson) {
-                    onOpenLesson(prevLesson.id);
-                  }
-                }}
-              >
-                ← Anterior
-              </Button>
-
-              <div className="lp-footer-hint">
-                <span className="lp-footer-kbds">
-                  <Kbd>←</Kbd>
-                  <Kbd>→</Kbd>
-                </span>
-                <span className="lp-footer-step-name">
-                  {LESSON_STEPS[safeStep].label}
-                </span>
-              </div>
-
-              {safeStep === 4 ? (
-                <Button
-                  variant="primary"
-                  size="md"
-                  className="lp-footer-primary-btn"
-                  disabled={!activeQuizOptionId}
-                  onClick={handleCheckQuiz}
-                >
-                  Comprobar
-                </Button>
-              ) : (
-                <Button
-                  variant="primary"
-                  size="md"
-                  className="lp-footer-primary-btn"
-                  onClick={() => {
-                    if (safeStep < LESSON_STEPS.length - 1) {
-                      handleSelectStep(safeStep + 1);
-                    } else if (nextLesson) {
-                      onOpenLesson(nextLesson.id);
-                    } else {
-                      onNavigate('capstones');
-                    }
-                  }}
-                >
-                  {safeStep < LESSON_STEPS.length - 1
-                    ? 'Siguiente →'
-                    : nextLesson
-                      ? 'Siguiente lección →'
-                      : 'Finalizar →'}
-                </Button>
-              )}
-            </footer>
-          )}
-        </div>
-      </div>
+      </Dialog>
     </div>
   );
 }

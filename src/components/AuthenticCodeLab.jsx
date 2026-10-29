@@ -1,308 +1,369 @@
-import React, { useState, useEffect } from 'react';
-import { Code2, CheckCircle2, Sparkles } from 'lucide-react';
-import { Callout } from './ui/index.js';
-import { formatInlineText, isNumericCell } from '../utils/formatText.jsx';
+import React, { useState, useMemo, useEffect, Suspense, lazy } from 'react';
+import { CheckCircle2, RotateCcw, Lightbulb, Eye, EyeOff, MessageSquare } from 'lucide-react';
+import { LESSONS_V2, getLessonById } from '../data/lessons/index.js';
+import { openTutor, solvePractice } from '../state/store.js';
+import '../styles/views/lab.css';
 
-function normalizeCode(val) {
-  if (!val || typeof val !== 'string') return '';
-  return val
-    .trim()
-    .replace(/;+$/, '')
-    .replace(/\s+/g, ' ')
-    .toLowerCase();
-}
+const LazySqlLab = lazy(() => import('../lab/SqlLab.jsx'));
+const LazyPracticeView = lazy(() => import('../views/PracticeView.jsx'));
 
-export function AuthenticCodeLab({ challenge, onSolve, onAskAiTutor }) {
-  const blanks = Array.isArray(challenge?.blanks) ? challenge.blanks : [];
-  const [values, setValues] = useState({});
-  const [hintShown, setHintShown] = useState({});
-  const [checked, setChecked] = useState(false);
-  const [attemptCount, setAttemptCount] = useState(0);
-  const [animMode, setAnimMode] = useState(''); // '' | 'pop' | 'shake'
+export function AuthenticCodeLab({
+  lessonId = null,
+  practice = null,
+  challenge = null,
+  onSolve,
+  onAskAiTutor,
+  embeddedInPracticeView = false,
+}) {
+  const forceFullPracticeView =
+    !embeddedInPracticeView &&
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('t10_view') === 'practice';
+  const matchedLesson = useMemo(() => {
+    if (lessonId) {
+      return getLessonById(lessonId) || LESSONS_V2.find((l) => l.id === lessonId) || null;
+    }
+    const target = practice || challenge;
+    if (target) {
+      const byContent = LESSONS_V2.find(
+        (l) =>
+          (target.prompt && l.practice?.prompt === target.prompt) ||
+          (target.instruction && l.practice?.prompt === target.instruction) ||
+          (target.starterCode && l.practice?.starterCode === target.starterCode) ||
+          (target.templateCode && l.practice?.starterCode === target.templateCode) ||
+          target.title === `Práctica: ${l.title}`
+      );
+      if (byContent) return byContent;
+    }
+    if (typeof window !== 'undefined') {
+      try {
+        const rawStoredId = window.localStorage.getItem('manual_datos_current_lesson_v1');
+        const parsedId = rawStoredId ? JSON.parse(rawStoredId) : null;
+        if (parsedId) {
+          const byStored = getLessonById(parsedId);
+          if (byStored) return byStored;
+        }
+      } catch {
+        // ignore storage parse error
+      }
+    }
+    return LESSONS_V2[0] || null;
+  }, [lessonId, practice, challenge]);
+
+  const resolvedLessonId = lessonId || matchedLesson?.v2Id || matchedLesson?.id || null;
+  const resolvedPractice = useMemo(() => {
+    if (practice && practice.type) return practice;
+    if (challenge && challenge.type) return challenge;
+    if (matchedLesson?.practice) return matchedLesson.practice;
+    if (!challenge) return null;
+    return {
+      type: 'fill-blanks',
+      title: challenge.title || 'Práctica guiada',
+      prompt: challenge.prompt || challenge.instruction || challenge.description || '',
+      starterCode: challenge.starterCode || challenge.templateCode || challenge.template || '',
+      blanks: Array.isArray(challenge.blanks) ? challenge.blanks : [],
+      hints: Array.isArray(challenge.hints) ? challenge.hints : [],
+      solution: challenge.solution || '',
+      solutionExplanation: challenge.solutionExplanation || '',
+    };
+  }, [practice, challenge, matchedLesson]);
+
+  const isSqlPractice = resolvedPractice?.type === 'sql';
+
+  // State for fill-blanks mode
+  const blanks = useMemo(() => {
+    const raw = resolvedPractice?.blanks || challenge?.blanks || [];
+    return Array.isArray(raw) ? raw : [];
+  }, [resolvedPractice, challenge]);
+
+  const templateText =
+    resolvedPractice?.starterCode ||
+    challenge?.templateCode ||
+    challenge?.template ||
+    '';
+
+  const [selectedValues, setSelectedValues] = useState({});
+  const [activeBlankId, setActiveBlankId] = useState(() => blanks[0]?.id || null);
+  const [checkedStatus, setCheckedStatus] = useState(null); // null | 'passed' | 'failed'
+  const [revealedHints, setRevealedHints] = useState(0);
+  const [showSolution, setShowSolution] = useState(false);
 
   useEffect(() => {
-    const init = {};
-    blanks.forEach((b) => {
-      init[b.id] = '';
-    });
-    setValues(init);
-    setHintShown({});
-    setChecked(false);
-    setAttemptCount(0);
-    setAnimMode('');
-  }, [challenge?.title]);
+    setSelectedValues({});
+    setActiveBlankId(blanks[0]?.id || null);
+    setCheckedStatus(null);
+    setRevealedHints(0);
+    setShowSolution(false);
+  }, [resolvedLessonId, templateText, blanks]);
 
-  if (!challenge || blanks.length === 0) return null;
-
-  const results = {};
-  let allCorrect = true;
-  blanks.forEach((b) => {
-    const userVal = normalizeCode(values[b.id]);
-    const accepted = Array.isArray(b.acceptedAnswers) ? b.acceptedAnswers : [];
-    const ok = accepted.some((ans) => normalizeCode(ans) === userVal);
-    results[b.id] = ok;
-    if (!ok) allCorrect = false;
-  });
-
-  const triggerAnimation = (nextMode) => {
-    setAnimMode('');
-    setTimeout(() => {
-      setAnimMode(nextMode);
-    }, 10);
-  };
-
-  const handleCheck = () => {
-    const nextAttempt = attemptCount + 1;
-    setAttemptCount(nextAttempt);
-    setChecked(true);
-
-    if (allCorrect) {
-      triggerAnimation('pop');
-      if (typeof onSolve === 'function') {
-        onSolve({ passed: true });
-      }
-    } else {
-      triggerAnimation('shake');
-      // Pista progresiva automática para los campos con error
-      const nextHints = { ...hintShown };
-      blanks.forEach((b) => {
-        if (!results[b.id]) {
-          nextHints[b.id] = true;
+  if (forceFullPracticeView) {
+    return (
+      <Suspense
+        fallback={
+          <div className="sql-lab" data-testid="sql-lab-loading">
+            <span className="sql-lab-engine-pill is-loading">Preparando el motor SQL…</span>
+          </div>
         }
+      >
+        <LazyPracticeView initialLessonId={resolvedLessonId} />
+      </Suspense>
+    );
+  }
+
+  if (!resolvedPractice) return null;
+
+  if (isSqlPractice) {
+    return (
+      <Suspense
+        fallback={
+          <div className="sql-lab" data-testid="sql-lab-loading">
+            <span className="sql-lab-engine-pill is-loading">Preparando el motor SQL…</span>
+          </div>
+        }
+      >
+        <LazySqlLab
+          lessonId={resolvedLessonId}
+          title={
+            challenge?.title ||
+            resolvedPractice.title ||
+            (matchedLesson ? `Práctica: ${matchedLesson.title}` : 'Práctica SQL')
+          }
+          prompt={resolvedPractice.prompt}
+          starterCode={resolvedPractice.starterCode}
+          practice={resolvedPractice}
+          mode="practice"
+          onSolve={onSolve}
+        />
+      </Suspense>
+    );
+  }
+
+  const activeBlank = blanks.find((b) => b.id === activeBlankId) || blanks[0] || null;
+  const hints = Array.isArray(resolvedPractice.hints) ? resolvedPractice.hints : [];
+
+  const handleSelectToken = (blankId, optionValue) => {
+    const next = { ...selectedValues, [blankId]: optionValue };
+    setSelectedValues(next);
+    setCheckedStatus(null);
+    const nextUnfilled = blanks.find((b) => b.id !== blankId && !next[b.id]);
+    if (nextUnfilled) {
+      setActiveBlankId(nextUnfilled.id);
+    }
+  };
+
+  const handleVerifyBlanks = () => {
+    if (blanks.length === 0) return;
+    const allCorrect = blanks.every((b) => selectedValues[b.id] === b.correct);
+    setCheckedStatus(allCorrect ? 'passed' : 'failed');
+    if (allCorrect) {
+      if (resolvedLessonId) {
+        solvePractice(resolvedLessonId, {
+          passed: true,
+          mode: 'fill-blanks',
+          answers: selectedValues,
+        });
+      }
+      if (onSolve) {
+        onSolve();
+      }
+    }
+  };
+
+  const handleResetBlanks = () => {
+    setSelectedValues({});
+    setActiveBlankId(blanks[0]?.id || null);
+    setCheckedStatus(null);
+  };
+
+  const handleReviewWithTutor = () => {
+    if (onAskAiTutor) {
+      onAskAiTutor({
+        mode: 'review-sql',
+        lessonId: resolvedLessonId,
+        code: templateText,
+        result: selectedValues,
       });
-      setHintShown(nextHints);
+      return;
     }
-  };
-
-  const handleFillSolution = () => {
-    const filled = {};
-    blanks.forEach((b) => {
-      filled[b.id] = b.acceptedAnswers?.[0] || '';
+    openTutor({
+      mode: 'review-sql',
+      lessonId: resolvedLessonId,
+      code: templateText,
+      result: selectedValues,
     });
-    setValues(filled);
-    setChecked(true);
-    triggerAnimation('pop');
-    if (typeof onSolve === 'function') {
-      onSolve({ passed: true });
-    }
   };
 
-  const renderLiveCode = () => {
-    let code = String(challenge.templateCode || '');
-    blanks.forEach((b, idx) => {
-      const replacement = values[b.id]?.trim()
-        ? values[b.id]
-        : `/* [${idx + 1}: ${b.placeholder}] */`;
-      code = code
-        .replace(`{{${b.id}}}`, replacement)
-        .replace(`___${b.id}___`, replacement)
-        .replace(`__${b.id}__`, replacement);
+  const renderTemplateSegments = () => {
+    const parts = String(templateText).split(/(\{\{blank_\d+\}\})/g);
+    return parts.map((segment, idx) => {
+      const match = segment.match(/^\{\{(blank_\d+)\}\}$/);
+      if (!match) {
+        return <span key={idx}>{segment}</span>;
+      }
+      const blankId = match[1];
+      const blankSpec = blanks.find((b) => b.id === blankId);
+      const val = selectedValues[blankId];
+      const isAct = activeBlankId === blankId;
+      let statusClass = '';
+      if (checkedStatus && blankSpec) {
+        statusClass = val === blankSpec.correct ? 'is-correct' : 'is-wrong';
+      } else if (val) {
+        statusClass = 'is-filled';
+      }
+
+      return (
+        <button
+          key={idx}
+          type="button"
+          className={`code-blank-slot ${isAct ? 'is-active' : ''} ${statusClass}`}
+          onClick={() => setActiveBlankId(blankId)}
+          data-testid={`blank-slot-${blankId}`}
+        >
+          {val || `[${blankId.replace('blank_', 'hueco ')}]`}
+        </button>
+      );
     });
-    return code;
   };
-
-  const codeLines = renderLiveCode().split('\n');
-  const outputRows = Array.isArray(challenge.expectedOutputTable)
-    ? challenge.expectedOutputTable
-    : [];
-
-  const firstPendingBlank = blanks.find((b) => !results[b.id]);
 
   return (
-    <section
-      className={`codelab ${animMode === 'pop' ? 'codelab--pop' : ''} ${
-        animMode === 'shake' ? 'codelab--shake' : ''
-      }`.trim()}
-    >
-      <div className="codelab__header">
-        <h3 className="codelab__title">
-          {challenge.title || 'Ejercicio práctico de código'}
-        </h3>
-        <p className="codelab__desc">{formatInlineText(challenge.instruction)}</p>
-      </div>
-
-      <div className="codelab-editor">
-        <div className="codelab-editor__topbar">
-          <span className="codelab-editor__dots" aria-hidden="true">
-            <span className="codelab-editor__dot" />
-            <span className="codelab-editor__dot" />
-            <span className="codelab-editor__dot" />
-            <Code2 size={14} />
-            <span>laboratorio_interactivo.sql</span>
-          </span>
-          <span>
-            {codeLines.length} líneas · {blanks.length}{' '}
-            {blanks.length === 1 ? 'espacio' : 'espacios'}
-          </span>
-        </div>
-
-        <div className="codelab-editor__viewport">
-          <div className="codelab-lines tabular" role="region" aria-label="Código del ejercicio">
-            {codeLines.map((line, idx) => (
-              <div key={idx} className="codelab-line">
-                <span className="codelab-gutter">{idx + 1}</span>
-                <span className="codelab-code">{line || ' '}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="codelab-inputs-panel lab-blanks-list">
-          {blanks.map((blank, idx) => {
-            const isOk = checked && results[blank.id];
-            const isErr = checked && !results[blank.id];
-            const showHint = Boolean(hintShown[blank.id]);
-
-            return (
-              <div
-                key={blank.id}
-                className={`codelab-blank-row lab-blank-row ${
-                  isOk ? 'codelab-blank-row--valid' : ''
-                } ${isErr ? 'codelab-blank-row--err' : ''}`.trim()}
-              >
-                <div className="codelab-blank-header lab-blank-header">
-                  <label htmlFor={`blank-${blank.id}`} className="tabular">
-                    <strong>Espacio {idx + 1}:</strong> {formatInlineText(blank.placeholder)}
-                  </label>
-                  <button
-                    type="button"
-                    className="codelab-hint-btn text-action-btn"
-                    onClick={() =>
-                      setHintShown((prev) => ({ ...prev, [blank.id]: !prev[blank.id] }))
-                    }
-                  >
-                    {showHint ? 'Ocultar pista' : 'Ver pista'}
-                  </button>
-                </div>
-
-                <input
-                  id={`blank-${blank.id}`}
-                  type="text"
-                  className={`codelab-code-input lab-code-input tabular ${
-                    isOk ? 'is-ok' : ''
-                  } ${isErr ? 'is-err' : ''}`.trim()}
-                  value={values[blank.id] || ''}
-                  onChange={(e) => {
-                    setValues((prev) => ({ ...prev, [blank.id]: e.target.value }));
-                    setChecked(false);
-                  }}
-                  placeholder={`Completa el espacio ${idx + 1}...`}
-                />
-
-                {showHint && (
-                  <p className="codelab-hint-text lab-hint-text">
-                    <strong>Pista progresiva:</strong> {formatInlineText(blank.hint)}{' '}
-                    {attemptCount >= 2 || hintShown[blank.id] ? (
-                      <>
-                        (Sintaxis de referencia: <code>{blank.acceptedAnswers?.[0]}</code>)
-                      </>
-                    ) : null}
-                  </p>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="codelab-actions editorial-actions-row">
-        <button
-          type="button"
-          className="ui-btn ui-btn--primary ui-btn--md codelab-check-btn"
-          onClick={handleCheck}
-        >
-          <CheckCircle2 size={16} />
-          Comprobar código
-        </button>
-        <button
-          type="button"
-          className="ui-btn ui-btn--secondary ui-btn--md"
-          onClick={handleFillSolution}
-        >
-          Completar con solución de referencia
-        </button>
-        {onAskAiTutor && (
-          <button
-            type="button"
-            className="ui-btn ui-btn--ghost ui-btn--md"
-            onClick={() =>
-              onAskAiTutor(
-                `Explícame paso a paso cómo resolver el ejercicio "${challenge.title}" y por qué se usan las cláusulas ${blanks.map((b) => b.acceptedAnswers?.[0]).join(', ')}.`
-              )
-            }
-          >
-            <Sparkles size={16} />
-            Consultar duda al Tutor IA
-          </button>
-        )}
-      </div>
-
-      {checked && allCorrect && (
-        <Callout
-          tone="success"
-          title="Código verificado correctamente"
-          className="editorial-feedback ok"
-        >
-          <p>
-            Todas las cláusulas respetan el grano y las invariantes del motor analítico.
-          </p>
-          {outputRows.length > 0 && (
-            <div className="sim-panel">
-              <div className="sim-panel__title">
-                Tabla de salida producida por tu consulta:
-              </div>
-              <div className="sim-table-scroll">
-                <table className="sim-table tabular">
-                  <thead>
-                    <tr>
-                      {Object.entries(outputRows[0]).map(([col, sampleVal]) => (
-                        <th key={col} className={isNumericCell(sampleVal) ? 'num' : ''}>
-                          {col}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {outputRows.map((row, rIdx) => (
-                      <tr key={rIdx} className="row-optimal row-flash">
-                        {Object.values(row).map((val, cIdx) => (
-                          <td key={cIdx} className={isNumericCell(val) ? 'num' : ''}>
-                            {String(val)}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+    <section className="code-challenge-card" data-testid="fill-blanks-lab">
+      <header className="sql-lab-header">
+        <div className="sql-lab-title-group">
+          <span className="sql-lab-kicker">Práctica de código estructurado</span>
+          <h3 className="sql-lab-title">
+            {challenge?.title ||
+              resolvedPractice.title ||
+              (matchedLesson ? `Práctica: ${matchedLesson.title}` : 'Completar bloques clave')}
+          </h3>
+          {resolvedPractice.prompt && (
+            <p className="sql-lab-prompt">{resolvedPractice.prompt}</p>
           )}
-        </Callout>
+        </div>
+      </header>
+
+      <pre className="code-template-box">
+        <code>{renderTemplateSegments()}</code>
+      </pre>
+
+      {activeBlank && (
+        <div className="code-token-bank" data-testid="blank-token-bank">
+          <span
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 'var(--fs-1)',
+              color: 'var(--ink-2)',
+              alignSelf: 'center',
+              marginRight: 'var(--sp-2)',
+            }}
+          >
+            Opciones para {activeBlank.id.replace('blank_', 'hueco ')}:
+          </span>
+          {(activeBlank.options || []).map((opt) => (
+            <button
+              key={opt}
+              type="button"
+              className="code-token-chip"
+              onClick={() => handleSelectToken(activeBlank.id, opt)}
+              data-testid={`token-option-${opt}`}
+            >
+              {opt}
+            </button>
+          ))}
+        </div>
       )}
 
-      {checked && !allCorrect && (
-        <Callout
-          tone="danger"
-          title="Hay cláusulas pendientes o con sintaxis distinta a la esperada"
-          className="editorial-feedback err"
+      <div className="sql-lab-toolbar">
+        <div className="sql-lab-actions-left">
+          <button
+            type="button"
+            className="sql-btn sql-btn-primary"
+            onClick={handleVerifyBlanks}
+            data-testid="verify-blanks-btn"
+          >
+            <CheckCircle2 size={14} />
+            <span>Comprobar respuesta</span>
+          </button>
+
+          <button
+            type="button"
+            className="sql-btn sql-btn-ghost"
+            onClick={handleResetBlanks}
+          >
+            <RotateCcw size={14} />
+            <span>Reiniciar huecos</span>
+          </button>
+        </div>
+
+        <div className="sql-lab-actions-right">
+          {hints.length > 0 && revealedHints < hints.length && (
+            <button
+              type="button"
+              className="sql-btn sql-btn-ghost"
+              onClick={() => setRevealedHints((n) => Math.min(hints.length, n + 1))}
+            >
+              <Lightbulb size={14} />
+              <span>Ver pista ({revealedHints}/{hints.length})</span>
+            </button>
+          )}
+
+          {resolvedPractice.solution && (
+            <button
+              type="button"
+              className="sql-btn sql-btn-ghost"
+              onClick={() => setShowSolution((v) => !v)}
+            >
+              {showSolution ? <EyeOff size={14} /> : <Eye size={14} />}
+              <span>{showSolution ? 'Ocultar solución' : 'Ver solución'}</span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            className="sql-btn sql-btn-secondary"
+            onClick={handleReviewWithTutor}
+          >
+            <MessageSquare size={14} />
+            <span>Consultar al tutor</span>
+          </button>
+        </div>
+      </div>
+
+      {revealedHints > 0 && (
+        <div className="sql-hints-box">
+          {hints.slice(0, revealedHints).map((h, i) => (
+            <p key={i} className="sql-hint-item">
+              <strong>Pista {i + 1}:</strong> {h}
+            </p>
+          ))}
+        </div>
+      )}
+
+      {checkedStatus && (
+        <div
+          className={`sql-grade-box ${checkedStatus === 'passed' ? 'is-pass' : 'is-fail'}`}
+          data-testid="fill-blanks-feedback"
         >
-          <p>
-            {firstPendingBlank ? (
-              <>
-                Revisa <strong>{formatInlineText(firstPendingBlank.placeholder)}</strong>:{' '}
-                {formatInlineText(firstPendingBlank.hint)}
-                {attemptCount >= 2 && (
-                  <>
-                    {' '}
-                    — Prueba con <code>{firstPendingBlank.acceptedAnswers?.[0]}</code>.
-                  </>
-                )}
-              </>
-            ) : (
-              'Verifica las pistas activadas en cada espacio marcado en rojo.'
-            )}
-          </p>
-        </Callout>
+          <span className="sql-grade-title">
+            {checkedStatus === 'passed'
+              ? 'Respuesta verificada · Todos los bloques coinciden con la especificación'
+              : 'Algunos huecos no coinciden · Revisa los bloques marcados en rojo'}
+          </span>
+          {checkedStatus === 'passed' && resolvedPractice.solutionExplanation && (
+            <p className="sql-grade-summary">{resolvedPractice.solutionExplanation}</p>
+          )}
+        </div>
+      )}
+
+      {showSolution && resolvedPractice.solution && (
+        <div className="sql-solution-box">
+          <span className="sql-grade-title">Solución de referencia</span>
+          <pre className="sql-solution-pre">
+            <code>{resolvedPractice.solution}</code>
+          </pre>
+          {resolvedPractice.solutionExplanation && (
+            <p className="sql-solution-explanation">{resolvedPractice.solutionExplanation}</p>
+          )}
+        </div>
       )}
     </section>
   );

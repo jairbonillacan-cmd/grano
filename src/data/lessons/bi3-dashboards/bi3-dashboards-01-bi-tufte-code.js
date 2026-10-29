@@ -200,72 +200,20 @@ const lesson = {
     }
   ],
   "practice": {
-    "type": "fill-blanks",
-    "title": "Bloque declarativo con contexto frente a meta",
+    "type": "sql",
+    "title": "Tabla ejecutiva de desempeño frente a meta por región",
     "language": "sql",
-    "prompt": "Completa el bloque declarativo de BI-as-Code (SQL + componente `<DataTable>`) para calcular la desviación porcentual contra la meta (`vs_plan_pct`), ordenar las regiones de mayor a menor ingreso real y renderizar la variación con formato semántico `delta`.",
-    "starterCode": "```sql kpi_regional\nSELECT\n  region,\n  SUM(net_revenue_usd) AS actual_rev_usd,\n  SUM(plan_revenue_usd) AS plan_rev_usd,\n  ROUND(\n    100.0 * (SUM(net_revenue_usd) - SUM(plan_revenue_usd))\n      / {{b1}}(SUM(plan_revenue_usd), 0),\n    1\n  ) AS vs_plan_pct\nFROM gold.fct_regional_revenue\nWHERE fiscal_month = '2026-10-01'\nGROUP BY region\n{{b2}} actual_rev_usd DESC;\n```\n\n<DataTable data={kpi_regional}>\n  <Column id=region title=\"Región\" />\n  <Column id=actual_rev_usd title=\"Ingreso Real\" fmt=usd0 contentType=bar />\n  <Column id=plan_rev_usd title=\"Meta (Plan)\" fmt=usd0 />\n  <Column id=vs_plan_pct title=\"vs. Plan (%)\" fmt=pct1 contentType={{b3}} />\n</DataTable>",
-    "expected": "```sql kpi_regional\nSELECT\n  region,\n  SUM(net_revenue_usd) AS actual_rev_usd,\n  SUM(plan_revenue_usd) AS plan_rev_usd,\n  ROUND(\n    100.0 * (SUM(net_revenue_usd) - SUM(plan_revenue_usd))\n      / {{b1}}(SUM(plan_revenue_usd), 0),\n    1\n  ) AS vs_plan_pct\nFROM gold.fct_regional_revenue\nWHERE fiscal_month = '2026-10-01'\nGROUP BY region\n{{b2}} actual_rev_usd DESC;\n```\n\n<DataTable data={kpi_regional}>\n  <Column id=region title=\"Región\" />\n  <Column id=actual_rev_usd title=\"Ingreso Real\" fmt=usd0 contentType=bar />\n  <Column id=plan_rev_usd title=\"Meta (Plan)\" fmt=usd0 />\n  <Column id=vs_plan_pct title=\"vs. Plan (%)\" fmt=pct1 contentType={{b3}} />\n</DataTable>",
+    "prompt": "Construye la consulta ejecutiva que compara las ventas completadas de `orders` en el año 2024 frente a la meta anual de cada tienda (`stores.monthly_target_usd * 12`) agrupando por `region`: `actual_rev_usd`, `plan_rev_usd` y `vs_plan_pct`, ordenado por `actual_rev_usd DESC`.",
+    "starterCode": "WITH store_sales_2024 AS (\n  SELECT\n    store_id,\n    SUM(total_usd) AS actual_rev_usd\n  FROM orders\n  WHERE status = 'completed'\n    AND order_date BETWEEN DATE '2024-01-01' AND DATE '2024-12-31'\n  GROUP BY store_id\n)\nSELECT\n  s.region,\n  ROUND(SUM(COALESCE(ss.actual_rev_usd, 0)), 2) AS actual_rev_usd,\n  ROUND(SUM(s.monthly_target_usd * 12), 2) AS plan_rev_usd,\n  -- TODO: Calcula vs_plan_pct redondeado a 1 decimal: 100.0 * (actual - plan) / NULLIF(plan, 0)\n  0.0 AS vs_plan_pct\nFROM stores s\nLEFT JOIN store_sales_2024 ss ON s.store_id = ss.store_id\nGROUP BY s.region\nORDER BY actual_rev_usd DESC;",
+    "expected": "WITH store_sales_2024 AS (\n  SELECT\n    store_id,\n    SUM(total_usd) AS actual_rev_usd\n  FROM orders\n  WHERE status = 'completed'\n    AND order_date BETWEEN DATE '2024-01-01' AND DATE '2024-12-31'\n  GROUP BY store_id\n)\nSELECT\n  s.region,\n  ROUND(SUM(COALESCE(ss.actual_rev_usd, 0)), 2) AS actual_rev_usd,\n  ROUND(SUM(s.monthly_target_usd * 12), 2) AS plan_rev_usd,\n  ROUND(\n    100.0 * (SUM(COALESCE(ss.actual_rev_usd, 0)) - SUM(s.monthly_target_usd * 12))\n      / NULLIF(SUM(s.monthly_target_usd * 12), 0),\n    1\n  ) AS vs_plan_pct\nFROM stores s\nLEFT JOIN store_sales_2024 ss ON s.store_id = ss.store_id\nGROUP BY s.region\nORDER BY actual_rev_usd DESC;",
     "orderMatters": true,
     "hints": [
-      "Protección contra división por cero: En SQL de producción, protege siempre el denominador de un porcentaje con `NULLIF(denominador, 0)`.",
-      "Cláusula de ordenamiento jerárquico: Una tabla ejecutiva nunca se deja en orden aleatorio; ordena de mayor a menor impacto con `ORDER BY`.",
-      "Tipo de contenido para variación +/-: En Evidence / BI-as-Code, el `contentType` que muestra flechas y color semántico positivo/negativo para desviaciones es `delta`."
+      "Pre-agregar las ventas de 2024 por `store_id` antes de unir con `stores` evita que `monthly_target_usd` se multiplique por cada pedido.",
+      "La desviación porcentual contra el plan es `ROUND(100.0 * (SUM(COALESCE(ss.actual_rev_usd, 0)) - SUM(s.monthly_target_usd * 12)) / NULLIF(SUM(s.monthly_target_usd * 12), 0), 1) AS vs_plan_pct`.",
+      "Conserva `ORDER BY actual_rev_usd DESC` para presentar las regiones jerárquicamente."
     ],
-    "solution": "```sql kpi_regional\nSELECT\n  region,\n  SUM(net_revenue_usd) AS actual_rev_usd,\n  SUM(plan_revenue_usd) AS plan_rev_usd,\n  ROUND(\n    100.0 * (SUM(net_revenue_usd) - SUM(plan_revenue_usd))\n      / {{b1}}(SUM(plan_revenue_usd), 0),\n    1\n  ) AS vs_plan_pct\nFROM gold.fct_regional_revenue\nWHERE fiscal_month = '2026-10-01'\nGROUP BY region\n{{b2}} actual_rev_usd DESC;\n```\n\n<DataTable data={kpi_regional}>\n  <Column id=region title=\"Región\" />\n  <Column id=actual_rev_usd title=\"Ingreso Real\" fmt=usd0 contentType=bar />\n  <Column id=plan_rev_usd title=\"Meta (Plan)\" fmt=usd0 />\n  <Column id=vs_plan_pct title=\"vs. Plan (%)\" fmt=pct1 contentType={{b3}} />\n</DataTable>",
-    "solutionExplanation": "Protege el cálculo del porcentaje contra el Plan usando `NULLIF(SUM(plan_revenue_usd), 0)`. Ordena explícitamente las categorías por magnitud (`ORDER BY actual_rev_usd DESC`) para facilitar el escaneo visual inmediato. Integra barras alineadas (`contentType=bar`) y deltas semánticos (`contentType=delta`) en lugar de gráficos circulares.",
-    "blanks": [
-      {
-        "id": "b1",
-        "placeholder": "Protección contra división por cero",
-        "acceptedAnswers": [
-          "NULLIF"
-        ],
-        "hint": "En SQL de producción, protege siempre el denominador de un porcentaje con `NULLIF(denominador, 0)`."
-      },
-      {
-        "id": "b2",
-        "placeholder": "Cláusula de ordenamiento jerárquico",
-        "acceptedAnswers": [
-          "ORDER BY"
-        ],
-        "hint": "Una tabla ejecutiva nunca se deja en orden aleatorio; ordena de mayor a menor impacto con `ORDER BY`."
-      },
-      {
-        "id": "b3",
-        "placeholder": "Tipo de contenido para variación +/-",
-        "acceptedAnswers": [
-          "delta",
-          "\"delta\""
-        ],
-        "hint": "En Evidence / BI-as-Code, el `contentType` que muestra flechas y color semántico positivo/negativo para desviaciones es `delta`."
-      }
-    ],
-    "expectedOutputTable": [
-      {
-        "region": "LATAM",
-        "actual_rev_usd": "$640,000",
-        "plan_rev_usd": "$540,000",
-        "vs_plan_pct": "+18.5%"
-      },
-      {
-        "region": "EMEA",
-        "actual_rev_usd": "$510,000",
-        "plan_rev_usd": "$480,000",
-        "vs_plan_pct": "+6.3%"
-      },
-      {
-        "region": "NORAM",
-        "actual_rev_usd": "$390,000",
-        "plan_rev_usd": "$430,000",
-        "vs_plan_pct": "-9.3%"
-      }
-    ],
-    "rubricCriteria": [
-      "Protege el cálculo del porcentaje contra el Plan usando `NULLIF(SUM(plan_revenue_usd), 0)`.",
-      "Ordena explícitamente las categorías por magnitud (`ORDER BY actual_rev_usd DESC`) para facilitar el escaneo visual inmediato.",
-      "Integra barras alineadas (`contentType=bar`) y deltas semánticos (`contentType=delta`) en lugar de gráficos circulares."
-    ]
+    "solution": "WITH store_sales_2024 AS (\n  SELECT\n    store_id,\n    SUM(total_usd) AS actual_rev_usd\n  FROM orders\n  WHERE status = 'completed'\n    AND order_date BETWEEN DATE '2024-01-01' AND DATE '2024-12-31'\n  GROUP BY store_id\n)\nSELECT\n  s.region,\n  ROUND(SUM(COALESCE(ss.actual_rev_usd, 0)), 2) AS actual_rev_usd,\n  ROUND(SUM(s.monthly_target_usd * 12), 2) AS plan_rev_usd,\n  ROUND(\n    100.0 * (SUM(COALESCE(ss.actual_rev_usd, 0)) - SUM(s.monthly_target_usd * 12))\n      / NULLIF(SUM(s.monthly_target_usd * 12), 0),\n    1\n  ) AS vs_plan_pct\nFROM stores s\nLEFT JOIN store_sales_2024 ss ON s.store_id = ss.store_id\nGROUP BY s.region\nORDER BY actual_rev_usd DESC;",
+    "solutionExplanation": "Pre-agrega las ventas reales de 2024 al grano `store_id` antes de unirlas con `stores`, y calcula la variación porcentual frente a la meta anual (`monthly_target_usd * 12`) protegiendo el denominador con `NULLIF(..., 0)`."
   },
   "roleNotes": {
     "de": "Integra el paso `npm run build:reports` del proyecto BI-as-Code dentro del pipeline CI/CD de dbt/SQLMesh para garantizar cero dashboards rotos tras cambios de esquema. Materializa extractos Parquet compactos y ordenados desde la capa Gold para que DuckDB-Wasm los sirva desde CDN con latencia inferior a 50ms. Audita que ningún reporte ejecute consultas pesadas directas contra tablas Bronze/Silver saltándose la Capa Semántica.",

@@ -187,64 +187,20 @@ const lesson = {
     }
   ],
   "practice": {
-    "type": "fill-blanks",
-    "title": "Cruce punto en el tiempo con SCD2",
+    "type": "sql",
+    "title": "Cruce punto en el tiempo con dimensión SCD2",
     "language": "sql",
-    "prompt": "Completa la consulta para atribuir cada pago de `silver.fct_payments` al nivel de riesgo (`risk_tier`) que tenía el comercio en `silver.dim_merchant_scd2` en el instante exacto de la transacción (`payment_ts`) usando un intervalo semicerrado `[valid_from, valid_to)`.",
-    "starterCode": "SELECT\n  m.risk_tier AS risk_tier_at_payment,\n  COUNT(p.payment_id) AS total_payments,\n  SUM(p.amount_usd) AS total_volume_usd\nFROM silver.fct_payments p\nJOIN silver.dim_merchant_scd2 m\n  ON {{b1}}\n  AND p.payment_ts {{b2}}\n  AND p.payment_ts {{b3}}\nGROUP BY m.risk_tier;",
-    "expected": "SELECT\n  m.risk_tier AS risk_tier_at_payment,\n  COUNT(p.payment_id) AS total_payments,\n  SUM(p.amount_usd) AS total_volume_usd\nFROM silver.fct_payments p\nJOIN silver.dim_merchant_scd2 m\n  ON {{b1}}\n  AND p.payment_ts {{b2}}\n  AND p.payment_ts {{b3}}\nGROUP BY m.risk_tier;",
+    "prompt": "Atribuye cada pedido completado de `orders` al nivel (`tier`) que tenía el cliente en `customer_changes` en el instante exacto de la compra (`order_ts`) usando un intervalo semicerrado `[valid_from, valid_to)`, devolviendo `tier_at_order`, `total_orders` y `revenue_usd` ordenados por `revenue_usd DESC`.",
+    "starterCode": "SELECT\n  h.tier AS tier_at_order,\n  COUNT(o.order_id) AS total_orders,\n  ROUND(SUM(o.total_usd), 2) AS revenue_usd\nFROM orders o\nJOIN customer_changes h\n  ON o.customer_id = h.customer_id\n  -- TODO: Filtra el intervalo semicerrado: o.order_ts >= h.valid_from y (o.order_ts < h.valid_to OR h.valid_to IS NULL)\n  AND h.is_current = TRUE\nWHERE o.status = 'completed'\nGROUP BY h.tier\nORDER BY revenue_usd DESC;",
+    "expected": "SELECT\n  h.tier AS tier_at_order,\n  COUNT(o.order_id) AS total_orders,\n  ROUND(SUM(o.total_usd), 2) AS revenue_usd\nFROM orders o\nJOIN customer_changes h\n  ON o.customer_id = h.customer_id\n  AND o.order_ts >= h.valid_from\n  AND (o.order_ts < h.valid_to OR h.valid_to IS NULL)\nWHERE o.status = 'completed'\nGROUP BY h.tier\nORDER BY revenue_usd DESC;",
     "orderMatters": true,
     "hints": [
-      "Igualdad de clave natural del comercio: Empareja primero el identificador del comercio entre hechos y dimensión (`p.merchant_id = m.merchant_id`).",
-      "Límite inferior cerrado (valid_from): El inicio de vigencia es inclusivo: usa `>= m.valid_from`.",
-      "Límite superior abierto (valid_to): El fin de vigencia es exclusivo para evitar solapamientos en bordes exactos: usa `< m.valid_to`."
+      "Elimina `AND h.is_current = TRUE`, ya que eso re-expresaría todas las ventas históricas con el nivel actual del cliente.",
+      "Añade el límite inferior inclusivo: `AND o.order_ts >= h.valid_from`.",
+      "Añade el límite superior exclusivo contemplando la versión vigente abierta (`NULL`): `AND (o.order_ts < h.valid_to OR h.valid_to IS NULL)`."
     ],
-    "solution": "SELECT\n  m.risk_tier AS risk_tier_at_payment,\n  COUNT(p.payment_id) AS total_payments,\n  SUM(p.amount_usd) AS total_volume_usd\nFROM silver.fct_payments p\nJOIN silver.dim_merchant_scd2 m\n  ON {{b1}}\n  AND p.payment_ts {{b2}}\n  AND p.payment_ts {{b3}}\nGROUP BY m.risk_tier;",
-    "solutionExplanation": "Empareja la clave natural (`merchant_id`) combinada obligatoriamente con el filtro temporal. Aplica intervalo semicerrado (`>= valid_from` y `< valid_to`) en lugar de `BETWEEN` para evitar duplicar eventos en el milisegundo exacto de transición. Evita filtrar por `is_current = true` cuando el objetivo es auditar el estado histórico Point-in-Time.",
-    "blanks": [
-      {
-        "id": "b1",
-        "placeholder": "Igualdad de clave natural del comercio",
-        "acceptedAnswers": [
-          "p.merchant_id = m.merchant_id",
-          "m.merchant_id = p.merchant_id"
-        ],
-        "hint": "Empareja primero el identificador del comercio entre hechos y dimensión (`p.merchant_id = m.merchant_id`)."
-      },
-      {
-        "id": "b2",
-        "placeholder": "Límite inferior cerrado (valid_from)",
-        "acceptedAnswers": [
-          ">= m.valid_from"
-        ],
-        "hint": "El inicio de vigencia es inclusivo: usa `>= m.valid_from`."
-      },
-      {
-        "id": "b3",
-        "placeholder": "Límite superior abierto (valid_to)",
-        "acceptedAnswers": [
-          "< m.valid_to"
-        ],
-        "hint": "El fin de vigencia es exclusivo para evitar solapamientos en bordes exactos: usa `< m.valid_to`."
-      }
-    ],
-    "expectedOutputTable": [
-      {
-        "risk_tier_at_payment": "LOW_RISK",
-        "total_payments": 1420,
-        "total_volume_usd": "$284,000.00"
-      },
-      {
-        "risk_tier_at_payment": "MEDIUM_RISK",
-        "total_payments": 310,
-        "total_volume_usd": "$62,000.00"
-      }
-    ],
-    "rubricCriteria": [
-      "Empareja la clave natural (`merchant_id`) combinada obligatoriamente con el filtro temporal.",
-      "Aplica intervalo semicerrado (`>= valid_from` y `< valid_to`) en lugar de `BETWEEN` para evitar duplicar eventos en el milisegundo exacto de transición.",
-      "Evita filtrar por `is_current = true` cuando el objetivo es auditar el estado histórico Point-in-Time."
-    ]
+    "solution": "SELECT\n  h.tier AS tier_at_order,\n  COUNT(o.order_id) AS total_orders,\n  ROUND(SUM(o.total_usd), 2) AS revenue_usd\nFROM orders o\nJOIN customer_changes h\n  ON o.customer_id = h.customer_id\n  AND o.order_ts >= h.valid_from\n  AND (o.order_ts < h.valid_to OR h.valid_to IS NULL)\nWHERE o.status = 'completed'\nGROUP BY h.tier\nORDER BY revenue_usd DESC;",
+    "solutionExplanation": "Cruza `orders` con la dimensión histórica `customer_changes` por clave natural (`customer_id`) y acota el intervalo semicerrado `o.order_ts >= h.valid_from AND (o.order_ts < h.valid_to OR h.valid_to IS NULL)` para recuperar la versión exacta vigente en cada compra."
   },
   "roleNotes": {
     "de": "Automatiza la generación de dimensiones SCD Tipo 2 mediante `dbt snapshot` o modelos `SCD_TYPE_2` en SQLMesh usando intervalos semicerrados `[valid_from, valid_to)` y centinela `9999-12-31`. Durante la carga de `fct_orders`, resuelve y estampa la clave subrogada histórica (`customer_sk`) en la tabla de hechos para que las consultas posteriores en BI sean un join entero directo `1:1` ultrarrápido.",

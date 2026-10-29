@@ -1,0 +1,637 @@
+{
+  "dataset": "Mercado Brisa",
+  "domain": "Comercio electrónico e inventario regional omnicanal (café de especialidad y equipamiento)",
+  "seed": 19870315,
+  "tables": [
+    {
+      "name": "customers",
+      "grain": "1 fila = 1 cliente actual (snapshot)",
+      "rowCount": 2400,
+      "sizeBytes": 18976,
+      "sha256": "0e3b2d56ee4882d437ba643c18fd2fe12ef6a53422d4ae21830d35fb2d0956f4",
+      "columns": [
+        {
+          "name": "customer_id",
+          "type": "INTEGER"
+        },
+        {
+          "name": "full_name",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "email",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "country_code",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "city",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "postal_code",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "segment",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "acquisition_channel",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "signup_date",
+          "type": "DATE"
+        },
+        {
+          "name": "is_active",
+          "type": "BOOLEAN"
+        },
+        {
+          "name": "current_tier",
+          "type": "VARCHAR"
+        }
+      ]
+    },
+    {
+      "name": "customer_changes",
+      "grain": "1 fila = 1 versión histórica SCD2 de cliente (valid_from, valid_to, is_current)",
+      "rowCount": 4100,
+      "sizeBytes": 31688,
+      "sha256": "77c431bc06c4dca7566ce57855db70582525441af2a1c646defdf661184e7acc",
+      "columns": [
+        {
+          "name": "change_id",
+          "type": "INTEGER"
+        },
+        {
+          "name": "customer_id",
+          "type": "INTEGER"
+        },
+        {
+          "name": "country_code",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "segment",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "tier",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "valid_from",
+          "type": "TIMESTAMP"
+        },
+        {
+          "name": "valid_to",
+          "type": "TIMESTAMP"
+        },
+        {
+          "name": "is_current",
+          "type": "BOOLEAN"
+        }
+      ]
+    },
+    {
+      "name": "products",
+      "grain": "1 fila = 1 SKU con categoría, coste y precio de lista",
+      "rowCount": 180,
+      "sizeBytes": 5369,
+      "sha256": "c76db81ff9cf287e8125926f19a76a59f50d89e2a145187f32d825b29fbd7765",
+      "columns": [
+        {
+          "name": "product_id",
+          "type": "INTEGER"
+        },
+        {
+          "name": "sku",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "product_name",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "category",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "subcategory",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "brand",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "unit_cost_usd",
+          "type": "DOUBLE"
+        },
+        {
+          "name": "list_price_usd",
+          "type": "DOUBLE"
+        },
+        {
+          "name": "is_active",
+          "type": "BOOLEAN"
+        },
+        {
+          "name": "launch_date",
+          "type": "DATE"
+        }
+      ]
+    },
+    {
+      "name": "orders",
+      "grain": "1 fila = 1 pedido con customer_id, order_ts, status, store_id",
+      "rowCount": 18000,
+      "sizeBytes": 393310,
+      "sha256": "c031a2e72bee62c75f01c793de67bb5175877b074e60e2afd65e71423df2fd99",
+      "columns": [
+        {
+          "name": "order_id",
+          "type": "INTEGER"
+        },
+        {
+          "name": "customer_id",
+          "type": "INTEGER"
+        },
+        {
+          "name": "store_id",
+          "type": "INTEGER"
+        },
+        {
+          "name": "order_ts",
+          "type": "TIMESTAMP"
+        },
+        {
+          "name": "order_date",
+          "type": "DATE"
+        },
+        {
+          "name": "status",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "currency",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "subtotal_usd",
+          "type": "DOUBLE"
+        },
+        {
+          "name": "discount_usd",
+          "type": "DOUBLE"
+        },
+        {
+          "name": "shipping_usd",
+          "type": "DOUBLE"
+        },
+        {
+          "name": "tax_usd",
+          "type": "DOUBLE"
+        },
+        {
+          "name": "total_usd",
+          "type": "DOUBLE"
+        },
+        {
+          "name": "campaign_id",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "device_type",
+          "type": "VARCHAR"
+        }
+      ]
+    },
+    {
+      "name": "order_items",
+      "grain": "1 fila = 1 línea de pedido (order_id, product_id, qty, unit_price_usd, discount_usd)",
+      "rowCount": 42000,
+      "sizeBytes": 238529,
+      "sha256": "669a3445992e63abfc5de0143c96dfe91117173b60567657eb650b6ea4752697",
+      "columns": [
+        {
+          "name": "order_item_id",
+          "type": "INTEGER"
+        },
+        {
+          "name": "order_id",
+          "type": "INTEGER"
+        },
+        {
+          "name": "line_number",
+          "type": "INTEGER"
+        },
+        {
+          "name": "product_id",
+          "type": "INTEGER"
+        },
+        {
+          "name": "qty",
+          "type": "INTEGER"
+        },
+        {
+          "name": "unit_price_usd",
+          "type": "DOUBLE"
+        },
+        {
+          "name": "discount_usd",
+          "type": "DOUBLE"
+        },
+        {
+          "name": "line_total_usd",
+          "type": "DOUBLE"
+        }
+      ]
+    },
+    {
+      "name": "payments",
+      "grain": "1 fila = 1 intento de cobro (incluye reintentos fallidos y duplicados)",
+      "rowCount": 19200,
+      "sizeBytes": 278550,
+      "sha256": "806c12308df71223a44f539cb1da50030792dff1d721d2285c4905ce71536686",
+      "columns": [
+        {
+          "name": "payment_id",
+          "type": "INTEGER"
+        },
+        {
+          "name": "order_id",
+          "type": "INTEGER"
+        },
+        {
+          "name": "attempt_number",
+          "type": "INTEGER"
+        },
+        {
+          "name": "payment_method",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "provider",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "status",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "amount_usd",
+          "type": "DOUBLE"
+        },
+        {
+          "name": "payment_ts",
+          "type": "TIMESTAMP"
+        },
+        {
+          "name": "idempotency_key",
+          "type": "VARCHAR"
+        }
+      ]
+    },
+    {
+      "name": "refunds",
+      "grain": "1 fila = 1 devolución parcial o total asociada a order_id",
+      "rowCount": 1450,
+      "sizeBytes": 23426,
+      "sha256": "c72c988de201ef58e32b745560df6fe62bb8a454976180b512061b5d4562af9c",
+      "columns": [
+        {
+          "name": "refund_id",
+          "type": "INTEGER"
+        },
+        {
+          "name": "order_id",
+          "type": "INTEGER"
+        },
+        {
+          "name": "refund_ts",
+          "type": "TIMESTAMP"
+        },
+        {
+          "name": "refund_date",
+          "type": "DATE"
+        },
+        {
+          "name": "reason",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "refund_amount_usd",
+          "type": "DOUBLE"
+        },
+        {
+          "name": "status",
+          "type": "VARCHAR"
+        }
+      ]
+    },
+    {
+      "name": "events",
+      "grain": "1 fila = 1 evento web/app (session_id, user_id, event_type, event_ts, payload_json)",
+      "rowCount": 65000,
+      "sizeBytes": 1099791,
+      "sha256": "0b114898f00997f999b4f88b337daae9ac96d3068ec434f2973682467e9f6e36",
+      "columns": [
+        {
+          "name": "event_id",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "session_id",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "customer_id",
+          "type": "INTEGER"
+        },
+        {
+          "name": "user_id",
+          "type": "INTEGER"
+        },
+        {
+          "name": "event_type",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "event_ts",
+          "type": "TIMESTAMP"
+        },
+        {
+          "name": "event_ts_raw",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "timezone_offset",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "device_type",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "campaign_id",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "product_id",
+          "type": "INTEGER"
+        },
+        {
+          "name": "payload_json",
+          "type": "VARCHAR"
+        }
+      ]
+    },
+    {
+      "name": "marketing_spend",
+      "grain": "1 fila = 1 día × canal con gasto e impresiones",
+      "rowCount": 730,
+      "sizeBytes": 9054,
+      "sha256": "2c2488dd747f3ba94c5ec1440e0f4190e6b0c2f7e365b63f4b06276d9293a9b8",
+      "columns": [
+        {
+          "name": "spend_date",
+          "type": "DATE"
+        },
+        {
+          "name": "channel",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "campaign_id",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "region",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "spend_usd",
+          "type": "DOUBLE"
+        },
+        {
+          "name": "impressions",
+          "type": "INTEGER"
+        },
+        {
+          "name": "clicks",
+          "type": "INTEGER"
+        },
+        {
+          "name": "attributed_conversions",
+          "type": "INTEGER"
+        }
+      ]
+    },
+    {
+      "name": "experiments",
+      "grain": "1 fila = 1 experimento A/B con fechas e hipótesis",
+      "rowCount": 6,
+      "sizeBytes": 2801,
+      "sha256": "87fc44f7377b18561841c4ab50afbd97459425f07a00e86065a3b4733d40fcd2",
+      "columns": [
+        {
+          "name": "experiment_id",
+          "type": "INTEGER"
+        },
+        {
+          "name": "experiment_code",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "experiment_name",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "hypothesis",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "primary_metric",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "start_date",
+          "type": "DATE"
+        },
+        {
+          "name": "end_date",
+          "type": "DATE"
+        },
+        {
+          "name": "status",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "target_sample_size",
+          "type": "INTEGER"
+        },
+        {
+          "name": "srm_p_value",
+          "type": "DOUBLE"
+        }
+      ]
+    },
+    {
+      "name": "experiment_assignments",
+      "grain": "1 fila = 1 usuario asignado a variante (control / treatment)",
+      "rowCount": 9600,
+      "sizeBytes": 135292,
+      "sha256": "acf61037d2c557488f8defe57958439682fb6e3293b4c530eab2475cf0ba5d60",
+      "columns": [
+        {
+          "name": "assignment_id",
+          "type": "INTEGER"
+        },
+        {
+          "name": "experiment_id",
+          "type": "INTEGER"
+        },
+        {
+          "name": "customer_id",
+          "type": "INTEGER"
+        },
+        {
+          "name": "variant",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "assigned_ts",
+          "type": "TIMESTAMP"
+        },
+        {
+          "name": "pre_experiment_spend_usd",
+          "type": "DOUBLE"
+        },
+        {
+          "name": "post_experiment_spend_usd",
+          "type": "DOUBLE"
+        },
+        {
+          "name": "converted",
+          "type": "BOOLEAN"
+        }
+      ]
+    },
+    {
+      "name": "stores",
+      "grain": "1 fila = 1 tienda física o almacén logístico regional",
+      "rowCount": 14,
+      "sizeBytes": 2269,
+      "sha256": "ba60792cb1acce16682f15081445faf3d83642be262ac26958cfac6a5ab29b4e",
+      "columns": [
+        {
+          "name": "store_id",
+          "type": "INTEGER"
+        },
+        {
+          "name": "store_code",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "store_name",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "store_type",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "country_code",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "region",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "city",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "opened_date",
+          "type": "DATE"
+        },
+        {
+          "name": "monthly_target_usd",
+          "type": "DOUBLE"
+        },
+        {
+          "name": "area_sqm",
+          "type": "INTEGER"
+        }
+      ]
+    },
+    {
+      "name": "calendar",
+      "grain": "1 fila = 1 día natural con festivos, trimestre fiscal y semana ISO",
+      "rowCount": 1095,
+      "sizeBytes": 6167,
+      "sha256": "97c9b9aeb46b9d79d8034b29f8fde940e4afe6108f69d6346a24a1561c65e868",
+      "columns": [
+        {
+          "name": "calendar_date",
+          "type": "DATE"
+        },
+        {
+          "name": "year",
+          "type": "INTEGER"
+        },
+        {
+          "name": "quarter",
+          "type": "INTEGER"
+        },
+        {
+          "name": "fiscal_quarter",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "month",
+          "type": "INTEGER"
+        },
+        {
+          "name": "month_name",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "iso_week",
+          "type": "INTEGER"
+        },
+        {
+          "name": "day_of_week",
+          "type": "INTEGER"
+        },
+        {
+          "name": "day_name",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "is_weekend",
+          "type": "BOOLEAN"
+        },
+        {
+          "name": "is_holiday",
+          "type": "BOOLEAN"
+        },
+        {
+          "name": "holiday_name",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "season",
+          "type": "VARCHAR"
+        }
+      ]
+    }
+  ],
+  "totalSizeBytes": 2245222
+}

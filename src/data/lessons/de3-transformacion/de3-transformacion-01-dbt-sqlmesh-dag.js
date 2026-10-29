@@ -168,95 +168,20 @@ const lesson = {
     }
   ],
   "practice": {
-    "type": "fill-blanks",
-    "title": "Modelo incremental por rango en SQLMesh",
+    "type": "sql",
+    "title": "Modelo de staging idempotente: deduplicación de payments",
     "language": "sql",
-    "prompt": "Completa la definición de este modelo SQLMesh en la capa Silver para que: 1) utilice la estrategia incremental por rango de tiempo (`INCREMENTAL_BY_TIME_RANGE`), 2) valide automáticamente que no existan valores nulos con el bloque de auditoría (`audits`), y 3) acote el escaneo de la tabla origen usando las macros de intervalo inyectadas (`@start_ts` y `@end_ts`).",
-    "starterCode": "MODEL (\n  name silver.fct_daily_subscriptions,\n  kind {{blank_1}} (\n    time_column event_date,\n    batch_size 14,\n    lookback 2\n  ),\n  grain (subscription_id, event_date),\n  {{blank_2}} (\n    not_null(columns := (subscription_id, customer_id, mrr_usd)),\n    positive_values(column := mrr_usd)\n  )\n);\n\nSELECT\n  subscription_id,\n  customer_id,\n  CAST(event_ts AS DATE) AS event_date,\n  mrr_usd\nFROM bronze.subscription_events\nWHERE event_ts BETWEEN @start_ts AND {{blank_3}};",
-    "expected": "MODEL (\n  name silver.fct_daily_subscriptions,\n  kind {{blank_1}} (\n    time_column event_date,\n    batch_size 14,\n    lookback 2\n  ),\n  grain (subscription_id, event_date),\n  {{blank_2}} (\n    not_null(columns := (subscription_id, customer_id, mrr_usd)),\n    positive_values(column := mrr_usd)\n  )\n);\n\nSELECT\n  subscription_id,\n  customer_id,\n  CAST(event_ts AS DATE) AS event_date,\n  mrr_usd\nFROM bronze.subscription_events\nWHERE event_ts BETWEEN @start_ts AND {{blank_3}};",
+    "prompt": "La tabla `payments` contiene reenvíos duplicados de webhooks con el mismo `idempotency_key`. Construye una consulta con una CTE `stg_payments_dedup` que conserve solo el primer registro por `idempotency_key` (`QUALIFY ROW_NUMBER() OVER (PARTITION BY idempotency_key ORDER BY payment_ts ASC) = 1`) y agregue los cobros `status = 'captured'` por `payment_method`.",
+    "starterCode": "WITH stg_payments_dedup AS (\n  SELECT\n    payment_id,\n    order_id,\n    payment_method,\n    status,\n    amount_usd,\n    payment_ts,\n    idempotency_key\n  FROM payments\n  -- TODO: Filtra duplicados con QUALIFY ROW_NUMBER() OVER (PARTITION BY idempotency_key ORDER BY payment_ts ASC) = 1\n)\nSELECT\n  payment_method,\n  COUNT(*) AS captured_payments,\n  ROUND(SUM(amount_usd), 2) AS captured_volume_usd\nFROM stg_payments_dedup\nWHERE status = 'captured'\nGROUP BY payment_method\nORDER BY captured_volume_usd DESC;",
+    "expected": "WITH stg_payments_dedup AS (\n  SELECT\n    payment_id,\n    order_id,\n    payment_method,\n    status,\n    amount_usd,\n    payment_ts,\n    idempotency_key\n  FROM payments\n  QUALIFY ROW_NUMBER() OVER (\n    PARTITION BY idempotency_key\n    ORDER BY payment_ts ASC\n  ) = 1\n)\nSELECT\n  payment_method,\n  COUNT(*) AS captured_payments,\n  ROUND(SUM(amount_usd), 2) AS captured_volume_usd\nFROM stg_payments_dedup\nWHERE status = 'captured'\nGROUP BY payment_method\nORDER BY captured_volume_usd DESC;",
     "orderMatters": true,
     "hints": [
-      "TIPO_MODELO_INCREMENTAL: En SQLMesh, ¿cómo se llama el `kind` de modelo que rastrea intervalos de tiempo discretos y evita brechas de datos?",
-      "BLOQUE_CALIDAD: ¿Qué propiedad del encabezado `MODEL (...)` ejecuta aserciones de calidad bloqueantes (WAP) inmediatamente después de calcular cada lote?",
-      "MACRO_FIN_INTERVALO: Junto con `@start_ts`, ¿cuál es la variable macro que acota el límite superior del intervalo temporal procesado?"
+      "En `stg_payments_dedup`, añade `QUALIFY ROW_NUMBER() OVER (PARTITION BY idempotency_key ORDER BY payment_ts ASC) = 1` después de `FROM payments`.",
+      "Sin la deduplicación por `idempotency_key`, las 450 filas duplicadas por reenvío de webhook inflan `captured_payments` y `captured_volume_usd`.",
+      "Mantén el filtro `WHERE status = 'captured'` y `ORDER BY captured_volume_usd DESC`."
     ],
-    "solution": "MODEL (\n  name silver.fct_daily_subscriptions,\n  kind {{blank_1}} (\n    time_column event_date,\n    batch_size 14,\n    lookback 2\n  ),\n  grain (subscription_id, event_date),\n  {{blank_2}} (\n    not_null(columns := (subscription_id, customer_id, mrr_usd)),\n    positive_values(column := mrr_usd)\n  )\n);\n\nSELECT\n  subscription_id,\n  customer_id,\n  CAST(event_ts AS DATE) AS event_date,\n  mrr_usd\nFROM bronze.subscription_events\nWHERE event_ts BETWEEN @start_ts AND {{blank_3}};",
-    "solutionExplanation": "Idempotencia por intervalos de tiempo Auditorías bloqueantes en el flujo Podado eficiente con variables de intervalo",
-    "blanks": [
-      {
-        "id": "blank_1",
-        "placeholder": "TIPO_MODELO_INCREMENTAL",
-        "acceptedAnswers": [
-          "INCREMENTAL_BY_TIME_RANGE",
-          "incremental_by_time_range"
-        ],
-        "hint": "En SQLMesh, ¿cómo se llama el `kind` de modelo que rastrea intervalos de tiempo discretos y evita brechas de datos?",
-        "hints": [
-          "Nivel 1 (Concepto): Indica que el modelo es incremental basado en un rango de tiempo (Time Range).",
-          "Nivel 2 (Sintaxis): Cuatro palabras unidas por guiones bajos: INCREMENTAL_BY_..._...",
-          "Nivel 3 (Solución): Escribe INCREMENTAL_BY_TIME_RANGE"
-        ]
-      },
-      {
-        "id": "blank_2",
-        "placeholder": "BLOQUE_CALIDAD",
-        "acceptedAnswers": [
-          "audits",
-          "AUDITS"
-        ],
-        "hint": "¿Qué propiedad del encabezado `MODEL (...)` ejecuta aserciones de calidad bloqueantes (WAP) inmediatamente después de calcular cada lote?",
-        "hints": [
-          "Nivel 1 (Concepto): Es el bloque donde declaras validaciones como `not_null` y `positive_values`.",
-          "Nivel 2 (Sintaxis): Palabra en plural en inglés para \"auditorías\".",
-          "Nivel 3 (Solución): Escribe audits"
-        ]
-      },
-      {
-        "id": "blank_3",
-        "placeholder": "MACRO_FIN_INTERVALO",
-        "acceptedAnswers": [
-          "@end_ts",
-          "@end_date"
-        ],
-        "hint": "Junto con `@start_ts`, ¿cuál es la variable macro que acota el límite superior del intervalo temporal procesado?",
-        "hints": [
-          "Nivel 1 (Concepto): Representa el timestamp final del intervalo que el planificador está rellenando.",
-          "Nivel 2 (Sintaxis): Empieza con `@` igual que `@start_ts`.",
-          "Nivel 3 (Solución): Escribe @end_ts"
-        ]
-      }
-    ],
-    "expectedOutputTable": [
-      {
-        "model_name": "silver.fct_daily_subscriptions",
-        "ast_change_class": "Non-Breaking (Validated via SQLGlot)",
-        "intervals_backfilled": "2026-10-14 .. 2026-10-28 (100% Complete)",
-        "audits_status": "2 / 2 Passed (0 nulls, all positive)"
-      }
-    ],
-    "rubricCriteria": [
-      {
-        "criterion": "Idempotencia por intervalos de tiempo",
-        "title": "Idempotencia por intervalos de tiempo",
-        "description": "Configura INCREMENTAL_BY_TIME_RANGE con lookback para absorber eventos retrasados y rellenar huecos sin duplicar ni perder filas.",
-        "points": 40,
-        "role": "DE"
-      },
-      {
-        "criterion": "Auditorías bloqueantes en el flujo",
-        "title": "Auditorías bloqueantes en el flujo",
-        "description": "Integra audits declarativos dentro del propio modelo para impedir que datos corruptos promuevan el puntero de producción.",
-        "points": 30,
-        "role": "DA"
-      },
-      {
-        "criterion": "Podado eficiente con variables de intervalo",
-        "title": "Podado eficiente con variables de intervalo",
-        "description": "Filtra el origen con BETWEEN @start_ts AND @end_ts para habilitar partition pruning sobre el Lakehouse.",
-        "points": 30,
-        "role": "BI"
-      }
-    ]
+    "solution": "WITH stg_payments_dedup AS (\n  SELECT\n    payment_id,\n    order_id,\n    payment_method,\n    status,\n    amount_usd,\n    payment_ts,\n    idempotency_key\n  FROM payments\n  QUALIFY ROW_NUMBER() OVER (\n    PARTITION BY idempotency_key\n    ORDER BY payment_ts ASC\n  ) = 1\n)\nSELECT\n  payment_method,\n  COUNT(*) AS captured_payments,\n  ROUND(SUM(amount_usd), 2) AS captured_volume_usd\nFROM stg_payments_dedup\nWHERE status = 'captured'\nGROUP BY payment_method\nORDER BY captured_volume_usd DESC;",
+    "solutionExplanation": "En la capa `stg_payments_dedup` se aplica deduplicación determinista por `idempotency_key` mediante `QUALIFY ROW_NUMBER() OVER (PARTITION BY idempotency_key ORDER BY payment_ts ASC) = 1`, eliminando los 450 webhooks repetidos antes de agregar en la capa intermedia."
   },
   "roleNotes": {
     "de": "Diseña modelos `INCREMENTAL_BY_TIME_RANGE` con `batch_size` y `lookback` configurados para absorber eventos tardíos de forma idempotente sin hacer full-refresh. Utiliza la transpilación de SQLGlot para ejecutar tests unitarios SQL en memoria con DuckDB en el servidor de CI/CD en menos de 3 segundos antes de desplegar sobre Iceberg / Snowflake / Databricks.",

@@ -1,594 +1,754 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, Circle, Clock } from 'lucide-react';
-import {
-  Badge,
-  Button,
-  Card,
-  Chip,
-  Illustration,
-  ProgressBar,
-  ProgressRing,
-  getStageTheme,
-} from '../components/ui/index.js';
+import { ChevronRight, ArrowUpRight } from 'lucide-react';
+import { Button, Segmented } from '../components/ui/index.js';
+import { TRACKS } from '../data/catalog/tracks.js';
+import { LEVELS } from '../data/catalog/levels.js';
+import { MODULES } from '../data/catalog/modules.js';
+import { LESSONS_BY_ID } from '../data/lessons/index.js';
+import { setTrack, useProfile, useProgress } from '../state/store.js';
+import { Onboarding } from './Onboarding.jsx';
+import '../styles/views/onboarding.css';
+import '../styles/views/roadmap.css';
 
-const TOTAL_LESSON_STEPS = 5;
+const AREA_SEGMENT_OPTIONS = [
+  { value: 'de', label: 'DE' },
+  { value: 'da', label: 'DA' },
+  { value: 'bi', label: 'BI' },
+  { value: 'all', label: 'Todo' },
+];
 
-const STAGE_SHORT_DESCRIPTIONS = {
-  'stage-1':
-    'Definición del grano de una tabla, control de cardinalidad en JOINs, funciones de ventana con QUALIFY y ASOF JOIN.',
-  'stage-2':
-    'Compensaciones entre esquema en estrella y tablas OBT, historial con SCD tipo 2 y descomposición de indicadores.',
-  'stage-3':
-    'Estructura interna de Parquet, memoria compartida con Apache Arrow, formatos Lance y ejecución vectorizada con DuckDB y Polars.',
-  'stage-4':
-    'Tablas transaccionales con Apache Iceberg, orquestación SQL en dbt y SQLMesh, contratos de datos y métricas centralizadas.',
-  'stage-5':
-    'Análisis de retención por cohortes, diseño de experimentos A/B con reducción CUPED, percepción visual y reportes como código.',
-  'stage-6':
-    'Replicación basada en registros con Debezium y Kafka, procesamiento con watermarks en Apache Flink y acceso mediante servidores MCP.',
+const TRACK_SHORT_LABELS = {
+  core: 'Común',
+  de: 'DE',
+  da: 'DA',
+  bi: 'BI',
 };
 
-const LESSON_PROTAGONIST_ROLES_BY_ORDER = {
-  1: ['DA', 'BI'],
-  2: ['DA', 'DE'],
-  3: ['DE', 'DA'],
-  4: ['DE', 'BI'],
-  5: ['DE', 'BI'],
-  6: ['BI', 'DA'],
-  7: ['DE', 'DA'],
-  8: ['DE', 'DA'],
-  9: ['DA', 'DE'],
-  10: ['DE', 'BI'],
-  11: ['DE', 'DA'],
-  12: ['BI', 'DE'],
-  13: ['DA', 'BI'],
-  14: ['DA', 'BI'],
-  15: ['BI', 'DA'],
-  16: ['DE', 'DA'],
-  17: ['DE', 'BI'],
-  18: ['BI', 'DE'],
+const TRACK_ORDER = {
+  core: 0,
+  de: 1,
+  da: 2,
+  bi: 3,
 };
 
-const STAGE_DEFAULT_ROLES = {
-  1: ['DA', 'DE'],
-  2: ['DE', 'BI'],
-  3: ['DE', 'DA'],
-  4: ['DE', 'BI'],
-  5: ['DA', 'BI'],
-  6: ['DE', 'BI'],
+const MODULE_STATUS_LABELS = {
+  pending: 'Pendiente',
+  in_progress: 'En curso',
+  completed: 'Hecho',
+  known: 'Sabido',
 };
 
-const PRESERVED_TERMS = new Set([
-  'SQL',
-  'OBT',
-  'SCD',
-  'BI',
-  'DE',
-  'DA',
-  'MCP',
-  'RAG',
-  'CDC',
-  'LTV',
-  'SRM',
-  'CUPED',
-  'CTEs',
-  'JOINs',
-  'ASOF',
-  'JOIN',
-  'QUALIFY',
-  'SIMD',
-  'ODCS',
-  'A/B',
-  'DuckDB',
-  'SQLMesh',
-  'MetricFlow',
-  'Parquet',
-  'Arrow',
-  'Lance',
-  'Vortex',
-  'Polars',
-  'Marimo',
-  'Iceberg',
-  'Cube',
-  'Tufte',
-  'Cleveland',
-  'Debezium',
-  'Kafka',
-  'Flink',
-  'Git',
-  'RAM',
-  'dbt',
-]);
+const LESSON_STATUS_LABELS = {
+  pending: 'Pendiente',
+  in_progress: 'En curso',
+  completed: 'Hecha',
+  known: 'Sabida',
+};
 
-function parseLessonMinutes(durationStr) {
-  if (!durationStr || typeof durationStr !== 'string') return 30;
-  const match = durationStr.match(/(\d+)/);
-  return match ? Number(match[1]) : 30;
-}
+function resolveLessonStatus(lesson, progressLessons, completedSet, lessonSteps) {
+  const matchedV2 =
+    LESSONS_BY_ID[lesson.id] ||
+    (lesson.legacyId ? LESSONS_BY_ID[lesson.legacyId] : null);
+  const candidateIds = [
+    lesson.id,
+    lesson.legacyId,
+    matchedV2?.id,
+    matchedV2?.legacyId,
+  ].filter(Boolean);
 
-function limitWords(text, maxWords) {
-  if (!text || typeof text !== 'string') return '';
-  const words = text.trim().split(/\s+/);
-  if (words.length <= maxWords) return text.trim();
-  return `${words.slice(0, maxWords).join(' ').replace(/[.,;:]+$/, '')}.`;
-}
-
-function toSentenceCase(title) {
-  if (!title || typeof title !== 'string') return '';
-  const trimmed = title.trim();
-  if (!trimmed) return '';
-  const words = trimmed.split(/\s+/);
-  return words
-    .map((word, index) => {
-      const clean = word.replace(/[.,;:()]/g, '');
-      if (PRESERVED_TERMS.has(clean)) {
-        return word;
-      }
-      if (index === 0) {
-        return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
-      }
-      return word.toLowerCase();
-    })
-    .join(' ');
-}
-
-function getStageDescription(stage) {
-  const custom = STAGE_SHORT_DESCRIPTIONS[stage?.id];
-  if (custom) return limitWords(custom, 20);
-  return limitWords(stage?.description || stage?.subtitle || '', 20);
-}
-
-function getProtagonistRoles(lesson, stageNumber) {
-  const byOrder = LESSON_PROTAGONIST_ROLES_BY_ORDER[Number(lesson?.order)];
-  if (Array.isArray(byOrder) && byOrder.length > 0) {
-    return byOrder.slice(0, 2);
+  for (const cid of candidateIds) {
+    if (progressLessons?.[cid]?.status === 'known') {
+      return 'known';
+    }
   }
-  const byStage = STAGE_DEFAULT_ROLES[Number(stageNumber)];
-  if (Array.isArray(byStage) && byStage.length > 0) {
-    return byStage.slice(0, 2);
+  for (const cid of candidateIds) {
+    if (
+      progressLessons?.[cid]?.status === 'completed' ||
+      completedSet.has(cid)
+    ) {
+      return 'completed';
+    }
   }
-  if (Array.isArray(lesson?.coreFocus) && lesson.coreFocus.length > 0) {
-    return lesson.coreFocus.slice(0, 2);
+  for (const cid of candidateIds) {
+    const stepVal = Number(lessonSteps?.[cid] ?? 0);
+    if (progressLessons?.[cid]?.status === 'in_progress' || stepVal > 0) {
+      return 'in_progress';
+    }
   }
-  return ['DE', 'DA'];
+  return 'pending';
 }
 
 export function RoadmapView({
-  stages = [],
-  lessons = [],
   completedIds = [],
   lessonSteps = {},
   diagnosticResult = null,
-  nextRecommendedLesson,
+  nextRecommendedLesson = null,
+  customModules = null,
   onOpenLesson = () => {},
   onOpenDiagnostic = () => {},
 }) {
-  const completedSet = useMemo(() => new Set(completedIds), [completedIds]);
+  const profile = useProfile();
+  const progress = useProgress();
 
-  const [activeStageId, setActiveStageId] = useState(
-    () => stages[0]?.id || 'stage-1'
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [areaFilter, setAreaFilter] = useState(() => profile.track || 'all');
+  const [expandedModuleIds, setExpandedModuleIds] = useState(
+    () => new Set(['c0-datos', 'c1-sql-joins'])
+  );
+  const [injectedModules, setInjectedModules] = useState(() =>
+    typeof window !== 'undefined' && Array.isArray(window.__GRANO_TEST_MODULES__)
+      ? window.__GRANO_TEST_MODULES__
+      : null
   );
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !('IntersectionObserver' in window)) {
-      return undefined;
-    }
+    setAreaFilter(profile.track || 'all');
+  }, [profile.track]);
 
-    const sectionElements = stages
-      .map((stage) => document.getElementById(`stage-section-${stage.id}`))
-      .filter(Boolean);
-
-    if (sectionElements.length === 0) return undefined;
-
-    const visibleRatios = new Map();
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          const id = entry.target.getAttribute('data-stage-id');
-          if (!id) return;
-          if (entry.isIntersecting) {
-            visibleRatios.set(id, entry.intersectionRatio);
-          } else {
-            visibleRatios.delete(id);
-          }
-        });
-
-        if (visibleRatios.size > 0) {
-          let bestId = null;
-          let bestRatio = -1;
-          visibleRatios.forEach((ratio, id) => {
-            if (ratio > bestRatio) {
-              bestRatio = ratio;
-              bestId = id;
-            }
-          });
-          if (bestId) {
-            setActiveStageId(bestId);
-          }
-        }
-      },
-      {
-        root: null,
-        rootMargin: '-120px 0px -55% 0px',
-        threshold: [0, 0.15, 0.35, 0.6],
+  useEffect(() => {
+    if (profile.onboarded && !showOnboarding) {
+      if (typeof window !== 'undefined') window.scrollTo(0, 0);
+      if (typeof document !== 'undefined') {
+        const mainEl = document.querySelector('.app-main');
+        if (mainEl) mainEl.scrollTop = 0;
       }
-    );
+    }
+  }, [profile.onboarded, showOnboarding]);
 
-    sectionElements.forEach((el) => observer.observe(el));
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const handleInjected = (event) => {
+      if (Array.isArray(event?.detail)) {
+        setInjectedModules(event.detail);
+      } else if (Array.isArray(window.__GRANO_TEST_MODULES__)) {
+        setInjectedModules([...window.__GRANO_TEST_MODULES__]);
+      } else {
+        setInjectedModules(null);
+      }
+    };
+    window.addEventListener('grano:test-modules', handleInjected);
+    return () => window.removeEventListener('grano:test-modules', handleInjected);
+  }, []);
 
-    return () => observer.disconnect();
-  }, [stages]);
+  const catalogModules = customModules || injectedModules || MODULES;
 
-  const stats = useMemo(() => {
-    const totalLessons = lessons.length || 18;
-    let completedCount = 0;
+  const completedSet = useMemo(() => new Set(completedIds), [completedIds]);
+  const progressLessons = progress?.lessons || {};
+
+  const moduleTitleById = useMemo(() => {
+    const map = new Map();
+    catalogModules.forEach((m) => {
+      map.set(m.id, m.title);
+    });
+    return map;
+  }, [catalogModules]);
+
+  const visibleModules = useMemo(() => {
+    const filtered =
+      areaFilter === 'all'
+        ? catalogModules
+        : catalogModules.filter(
+            (m) => m.track === 'core' || m.track === areaFilter
+          );
+
+    return [...filtered].sort((a, b) => {
+      if (a.level !== b.level) return a.level - b.level;
+      const trackDiff =
+        (TRACK_ORDER[a.track] ?? 9) - (TRACK_ORDER[b.track] ?? 9);
+      if (trackDiff !== 0) return trackDiff;
+      return 0;
+    });
+  }, [catalogModules, areaFilter]);
+
+  const enrichedModules = useMemo(() => {
+    return visibleModules.map((mod, idx) => {
+      const lessons = Array.isArray(mod.lessons) ? mod.lessons : [];
+      let knownCount = 0;
+      let completedCount = 0;
+      let inProgressCount = 0;
+
+      const enrichedLessons = lessons.map((lesson) => {
+        const status = resolveLessonStatus(
+          lesson,
+          progressLessons,
+          completedSet,
+          lessonSteps
+        );
+        if (status === 'known') knownCount += 1;
+        else if (status === 'completed') completedCount += 1;
+        else if (status === 'in_progress') inProgressCount += 1;
+
+        return {
+          ...lesson,
+          computedStatus: status,
+        };
+      });
+
+      const totalLessons = enrichedLessons.length;
+      const doneLessons = knownCount + completedCount;
+
+      let moduleStatus = 'pending';
+      if (totalLessons > 0 && doneLessons === totalLessons) {
+        moduleStatus =
+          completedCount === 0 && knownCount > 0 ? 'known' : 'completed';
+      } else if (doneLessons > 0 || inProgressCount > 0) {
+        moduleStatus = 'in_progress';
+      }
+
+      const estimatedMinutes =
+        typeof mod.estimatedMinutes === 'number'
+          ? mod.estimatedMinutes
+          : enrichedLessons.reduce((acc, l) => acc + (Number(l.minutes) || 0), 0);
+
+      const filledCells =
+        totalLessons > 0
+          ? Math.min(9, Math.round((doneLessons / totalLessons) * 9))
+          : 0;
+
+      const prereqTitles = Array.isArray(mod.prerequisites)
+        ? mod.prerequisites
+            .map((pid) => moduleTitleById.get(pid) || pid)
+            .filter(Boolean)
+        : [];
+
+      const hasRecommendedLesson =
+        Boolean(nextRecommendedLesson) &&
+        enrichedLessons.some(
+          (l) =>
+            l.id === nextRecommendedLesson.id ||
+            (l.legacyId && l.legacyId === nextRecommendedLesson.id)
+        );
+
+      return {
+        ...mod,
+        globalOrder: idx + 1,
+        enrichedLessons,
+        totalLessons,
+        doneLessons,
+        knownCount,
+        completedCount,
+        inProgressCount,
+        moduleStatus,
+        estimatedMinutes,
+        filledCells,
+        prereqTitles,
+        hasRecommendedLesson,
+      };
+    });
+  }, [
+    visibleModules,
+    progressLessons,
+    completedSet,
+    lessonSteps,
+    moduleTitleById,
+    nextRecommendedLesson,
+  ]);
+
+  const routeStats = useMemo(() => {
+    let totalLessons = 0;
+    let completedLessons = 0;
+    let knownLessons = 0;
     let remainingMinutes = 0;
 
-    lessons.forEach((lesson) => {
-      const mins = parseLessonMinutes(lesson.duration);
-      if (completedSet.has(lesson.id)) {
-        completedCount += 1;
-      } else {
-        remainingMinutes += mins;
-      }
+    enrichedModules.forEach((mod) => {
+      mod.enrichedLessons.forEach((lesson) => {
+        totalLessons += 1;
+        const mins = Number(lesson.minutes) || 25;
+        if (lesson.computedStatus === 'completed') {
+          completedLessons += 1;
+        } else if (lesson.computedStatus === 'known') {
+          knownLessons += 1;
+        } else {
+          remainingMinutes += mins;
+        }
+      });
     });
 
-    const remainingHours = Math.floor(remainingMinutes / 60);
-    const remainingMins = remainingMinutes % 60;
+    const doneLessons = completedLessons + knownLessons;
+    const remainingHours = Math.max(0, Math.round(remainingMinutes / 60));
     const pct =
-      totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
+      totalLessons > 0 ? Math.round((doneLessons / totalLessons) * 100) : 0;
 
     return {
-      completedCount,
       totalLessons,
+      doneLessons,
+      completedLessons,
+      knownLessons,
       remainingHours,
-      remainingMins,
       pct,
     };
-  }, [lessons, completedSet]);
+  }, [enrichedModules]);
 
-  const stageSummaries = useMemo(
-    () =>
-      stages.map((stage) => {
-        const stageLessons = lessons.filter((l) => l.stageId === stage.id);
-        const doneCount = stageLessons.filter((l) => completedSet.has(l.id)).length;
-        const totalCount = stageLessons.length || 3;
-        const isStageDone = totalCount > 0 && doneCount === totalCount;
-        const isStagePartial = doneCount > 0 && !isStageDone;
-        const theme = getStageTheme(stage.number);
-        return {
-          ...stage,
-          shortName: theme.shortName,
-          doneCount,
-          totalCount,
-          isStageDone,
-          isStagePartial,
-        };
-      }),
-    [stages, lessons, completedSet]
-  );
+  const activeTrackMeta = useMemo(() => {
+    if (areaFilter === 'all') {
+      return {
+        id: 'all',
+        name: 'Catálogo completo (Tronco común + DE + DA + BI)',
+        short: 'Todo',
+        summary:
+          'Los 32 módulos del currículo organizados en 5 niveles progresivos.',
+      };
+    }
+    const found = TRACKS.find((t) => t.id === areaFilter);
+    return (
+      found || {
+        id: 'da',
+        name: 'Análisis de Datos',
+        short: 'DA',
+        summary: 'Tronco común + especialidad seleccionada.',
+      }
+    );
+  }, [areaFilter]);
 
-  const handleScrollToStage = (stageId) => {
-    setActiveStageId(stageId);
-    if (typeof document === 'undefined') return;
-    const target = document.getElementById(`stage-section-${stageId}`);
-    if (target) {
-      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const handleAreaChange = (nextArea) => {
+    setAreaFilter(nextArea);
+    if (nextArea === 'all') {
+      setTrack(null);
+    } else if (nextArea === 'de' || nextArea === 'da' || nextArea === 'bi') {
+      setTrack(nextArea);
     }
   };
 
+  const toggleModuleExpanded = (moduleId) => {
+    setExpandedModuleIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(moduleId)) {
+        next.delete(moduleId);
+      } else {
+        next.add(moduleId);
+      }
+      return next;
+    });
+  };
+
+  if (!profile.onboarded || showOnboarding) {
+    return (
+      <Onboarding
+        onComplete={() => setShowOnboarding(false)}
+        onSkip={() => setShowOnboarding(false)}
+      />
+    );
+  }
+
   return (
-    <div className="roadmap-view">
+    <div className="roadmap-view" data-active-area={areaFilter}>
       <header className="roadmap-header">
         <div className="roadmap-header__top">
           <div className="roadmap-header__title-group">
+            <span className="roadmap-header__eyebrow tabular">
+              Currículo Grano · 5 niveles · {enrichedModules.length} módulos
+            </span>
             <h1 className="roadmap-header__title">Tu ruta</h1>
             <p className="roadmap-header__subtitle">
-              6 etapas progresivas desde SQL analítico hasta flujos en tiempo real y agentes MCP.
+              {areaFilter === 'all'
+                ? 'Explora los 32 módulos del tronco común y las tres especialidades (Ingeniería, Análisis y Business Intelligence).'
+                : `Tronco común compartido + especialidad en ${activeTrackMeta.name}. Ningún módulo tiene candado: avanza en orden o consulta cualquier tema cuando lo necesites.`}
             </p>
           </div>
 
           <div className="roadmap-header__actions">
-            <Button variant="secondary" size="md" onClick={onOpenDiagnostic}>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setShowOnboarding(true)}
+            >
+              Cambiar objetivo
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={onOpenDiagnostic}
+            >
               {diagnosticResult
-                ? `Diagnóstico: ${diagnosticResult.profileLabel || 'Recalibrar'}`
-                : 'Test de nivel inicial'}
+                ? 'Repetir prueba de nivel'
+                : 'Prueba de nivel (10 preguntas)'}
             </Button>
           </div>
         </div>
 
-        <Card className="roadmap-summary-bar">
-          <div className="roadmap-summary-stats tabular">
-            <span className="roadmap-summary-stats__text tabular">
-              {stats.completedCount} de {stats.totalLessons} lecciones ·{' '}
-              {stats.remainingHours} h {stats.remainingMins} min restantes
+        <div className="roadmap-toolbar">
+          <div className="roadmap-toolbar__filter">
+            <span className="roadmap-toolbar__label">Área</span>
+            <Segmented
+              options={AREA_SEGMENT_OPTIONS}
+              value={areaFilter}
+              onChange={handleAreaChange}
+              ariaLabel="Filtrar ruta por área de especialidad"
+            />
+          </div>
+
+          <div className="roadmap-toolbar__area-info">
+            <span
+              className="roadmap-area-dot"
+              data-track={areaFilter === 'all' ? 'core' : areaFilter}
+              aria-hidden="true"
+            />
+            <span>
+              <strong>{activeTrackMeta.name}</strong>
+              {profile.startLevel > 0
+                ? ` · Inicio recomendado en Nivel ${profile.startLevel}`
+                : ' · Desde Nivel 0 (Cimientos)'}
             </span>
-            <span className="roadmap-summary-stats__pct tabular">
-              {stats.pct}% completado
+          </div>
+        </div>
+
+        <div
+          className="roadmap-progress-strip"
+          role="region"
+          aria-label="Progreso total de la ruta"
+        >
+          <div className="roadmap-progress-strip__row">
+            <span className="roadmap-progress-strip__stat tabular">
+              {routeStats.doneLessons} de {routeStats.totalLessons} lecciones ·{' '}
+              {routeStats.remainingHours} h restantes
+            </span>
+            <span className="roadmap-progress-strip__sub tabular">
+              {routeStats.pct}% completado
+              {routeStats.knownLessons > 0
+                ? ` (${routeStats.completedLessons} hechas · ${routeStats.knownLessons} sabidas)`
+                : ''}
             </span>
           </div>
 
-          <div className="roadmap-progress-global">
-            <div className="roadmap-progress-global__bar-wrap">
-              <ProgressBar
-                size="lg"
-                value={stats.pct}
-                tone={stats.pct === 100 ? 'success' : 'primary'}
-                ariaLabel={`Progreso de la ruta: ${stats.completedCount} de ${stats.totalLessons} lecciones (${stats.pct}%)`}
-              />
-              <div className="roadmap-progress-global__ticks" aria-hidden="true">
-                {stageSummaries.map((stage) => (
-                  <span
-                    key={stage.id}
-                    className="roadmap-progress-global__tick"
-                    data-stage={stage.number}
-                  />
-                ))}
-              </div>
-            </div>
-
+          <div
+            className="roadmap-progress-strip__bar"
+            role="progressbar"
+            aria-valuenow={routeStats.pct}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label={`${routeStats.doneLessons} de ${routeStats.totalLessons} lecciones (${routeStats.pct}%)`}
+          >
             <div
-              className="roadmap-progress-markers"
-              aria-label="Marcadores de las 6 etapas"
-            >
-              {stageSummaries.map((stage) => (
-                <div
-                  key={stage.id}
-                  data-stage={stage.number}
-                  className={[
-                    'roadmap-progress-marker',
-                    stage.isStageDone ? 'is-done' : '',
-                    stage.isStagePartial ? 'is-partial' : '',
-                  ]
-                    .filter(Boolean)
-                    .join(' ')}
-                >
-                  <span className="roadmap-progress-marker__dot" aria-hidden="true" />
-                  <span className="roadmap-progress-marker__code tabular">
-                    E{stage.number}
-                  </span>
-                  <span className="roadmap-progress-marker__name">
-                    {stage.shortName}
-                  </span>
-                </div>
-              ))}
-            </div>
+              className="roadmap-progress-strip__fill"
+              style={{ width: `${routeStats.pct}%` }}
+            />
           </div>
-        </Card>
+        </div>
       </header>
 
-      <nav
-        className="roadmap-stage-nav"
-        aria-label="Navegación rápida por etapas"
-      >
-        <div className="roadmap-stage-nav__scroll">
-          {stageSummaries.map((stage) => {
-            const isActive = activeStageId === stage.id;
-            return (
-              <button
-                key={stage.id}
-                type="button"
-                data-stage={stage.number}
-                className={[
-                  'roadmap-stage-nav__pill',
-                  isActive ? 'is-active' : '',
-                  stage.isStageDone ? 'is-completed' : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ')}
-                onClick={() => handleScrollToStage(stage.id)}
-                aria-current={isActive ? 'true' : undefined}
-              >
-                <span className="roadmap-stage-nav__num tabular">
-                  0{stage.number}
-                </span>
-                <span className="roadmap-stage-nav__label">{stage.shortName}</span>
-                <span className="roadmap-stage-nav__count tabular">
-                  {stage.doneCount}/{stage.totalCount}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </nav>
+      <div className="roadmap-levels">
+        {LEVELS.map((lvl) => {
+          const modulesInLevel = enrichedModules.filter(
+            (m) => m.level === lvl.level
+          );
+          if (modulesInLevel.length === 0) return null;
 
-      <div className="roadmap-stages-list">
-        {stages.map((stage) => {
-          const stageLessons = lessons.filter((l) => l.stageId === stage.id);
-          const doneInStage = stageLessons.filter((l) =>
-            completedSet.has(l.id)
+          const lessonsInLevel = modulesInLevel.reduce(
+            (acc, m) => acc + m.totalLessons,
+            0
+          );
+          const doneLessonsInLevel = modulesInLevel.reduce(
+            (acc, m) => acc + m.doneLessons,
+            0
+          );
+          const doneModulesInLevel = modulesInLevel.filter(
+            (m) => m.moduleStatus === 'completed' || m.moduleStatus === 'known'
           ).length;
-          const totalInStage = stageLessons.length || 3;
-          const isStageDone = totalInStage > 0 && doneInStage === totalInStage;
-          const stagePct =
-            totalInStage > 0
-              ? Math.round((doneInStage / totalInStage) * 100)
-              : 0;
-          const stageTitle = toSentenceCase(stage.title);
-          const stageDescription = getStageDescription(stage);
+
+          const isStartLevel =
+            Number(profile.startLevel) > 0 &&
+            lvl.level === Number(profile.startLevel);
 
           return (
             <section
-              key={stage.id}
-              id={`stage-section-${stage.id}`}
-              data-stage={stage.number}
-              data-stage-id={stage.id}
-              className="roadmap-stage-block"
-              aria-label={`Etapa ${stage.number}: ${stageTitle}`}
+              key={lvl.level}
+              className={`roadmap-level ${
+                isStartLevel ? 'is-start-level' : ''
+              }`.trim()}
+              aria-labelledby={`roadmap-level-heading-${lvl.level}`}
+              data-level={lvl.level}
             >
-              <div className="roadmap-stage-header" data-stage={stage.number}>
-                <div className="roadmap-stage-header__main">
-                  <div className="roadmap-stage-header__illus">
-                    <Illustration
-                      name={`stage-${stage.number}`}
-                      stage={stage.number}
-                      size="md"
-                    />
+              <div className="roadmap-level__header">
+                <div className="roadmap-level__title-wrap">
+                  <div className="roadmap-level__heading-row">
+                    <span className="roadmap-level__badge tabular">
+                      Nivel {lvl.level}
+                    </span>
+                    <h2
+                      id={`roadmap-level-heading-${lvl.level}`}
+                      className="roadmap-level__title"
+                    >
+                      {lvl.name}
+                    </h2>
+                    {isStartLevel && (
+                      <span className="roadmap-level__start-tag">
+                        Tu punto de partida
+                      </span>
+                    )}
                   </div>
-
-                  <div className="roadmap-stage-header__copy">
-                    <div className="roadmap-stage-header__eyebrow tabular">
-                      Etapa {stage.number}
-                    </div>
-                    <h2 className="roadmap-stage-header__title">{stageTitle}</h2>
-                    <p className="roadmap-stage-header__desc">
-                      {stageDescription}
-                    </p>
-                  </div>
+                  <p className="roadmap-level__summary">{lvl.summary}</p>
                 </div>
 
-                <div className="roadmap-stage-header__aside">
-                  <div className="roadmap-stage-header__ring">
-                    <ProgressRing
-                      size={64}
-                      value={stagePct}
-                      stage={stage.number}
-                      tone={isStageDone ? 'success' : 'stage'}
-                      celebrate={isStageDone}
-                      label={`${doneInStage}/${totalInStage}`}
-                      ariaLabel={`Progreso Etapa ${stage.number}: ${doneInStage} de ${totalInStage}`}
-                    />
-                  </div>
-                  <Badge
-                    stage={stage.number}
-                    unlocked={isStageDone}
-                    className="roadmap-stage-header__badge"
-                  />
+                <div className="roadmap-level__counter tabular">
+                  {doneLessonsInLevel}/{lessonsInLevel} lecciones ·{' '}
+                  {doneModulesInLevel}/{modulesInLevel.length} módulos
                 </div>
               </div>
 
-              <div className="roadmap-lessons-grid">
-                {stageLessons.map((lesson) => {
-                  const isDone = completedSet.has(lesson.id);
-                  const savedStep = Number(lessonSteps?.[lesson.id] ?? 0);
-                  const isInProgress = !isDone && savedStep > 0;
-                  const stepPct = isInProgress
-                    ? savedStep > TOTAL_LESSON_STEPS
-                      ? Math.min(99, Math.round(savedStep))
-                      : Math.round(
-                          ((Math.min(savedStep, TOTAL_LESSON_STEPS - 1) + 1) /
-                            TOTAL_LESSON_STEPS) *
-                            100
-                        )
-                    : 0;
-
-                  const statusLabel = isDone
-                    ? 'Completada'
-                    : isInProgress
-                      ? `En curso ${stepPct}%`
-                      : 'Pendiente';
-
-                  const isRecommended =
-                    !isDone &&
-                    Boolean(nextRecommendedLesson) &&
-                    lesson.id === nextRecommendedLesson.id;
-
-                  const formattedOrder = String(lesson.order).padStart(2, '0');
-                  const fullTitle = toSentenceCase(lesson.title);
-                  const fullSubtitle = lesson.subtitle;
-                  const protagonistRoles = getProtagonistRoles(
-                    lesson,
-                    stage.number
+              <div className="roadmap-modules-list">
+                {modulesInLevel.map((mod) => {
+                  const isExpanded = expandedModuleIds.has(mod.id);
+                  const formattedIndex = String(mod.globalOrder).padStart(
+                    2,
+                    '0'
                   );
-
-                  const cardClasses = [
-                    'roadmap-lesson-card',
-                    isDone ? 'is-completed' : '',
-                    isInProgress ? 'is-in-progress' : '',
-                    isRecommended ? 'is-recommended' : '',
-                  ]
-                    .filter(Boolean)
-                    .join(' ');
+                  const statusLabel =
+                    MODULE_STATUS_LABELS[mod.moduleStatus] || 'Pendiente';
 
                   return (
-                    <Card
-                      key={lesson.id}
-                      interactive
-                      stage={stage.number}
-                      className={cardClasses}
-                      onClick={() => onOpenLesson(lesson.id)}
-                      ariaLabel={`Lección ${formattedOrder}: ${fullTitle} (${statusLabel})`}
+                    <article
+                      key={mod.id}
+                      className={[
+                        'roadmap-module',
+                        isExpanded ? 'is-expanded' : '',
+                        `is-${mod.moduleStatus}`,
+                      ]
+                        .filter(Boolean)
+                        .join(' ')}
+                      data-module-id={mod.id}
+                      data-module-status={mod.moduleStatus}
                     >
-                      <div className="roadmap-lesson-card__layout">
-                        <div className="roadmap-lesson-card__body">
-                          <div className="roadmap-lesson-card__top">
-                            <span className="roadmap-lesson-card__num tabular">
-                              {formattedOrder}
-                            </span>
-                            {isRecommended && (
-                              <Chip variant="primary">Recomendada</Chip>
-                            )}
-                          </div>
-
-                          <h3 className="roadmap-lesson-card__title">
-                            {fullTitle}
-                          </h3>
-                          <p className="roadmap-lesson-card__sub">
-                            {fullSubtitle}
-                          </p>
-                        </div>
-
-                        <div className="roadmap-lesson-card__footer tabular">
-                          <div className="roadmap-lesson-card__meta">
-                            <span className="roadmap-lesson-card__duration tabular">
-                              <Clock size={14} aria-hidden="true" />
-                              <span>{lesson.duration}</span>
-                            </span>
-
-                            <div
-                              className="roadmap-lesson-card__roles"
-                              aria-label="Roles protagonistas"
-                            >
-                              {protagonistRoles.map((roleKey) => (
-                                <Chip
-                                  key={roleKey}
-                                  variant="role"
-                                  role={roleKey}
-                                >
-                                  {roleKey}
-                                </Chip>
-                              ))}
-                            </div>
-                          </div>
-
-                          <div
-                            className={[
-                              'roadmap-lesson-card__status',
-                              isDone ? 'is-done' : '',
-                              isInProgress ? 'is-progress' : 'is-pending',
-                            ]
-                              .filter(Boolean)
-                              .join(' ')}
+                      <button
+                        type="button"
+                        className="roadmap-module__row"
+                        aria-expanded={isExpanded}
+                        aria-controls={`module-details-${mod.id}`}
+                        onClick={() => toggleModuleExpanded(mod.id)}
+                      >
+                        <div className="roadmap-module__index">
+                          <span className="roadmap-module__num tabular">
+                            {formattedIndex}
+                          </span>
+                          <span
+                            className="roadmap-module__grain"
+                            aria-hidden="true"
+                            title={`${mod.doneLessons} de ${mod.totalLessons} lecciones`}
                           >
-                            {isDone && (
-                              <>
-                                <CheckCircle2 size={16} aria-hidden="true" />
-                                <span>Completada</span>
-                              </>
-                            )}
-                            {isInProgress && (
-                              <>
-                                <ProgressRing
-                                  size={24}
-                                  value={stepPct}
-                                  stage={stage.number}
-                                  tone="stage"
-                                  ariaLabel={`En curso ${stepPct}%`}
-                                />
-                                <span>En curso {stepPct}%</span>
-                              </>
-                            )}
-                            {!isDone && !isInProgress && (
-                              <>
-                                <Circle size={14} aria-hidden="true" />
-                                <span>Pendiente</span>
-                              </>
+                            {Array.from({ length: 9 }).map((_, cellIdx) => (
+                              <span
+                                key={cellIdx}
+                                className={`roadmap-module__grain-cell ${
+                                  cellIdx < mod.filledCells ? 'is-filled' : ''
+                                }`.trim()}
+                              />
+                            ))}
+                          </span>
+                        </div>
+
+                        <div className="roadmap-module__main">
+                          <div className="roadmap-module__title-line">
+                            <span className="roadmap-module__track-pill">
+                              <span
+                                className="roadmap-area-dot"
+                                data-track={mod.track}
+                                aria-hidden="true"
+                              />
+                              <span>
+                                {TRACK_SHORT_LABELS[mod.track] || 'Común'}
+                              </span>
+                            </span>
+                            <h3 className="roadmap-module__title">
+                              {mod.title}
+                            </h3>
+                            {mod.hasRecommendedLesson && (
+                              <span className="roadmap-module__next-tag">
+                                Siguiente sugerida
+                              </span>
                             )}
                           </div>
+                          <p className="roadmap-module__goal">{mod.goal}</p>
                         </div>
-                      </div>
-                    </Card>
+
+                        <div className="roadmap-module__meta tabular">
+                          <span className="roadmap-module__counts tabular">
+                            {mod.doneLessons}/{mod.totalLessons} lecciones
+                          </span>
+                          <span className="roadmap-module__mins tabular">
+                            {mod.estimatedMinutes} min
+                          </span>
+                          <span
+                            className={`roadmap-status-badge roadmap-status-badge--${mod.moduleStatus}`}
+                          >
+                            {statusLabel}
+                          </span>
+                          <ChevronRight
+                            size={16}
+                            className="roadmap-module__chevron"
+                            aria-hidden="true"
+                          />
+                        </div>
+                      </button>
+
+                      {isExpanded && (
+                        <div
+                          id={`module-details-${mod.id}`}
+                          className="roadmap-module__details"
+                        >
+                          <p className="roadmap-module__prereq">
+                            <strong>Recomendado antes:</strong>{' '}
+                            {mod.prereqTitles.length > 0
+                              ? mod.prereqTitles.join(' · ')
+                              : 'Ningún módulo previo (puedes empezar directamente aquí).'}
+                          </p>
+
+                          {mod.enrichedLessons.length === 0 ? (
+                            <p className="roadmap-module__empty">
+                              Este módulo aún no tiene lecciones publicadas (en preparación).
+                            </p>
+                          ) : (
+                            <ol className="roadmap-lessons-list">
+                              {mod.enrichedLessons.map((lesson, lessonIdx) => {
+                                const isPlanned = lesson.status === 'planned';
+                                const lessonNum = String(lessonIdx + 1).padStart(
+                                  2,
+                                  '0'
+                                );
+                                const lessonStatusLabel =
+                                  LESSON_STATUS_LABELS[lesson.computedStatus] ||
+                                  'Pendiente';
+                                const prevLesson =
+                                  lessonIdx > 0
+                                    ? mod.enrichedLessons[lessonIdx - 1]
+                                    : null;
+                                const showPrevRec =
+                                  prevLesson &&
+                                  prevLesson.computedStatus === 'pending' &&
+                                  lesson.computedStatus === 'pending' &&
+                                  lessonIdx === 1;
+
+                                if (isPlanned) {
+                                  return (
+                                    <li
+                                      key={lesson.id}
+                                      className="roadmap-lessons-list__item"
+                                    >
+                                      <div
+                                        className="roadmap-lesson-row is-planned"
+                                        aria-disabled="true"
+                                        data-lesson-id={lesson.id}
+                                        data-lesson-status="planned"
+                                      >
+                                        <div className="roadmap-lesson-row__left">
+                                          <span className="roadmap-lesson-row__num tabular">
+                                            {lessonNum}
+                                          </span>
+                                          <div className="roadmap-lesson-row__copy">
+                                            <span className="roadmap-lesson-row__title">
+                                              {lesson.title}
+                                            </span>
+                                            {showPrevRec && (
+                                              <span className="roadmap-lesson-row__rec">
+                                                Recomendado antes:{' '}
+                                                {prevLesson.title}
+                                              </span>
+                                            )}
+                                          </div>
+                                        </div>
+
+                                        <div className="roadmap-lesson-row__right tabular">
+                                          <span className="roadmap-lesson-row__mins tabular">
+                                            {lesson.minutes} min
+                                          </span>
+                                          <span className="roadmap-lesson-row__planned-tag">
+                                            En preparación
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </li>
+                                  );
+                                }
+
+                                return (
+                                  <li
+                                    key={lesson.id}
+                                    className="roadmap-lessons-list__item"
+                                  >
+                                    <button
+                                      type="button"
+                                      className="roadmap-lesson-row is-existing"
+                                      data-lesson-id={lesson.id}
+                                      data-lesson-status={lesson.computedStatus}
+                                      onClick={() =>
+                                        onOpenLesson(
+                                          lesson.legacyId || lesson.id
+                                        )
+                                      }
+                                    >
+                                      <div className="roadmap-lesson-row__left">
+                                        <span className="roadmap-lesson-row__num tabular">
+                                          {lessonNum}
+                                        </span>
+                                        <div className="roadmap-lesson-row__copy">
+                                          <span className="roadmap-lesson-row__title">
+                                            {lesson.title}
+                                          </span>
+                                          {showPrevRec && (
+                                            <span className="roadmap-lesson-row__rec">
+                                              Recomendado antes:{' '}
+                                              {prevLesson.title}
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      <div className="roadmap-lesson-row__right tabular">
+                                        <span className="roadmap-lesson-row__mins tabular">
+                                          {lesson.minutes} min
+                                        </span>
+                                        <span
+                                          className={`roadmap-status-badge roadmap-status-badge--${lesson.computedStatus}`}
+                                        >
+                                          {lessonStatusLabel}
+                                        </span>
+                                        <ArrowUpRight
+                                          size={14}
+                                          aria-hidden="true"
+                                        />
+                                      </div>
+                                    </button>
+                                  </li>
+                                );
+                              })}
+                            </ol>
+                          )}
+
+                          {(mod.projectSpec?.deliverable ||
+                            mod.project?.title ||
+                            typeof mod.project === 'string') && (
+                            <div className="roadmap-module__project-foot">
+                              {mod.projectSpec?.deliverable ? (
+                                <>
+                                  <span>
+                                    <strong>Proyecto de cierre:</strong>{' '}
+                                    {mod.projectSpec.prompt}
+                                  </span>
+                                  <span>
+                                    <strong>Entregable:</strong>{' '}
+                                    {mod.projectSpec.deliverable}
+                                  </span>
+                                </>
+                              ) : mod.project?.title ? (
+                                <>
+                                  <span>
+                                    <strong>Proyecto de cierre:</strong>{' '}
+                                    {mod.project.title}
+                                  </span>
+                                  <span>
+                                    <strong>Entregable:</strong>{' '}
+                                    {mod.project.deliverable}
+                                  </span>
+                                </>
+                              ) : (
+                                <span>
+                                  <strong>Proyecto de cierre:</strong>{' '}
+                                  {mod.project}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </article>
                   );
                 })}
               </div>

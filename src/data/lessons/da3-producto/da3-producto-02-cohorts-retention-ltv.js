@@ -205,75 +205,20 @@ const lesson = {
     }
   ],
   "practice": {
-    "type": "fill-blanks",
-    "title": "Matriz de cohortes y retención neta",
+    "type": "sql",
+    "title": "Matriz de cohortes y retención sobre Mercado Brisa",
     "language": "sql",
-    "prompt": "Completa la consulta analítica para calcular el índice de mes relativo (`month_number`), la retención porcentual de usuarios (`logo_retention_pct`) y la retención neta de ingresos (`nrr_pct`) tomando siempre el valor del Mes 0 (`month_number = 0`) de cada cohorte como denominador.",
-    "starterCode": "WITH cohort_base AS (\n  SELECT\n    cohort_month,\n    {{b1}}('month', cohort_month, activity_month) AS month_number,\n    COUNT(DISTINCT customer_id) AS active_users,\n    SUM(net_mrr_usd) AS cohort_mrr\n  FROM gold.cohort_monthly_ledger\n  GROUP BY cohort_month, month_number\n)\nSELECT\n  cohort_month,\n  month_number,\n  active_users,\n  ROUND(\n    100.0 * active_users / {{b2}}(active_users) OVER (\n      PARTITION BY {{b3}} ORDER BY month_number\n    ),\n    1\n  ) AS logo_retention_pct,\n  ROUND(\n    100.0 * cohort_mrr / FIRST_VALUE(cohort_mrr) OVER (\n      PARTITION BY cohort_month ORDER BY month_number\n    ),\n    1\n  ) AS nrr_pct\nFROM cohort_base\nORDER BY cohort_month, month_number;",
-    "expected": "WITH cohort_base AS (\n  SELECT\n    cohort_month,\n    {{b1}}('month', cohort_month, activity_month) AS month_number,\n    COUNT(DISTINCT customer_id) AS active_users,\n    SUM(net_mrr_usd) AS cohort_mrr\n  FROM gold.cohort_monthly_ledger\n  GROUP BY cohort_month, month_number\n)\nSELECT\n  cohort_month,\n  month_number,\n  active_users,\n  ROUND(\n    100.0 * active_users / {{b2}}(active_users) OVER (\n      PARTITION BY {{b3}} ORDER BY month_number\n    ),\n    1\n  ) AS logo_retention_pct,\n  ROUND(\n    100.0 * cohort_mrr / FIRST_VALUE(cohort_mrr) OVER (\n      PARTITION BY cohort_month ORDER BY month_number\n    ),\n    1\n  ) AS nrr_pct\nFROM cohort_base\nORDER BY cohort_month, month_number;",
+    "prompt": "Calcula para la cohorte de clientes dados de alta en enero de 2023 (`DATE_TRUNC('month', c.signup_date) = DATE '2023-01-01'`) su evolución en los primeros 6 meses (`month_number BETWEEN 0 AND 5`): `cohort_month`, `month_number`, `active_customers`, `cohort_revenue_usd` y `logo_retention_pct` respecto al mes `0`.",
+    "starterCode": "WITH cohort_activity AS (\n  SELECT\n    DATE_TRUNC('month', c.signup_date) AS cohort_month,\n    DATE_DIFF('month', DATE_TRUNC('month', c.signup_date), DATE_TRUNC('month', o.order_date)) AS month_number,\n    COUNT(DISTINCT o.customer_id) AS active_customers,\n    ROUND(SUM(o.total_usd), 2) AS cohort_revenue_usd\n  FROM customers c\n  JOIN orders o ON o.customer_id = c.customer_id\n  WHERE o.status = 'completed'\n    AND DATE_TRUNC('month', c.signup_date) = DATE '2023-01-01'\n  GROUP BY 1, 2\n)\nSELECT\n  cohort_month,\n  month_number,\n  active_customers,\n  cohort_revenue_usd,\n  -- TODO: Calcula logo_retention_pct dividiendo 100.0 * active_customers entre FIRST_VALUE(active_customers) OVER (PARTITION BY cohort_month ORDER BY month_number) redondeado a 1 decimal\n  0.0 AS logo_retention_pct\nFROM cohort_activity\nWHERE month_number BETWEEN 0 AND 5\nORDER BY month_number;",
+    "expected": "WITH cohort_activity AS (\n  SELECT\n    DATE_TRUNC('month', c.signup_date) AS cohort_month,\n    DATE_DIFF('month', DATE_TRUNC('month', c.signup_date), DATE_TRUNC('month', o.order_date)) AS month_number,\n    COUNT(DISTINCT o.customer_id) AS active_customers,\n    ROUND(SUM(o.total_usd), 2) AS cohort_revenue_usd\n  FROM customers c\n  JOIN orders o ON o.customer_id = c.customer_id\n  WHERE o.status = 'completed'\n    AND DATE_TRUNC('month', c.signup_date) = DATE '2023-01-01'\n  GROUP BY 1, 2\n)\nSELECT\n  cohort_month,\n  month_number,\n  active_customers,\n  cohort_revenue_usd,\n  ROUND(\n    100.0 * active_customers / FIRST_VALUE(active_customers) OVER (\n      PARTITION BY cohort_month\n      ORDER BY month_number\n    ),\n    1\n  ) AS logo_retention_pct\nFROM cohort_activity\nWHERE month_number BETWEEN 0 AND 5\nORDER BY month_number;",
     "orderMatters": true,
     "hints": [
-      "Función de diferencia de fechas: Necesitas calcular cuántos meses han transcurrido entre `cohort_month` y `activity_month`.",
-      "Función de ventana para el valor inicial M0: Al ordenar por `month_number` ascendente, el primer valor de la ventana corresponde exactamente al Mes 0.",
-      "Columna de partición de la cohorte: Cada cohorte debe dividirse por su propio tamaño inicial en `M0`, sin mezclar meses de adquisición distintos."
+      "Usa `FIRST_VALUE(active_customers) OVER (PARTITION BY cohort_month ORDER BY month_number)` como denominador para anclar la retención al mes inicial (`month_number = 0`).",
+      "Multiplica por `100.0` antes de dividir y redondea a 1 decimal con `ROUND(..., 1)`.",
+      "Conserva `WHERE month_number BETWEEN 0 AND 5` y `ORDER BY month_number`."
     ],
-    "solution": "WITH cohort_base AS (\n  SELECT\n    cohort_month,\n    {{b1}}('month', cohort_month, activity_month) AS month_number,\n    COUNT(DISTINCT customer_id) AS active_users,\n    SUM(net_mrr_usd) AS cohort_mrr\n  FROM gold.cohort_monthly_ledger\n  GROUP BY cohort_month, month_number\n)\nSELECT\n  cohort_month,\n  month_number,\n  active_users,\n  ROUND(\n    100.0 * active_users / {{b2}}(active_users) OVER (\n      PARTITION BY {{b3}} ORDER BY month_number\n    ),\n    1\n  ) AS logo_retention_pct,\n  ROUND(\n    100.0 * cohort_mrr / FIRST_VALUE(cohort_mrr) OVER (\n      PARTITION BY cohort_month ORDER BY month_number\n    ),\n    1\n  ) AS nrr_pct\nFROM cohort_base\nORDER BY cohort_month, month_number;",
-    "solutionExplanation": "Calcula la edad relativa de la cohorte (`month_number`) con `DATE_DIFF` respecto al mes de alta inmutable. Ancla el denominador al tamaño original de la cohorte en M0 mediante `FIRST_VALUE(...) OVER (PARTITION BY cohort_month ORDER BY month_number)`. Separa la retención de clientes (`active_users`) de la retención neta de ingresos (`cohort_mrr`).",
-    "blanks": [
-      {
-        "id": "b1",
-        "placeholder": "Función de diferencia de fechas",
-        "acceptedAnswers": [
-          "DATE_DIFF",
-          "DATEDIFF"
-        ],
-        "hint": "Necesitas calcular cuántos meses han transcurrido entre `cohort_month` y `activity_month`."
-      },
-      {
-        "id": "b2",
-        "placeholder": "Función de ventana para el valor inicial M0",
-        "acceptedAnswers": [
-          "FIRST_VALUE"
-        ],
-        "hint": "Al ordenar por `month_number` ascendente, el primer valor de la ventana corresponde exactamente al Mes 0."
-      },
-      {
-        "id": "b3",
-        "placeholder": "Columna de partición de la cohorte",
-        "acceptedAnswers": [
-          "cohort_month"
-        ],
-        "hint": "Cada cohorte debe dividirse por su propio tamaño inicial en `M0`, sin mezclar meses de adquisición distintos."
-      }
-    ],
-    "expectedOutputTable": [
-      {
-        "cohort_month": "2026-08-01",
-        "month_number": 0,
-        "active_users": 500,
-        "logo_retention_pct": "100.0",
-        "nrr_pct": "100.0"
-      },
-      {
-        "cohort_month": "2026-08-01",
-        "month_number": 1,
-        "active_users": 410,
-        "logo_retention_pct": "82.0",
-        "nrr_pct": "98.5"
-      },
-      {
-        "cohort_month": "2026-08-01",
-        "month_number": 2,
-        "active_users": 380,
-        "logo_retention_pct": "76.0",
-        "nrr_pct": "112.4"
-      }
-    ],
-    "rubricCriteria": [
-      "Calcula la edad relativa de la cohorte (`month_number`) con `DATE_DIFF` respecto al mes de alta inmutable.",
-      "Ancla el denominador al tamaño original de la cohorte en M0 mediante `FIRST_VALUE(...) OVER (PARTITION BY cohort_month ORDER BY month_number)`.",
-      "Separa la retención de clientes (`active_users`) de la retención neta de ingresos (`cohort_mrr`)."
-    ]
+    "solution": "WITH cohort_activity AS (\n  SELECT\n    DATE_TRUNC('month', c.signup_date) AS cohort_month,\n    DATE_DIFF('month', DATE_TRUNC('month', c.signup_date), DATE_TRUNC('month', o.order_date)) AS month_number,\n    COUNT(DISTINCT o.customer_id) AS active_customers,\n    ROUND(SUM(o.total_usd), 2) AS cohort_revenue_usd\n  FROM customers c\n  JOIN orders o ON o.customer_id = c.customer_id\n  WHERE o.status = 'completed'\n    AND DATE_TRUNC('month', c.signup_date) = DATE '2023-01-01'\n  GROUP BY 1, 2\n)\nSELECT\n  cohort_month,\n  month_number,\n  active_customers,\n  cohort_revenue_usd,\n  ROUND(\n    100.0 * active_customers / FIRST_VALUE(active_customers) OVER (\n      PARTITION BY cohort_month\n      ORDER BY month_number\n    ),\n    1\n  ) AS logo_retention_pct\nFROM cohort_activity\nWHERE month_number BETWEEN 0 AND 5\nORDER BY month_number;",
+    "solutionExplanation": "Determina la edad relativa de la actividad con `DATE_DIFF('month', cohort_month, order_month)` y calcula `logo_retention_pct` dividiendo los clientes activos de cada mes entre `FIRST_VALUE(active_customers)` ordenado por `month_number`."
   },
   "roleNotes": {
     "de": "Materializa la fecha inmutable de primera activación (`first_active_date`) en `dim_customers` y construye un calendario denso (Date Spine) en la capa Silver para detectar meses de inactividad sin huecos. Particiona las tablas de actividad mensual por `activity_month` y ordena por `cohort_month` para que los escaneos históricos de 36 meses sean instantáneos. Garantiza que los eventos tardíos o reactivaciones no sobrescriban el `cohort_month` original del usuario.",

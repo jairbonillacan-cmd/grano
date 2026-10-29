@@ -189,66 +189,20 @@ const lesson = {
     }
   ],
   "practice": {
-    "type": "fill-blanks",
+    "type": "sql",
     "title": "Reducción de varianza experimental con CUPED",
     "language": "sql",
-    "prompt": "Completa la consulta para calcular el coeficiente óptimo `theta` (covarianza muestral entre post y pre dividida por la varianza pre), aplicar la fórmula de ajuste `y_cuped` por usuario y obtener el error estándar reducido por cada variante.",
-    "starterCode": "WITH stats_global AS (\n  SELECT\n    {{b1}}(post_revenue_usd, pre_revenue_14d_usd)\n      / NULLIF(VAR_SAMP(pre_revenue_14d_usd), 0) AS theta,\n    AVG(pre_revenue_14d_usd) AS mean_pre\n  FROM exp_checkout_users\n),\ncuped_users AS (\n  SELECT\n    u.variant,\n    u.post_revenue_usd - s.theta * (u.{{b2}} - s.mean_pre) AS y_cuped\n  FROM exp_checkout_users u\n  CROSS JOIN stats_global s\n)\nSELECT\n  variant,\n  COUNT(*) AS usuarios,\n  ROUND(AVG(y_cuped), 2) AS media_ajustada_usd,\n  ROUND(STDDEV_SAMP(y_cuped) / {{b3}}(COUNT(*)), 3) AS error_estandar_cuped\nFROM cuped_users\nGROUP BY variant;",
-    "expected": "WITH stats_global AS (\n  SELECT\n    {{b1}}(post_revenue_usd, pre_revenue_14d_usd)\n      / NULLIF(VAR_SAMP(pre_revenue_14d_usd), 0) AS theta,\n    AVG(pre_revenue_14d_usd) AS mean_pre\n  FROM exp_checkout_users\n),\ncuped_users AS (\n  SELECT\n    u.variant,\n    u.post_revenue_usd - s.theta * (u.{{b2}} - s.mean_pre) AS y_cuped\n  FROM exp_checkout_users u\n  CROSS JOIN stats_global s\n)\nSELECT\n  variant,\n  COUNT(*) AS usuarios,\n  ROUND(AVG(y_cuped), 2) AS media_ajustada_usd,\n  ROUND(STDDEV_SAMP(y_cuped) / {{b3}}(COUNT(*)), 3) AS error_estandar_cuped\nFROM cuped_users\nGROUP BY variant;",
+    "prompt": "Aplica el ajuste CUPED sobre `experiment_assignments` para el experimento `experiment_id = 1`: calcula `theta` (`COVAR_SAMP(post_experiment_spend_usd, pre_experiment_spend_usd) / VAR_SAMP(pre_experiment_spend_usd)`), la métrica ajustada `y_cuped` y devuelve por `variant`: `usuarios`, `media_ajustada_usd` y `error_estandar_cuped`.",
+    "starterCode": "WITH stats_global AS (\n  SELECT\n    -- TODO: Calcula theta como COVAR_SAMP(post_experiment_spend_usd, pre_experiment_spend_usd) / NULLIF(VAR_SAMP(pre_experiment_spend_usd), 0)\n    0.0 AS theta,\n    AVG(pre_experiment_spend_usd) AS mean_pre\n  FROM experiment_assignments\n  WHERE experiment_id = 1\n),\ncuped_users AS (\n  SELECT\n    u.variant,\n    u.post_experiment_spend_usd - s.theta * (u.pre_experiment_spend_usd - s.mean_pre) AS y_cuped\n  FROM experiment_assignments u\n  CROSS JOIN stats_global s\n  WHERE u.experiment_id = 1\n)\nSELECT\n  variant,\n  COUNT(*) AS usuarios,\n  ROUND(AVG(y_cuped), 2) AS media_ajustada_usd,\n  ROUND(STDDEV_SAMP(y_cuped) / SQRT(COUNT(*)), 3) AS error_estandar_cuped\nFROM cuped_users\nGROUP BY variant\nORDER BY variant;",
+    "expected": "WITH stats_global AS (\n  SELECT\n    COVAR_SAMP(post_experiment_spend_usd, pre_experiment_spend_usd)\n      / NULLIF(VAR_SAMP(pre_experiment_spend_usd), 0) AS theta,\n    AVG(pre_experiment_spend_usd) AS mean_pre\n  FROM experiment_assignments\n  WHERE experiment_id = 1\n),\ncuped_users AS (\n  SELECT\n    u.variant,\n    u.post_experiment_spend_usd - s.theta * (u.pre_experiment_spend_usd - s.mean_pre) AS y_cuped\n  FROM experiment_assignments u\n  CROSS JOIN stats_global s\n  WHERE u.experiment_id = 1\n)\nSELECT\n  variant,\n  COUNT(*) AS usuarios,\n  ROUND(AVG(y_cuped), 2) AS media_ajustada_usd,\n  ROUND(STDDEV_SAMP(y_cuped) / SQRT(COUNT(*)), 3) AS error_estandar_cuped\nFROM cuped_users\nGROUP BY variant\nORDER BY variant;",
     "orderMatters": true,
     "hints": [
-      "Función de covarianza muestral: El numerador de `theta` en CUPED es la covarianza entre la métrica post-experimento y la covariable pre-experimento.",
-      "Columna de la covariable pre-experimento: Debes centrar la covariable individual de los 14 días previos restándole la media global `s.mean_pre`.",
-      "Raíz cuadrada del tamaño muestral: El Error Estándar de la media es la desviación estándar dividida entre la raíz cuadrada de `N` (`SQRT(COUNT(*))`)."
+      "En `stats_global`, reemplaza `0.0 AS theta` por `COVAR_SAMP(post_experiment_spend_usd, pre_experiment_spend_usd) / NULLIF(VAR_SAMP(pre_experiment_spend_usd), 0) AS theta`.",
+      "La covariable `pre_experiment_spend_usd` fue medida antes de la asignación y reduce sustancialmente el error estándar.",
+      "Mantén `ORDER BY variant` para mostrar `control` y `treatment` en orden determinista."
     ],
-    "solution": "WITH stats_global AS (\n  SELECT\n    {{b1}}(post_revenue_usd, pre_revenue_14d_usd)\n      / NULLIF(VAR_SAMP(pre_revenue_14d_usd), 0) AS theta,\n    AVG(pre_revenue_14d_usd) AS mean_pre\n  FROM exp_checkout_users\n),\ncuped_users AS (\n  SELECT\n    u.variant,\n    u.post_revenue_usd - s.theta * (u.{{b2}} - s.mean_pre) AS y_cuped\n  FROM exp_checkout_users u\n  CROSS JOIN stats_global s\n)\nSELECT\n  variant,\n  COUNT(*) AS usuarios,\n  ROUND(AVG(y_cuped), 2) AS media_ajustada_usd,\n  ROUND(STDDEV_SAMP(y_cuped) / {{b3}}(COUNT(*)), 3) AS error_estandar_cuped\nFROM cuped_users\nGROUP BY variant;",
-    "solutionExplanation": "Estima `theta` globalmente como `COVAR_SAMP(Y, X_pre) / VAR_SAMP(X_pre)`. Garantiza que la covariable `pre_revenue_14d_usd` provenga de una ventana estrictamente anterior a la primera exposición al experimento. Calcula el Error Estándar dividiendo `STDDEV_SAMP(y_cuped)` entre `SQRT(COUNT(*))`.",
-    "blanks": [
-      {
-        "id": "b1",
-        "placeholder": "Función de covarianza muestral",
-        "acceptedAnswers": [
-          "COVAR_SAMP",
-          "COVAR_POP"
-        ],
-        "hint": "El numerador de `theta` en CUPED es la covarianza entre la métrica post-experimento y la covariable pre-experimento."
-      },
-      {
-        "id": "b2",
-        "placeholder": "Columna de la covariable pre-experimento",
-        "acceptedAnswers": [
-          "pre_revenue_14d_usd"
-        ],
-        "hint": "Debes centrar la covariable individual de los 14 días previos restándole la media global `s.mean_pre`."
-      },
-      {
-        "id": "b3",
-        "placeholder": "Raíz cuadrada del tamaño muestral",
-        "acceptedAnswers": [
-          "SQRT"
-        ],
-        "hint": "El Error Estándar de la media es la desviación estándar dividida entre la raíz cuadrada de `N` (`SQRT(COUNT(*))`)."
-      }
-    ],
-    "expectedOutputTable": [
-      {
-        "variant": "Control (A)",
-        "usuarios": 50042,
-        "media_ajustada_usd": "$24.35",
-        "error_estandar_cuped": "0.265"
-      },
-      {
-        "variant": "Tratamiento (B)",
-        "usuarios": 49958,
-        "media_ajustada_usd": "$25.12",
-        "error_estandar_cuped": "0.270"
-      }
-    ],
-    "rubricCriteria": [
-      "Estima `theta` globalmente como `COVAR_SAMP(Y, X_pre) / VAR_SAMP(X_pre)`.",
-      "Garantiza que la covariable `pre_revenue_14d_usd` provenga de una ventana estrictamente anterior a la primera exposición al experimento.",
-      "Calcula el Error Estándar dividiendo `STDDEV_SAMP(y_cuped)` entre `SQRT(COUNT(*))`."
-    ]
+    "solution": "WITH stats_global AS (\n  SELECT\n    COVAR_SAMP(post_experiment_spend_usd, pre_experiment_spend_usd)\n      / NULLIF(VAR_SAMP(pre_experiment_spend_usd), 0) AS theta,\n    AVG(pre_experiment_spend_usd) AS mean_pre\n  FROM experiment_assignments\n  WHERE experiment_id = 1\n),\ncuped_users AS (\n  SELECT\n    u.variant,\n    u.post_experiment_spend_usd - s.theta * (u.pre_experiment_spend_usd - s.mean_pre) AS y_cuped\n  FROM experiment_assignments u\n  CROSS JOIN stats_global s\n  WHERE u.experiment_id = 1\n)\nSELECT\n  variant,\n  COUNT(*) AS usuarios,\n  ROUND(AVG(y_cuped), 2) AS media_ajustada_usd,\n  ROUND(STDDEV_SAMP(y_cuped) / SQRT(COUNT(*)), 3) AS error_estandar_cuped\nFROM cuped_users\nGROUP BY variant\nORDER BY variant;",
+    "solutionExplanation": "Calcula el coeficiente `theta` pooled sobre los usuarios del experimento `experiment_id = 1` y resta `theta * (pre - mean_pre)` a `post_experiment_spend_usd`, reduciendo el error estándar sin sesgar el efecto del tratamiento."
   },
   "roleNotes": {
     "de": "Implementa asignación determinista sin estado mediante hashing rápido (`MurmurHash3(user_id || experiment_salt) % 10000`) para que el usuario vea siempre la misma variante en web y móvil. Registra el evento inmutable de primera exposición (`first_exposed_at`) y construye un pipeline automatizado que congela las covariables pre-experimento (`pre_14d_revenue`, `pre_14d_sessions`) estrictamente antes de ese milisegundo.",

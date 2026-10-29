@@ -1,578 +1,549 @@
 /* ==========================================================================
-   HOME VIEW (src/views/HomeView.jsx)
+   VISTA HOY (HomeView.jsx) — Editorial sobria, sin hero ni cajas vacías
    ========================================================================== */
 
 .home-view {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
-  min-width: 0;
-}
-
-/* Ilustraciones SVG del catálogo */
-.ui-illustration {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  overflow: hidden;
-  border-radius: var(--r-lg);
-}
-
-.ui-illustration--sm {
-  width: 5.25rem;
-  height: 3.5rem;
-}
-
-.ui-illustration--md {
-  width: 8.75rem;
-  height: 5.875rem;
-}
-
-.ui-illustration--lg {
-  width: 13.125rem;
-  height: 8.75rem;
-}
-
-.ui-illustration-svg {
+  gap: var(--sp-6);
+  max-width: 820px;
   width: 100%;
-  height: 100%;
-  display: block;
+  margin: 0 auto;
+  padding-bottom: var(--sp-10);
 }
 
-.ui-empty-state .ui-empty-state__illus {
-  width: auto;
-  height: auto;
-  min-width: 3.5rem;
-  min-height: 3.5rem;
-  padding: 0.375rem;
-  background-color: transparent;
+.home-view h1,
+.home-view h2,
+.home-view h3 {
+  font-family: var(--font-sans);
 }
 
-/* 1. Cabecera de "Hoy": una línea de estado, sin fondo ni ilustración */
-.home-hero {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 0.25rem 1rem;
-  padding: 0.25rem 0 0;
-}
-
-.home-hero__title {
-  font-family: var(--font-display);
-  font-size: var(--fs-2xl);
-  font-weight: 560;
-  letter-spacing: -0.01em;
-  line-height: 1.15;
-  color: var(--text);
-  margin: 0;
-}
-
-.home-hero__status {
-  font-family: var(--font-mono);
-  font-size: var(--fs-sm);
-  color: var(--text-2);
-  margin: 0;
-}
-
-/* 2. Tarjeta Continuar con data-stage */
-.home-continue-card {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
-
-.home-continue-card__top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.home-continue-card__chips {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.home-continue-card__main {
+/* Cabecera Hoy */
+.home-header {
   display: flex;
   align-items: flex-start;
-  gap: 1.25rem;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  padding-bottom: var(--sp-4);
+  border-bottom: 1px solid var(--line);
 }
 
-.home-continue-card__number {
-  font-family: var(--font-mono);
-  font-size: clamp(2.25rem, 4vw + 1rem, 3.25rem);
-  font-weight: 600;
-  line-height: 1;
-  color: var(--stage);
-  background-color: var(--stage-soft);
-  border: 1px solid color-mix(in oklab, var(--stage) 32%, transparent);
-  border-radius: var(--r-lg);
-  min-width: 4.75rem;
-  height: 4.75rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.home-continue-card__copy {
+.home-header__main {
   display: flex;
   flex-direction: column;
-  gap: 0.375rem;
-  min-width: 0;
-  flex: 1;
+  gap: var(--sp-1);
 }
 
-.home-continue-card__title {
-  font-family: var(--font-display);
-  font-size: var(--fs-xl);
-  font-weight: 600;
-  line-height: 1.25;
-  color: var(--text);
+.home-header__title {
   margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--fs-7);
+  font-weight: 600;
+  line-height: var(--lh-tight);
+  letter-spacing: var(--ls-tight);
+  color: var(--ink);
 }
 
-.home-continue-card__desc {
-  font-size: var(--fs-md);
-  color: var(--text-2);
-  line-height: 1.5;
+.home-header__status {
   margin: 0;
-}
-
-.home-continue-card__progress {
   display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.home-continue-card__step-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  color: var(--text-2);
-}
-
-.home-continue-card__footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
   flex-wrap: wrap;
-  padding-top: 0.25rem;
-}
-
-.home-continue-card__roles {
-  display: flex;
   align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.home-continue-card__actions {
-  display: flex;
-  align-items: center;
-  gap: 0.625rem;
-  flex-wrap: wrap;
-}
-
-/* 3. Métricas (3 tarjetas) */
-.home-metrics-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1rem;
-}
-
-.home-metric-card {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 0.75rem;
-}
-
-.home-metric-card__head {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.home-metric-card__icon {
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: var(--r-pill);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.home-metric-card__icon--primary {
-  background-color: var(--primary-soft);
-  color: var(--primary-deep);
-}
-
-.home-metric-card__icon--success {
-  background-color: var(--success-soft);
-  color: var(--success);
-}
-
-.home-metric-card__icon--warning {
-  background-color: var(--warning-soft);
-  color: color-mix(in oklab, var(--warning) 80%, var(--text));
-}
-
-.home-metric-card__label {
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-2);
-}
-
-.home-metric-card__value {
-  font-family: var(--font-mono);
-  font-size: var(--fs-2xl);
-  font-weight: 600;
-  color: var(--text);
-  line-height: 1.1;
+  gap: var(--sp-2);
+  font-size: var(--fs-2);
+  color: var(--ink-2);
   font-variant-numeric: tabular-nums;
 }
 
-.home-metric-card__value--warning {
-  color: var(--warning);
-}
-
-.home-metric-card__motivate {
-  font-size: var(--fs-sm);
-  font-weight: 600;
-  color: var(--text);
-  line-height: 1.4;
-  margin: 0;
-}
-
-.home-metric-card__meta {
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  color: var(--text-2);
-}
-
-/* Secciones comunes */
-.home-section {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.home-section__header {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.home-section__title {
-  font-family: var(--font-display);
-  font-size: var(--fs-xl);
-  font-weight: 600;
-  color: var(--text);
-  margin: 0;
-}
-
-.home-section__subtitle {
-  font-size: var(--fs-sm);
-  color: var(--text-2);
-  margin: 0.25rem 0 0 0;
-}
-
-/* 4. Mapa de etapas (camino visual con línea conectora) */
-.home-stage-map {
-  position: relative;
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 0.75rem;
-  padding: 1.25rem 1rem;
-  background-color: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-lg);
-  box-shadow: var(--shadow-1);
-}
-
-.home-stage-map::before {
-  content: '';
-  position: absolute;
-  top: 3.5rem;
-  left: 10%;
-  right: 10%;
-  height: 3px;
-  background-color: var(--border);
-  z-index: 0;
-}
-
-.home-stage-node {
-  position: relative;
-  z-index: 1;
-  min-height: 2.75rem;
-  min-width: 2.75rem;
-  padding: 0.5rem 0.375rem;
-  border-radius: var(--r-md);
-  border: 1px solid transparent;
-  background-color: transparent;
-  color: var(--text);
-  font-family: var(--font-sans);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 0.625rem;
-  cursor: pointer;
-  transition:
-    background-color var(--dur-1) var(--ease-out),
-    border-color var(--dur-1) var(--ease-out),
-    transform var(--dur-1) var(--ease-out);
-}
-
-.home-stage-node:hover {
-  background-color: var(--surface-2);
-  border-color: var(--stage);
-  transform: translateY(-0.125rem);
-}
-
-.home-stage-node:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
-}
-
-.home-stage-node.is-current {
-  background-color: color-mix(in oklab, var(--stage-soft) 50%, var(--surface));
-  border-color: var(--stage);
-}
-
-.home-stage-node__ring-wrap {
-  width: 3.5rem;
-  height: 3.5rem;
-  border-radius: var(--r-pill);
-  background-color: var(--surface);
+.home-header__track {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  gap: 6px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.home-header__sep {
+  color: var(--ink-3);
+}
+
+.home-header__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
   flex-shrink: 0;
 }
 
-.home-stage-node__icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--stage-deep);
+/* Puntos de área DE / DA / BI (6px) */
+.home-track-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  background: var(--ink-3);
 }
 
-.home-stage-node.is-completed .home-stage-node__icon {
-  color: var(--success);
+.home-track-dot--de {
+  background: var(--track-de);
 }
 
-.home-stage-node__info {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.125rem;
-  min-width: 0;
+.home-track-dot--da {
+  background: var(--track-da);
 }
 
-.home-stage-node__eyebrow {
+.home-track-dot--bi {
+  background: var(--track-bi);
+}
+
+.home-kicker {
   font-family: var(--font-mono);
-  font-size: 0.6875rem;
+  font-size: var(--fs-1);
   font-weight: 600;
+  letter-spacing: var(--ls-caps);
   text-transform: uppercase;
-  color: var(--stage-deep);
+  color: var(--brand);
 }
 
-.home-stage-node__name {
-  font-family: var(--font-display);
-  font-size: var(--fs-sm);
-  font-weight: 600;
-  color: var(--text);
-  line-height: 1.25;
-}
+/* ==========================================================================
+   ESTADO USUARIO NUEVO: Una sola tarjeta limpia
+   ========================================================================== */
 
-.home-stage-node__status {
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  color: var(--text-2);
-}
-
-.home-stage-node__completed-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.125rem 0.5rem;
-  border-radius: var(--r-pill);
-  background-color: var(--success-soft);
-  color: var(--success);
-  font-weight: 600;
-}
-
-/* 5. Repaso de hoy y 6. Diagnóstico */
-.home-actions-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(18.75rem, 1fr));
-  gap: 1.25rem;
-  align-items: start;
-}
-
-.home-review-block,
-.home-diagnostic-block {
+.home-onboarding-card {
   display: flex;
   flex-direction: column;
-  gap: 0.875rem;
-  min-width: 0;
+  gap: var(--sp-5);
+  padding: var(--sp-6);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-3);
 }
 
-.home-review-card {
+.home-onboarding-card__top {
   display: flex;
   flex-direction: column;
-  gap: 0.875rem;
+  gap: var(--sp-2);
 }
 
-.home-review-card__top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.home-review-card__roles {
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  color: var(--text-2);
-}
-
-.home-review-card__title,
-.home-diagnostic-card__title {
-  font-family: var(--font-display);
-  font-size: var(--fs-lg);
-  font-weight: 600;
-  color: var(--text);
+.home-onboarding-card__title {
   margin: 0;
+  font-size: var(--fs-5);
+  font-weight: 600;
+  line-height: var(--lh-snug);
+  letter-spacing: var(--ls-snug);
+  color: var(--ink);
 }
 
-.home-review-card__desc,
-.home-diagnostic-card__desc {
-  font-size: var(--fs-sm);
-  color: var(--text-2);
-  line-height: 1.5;
+.home-onboarding-card__goal {
   margin: 0;
+  font-size: var(--fs-3);
+  line-height: var(--lh-body);
+  color: var(--ink-2);
+  max-width: 65ch;
 }
 
-.home-review-card__actions,
-.home-diagnostic-card__actions {
-  padding-top: 0.25rem;
-}
-
-.home-diagnostic-card {
+.home-onboarding-card__meta {
   display: flex;
-  align-items: flex-start;
-  gap: 1.125rem;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-2);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
 }
 
-.home-diagnostic-card__illus {
-  flex-shrink: 0;
+.home-onboarding-card__cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3);
 }
 
-.home-diagnostic-card__body {
+.home-onboarding-card__tracks {
   display: flex;
   flex-direction: column;
-  gap: 0.625rem;
-  min-width: 0;
-  flex: 1;
+  gap: var(--sp-3);
+  padding-top: var(--sp-4);
+  border-top: 1px solid var(--line);
 }
 
-.home-diagnostic-card__chips {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+.home-onboarding-card__tracks-label {
+  font-size: var(--fs-2);
+  font-weight: 500;
+  color: var(--ink-2);
 }
 
-/* 7. Insignias de etapa */
-.home-badges-grid {
+.home-track-picker {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.875rem;
+  gap: var(--sp-3);
 }
 
-/* Responsive < 1024px: Mapa de etapas vertical */
-@media (max-width: 1023px) {
-  .home-stage-map {
-    grid-template-columns: 1fr;
-    gap: 0.625rem;
-    padding: 1rem;
-  }
-
-  .home-stage-map::before {
-    top: 2.25rem;
-    bottom: 2.25rem;
-    left: 3.25rem;
-    right: auto;
-    width: 3px;
-    height: auto;
-  }
-
-  .home-stage-node {
-    flex-direction: row;
-    text-align: left;
-    padding: 0.5rem 0.75rem 0.5rem 0.5rem;
-    gap: 1rem;
-  }
-
-  .home-stage-node__info {
-    align-items: flex-start;
-    flex: 1;
-  }
-
-  .home-badges-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+.home-track-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sp-1);
+  padding: var(--sp-3);
+  text-align: left;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--r-2);
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
 }
 
-/* Responsive < 768px (Móvil) */
+.home-track-choice:hover {
+  border-color: var(--line-strong);
+  background: var(--surface);
+}
+
+.home-track-choice.is-selected {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+}
+
+.home-track-choice:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.home-track-choice__title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  font-size: var(--fs-2);
+}
+
+.home-track-choice__short {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: var(--fs-1);
+  color: var(--ink-3);
+}
+
+.home-track-choice__desc {
+  font-size: var(--fs-1);
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+
+/* ==========================================================================
+   ESTADO CON PROGRESO: 1. Continuar · 2. Repaso · 3. Siguiente · 4. Semana
+   ========================================================================== */
+
+.home-active-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+}
+
+/* 1. Bloque principal Continuar */
+.home-continue-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-5);
+  padding: var(--sp-5);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-3);
+}
+
+.home-continue-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+.home-continue-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-1);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.home-continue-card__title {
+  margin: 0;
+  font-size: var(--fs-5);
+  font-weight: 600;
+  line-height: var(--lh-snug);
+  letter-spacing: var(--ls-snug);
+  color: var(--ink);
+}
+
+.home-continue-card__goal {
+  margin: 0;
+  font-size: var(--fs-2);
+  line-height: var(--lh-body);
+  color: var(--ink-2);
+  max-width: 62ch;
+}
+
+.home-continue-card__actions {
+  flex-shrink: 0;
+}
+
+/* 2. Repaso de hoy */
+.home-review-block {
+  display: flex;
+  flex-direction: column;
+}
+
+.home-review-line-empty {
+  margin: 0;
+  padding: var(--sp-2) 0;
+  font-size: var(--fs-2);
+  color: var(--ink-3);
+}
+
+.home-review-line-empty__label {
+  font-weight: 500;
+  color: var(--ink-2);
+}
+
+.home-review-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-2);
+}
+
+.home-review-bar__info {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-2);
+  color: var(--ink);
+}
+
+.home-review-bar__icon {
+  color: var(--brand);
+  flex-shrink: 0;
+}
+
+.home-review-bar__title {
+  font-weight: 600;
+}
+
+.home-review-bar__sep {
+  color: var(--ink-3);
+}
+
+.home-review-bar__count {
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Cabeceras de sección interna */
+.home-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-3);
+}
+
+.home-section-title {
+  margin: 0;
+  font-size: var(--fs-3);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.home-text-link {
+  padding: 0;
+  background: none;
+  border: none;
+  font-family: var(--font-sans);
+  font-size: var(--fs-2);
+  font-weight: 500;
+  color: var(--brand);
+  cursor: pointer;
+}
+
+.home-text-link:hover {
+  text-decoration: underline;
+}
+
+/* 3. Siguiente en tu ruta */
+.home-next-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--r-2);
+  background: var(--surface);
+  divide-y: 1px solid var(--line);
+}
+
+.home-next-row + .home-next-row {
+  border-top: 1px solid var(--line);
+}
+
+.home-next-row__btn {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  background: transparent;
+  border: none;
+  text-align: left;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+
+.home-next-row__btn:hover {
+  background: var(--sunken);
+}
+
+.home-next-row__btn:focus-visible {
+  outline: none;
+  box-shadow: inset var(--focus-ring);
+}
+
+.home-next-row__code {
+  font-family: var(--font-mono);
+  font-size: var(--fs-1);
+  font-weight: 600;
+  color: var(--ink-3);
+  padding: 2px 6px;
+  border-radius: var(--r-1);
+  background: var(--sunken);
+}
+
+.home-next-row__main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.home-next-row__title {
+  font-size: var(--fs-2);
+  font-weight: 500;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.home-next-row__sub {
+  font-size: var(--fs-1);
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.home-next-row__mins {
+  font-family: var(--font-mono);
+  font-size: var(--fs-1);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.home-next-row__arrow {
+  color: var(--ink-3);
+}
+
+/* 4. Esta semana (7 celdas L..D) */
+.home-week-total {
+  font-family: var(--font-mono);
+  font-size: var(--fs-1);
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.home-week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-2);
+}
+
+.home-week-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.home-week-cell__day {
+  font-family: var(--font-mono);
+  font-size: var(--fs-1);
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.home-week-cell__swatch {
+  width: 100%;
+  height: 24px;
+  border-radius: var(--r-1);
+  border: 1px solid var(--line);
+}
+
+.home-week-cell--active .home-week-cell__swatch {
+  border-color: var(--brand);
+}
+
+.home-week-cell__mins {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.home-week-cell--active .home-week-cell__mins {
+  color: var(--ink);
+  font-weight: 500;
+}
+
 @media (max-width: 767px) {
-  .home-view {
-    gap: 1.5rem;
-  }
-
-  .home-metrics-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .home-actions-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .home-continue-card__main {
+  .home-header {
     flex-direction: column;
-    gap: 0.75rem;
+    align-items: flex-start;
   }
 
-  .home-continue-card__number {
-    min-width: 3.75rem;
-    height: 3.75rem;
-    font-size: 1.75rem;
-  }
-
-  .home-diagnostic-card {
-    flex-direction: column;
-  }
-
-  .home-badges-grid {
+  .home-track-picker {
     grid-template-columns: 1fr;
+  }
+
+  .home-continue-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .home-continue-card__actions .ui-btn {
+    width: 100%;
+  }
+
+  .home-review-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .home-next-row__btn {
+    grid-template-columns: auto 1fr auto;
+  }
+
+  .home-next-row__arrow {
+    display: none;
   }
 }
