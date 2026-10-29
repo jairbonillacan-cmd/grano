@@ -125,7 +125,7 @@ function isSourceOrImportLine(trimmed) {
     trimmed.includes('"title"') ||
     trimmed.includes('https://') ||
     trimmed.startsWith('import ') ||
-    trimmed.startsWith('export ') ||
+    /^export\s+\{[^}]*\}\s+from\s+/.test(trimmed) ||
     trimmed.includes('GLOSSARY_CONCEPTS_2026') ||
     trimmed.includes('learningPath2026') ||
     trimmed.includes('curriculum2026') ||

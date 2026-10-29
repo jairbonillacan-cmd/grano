@@ -181,6 +181,13 @@ async function main() {
 
     // 6. Rango de palabras totales visibles y bandera needsReview
     const visibleWords = countVisibleLessonWords(lesson);
+    const minVisible = lesson.level === 0 ? 500 : 600;
+    const maxVisible = lesson.level === 0 ? 1000 : 1600;
+    if (visibleWords < minVisible || visibleWords > maxVisible) {
+      lessonWarnings.push(
+        `Palabras visibles (${visibleWords}) fuera del rango recomendado [${minVisible}, ${maxVisible}]`
+      );
+    }
     if (lesson.needsReview) {
       lessonWarnings.push('needsReview: true (pendiente de edición fina en Fase 3)');
     }
