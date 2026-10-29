@@ -2419,3 +2419,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
   }
 }
 
+export { LESSON_META };
+export default LESSON_META;
+
+
