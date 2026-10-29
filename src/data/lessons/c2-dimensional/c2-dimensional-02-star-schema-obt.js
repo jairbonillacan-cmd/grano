@@ -1,340 +1,734 @@
-// Lección migrada al esquema v2 mediante scripts/migrate-legacy.mjs
-const lesson = {
-  "id": "c2-dimensional-02-star-schema-obt",
-  "moduleId": "c2-dimensional",
-  "tracks": [
-    "core"
+export const lesson = {
+  id: 'c2-dimensional-02-star-schema-obt',
+  legacyId: 'l4-star-schema-obt',
+  legacyOrder: 4,
+  moduleId: 'c2-dimensional',
+  tracks: ['core', 'de', 'da', 'bi'],
+  level: 2,
+  order: 2,
+  title: 'Esquema en estrella frente a tabla ancha (OBT)',
+  subtitle:
+    'Comparación entre esquemas en estrella, copo de nieve y One Big Table (OBT) en motores columnares',
+  minutes: 25,
+  prerequisites: ['c2-dimensional-01-hechos-dimensiones-bus'],
+  contentVersion: 2,
+  hook: 'El equipo de analítica de Mercado Brisa propuso materializar una sola tabla ancha (`obt_order_lines`) uniendo `orders`, `order_items`, `products`, `customers` y `stores` para acelerar los tableros de BI. Al día siguiente, el reporte de costos logísticos por segmento mostró `$435.50` de envío en órdenes completadas en lugar de los `$370.50` reales, y una actualización de regiones en `stores` obligó a reescribir las `42,000` líneas. ¿Cuándo conviene servir un esquema en estrella clásico y cuándo una tabla ancha preunida sin inflar métricas?',
+  objectives: [
+    'Contrastar la topología del esquema en estrella, el esquema en copo de nieve (Snowflake) y la tabla ancha desnormalizada (OBT).',
+    'Diagnosticar cómo la compresión columnar (RLE y diccionario en Parquet y DuckDB) mitiga el costo de almacenamiento de atributos repetidos en una OBT.',
+    'Construir consultas sobre el esquema en estrella de Mercado Brisa filtrando anomalías de catálogo (`SKU-TEST-NEG`) y evitando duplicar medidas de cabecera en granos de línea.',
   ],
-  "level": 2,
-  "order": 2,
-  "title": "Esquema en estrella frente a tabla ancha (OBT)",
-  "minutes": 25,
-  "prerequisites": [
-    "c2-dimensional-01"
-  ],
-  "contentVersion": 1,
-  "hook": "En Mercado Brisa (empresa ficticia), los tableros de ventas consultaban directamente la base PostgreSQL transaccional normalizada en 14 tablas (`orders`, `payments`, `customers`, `addresses`, `stores`). Durante el cierre mensual, una consulta que unía 11 tablas bloqueó el cobro en caja durante cuatro minutos. Al separar el almacén analítico, el equipo debate dos diseños: un esquema en estrella (`fact_orders` con dimensiones conformadas) o una tabla ancha desnormalizada (`obt_orders`). ¿Cuándo conviene cada uno?",
-  "objectives": [
-    "Separar cargas transaccionales (OLTP en 3FN) de modelos analíticos (OLAP dimensional).",
-    "Diseñar una tabla de hechos con claves sustitutas y dimensiones conformadas en esquema en estrella.",
-    "Evaluar el costo de almacenamiento, actualización y cómputo entre esquema en estrella y OBT."
-  ],
-  "sections": [
+  sections: [
     {
-      "id": "oltp-en-tercera-forma-normal-frente-a-olap-anali",
-      "heading": "OLTP en tercera forma normal frente a OLAP analítico",
-      "body": "Los sistemas **OLTP (Online Transaction Processing)** como PostgreSQL o MySQL de producción están diseñados para procesar miles de lecturas y escrituras puntuales por segundo (`INSERT INTO orders`, `UPDATE accounts SET balance = ... WHERE id = 99`). Para evitar anomalías de escritura y no repetir datos, utilizan la **Tercera Forma Normal (3NF)**: la ciudad vive en `cities`, el país en `countries` y el segmento en `account_tiers`.\nEn cambio, los sistemas **OLAP (Online Analytical Processing)** están diseñados para responder preguntas agregadas leyendo millones de filas pero solo unas pocas columnas (`SELECT country, SUM(net_amount) FROM ... GROUP BY country`). Ejecutar cargas OLAP sobre una base OLTP en 3NF obliga a realizar docenas de `JOINs` costosos en tiempo real y compite por CPU, memoria y bloqueos (locks) con los clientes que intentan pagar en tu aplicación.",
-      "interactive": {
-        "component": "star-vs-obt-sim",
-        "caption": "Simulador interactivo: Esquema en estrella frente a tabla ancha (OBT)"
-      }
-    },
-    {
-      "id": "esquema-en-estrella-de-kimball-hechos-dimensione",
-      "heading": "Esquema en estrella de Kimball: hechos, dimensiones y matriz de bus",
-      "body": "El **Modelado Dimensional de Kimball** reorganiza el caos de 3NF en una estructura en forma de estrella pensada para ser entendida por humanos y optimizada para consultas:\n- **Tablas de Hechos (Fact Tables, prefijo `fct_`)**: están en el centro de la estrella. Guardan mediciones cuantitativas de eventos de negocio (`net_amount_usd`, `quantity`, `discount_usd`) y claves foráneas (`customer_sk`, `product_sk`, `date_key`). Crecen rápidamente en filas pero son estrechas en columnas. Pueden ser *Transaccionales* (1 fila por evento), *Periodic Snapshots* (1 fila por cuenta al cierre de cada mes) o *Accumulating Snapshots* (1 fila por el ciclo de vida de un pedido desde compra hasta entrega).\n- **Tablas de Dimensión (Dimension Tables, prefijo `dim_`)**: son las puntas de la estrella. Contienen los atributos descriptivos (`quién`, `qué`, `dónde`, `cuándo`) que usamos en las cláusulas `WHERE` y `GROUP BY`. Desnormalizan las jerarquías de 3NF (por ejemplo, `dim_customer` ya incluye `city_name`, `country_name` y `region_name` en la misma tabla).\n- **Dimensiones Conformadas (Conformed Dimensions) y Bus Matrix**: cuando Finanzas, Producto y Marketing comparten exactamente la misma tabla `dim_customer` y `dim_calendar`, sus reportes son 100% compatibles entre sí.",
-      "example": {
-        "language": "sql",
-        "code": "-- 1. En Capa Silver mantenemos el Star Schema limpio (fct_orders + dim_customer + dim_merchant)\n-- 2. En Capa Gold exponemos obt_orders_analytics (Parquet columnar comprimido con RLE/Dictionary):\nSELECT\n  customer_country_name,\n  merchant_industry_label,\n  customer_plan_tier_at_order,\n  COUNT(order_id) AS total_orders,\n  SUM(net_revenue_usd) AS net_revenue_usd\nFROM gold.obt_orders_analytics\nWHERE order_date >= DATE '2026-10-01'\n  AND order_date <  DATE '2026-11-01'\nGROUP BY ALL;",
-        "expectedOutput": [
+      id: 'sec-estrella-vs-copo-nieve',
+      heading: 'Esquema en estrella frente a copo de nieve (Snowflake)',
+      body: 'El **esquema en estrella** de Ralph Kimball organiza cada proceso de negocio con una tabla de hechos central (`order_items`) rodeada por un único nivel de dimensiones desnormalizadas (`products`, `stores`, `customers`, `calendar`). La tabla de hechos concentra el volumen de filas con claves foráneas compactas y medidas numéricas. Las dimensiones son tablas pequeñas en filas pero anchas en atributos descriptivos.\n\nCuando un equipo normaliza una dimensión en subtablas jerárquicas —por ejemplo, separando `category` y `subcategory` de `products` en tablas independientes en `3FN`—, el diseño se convierte en un **esquema en copo de nieve** (*Snowflake*). Aunque el copo de nieve ahorra algunos kilobytes en las dimensiones, obliga a encadenar múltiples `JOIN` adicionales en cada consulta.\n\nEn el almacén de datos analítico, Kimball desaconseja normalizar las dimensiones salvo en casos extremos. Mantener dimensiones planas en estrella simplifica el optimizador de consultas. También facilita la navegación en herramientas de BI y preserva la gobernanza de las **dimensiones conformadas** entre procesos.',
+      example: {
+        language: 'sql',
+        code: `SELECT
+  s.region,
+  p.category,
+  COUNT(DISTINCT o.order_id) AS orders_count,
+  SUM(oi.qty) AS total_units,
+  ROUND(SUM(oi.line_total_usd), 2) AS net_sales_usd
+FROM order_items oi
+INNER JOIN orders o ON oi.order_id = o.order_id
+INNER JOIN products p ON oi.product_id = p.product_id
+INNER JOIN stores s ON o.store_id = s.store_id
+WHERE o.status = 'completed'
+  AND p.list_price_usd > 0
+  AND s.region = 'Cono Sur'
+GROUP BY s.region, p.category
+ORDER BY net_sales_usd DESC;`,
+        expectedOutput: [
           {
-            "tablas_unidas": "1 tabla Gold OBT (0 Joins en lectura)",
-            "riesgo_operativo": "Cero (Desacoplado de OLTP, compresión Dictionary 7.2x)",
-            "latencia_p95": "0.06 segundos (60 ms)"
-          }
-        ]
-      }
-    },
-    {
-      "id": "cuando-usar-una-tabla-ancha-obt-en-motores-colum",
-      "heading": "Cuándo usar una tabla ancha (OBT) en motores columnares con RLE",
-      "body": "Cuando Kimball formuló el Star Schema en los años 90, el almacenamiento en disco era carísimo y las bases de datos guardaban datos por filas: repetir `\"Estados Unidos\"` o `\"Enterprise\"` 100 millones de veces en la tabla de hechos habría desperdiciado terabytes. Pero en 2026 almacenamos datos en formatos columnares como **Apache Parquet** dentro de tablas **Apache Iceberg**.\nGracias a las técnicas **Dictionary Encoding** (que reemplaza `\"Enterprise\"` por el entero `1` en un diccionario local) y **Run-Length Encoding (RLE)** (que guarda `\"el valor 1 se repite 80,000 veces seguidas\"`), incrustar todos los atributos dimensionales directamente dentro de una **One Big Table (OBT)** apenas añade un 8%–12% de espacio en disco, a cambio de eliminar por completo los costosos *Shuffle Joins* en tiempo de consulta."
-    },
-    {
-      "id": "arquitectura-hibrida-esquema-en-estrella-en-silv",
-      "heading": "Arquitectura híbrida: esquema en estrella en silver y OBT en gold",
-      "body": "En lugar de tratar Star Schema y OBT como religiones opuestas, los equipos modernos combinan ambos en su arquitectura Medallion:\n- **En la capa Silver (Core / Gobernanza)**: mantenemos un **Star Schema disciplinado** (`fct_orders`, `dim_customer_scd2`, `dim_product`). ¿Por qué? Porque si un producto cambia de categoría o necesitamos corregir un atributo para 5 millones de clientes, actualizar solo `dim_product` (50,000 filas) es instantáneo, mientras que reescribir 10,000 millones de filas históricas en una OBT sería carísimo.\n- **En la capa Gold (Consumo / Marts)**: materializamos tablas **OBT desnormalizadas** (`obt_orders_enriched`) o vistas semánticas para los datasets de mayor concurrencia en BI y para exploración ultrarrápida en DuckDB y Polars."
-    }
-  ],
-  "workedExample": {
-    "title": "Ejemplo guiado: Esquema en estrella frente a tabla ancha (OBT)",
-    "description": "Compara el dolor de consultar un modelo transaccional OLTP en 3NF (9 tablas unidas en cadena) frente a construir y consultar una tabla analítica desnormalizada (OBT) alimentada desde tu Star Schema:",
-    "audit": "",
-    "steps": [
-      {
-        "label": "Antipatrón: consulta analítica directa sobre OLTP en 3NF",
-        "explanation": "Compara el dolor de consultar un modelo transaccional OLTP en 3NF (9 tablas unidas en cadena) frente a construir y consultar una tabla analítica desnormalizada (OBT) alimentada desde tu Star Schema:",
-        "code": "-- MAL: Consultar directamente la base OLTP en 3NF requiere unir 9 tablas en cadena,\n-- escanea índices por filas y acopla los reportes de BI al esquema interno del backend\nSELECT\n  co.country_name,\n  ind.industry_label,\n  pl.plan_tier_name,\n  COUNT(o.id) AS total_orders,\n  SUM(o.subtotal_cents - COALESCE(o.discount_cents, 0)) / 100.0 AS net_revenue_usd\nFROM oltp_prod.orders o\nJOIN oltp_prod.users u ON o.user_id = u.id\nJOIN oltp_prod.addresses a ON u.billing_address_id = a.id\nJOIN oltp_prod.cities ci ON a.city_id = ci.id\nJOIN oltp_prod.countries co ON ci.country_id = co.id\nJOIN oltp_prod.merchants m ON o.merchant_id = m.id\nJOIN oltp_prod.industries ind ON m.industry_id = ind.id\nJOIN oltp_prod.subscriptions s ON u.id = s.user_id\nJOIN oltp_prod.plans pl ON s.plan_id = pl.id\nWHERE o.status = 'COMPLETED'\n  AND o.created_at >= '2026-10-01'\nGROUP BY 1, 2, 3;",
-        "expectedOutput": [
+            region: 'Cono Sur',
+            category: 'Molinos',
+            orders_count: 2045,
+            total_units: 4684,
+            net_sales_usd: 704901.21,
+          },
           {
-            "tablas_unidas": "9 tablas OLTP (Cadena 3NF)",
-            "riesgo_operativo": "Alto (Lock contention en base de pagos + Fan-out por subscriptions)",
-            "latencia_p95": "18.4 segundos"
-          }
-        ]
-      },
-      {
-        "label": "Arquitectura híbrida: esquema en estrella en silver y OBT en gold",
-        "explanation": "Compara ahora la consulta corregida y verifica cómo las filas y totales coinciden con la auditoría.",
-        "code": "-- 1. En Capa Silver mantenemos el Star Schema limpio (fct_orders + dim_customer + dim_merchant)\n-- 2. En Capa Gold exponemos obt_orders_analytics (Parquet columnar comprimido con RLE/Dictionary):\nSELECT\n  customer_country_name,\n  merchant_industry_label,\n  customer_plan_tier_at_order,\n  COUNT(order_id) AS total_orders,\n  SUM(net_revenue_usd) AS net_revenue_usd\nFROM gold.obt_orders_analytics\nWHERE order_date >= DATE '2026-10-01'\n  AND order_date <  DATE '2026-11-01'\nGROUP BY ALL;",
-        "expectedOutput": [
+            region: 'Cono Sur',
+            category: 'Cafeteras',
+            orders_count: 2051,
+            total_units: 4740,
+            net_sales_usd: 545891.44,
+          },
           {
-            "tablas_unidas": "1 tabla Gold OBT (0 Joins en lectura)",
-            "riesgo_operativo": "Cero (Desacoplado de OLTP, compresión Dictionary 7.2x)",
-            "latencia_p95": "0.06 segundos (60 ms)"
-          }
-        ]
-      }
-    ]
-  },
-  "checks": [
+            region: 'Cono Sur',
+            category: 'Suscripciones',
+            orders_count: 2016,
+            total_units: 4590,
+            net_sales_usd: 216760.65,
+          },
+          {
+            region: 'Cono Sur',
+            category: 'Accesorios',
+            orders_count: 2051,
+            total_units: 4713,
+            net_sales_usd: 192675.97,
+          },
+          {
+            region: 'Cono Sur',
+            category: 'Café en grano',
+            orders_count: 2046,
+            total_units: 4740,
+            net_sales_usd: 137242.91,
+          },
+        ],
+      },
+    },
     {
-      "id": "c1",
-      "type": "mcq",
-      "prompt": "En una arquitectura moderna sobre Parquet/Iceberg, ¿por qué los equipos mantienen un Star Schema en la capa Silver en lugar de usar exclusivamente una única One Big Table (OBT) para todo el almacén?",
-      "options": [
+      id: 'sec-obt-motores-columnares',
+      heading: 'One Big Table (OBT) y el compromiso en motores columnares',
+      body: 'Con la adopción de formatos columnares como **Apache Parquet** y motores vectorizados como **DuckDB**, el costo físico de repetir cadenas de texto cambió. Una **One Big Table** (`OBT`) preune la tabla de hechos con todas sus dimensiones en una sola tabla ancha materializada en la capa de consumo.\n\nEn un motor orientado a filas, repetir `"Cono Sur"` o `"Cafeteras"` en `42,000` líneas multiplicaría el almacenamiento. En cambio, un archivo columnar aplica **codificación por diccionario** y *Run-Length Encoding* (`RLE`) cuando la tabla se ordena por atributos de baja cardinalidad. Así, las lecturas escanean únicamente las columnas proyectadas en el `SELECT` sin ejecutar `Hash Joins` en tiempo de consulta.\n\nSin embargo, la `OBT` introduce dos riesgos operativos importantes. Primero, cualquier cambio en una dimensión obliga a reconstruir toda la tabla ancha (*backfill* completo). Segundo, al aplanar una cabecera (`orders`) sobre sus líneas (`order_items`), las medidas de cabecera como `shipping_usd` se repiten en cada línea y se inflan al sumarse (`$435.50` frente a `$370.50` reales). La arquitectura híbrida mantiene el **esquema en estrella** como núcleo gobernado y materializa vistas u `OBT` solo para consumo final.',
+      interactive: {
+        component: 'star-vs-obt-sim',
+        caption:
+          'Compara el costo de escaneo, uniones en memoria y actualización dimensional entre un esquema OLTP normalizado, un esquema en estrella y una tabla ancha OBT.',
+      },
+      example: {
+        language: 'sql',
+        code: `WITH obt_order_lines AS (
+  SELECT
+    oi.order_item_id,
+    o.order_id,
+    s.region,
+    c.segment AS customer_segment,
+    p.category,
+    oi.qty,
+    oi.line_total_usd,
+    o.shipping_usd
+  FROM order_items oi
+  INNER JOIN orders o ON oi.order_id = o.order_id
+  INNER JOIN products p ON oi.product_id = p.product_id
+  INNER JOIN stores s ON o.store_id = s.store_id
+  INNER JOIN customers c ON o.customer_id = c.customer_id
+  WHERE o.status = 'completed'
+    AND p.list_price_usd > 0
+)
+SELECT
+  customer_segment,
+  COUNT(DISTINCT order_id) AS orders_count,
+  SUM(qty) AS units_sold,
+  ROUND(SUM(line_total_usd), 2) AS items_revenue_usd,
+  ROUND(SUM(shipping_usd), 2) AS duplicated_shipping_usd
+FROM obt_order_lines
+GROUP BY customer_segment
+ORDER BY items_revenue_usd DESC;`,
+        expectedOutput: [
+          {
+            customer_segment: 'pro_barista',
+            orders_count: 6229,
+            units_sold: 28508,
+            items_revenue_usd: 2189795.58,
+            duplicated_shipping_usd: 221,
+          },
+          {
+            customer_segment: 'retail',
+            orders_count: 5940,
+            units_sold: 27635,
+            items_revenue_usd: 2123739.67,
+            duplicated_shipping_usd: 195,
+          },
+          {
+            customer_segment: 'cafeteria_b2b',
+            orders_count: 2591,
+            units_sold: 14907,
+            items_revenue_usd: 1150615.93,
+            duplicated_shipping_usd: 19.5,
+          },
+        ],
+      },
+    },
+  ],
+  workedExample: {
+    title: 'Construcción de una vista Gold desde el esquema en estrella filtrando anomalías',
+    description:
+      'El área comercial de Mercado Brisa pide un resumen de unidades vendidas, ventas netas y margen bruto por categoría y por región sobre órdenes completadas. Antes de exponer una vista ancha (`obt_sales_gold`), auditaremos el catálogo `products` para aislar productos de prueba y verificaremos los totales contra el esquema en estrella.',
+    steps: [
+      {
+        label: 'Paso 1: Auditar productos con precio negativo',
+        explanation:
+          'Auditamos la dimensión `products` para identificar SKUs de prueba con precio de lista menor o igual a cero antes de construir el modelo analítico.',
+        code: `SELECT
+  product_id,
+  sku,
+  category,
+  unit_cost_usd,
+  list_price_usd
+FROM products
+WHERE list_price_usd <= 0 OR unit_cost_usd < 0;`,
+        expectedOutput: [
+          {
+            product_id: 180,
+            sku: 'SKU-TEST-NEG',
+            category: 'Accesorios',
+            unit_cost_usd: 0,
+            list_price_usd: -9.99,
+          },
+        ],
+      },
+      {
+        label: 'Paso 2: Consultar el esquema en estrella por categoría',
+        explanation:
+          'Consultamos el esquema en estrella (`order_items`, `orders`, `products`) excluyendo `list_price_usd <= 0` para obtener ventas netas, costo total y margen bruto por categoría.',
+        code: `SELECT
+  p.category,
+  SUM(oi.qty) AS units_sold,
+  ROUND(SUM(oi.line_total_usd), 2) AS net_sales_usd,
+  ROUND(SUM(oi.qty * p.unit_cost_usd), 2) AS total_cost_usd,
+  ROUND(SUM(oi.line_total_usd - (oi.qty * p.unit_cost_usd)), 2) AS gross_margin_usd
+FROM order_items oi
+INNER JOIN orders o ON oi.order_id = o.order_id
+INNER JOIN products p ON oi.product_id = p.product_id
+WHERE o.status = 'completed'
+  AND p.list_price_usd > 0
+GROUP BY p.category
+ORDER BY gross_margin_usd DESC;`,
+        expectedOutput: [
+          {
+            category: 'Molinos',
+            units_sold: 14314,
+            net_sales_usd: 2163162.27,
+            total_cost_usd: 1235089.04,
+            gross_margin_usd: 928073.23,
+          },
+          {
+            category: 'Cafeteras',
+            units_sold: 14270,
+            net_sales_usd: 1643366.45,
+            total_cost_usd: 861476.1,
+            gross_margin_usd: 781890.35,
+          },
+          {
+            category: 'Accesorios',
+            units_sold: 14366,
+            net_sales_usd: 586859.56,
+            total_cost_usd: 246528.02,
+            gross_margin_usd: 340331.54,
+          },
+          {
+            category: 'Suscripciones',
+            units_sold: 13857,
+            net_sales_usd: 657384.31,
+            total_cost_usd: 319166.57,
+            gross_margin_usd: 338217.74,
+          },
+          {
+            category: 'Café en grano',
+            units_sold: 14243,
+            net_sales_usd: 413378.59,
+            total_cost_usd: 184902.58,
+            gross_margin_usd: 228476.01,
+          },
+        ],
+      },
+      {
+        label: 'Paso 3: Derivar la OBT limpia a grano de línea',
+        explanation:
+          'Definimos la CTE desnormalizada `obt_sales_gold` únicamente con medidas válidas a nivel de línea (`qty`, `line_total_usd`, `line_margin_usd`) y agregamos el desempeño por región.',
+        code: `WITH obt_sales_gold AS (
+  SELECT
+    o.order_id,
+    s.region,
+    p.category,
+    oi.qty,
+    oi.line_total_usd,
+    ROUND(oi.line_total_usd - (oi.qty * p.unit_cost_usd), 2) AS line_margin_usd
+  FROM order_items oi
+  INNER JOIN orders o ON oi.order_id = o.order_id
+  INNER JOIN products p ON oi.product_id = p.product_id
+  INNER JOIN stores s ON o.store_id = s.store_id
+  WHERE o.status = 'completed'
+    AND p.list_price_usd > 0
+)
+SELECT
+  region,
+  COUNT(DISTINCT order_id) AS orders_count,
+  SUM(qty) AS units_sold,
+  ROUND(SUM(line_total_usd), 2) AS net_sales_usd,
+  ROUND(SUM(line_margin_usd), 2) AS gross_margin_usd
+FROM obt_sales_gold
+GROUP BY region
+ORDER BY gross_margin_usd DESC;`,
+        expectedOutput: [
+          {
+            region: 'Cono Sur',
+            orders_count: 4920,
+            units_sold: 23467,
+            net_sales_usd: 1797472.18,
+            gross_margin_usd: 861688.28,
+          },
+          {
+            region: 'Andina',
+            orders_count: 4921,
+            units_sold: 22502,
+            net_sales_usd: 1733571.64,
+            gross_margin_usd: 829571.07,
+          },
+          {
+            region: 'Iberia',
+            orders_count: 2811,
+            units_sold: 15211,
+            net_sales_usd: 1174460.14,
+            gross_margin_usd: 562675.96,
+          },
+          {
+            region: 'Norteamérica',
+            orders_count: 2108,
+            units_sold: 9870,
+            net_sales_usd: 758647.22,
+            gross_margin_usd: 363053.56,
+          },
+        ],
+      },
+    ],
+  },
+  checks: [
+    {
+      type: 'mcq',
+      id: 'chk-l4-q1',
+      prompt:
+        '¿Por qué una tabla ancha (OBT) con millones de filas que repite cadenas de texto como `region` y `category` no multiplica proporcionalmente el espacio en disco en Apache Parquet o DuckDB?',
+      options: [
         {
-          "id": "a",
-          "text": "Porque el Star Schema en Silver permite gobernar Dimensiones Conformadas reutilizables entre múltiples procesos de negocio (ventas, soporte, marketing) y actualizar atributos dimensionales sin tener que reescribir miles de millones de filas de hechos.",
-          "correct": true,
-          "feedback": "Exacto. Si tienes 5 tablas de hechos distintas y un atributo de producto se corrige, en Star Schema actualizas una sola tabla pequeña (`dim_product`); la OBT se materializa en Gold solo donde el rendimiento de lectura sin joins lo justifica."
+          id: 'a',
+          text: 'Porque Parquet normaliza automáticamente la tabla en un esquema en estrella oculto al guardarla.',
+          correct: false,
+          feedback:
+            'Incorrecto. Parquet conserva las columnas declaradas en el archivo; la eficiencia proviene de su codificación física por columna.',
         },
         {
-          "id": "b",
-          "text": "Porque los archivos Parquet prohíben tener más de 10 columnas en una misma tabla.",
-          "correct": false,
-          "feedback": "Parquet soporta cientos o miles de columnas sin problema y de hecho brilla con Projection Pushdown en tablas anchas."
+          id: 'b',
+          text: 'Porque el almacenamiento columnar aplica codificación por diccionario y Run-Length Encoding (RLE) sobre valores repetidos.',
+          correct: true,
+          feedback:
+            'Correcto. Al almacenar juntas las ocurrencias de una misma columna de baja cardinalidad, el diccionario y RLE comprimen las cadenas repetidas a enteros mínimos.',
         },
         {
-          "id": "c",
-          "text": "Porque las consultas con 8 JOINs siempre son más rápidas que leer una sola tabla pre-unida.",
-          "correct": false,
-          "feedback": "Al contrario: en tiempo de lectura pura sobre una única tabla de hechos, una OBT evita el costo de los joins; la ventaja del Star Schema está en el mantenimiento, la historia SCD2 y el cruce multi-hecho."
-        }
+          id: 'c',
+          text: 'Porque los motores analíticos truncan los atributos de texto a 4 bytes cuando detectan una OBT.',
+          correct: false,
+          feedback:
+            'Incorrecto. Los motores columnares preservan los textos íntegros sin pérdida mediante diccionarios por bloque (Row Group).',
+        },
       ],
-      "explanation": "Exacto. Si tienes 5 tablas de hechos distintas y un atributo de producto se corrige, en Star Schema actualizas una sola tabla pequeña (`dim_product`); la OBT se materializa en Gold solo donde el rendimiento de lectura sin joins lo justifica."
+      explanation:
+        'En formatos columnares como Parquet y el formato nativo de DuckDB, las columnas de texto con baja cardinalidad se codifican mediante diccionarios y RLE, haciendo que el impacto en almacenamiento de desnormalizar atributos sea mínimo.',
     },
     {
-      "id": "c2",
-      "type": "mcq",
-      "prompt": "En Mercado Brisa necesitas cruzar en un mismo reporte las compras (`fact_orders`), las devoluciones (`fact_refunds`) y los tickets de soporte (`fact_tickets`) por mes y segmento de cliente. ¿Qué patrón evita el fan-out entre los tres hechos?",
-      "options": [
+      type: 'mcq',
+      id: 'chk-l4-q2',
+      prompt:
+        '¿Cuál es la principal desventaja operativa de reemplazar por completo el esquema en estrella por una única One Big Table (OBT) en el almacén de datos?',
+      options: [
         {
-          "id": "a",
-          "text": "Drill-across: agregar cada tabla de hechos por separado por mes y cliente_sk y unir los resultados contra dim_date y dim_customer.",
-          "correct": true,
-          "feedback": "Correcto: cada hecho se agrega primero a la granularidad común de las dimensiones conformadas antes de combinar las métricas."
+          id: 'a',
+          text: 'Los motores columnares no permiten ejecutar cláusulas GROUP BY sobre tablas de más de 15 columnas.',
+          correct: false,
+          feedback:
+            'Incorrecto. Los motores columnares leen solo las columnas proyectadas y agrupan sobre tablas anchas sin restricción.',
         },
         {
-          "id": "b",
-          "text": "Unir fact_orders, fact_refunds y fact_tickets directamente con INNER JOIN por customer_sk.",
-          "correct": false,
-          "feedback": "Incorrecto: unir múltiples tablas de hechos por cliente produce una trampa de abismo (N×M×K filas) y corrompe las sumas."
+          id: 'b',
+          text: 'Cualquier corrección en una dimensión obliga a reescribir la OBT completa y se complica el cruce seguro con otras tablas de hechos de distinto grano.',
+          correct: true,
+          feedback:
+            'Correcto. La OBT penaliza el mantenimiento ante cambios dimensionales y propicia errores de fan-out cuando se mezcla con otros procesos.',
         },
         {
-          "id": "c",
-          "text": "Meter pedidos, devoluciones y tickets como columnas repetidas en una sola OBT sin grano fijo.",
-          "correct": false,
-          "feedback": "Incorrecto: mezclar tres procesos con distinta granularidad temporal en una sola tabla rompe el contrato de grano."
-        }
+          id: 'c',
+          text: 'Impide filtrar órdenes por estado o por rango de fechas en herramientas de visualización.',
+          correct: false,
+          feedback:
+            'Incorrecto. Filtrar por columnas presentes en la OBT es sumamente rápido gracias a los zonemaps columnares.',
+        },
       ],
-      "explanation": "Las dimensiones conformadas actúan como ejes comunes: agregas cada proceso de negocio a las claves de dimensión requeridas y luego combinas los subtotales sin multiplicar filas."
+      explanation:
+        'En un esquema en estrella, actualizar una dimensión modifica solo unos miles de filas y las dimensiones conformadas permiten hacer Drill-Across limpio entre múltiples procesos de negocio sin reconstruir tablas masivas.',
     },
     {
-      "id": "c3",
-      "type": "mcq",
-      "prompt": "¿En qué escenario resulta razonable materializar una One Big Table (OBT) a partir de tu esquema en estrella?",
-      "options": [
+      type: 'predict-output',
+      id: 'chk-l4-q3',
+      prompt:
+        'En Mercado Brisa, una orden completada (`order_id = 500`) tiene `total_usd = 120.00` en `orders` y está compuesta por `3` artículos en `order_items`. Si ejecutas `SELECT COUNT(o.order_id), COUNT(DISTINCT o.order_id), SUM(o.total_usd) FROM orders o JOIN order_items oi ON o.order_id = oi.order_id WHERE o.order_id = 500`, ¿qué obtienes?',
+      options: [
         {
-          "id": "a",
-          "text": "Como capa final de lectura para un único flujo de eventos inmutables donde un motor columnar filtra pocas columnas.",
-          "correct": true,
-          "feedback": "Correcto: sobre eventos append-only que no requieren actualizaciones frecuentes, una OBT evita el costo de JOIN en consultas exploratorias."
+          id: 'a',
+          text: '3, 1 y 360.00.',
+          correct: true,
+          feedback:
+            'Correcto. `COUNT(o.order_id)` cuenta las 3 filas resultantes, `COUNT(DISTINCT o.order_id)` devuelve 1 orden única y `SUM(o.total_usd)` triplica los $120.00 hasta $360.00.',
         },
         {
-          "id": "b",
-          "text": "Como única capa de almacenamiento reemplazando todas las dimensiones en una empresa con 12 áreas de negocio.",
-          "correct": false,
-          "feedback": "Incorrecto: eliminar las dimensiones compartidas provoca divergencia de definiciones y reescrituras masivas ante cambios de catálogo."
+          id: 'b',
+          text: '1, 1 y 120.00.',
+          correct: false,
+          feedback:
+            'Incorrecto. La unión 1:3 genera 3 filas físicas antes de agregar, por lo que `COUNT(o.order_id)` y `SUM(o.total_usd)` operan sobre las 3 filas repetidas.',
         },
         {
-          "id": "c",
-          "text": "En la base de datos PostgreSQL transaccional del carrito de compras.",
-          "correct": false,
-          "feedback": "Incorrecto: desnormalizar la base OLTP introduce anomalías de actualización y bloqueos en escrituras concurrentes."
-        }
+          id: 'c',
+          text: '3, 3 y 120.00.',
+          correct: false,
+          feedback:
+            'Incorrecto. `COUNT(DISTINCT o.order_id)` devuelve `1` porque las 3 líneas comparten el mismo `order_id`, mientras que `SUM(o.total_usd)` se triplica a `360.00`.',
+        },
       ],
-      "explanation": "En arquitecturas modernas, el esquema en estrella en la capa intermedia asegura consistencia y gobernanza, mientras que una OBT puede materializarse en el borde si una carga puntual lo justifica."
-    }
+      explanation:
+        'Al unir la cabecera (`1` fila) con sus líneas (`3` filas), el resultado intermedio tiene `3` filas. Por ello `COUNT(DISTINCT o.order_id)` es obligatorio para contar órdenes (`1`) y `SUM(oi.line_total_usd)` debe usarse en lugar de `SUM(o.total_usd)`.',
+    },
   ],
-  "practice": {
-    "type": "sql",
-    "title": "Margen bruto sobre esquema estrella",
-    "language": "sql",
-    "prompt": "Une la tabla de hechos `order_items` con `orders` (`status = 'completed'`) y las dimensiones conformadas `products` y `stores` para obtener por `region` y `category`: `total_units`, `revenue_usd` y `gross_margin_usd` (`SUM(line_total_usd - qty * unit_cost_usd)`), ordenado por `revenue_usd DESC`.",
-    "starterCode": "SELECT\n  s.region,\n  p.category,\n  SUM(oi.qty) AS total_units,\n  ROUND(SUM(oi.line_total_usd), 2) AS revenue_usd,\n  -- TODO: Calcula el margen bruto redondeado a 2 decimales AS gross_margin_usd\n  0.0 AS gross_margin_usd\nFROM order_items oi\nJOIN orders o ON oi.order_id = o.order_id\nJOIN products p ON oi.product_id = p.product_id\n-- TODO: Une la dimensión stores s usando store_id\nWHERE o.status = 'completed'\nGROUP BY s.region, p.category\nORDER BY revenue_usd DESC;",
-    "expected": "SELECT\n  s.region,\n  p.category,\n  SUM(oi.qty) AS total_units,\n  ROUND(SUM(oi.line_total_usd), 2) AS revenue_usd,\n  ROUND(SUM(oi.line_total_usd - oi.qty * p.unit_cost_usd), 2) AS gross_margin_usd\nFROM order_items oi\nJOIN orders o ON oi.order_id = o.order_id\nJOIN products p ON oi.product_id = p.product_id\nJOIN stores s ON o.store_id = s.store_id\nWHERE o.status = 'completed'\nGROUP BY s.region, p.category\nORDER BY revenue_usd DESC;",
-    "orderMatters": true,
-    "hints": [
-      "Añade `JOIN stores s ON o.store_id = s.store_id` después del join con `products`.",
-      "El margen bruto de cada línea es `oi.line_total_usd - oi.qty * p.unit_cost_usd`.",
-      "Envuelve la suma en `ROUND(SUM(oi.line_total_usd - oi.qty * p.unit_cost_usd), 2) AS gross_margin_usd`."
+  practice: {
+    type: 'sql',
+    title: 'Ventas netas y unidades por región y categoría en el esquema en estrella',
+    prompt:
+      'Construye una consulta analítica sobre el esquema en estrella de Mercado Brisa uniendo `order_items` (`oi`), `orders` (`o`), `products` (`p`) y `stores` (`s`). Filtra únicamente órdenes completadas (`o.status = \'completed\'`) y productos con precio de lista positivo (`p.list_price_usd > 0`). Agrupa por `s.region` y `p.category` para obtener: `orders_count` (`COUNT(DISTINCT o.order_id)`), `units_sold` (`SUM(oi.qty)`) y `net_revenue_usd` (`ROUND(SUM(oi.line_total_usd), 2)`). Ordena por `region ASC, net_revenue_usd DESC`.',
+    starterCode: `-- Une order_items con orders, products y stores cuidando el grano de línea
+SELECT
+  'PENDIENTE'::VARCHAR AS region,
+  'PENDIENTE'::VARCHAR AS category,
+  COUNT(DISTINCT o.order_id) AS orders_count,
+  SUM(0) AS units_sold,
+  ROUND(SUM(o.total_usd), 2) AS net_revenue_usd
+FROM orders o
+WHERE o.status = 'completed'
+GROUP BY 1, 2
+ORDER BY region ASC, net_revenue_usd DESC;`,
+    solution: `SELECT
+  s.region,
+  p.category,
+  COUNT(DISTINCT o.order_id) AS orders_count,
+  SUM(oi.qty) AS units_sold,
+  ROUND(SUM(oi.line_total_usd), 2) AS net_revenue_usd
+FROM order_items oi
+INNER JOIN orders o ON oi.order_id = o.order_id
+INNER JOIN products p ON oi.product_id = p.product_id
+INNER JOIN stores s ON o.store_id = s.store_id
+WHERE o.status = 'completed'
+  AND p.list_price_usd > 0
+GROUP BY s.region, p.category
+ORDER BY region ASC, net_revenue_usd DESC;`,
+    solutionExplanation:
+      'Al partir de `order_items`, filtrar `p.list_price_usd > 0` para excluir el SKU negativo de prueba y usar `COUNT(DISTINCT o.order_id)` junto con `SUM(oi.line_total_usd)`, obtenemos las órdenes únicas y las ventas netas exactas sin inflar importes de cabecera.',
+    expectedOutputTable: [
+      {
+        region: 'Andina',
+        category: 'Molinos',
+        orders_count: 2046,
+        units_sold: 4563,
+        net_revenue_usd: 692558.36,
+      },
+      {
+        region: 'Andina',
+        category: 'Cafeteras',
+        orders_count: 2040,
+        units_sold: 4498,
+        net_revenue_usd: 516191.39,
+      },
+      {
+        region: 'Andina',
+        category: 'Suscripciones',
+        orders_count: 2020,
+        units_sold: 4369,
+        net_revenue_usd: 207560.51,
+      },
+      {
+        region: 'Andina',
+        category: 'Accesorios',
+        orders_count: 2041,
+        units_sold: 4565,
+        net_revenue_usd: 186606.21,
+      },
+      {
+        region: 'Andina',
+        category: 'Café en grano',
+        orders_count: 2037,
+        units_sold: 4507,
+        net_revenue_usd: 130655.17,
+      },
+      {
+        region: 'Cono Sur',
+        category: 'Molinos',
+        orders_count: 2045,
+        units_sold: 4684,
+        net_revenue_usd: 704901.21,
+      },
+      {
+        region: 'Cono Sur',
+        category: 'Cafeteras',
+        orders_count: 2051,
+        units_sold: 4740,
+        net_revenue_usd: 545891.44,
+      },
+      {
+        region: 'Cono Sur',
+        category: 'Suscripciones',
+        orders_count: 2016,
+        units_sold: 4590,
+        net_revenue_usd: 216760.65,
+      },
+      {
+        region: 'Cono Sur',
+        category: 'Accesorios',
+        orders_count: 2051,
+        units_sold: 4713,
+        net_revenue_usd: 192675.97,
+      },
+      {
+        region: 'Cono Sur',
+        category: 'Café en grano',
+        orders_count: 2046,
+        units_sold: 4740,
+        net_revenue_usd: 137242.91,
+      },
+      {
+        region: 'Iberia',
+        category: 'Molinos',
+        orders_count: 1260,
+        units_sold: 3040,
+        net_revenue_usd: 459621.08,
+      },
+      {
+        region: 'Iberia',
+        category: 'Cafeteras',
+        orders_count: 1270,
+        units_sold: 3112,
+        net_revenue_usd: 360059.14,
+      },
+      {
+        region: 'Iberia',
+        category: 'Suscripciones',
+        orders_count: 1254,
+        units_sold: 2974,
+        net_revenue_usd: 141677.47,
+      },
+      {
+        region: 'Iberia',
+        category: 'Accesorios',
+        orders_count: 1266,
+        units_sold: 3054,
+        net_revenue_usd: 125068.91,
+      },
+      {
+        region: 'Iberia',
+        category: 'Café en grano',
+        orders_count: 1267,
+        units_sold: 3031,
+        net_revenue_usd: 88033.54,
+      },
+      {
+        region: 'Norteamérica',
+        category: 'Molinos',
+        orders_count: 894,
+        units_sold: 2027,
+        net_revenue_usd: 306081.62,
+      },
+      {
+        region: 'Norteamérica',
+        category: 'Cafeteras',
+        orders_count: 889,
+        units_sold: 1920,
+        net_revenue_usd: 221224.48,
+      },
+      {
+        region: 'Norteamérica',
+        category: 'Suscripciones',
+        orders_count: 877,
+        units_sold: 1924,
+        net_revenue_usd: 91385.68,
+      },
+      {
+        region: 'Norteamérica',
+        category: 'Accesorios',
+        orders_count: 889,
+        units_sold: 2034,
+        net_revenue_usd: 82508.47,
+      },
+      {
+        region: 'Norteamérica',
+        category: 'Café en grano',
+        orders_count: 896,
+        units_sold: 1965,
+        net_revenue_usd: 57446.97,
+      },
     ],
-    "solution": "SELECT\n  s.region,\n  p.category,\n  SUM(oi.qty) AS total_units,\n  ROUND(SUM(oi.line_total_usd), 2) AS revenue_usd,\n  ROUND(SUM(oi.line_total_usd - oi.qty * p.unit_cost_usd), 2) AS gross_margin_usd\nFROM order_items oi\nJOIN orders o ON oi.order_id = o.order_id\nJOIN products p ON oi.product_id = p.product_id\nJOIN stores s ON o.store_id = s.store_id\nWHERE o.status = 'completed'\nGROUP BY s.region, p.category\nORDER BY revenue_usd DESC;",
-    "solutionExplanation": "Enlaza la tabla de hechos `order_items` con `orders` y las dimensiones conformadas `products` y `stores`. Como las dimensiones tienen relación `1:N` hacia los hechos, el cruce preserva el grano de línea de pedido."
+    hints: [
+      'Realiza INNER JOIN desde `order_items oi` hacia `orders o` (`oi.order_id = o.order_id`), `products p` (`oi.product_id = p.product_id`) y `stores s` (`o.store_id = s.store_id`).',
+      'Filtra con `WHERE o.status = \'completed\' AND p.list_price_usd > 0` para excluir órdenes no completadas y el SKU de prueba negativo.',
+      'Usa `COUNT(DISTINCT o.order_id) AS orders_count`, `SUM(oi.qty) AS units_sold` y `ROUND(SUM(oi.line_total_usd), 2) AS net_revenue_usd` ordenando por `region ASC, net_revenue_usd DESC`.',
+    ],
+    orderMatters: true,
   },
-  "roleNotes": {
-    "de": "Extrae cambios de la base OLTP mediante CDC (sin impactar producción), construye el Star Schema gobernado en la capa Silver con claves subrogadas (`_sk`) y materializa tablas OBT ordenadas en la capa Gold para lecturas críticas. Evalúa el trade-off de cómputo: mantiene en Star Schema las dimensiones muy volátiles y aplana en OBT los atributos estables o ya cruzados temporalmente (Point-in-Time).",
-    "da": "Aprovecha las tablas OBT de la capa Gold para realizar análisis exploratorio de cohortes, regresiones y feature engineering en DuckDB o Polars sin tener que escribir 8 `LEFT JOIN` repetitivos en cada notebook. Acude al Star Schema de Silver cuando necesita cruzar múltiples tablas de hechos (ej. `fct_orders` + `fct_support_tickets` + `fct_marketing_touches`) a través de dimensiones conformadas.",
-    "bi": "Diseña la **Enterprise Bus Matrix** junto a DE para garantizar que todos los departamentos filtren por las mismas Dimensiones Conformadas (`dim_date`, `dim_customer`, `dim_merchant`). Conecta motores en memoria o Direct Lake sobre el Star Schema / OBT logrando tiempos de respuesta sub-segundo en filtros cruzados."
+  pipelineChallenge: {
+    title: 'Esquema en estrella frente a OBT: Ventas por Región y Categoría',
+    ValidatorKey: 'l4_star_obt',
+    datasets: ['orders', 'order_items', 'products', 'stores'],
+    steps: [
+      {
+        id: 'step-1',
+        text: 'Perfilar los granos de orders (18,000 cabeceras) frente a order_items (42,000 líneas) para prevenir el fan-out 1:N.',
+        title: '1. Perfilar granos de orders vs order_items',
+        goal: 'Compara el número de órdenes frente al número de líneas de ítems para entender la relación 1:N.',
+        hint: 'En el explorador de esquemas verifica cuántas filas tiene `orders` (18,000) frente a `order_items` (42,000). Si unes ambas tablas y sumas `orders.total_usd`, duplicarás el total por cada ítem.',
+      },
+      {
+        id: 'step-2',
+        text: 'Auditar la dimensión products y filtrar el registro centinela SKU-TEST-NEG con list_price_usd > 0.',
+        title: '2. Auditar el catálogo de productos',
+        goal: 'Identifica el SKU de prueba con precio negativo en la dimensión products.',
+        hint: 'En `products` existe `SKU-TEST-NEG` con `list_price_usd = -9.99`. Exclúyelo en tu modelo dimensional con `p.list_price_usd > 0`.',
+      },
+      {
+        id: 'step-3',
+        text: 'Unir order_items con orders, products y stores agregando unidades, ingreso neto y margen bruto al grano de línea.',
+        title: '3. Construir la consulta estrella / OBT limpia',
+        goal: 'Une order_items, orders, products y stores calculando total_units, revenue_usd y gross_margin_usd.',
+        hint: 'Agrupa por `s.region` y `p.category` sobre órdenes `completed`, sumando `oi.line_total_usd` y el margen `oi.line_total_usd - (oi.qty * p.unit_cost_usd)`.',
+      },
+    ],
+    prompt:
+      'Construye la consulta analítica que une `order_items` (`oi`), `orders` (`o`), `products` (`p`) y `stores` (`s`). Filtra órdenes con `o.status = \'completed\'` y productos válidos con `p.list_price_usd > 0`. Devuelve por `region` y `category`: 1) `total_units` (`SUM(oi.qty)`), 2) `revenue_usd` (`ROUND(SUM(oi.line_total_usd), 2)`), y 3) `gross_margin_usd` (`ROUND(SUM(oi.line_total_usd - (oi.qty * p.unit_cost_usd)), 2)`). Ordena por `revenue_usd DESC`.',
+    starterCode: `-- Construye el reporte dimensional uniendo hechos de ítems con dimensiones
+SELECT
+  s.region,
+  p.category,
+  SUM(oi.qty) AS total_units,
+  -- Calcula revenue_usd y gross_margin_usd redondeados a 2 decimales
+  ROUND(SUM(o.total_usd), 2) AS revenue_usd,
+  0.0 AS gross_margin_usd
+FROM order_items oi
+JOIN orders o ON oi.order_id = o.order_id
+JOIN products p ON oi.product_id = p.product_id
+JOIN stores s ON o.store_id = s.store_id
+WHERE o.status = 'completed'
+GROUP BY s.region, p.category
+ORDER BY revenue_usd DESC;`,
+    solution: `SELECT
+  s.region,
+  p.category,
+  SUM(oi.qty) AS total_units,
+  ROUND(SUM(oi.line_total_usd), 2) AS revenue_usd,
+  ROUND(SUM(oi.line_total_usd - (oi.qty * p.unit_cost_usd)), 2) AS gross_margin_usd
+FROM order_items oi
+JOIN orders o ON oi.order_id = o.order_id
+JOIN products p ON oi.product_id = p.product_id
+JOIN stores s ON o.store_id = s.store_id
+WHERE o.status = 'completed'
+  AND p.list_price_usd > 0
+GROUP BY s.region, p.category
+ORDER BY revenue_usd DESC;`,
+    expectedOutputTable: {
+      columns: ['region', 'category', 'total_units', 'revenue_usd', 'gross_margin_usd'],
+      rows: [
+        ['Cono Sur', 'Molinos', 4684, 704901.21, 302540.89],
+        ['Andina', 'Molinos', 4563, 692558.36, 297084.89],
+        ['Cono Sur', 'Cafeteras', 4740, 545891.44, 259943.06],
+        ['Andina', 'Cafeteras', 4498, 516191.39, 245414.81],
+        ['Iberia', 'Molinos', 3040, 459621.08, 197163.38],
+        ['Iberia', 'Cafeteras', 3112, 360059.14, 171304.06],
+        ['Norteamérica', 'Molinos', 2027, 306081.62, 131284.07],
+        ['Norteamérica', 'Cafeteras', 1920, 221224.48, 105228.42],
+        ['Cono Sur', 'Suscripciones', 4590, 216760.65, 111565.39],
+        ['Andina', 'Suscripciones', 4369, 207560.51, 106753.88],
+        ['Cono Sur', 'Accesorios', 4713, 192675.97, 111783.95],
+        ['Andina', 'Accesorios', 4565, 186606.21, 108162.95],
+        ['Iberia', 'Suscripciones', 2974, 141677.47, 72942.59],
+        ['Cono Sur', 'Café en grano', 4740, 137242.91, 75854.99],
+        ['Andina', 'Café en grano', 4507, 130655.17, 72154.54],
+        ['Iberia', 'Accesorios', 3054, 125068.91, 72557.25],
+        ['Norteamérica', 'Suscripciones', 1924, 91385.68, 46955.88],
+        ['Iberia', 'Café en grano', 3031, 88033.54, 48708.68],
+        ['Norteamérica', 'Accesorios', 2034, 82508.47, 47827.39],
+        ['Norteamérica', 'Café en grano', 1965, 57446.97, 31757.8],
+      ],
+    },
+    orderMatters: true,
+    hints: [
+      'No sumes `o.total_usd` al cruzar con `order_items`, porque se multiplica por cada línea de la orden; usa `SUM(oi.line_total_usd)`.',
+      'Agrega el filtro `AND p.list_price_usd > 0` para descartar el SKU de prueba negativo.',
+      'El margen bruto por línea es `oi.line_total_usd - (oi.qty * p.unit_cost_usd)`.',
+    ],
   },
-  "summary": [
-    "OLTP optimiza escrituras sin redundancia (3FN); OLAP optimiza lecturas agregadas masivas.",
-    "El esquema en estrella separa medidas numéricas en hechos y contexto descriptivo en dimensiones.",
-    "Las dimensiones conformadas permiten cruzar múltiples procesos de negocio con definiciones consistentes.",
-    "Una OBT acelera consultas sobre un único proceso pero encarece actualizaciones de atributos."
-  ],
-  "flashcards": [
-    {
-      "id": "fc-c2-star-01",
-      "front": "¿Por qué se usan claves sustitutas (surrogate keys) en lugar de IDs de producción en dimensiones?",
-      "back": "Aíslan el almacén de cambios en sistemas origen, integran múltiples fuentes y permiten versionar filas históricas en SCD Tipo 2."
-    },
-    {
-      "id": "fc-c2-star-02",
-      "front": "¿Qué ventaja aporta una dimensión conformada (`dim_customer`) frente a varias OBT aisladas?",
-      "back": "Garantiza que Ventas, Soporte y Logística filtren y agrupen por los mismos atributos de cliente y permite cruzar hechos mediante drill-across."
-    },
-    {
-      "id": "fc-c2-star-03",
-      "front": "¿Qué ocurre en una OBT de 2 000 millones de filas cuando cambia el nombre de una categoría de producto?",
-      "back": "Obliga a reescribir todos los archivos Parquet donde aparece esa categoría, mientras que en estrella solo se actualiza `dim_product`."
-    }
-  ],
-  "glossaryTerms": [
-    "c06-star-vs-obt",
-    "c01-grain-fanout"
-  ],
-  "sources": [
-    {
-      "title": "The Data Warehouse Toolkit (3rd Edition) — Star Schemas and OLAP Cubes",
-      "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/star-schema-olap-cube/",
-      "publisher": "Kimball Group",
-      "accessed": "2026-10-29",
-      "supports": "Separación entre tablas de hechos y dimensiones y uso de dimensiones conformadas."
-    },
-    {
-      "title": "Kimball Group — Conformed Dimensions and Drill-Across Queries",
-      "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/conformed-dimension/",
-      "publisher": "Kimball Group",
-      "accessed": "2026-10-29",
-      "supports": "Integración de múltiples tablas de hechos mediante dimensiones compartidas y drill-across."
-    },
-    {
-      "title": "DuckDB Documentation — Parquet Storage and Columnar Projection Pushdown",
-      "url": "https://duckdb.org/docs/data/parquet/overview.html",
-      "publisher": "DuckDB Foundation",
-      "accessed": "2026-10-29",
-      "supports": "Comportamiento de motores columnares al proyectar subconjuntos de columnas en tablas anchas."
-    }
-  ],
-  "aiNotes": "Muchos estudiantes creen que el esquema en estrella está obsoleto porque Parquet comprime columnas repetidas. Explícales que el problema de una OBT pura no es solo el espacio en disco, sino mantener dimensiones cambiantes y cruzar múltiples hechos sin fan-out.",
-  "needsReview": true,
-  "legacyId": "l4-star-schema-obt",
-  "legacyOrder": 4,
-  "stageId": "stage-2",
-  "subtitle": "Cuándo modelar hechos y dimensiones separadas y cuándo desnormalizar en una sola tabla ancha.",
-  "goal": "Comprender las diferencias estructurales entre sistemas transaccionales (OLTP en 3NF) y analíticos (OLAP), diseñar un Star Schema de Kimball (Hechos, Dimensiones Conformadas y Bus Matrix) y decidir cuándo desnormalizar hacia una One Big Table (OBT) en la capa Gold.",
-  "pipelineChallenge": {
-    "title": "Tubería híbrida de OLTP a OBT",
-    "scenario": "El equipo de NovaPay necesita migrar sus reportes desde la base PostgreSQL en 3NF hacia el Lakehouse sin perder gobernanza dimensional ni velocidad de lectura. Ordena las 4 etapas del pipeline:",
-    "description": "Ordena correctamente las 4 etapas del flujo de modelado moderno para desacoplar la base de datos transaccional (OLTP) de los dashboards ejecutivos de alta concurrencia:",
-    "prompt": "Establece el orden correcto del pipeline desde la base transaccional en 3NF hasta el consumo en BI y ciencia de datos:",
-    "steps": [
-      {
-        "id": "step-1",
-        "order": 1,
-        "label": "1. Captura CDC desde OLTP (3NF) hacia bronze",
-        "title": "Ingesta cruda desacoplada en bronze",
-        "role": "DE",
-        "layer": "Bronze",
-        "detail": "Replicar los eventos de `orders`, `users`, `addresses` y `countries` desde el log WAL de PostgreSQL hacia tablas crudas Iceberg sin ejecutar joins pesados sobre producción.",
-        "description": "Replicar los eventos de `orders`, `users`, `addresses` y `countries` desde el log WAL de PostgreSQL hacia tablas crudas Iceberg sin ejecutar joins pesados sobre producción."
-      },
-      {
-        "id": "step-2",
-        "order": 2,
-        "label": "2. Desnormalizar jerarquías 3NF en dimensiones conformadas (silver)",
-        "title": "Construcción de dimensiones conformadas en silver",
-        "role": "DE",
-        "layer": "Silver",
-        "detail": "Aplanar las cadenas `users -> addresses -> cities -> countries` en una única dimensión `silver.dim_customer` con clave subrogada (`customer_sk`).",
-        "description": "Aplanar las cadenas `users -> addresses -> cities -> countries` en una única dimensión `silver.dim_customer` con clave subrogada (`customer_sk`)."
-      },
-      {
-        "id": "step-3",
-        "order": 3,
-        "label": "3. Modelar tabla de hechos con grano explícito en silver",
-        "title": "Construcción de tabla de hechos",
-        "role": "DA",
-        "layer": "Silver",
-        "detail": "Crear `silver.fct_orders` declarando el grain exacto (1 fila por pedido), calculando medidas aditivas limpias (`net_amount_usd`) y enlazando claves foráneas (`customer_sk`, `merchant_sk`).",
-        "description": "Crear `silver.fct_orders` declarando el grain exacto (1 fila por pedido), calculando medidas aditivas limpias (`net_amount_usd`) y enlazando claves foráneas (`customer_sk`, `merchant_sk`)."
-      },
-      {
-        "id": "step-4",
-        "order": 4,
-        "label": "4. Materializar OBT columnar y capa semántica en gold",
-        "title": "Materialización de OBT en Parquet ordenado",
-        "role": "BI",
-        "layer": "Gold",
-        "detail": "Pre-unir `fct_orders` con sus dimensiones en `gold.obt_orders_analytics` (aprovechando Dictionary Encoding en Parquet) para consultas de 0 joins en BI y notebooks.",
-        "description": "Pre-unir `fct_orders` con sus dimensiones en `gold.obt_orders_analytics` (aprovechando Dictionary Encoding en Parquet) para consultas de 0 joins en BI y notebooks."
-      }
-    ],
-    "correctOrder": [
-      "step-1",
-      "step-2",
-      "step-3",
-      "step-4"
-    ],
-    "options": [
-      {
-        "id": "pipe-hybrid",
-        "text": "1) Captura CDC a Bronze → 2) Dimensiones Conformadas en Silver → 3) Tabla de Hechos en Silver → 4) OBT Columnar en Gold",
-        "correct": true,
-        "feedback": "Arquitectura impecable. Desacoplas el OLTP en Bronze, gobiernas el negocio con Star Schema en Silver y aceleras las lecturas masivas con OBT en Gold."
-      },
-      {
-        "id": "pipe-direct-oltp",
-        "text": "1) Conectar Power BI / Tableau en vivo a las 14 tablas 3NF de PostgreSQL → 2) Hacer los joins en el navegador del CEO",
-        "correct": false,
-        "feedback": "Peligroso: acopla el esquema interno de la aplicación a los reportes y degrada el rendimiento de la base transaccional."
-      },
-      {
-        "id": "pipe-obt-only",
-        "text": "1) Borrar todas las dimensiones → 2) Guardar únicamente una OBT gigante en Bronze sin claves ni tablas de dimensión en Silver",
-        "correct": false,
-        "feedback": "Sin dimensiones conformadas en Silver, cualquier corrección de un atributo descriptivo o cruce entre múltiples tablas de hechos se vuelve inmanejable."
-      }
-    ],
-    "explanation": "El Star Schema en Silver actúa como columna vertebral gobernada (fácil de mantener, auditar y compartir entre procesos), mientras que la OBT en Gold ofrece velocidad extrema sin joins en motores columnares.",
-    "expectedOutcome": "El Star Schema en Silver actúa como columna vertebral gobernada (fácil de mantener y auditar), mientras que la OBT en Gold ofrece velocidad extrema sin joins en motores columnares."
+  roleNotes: {
+    de: 'Como Ingeniero de Datos, mantendrás el esquema en estrella como núcleo gobernado en Silver/Gold y materializarás vistas u OBTs ordenadas por claves de baja cardinalidad para maximizar la compresión RLE en Parquet.',
+    da: 'Como Analista de Datos, auditarás siempre el grano de cualquier OBT antes de sumar columnas: si la tabla está a nivel de `order_item_id`, usarás `COUNT(DISTINCT order_id)` para órdenes y `SUM(line_total_usd)` para ingresos.',
+    bi: 'Como especialista en BI, preferirás exponer dimensiones planas en estrella a la capa semántica en lugar de esquemas en copo de nieve, evitando uniones encadenadas innecesarias.',
   },
-  "relatedLessons": [
+  summary: [
+    'El esquema en estrella une una tabla de hechos central con dimensiones planas desnormalizadas mediante una sola unión por dimensión.',
+    'El esquema en copo de nieve normaliza jerarquías dimensionales en 3FN, añadiendo uniones que rara vez compensan el mínimo ahorro de espacio.',
+    'En motores columnares como Parquet y DuckDB, la codificación por diccionario y RLE comprimen eficazmente los textos repetidos de una OBT.',
+    'Materializar una OBT acelera lecturas de una sola tabla, pero exige reescrituras completas cuando cambian atributos dimensionales.',
+    'Desnormalizar cabeceras (`orders`) sobre líneas (`order_items`) obliga a usar `COUNT(DISTINCT order_id)` y no sumar importes de cabecera sin prorrateo.',
+  ],
+  glossaryTerms: [
+    'c06-star-vs-obt',
+    'esquema-copo-de-nieve',
+    'grano-dimensional',
+    'dimension-conformada',
+  ],
+  flashcards: [
     {
-      "id": "l1-joins-fanout",
-      "reason": "Repasa cómo la definición estricta del Grain en la tabla de hechos previene el Fan-Out Trap al diseñar tu Star Schema."
+      id: 'fc-c2-dim-02-01',
+      front: '¿Qué diferencia a un esquema en estrella de un esquema en copo de nieve (Snowflake)?',
+      back: 'En el esquema en estrella cada dimensión es una sola tabla plana desnormalizada; en el copo de nieve las jerarquías de la dimensión se separan en subtablas normalizadas en 3FN.',
     },
     {
-      "id": "l5-scd2-history",
-      "reason": "Aprende cómo versionar los cambios históricos en tus tablas de dimensión (`dim_customer_scd2`) antes de construir una OBT."
+      id: 'fc-c2-dim-02-02',
+      front: '¿Por qué los archivos Parquet comprimen tan bien las columnas de texto repetidas en una OBT?',
+      back: 'Porque emplean codificación por diccionario (sustituyendo textos por enteros) y Run-Length Encoding (RLE) sobre secuencias de valores idénticos.',
     },
     {
-      "id": "l6-metrics-simpson",
-      "reason": "Descubre cómo definir métricas aditivas y no aditivas encima de tu modelo dimensional."
-    }
-  ]
+      id: 'fc-c2-dim-02-03',
+      front: '¿Qué ocurre si sumas `o.shipping_usd` o `o.total_usd` directamente en una OBT construida a grano de `order_items`?',
+      back: 'El importe de cabecera se repite en cada línea del pedido y su suma se infla proporcionalmente al número de artículos por orden.',
+    },
+    {
+      id: 'fc-c2-dim-02-04',
+      front: '¿Cuál es el patrón híbrido recomendado entre esquema en estrella y OBT?',
+      back: 'Gobernar y versionar las entidades maestras y hechos en un esquema en estrella central, y derivar tablas anchas (OBT) solo en la frontera de consumo.',
+    },
+  ],
+  sources: [
+    {
+      title: 'Star Schemas and OLAP Cubes',
+      url: 'https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/star-schema-olap-cube/',
+      publisher: 'Kimball Group',
+      accessed: '2026-10-29',
+      supports:
+        'Estructura y ventajas analíticas del esquema en estrella frente a modelos transaccionales normalizados.',
+    },
+    {
+      title: 'Snowflaked Dimensions',
+      url: 'https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/snowflake-dimension/',
+      publisher: 'Kimball Group',
+      accessed: '2026-10-29',
+      supports:
+        'Razones por las que Kimball recomienda dimensiones planas en estrella frente a dimensiones normalizadas en copo de nieve.',
+    },
+    {
+      title: 'Drilling Across Fact Tables',
+      url: 'https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/drilling-across/',
+      publisher: 'Kimball Group',
+      accessed: '2026-10-29',
+      supports:
+        'Ventaja del esquema en estrella con dimensiones conformadas para combinar múltiples procesos sin fan-out.',
+    },
+    {
+      title: 'DuckDB SQL — FROM and JOIN Clauses',
+      url: 'https://duckdb.org/docs/stable/sql/query_syntax/from.html',
+      publisher: 'DuckDB Foundation',
+      accessed: '2026-10-29',
+      supports:
+        'Ejecución vectorizada de uniones en estrella y escaneo columnar sobre tablas en DuckDB.',
+    },
+  ],
+  aiNotes:
+    'Recuerda al estudiante dos trampas reales en el dataset de Mercado Brisa para esta lección: 1) Unir `orders` (18,000 filas) con `order_items` (42,000 filas) duplica `o.total_usd` y `o.shipping_usd` por cada línea de la orden; debe sumar `oi.line_total_usd` y contar órdenes con `COUNT(DISTINCT o.order_id)`. 2) La tabla `products` incluye `SKU-TEST-NEG` (`product_id = 180`) con `list_price_usd = -9.99`, que debe filtrarse con `p.list_price_usd > 0`.',
+  needsReview: false,
 };
 
 export default lesson;

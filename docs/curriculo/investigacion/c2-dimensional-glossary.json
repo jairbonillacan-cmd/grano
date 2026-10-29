@@ -1,0 +1,253 @@
+[
+  {
+    "id": "grano-dimensional",
+    "term": "Grano dimensional (Grain)",
+    "track": "core",
+    "definition": "Declaración atómica y verificable de qué representa exactamente una fila física dentro de una tabla de hechos. Define el nivel mínimo de detalle antes de elegir dimensiones o medidas, e impide mezclar métricas de cabecera de orden con líneas de producto en una misma agregación.",
+    "example": "En Mercado Brisa, el grano de order_items es una línea de producto por orden (order_item_id), mientras que el grano de orders es una orden completa (order_id).",
+    "relatedLessons": [
+      "c2-dimensional-01-hechos-dimensiones-bus",
+      "c2-dimensional-02-star-schema-obt",
+      "c2-dimensional-05-hechos-instantanea-acumulativos"
+    ],
+    "relatedTerms": [
+      "dimension-conformada",
+      "dimension-degenerada",
+      "c06-star-vs-obt"
+    ],
+    "sources": [
+      {
+        "title": "Declaring the Grain",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/grain/",
+        "publisher": "Kimball Group",
+        "accessed": "2026-10-29",
+        "supports": "Definición formal del grano de una tabla de hechos en el proceso de diseño dimensional.",
+        "type": "primary"
+      }
+    ]
+  },
+  {
+    "id": "dimension-conformada",
+    "term": "Dimensión conformada (Conformed Dimension)",
+    "track": "core",
+    "definition": "Tabla de dimensión maestra cuyos atributos, claves sustitutas y definiciones semánticas son idénticos o subconjuntos estrictos compartidos entre múltiples tablas de hechos. Permite filtrar, agrupar y combinar métricas de procesos de negocio distintos sin ambigüedad ni reconciliaciones manuales entre departamentos.",
+    "example": "Las tablas stores y calendar de Mercado Brisa actúan como dimensiones conformadas compartidas entre las ventas (orders) y las devoluciones (refunds).",
+    "relatedLessons": [
+      "c2-dimensional-01-hechos-dimensiones-bus",
+      "c2-dimensional-02-star-schema-obt"
+    ],
+    "relatedTerms": [
+      "matriz-bus-kimball",
+      "drill-across",
+      "grano-dimensional"
+    ],
+    "sources": [
+      {
+        "title": "Conformed Dimensions",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/conformed-dimension/",
+        "publisher": "Kimball Group",
+        "accessed": "2026-10-29",
+        "supports": "Criterios de conformación de dimensiones maestras compartidas entre procesos de negocio.",
+        "type": "primary"
+      }
+    ]
+  },
+  {
+    "id": "matriz-bus-kimball",
+    "term": "Matriz de bus empresarial (Enterprise Bus Matrix)",
+    "track": "core",
+    "definition": "Plano arquitectónico tabular donde las filas representan los procesos de negocio de la organización y las columnas representan las dimensiones conformadas. Permite planificar la construcción incremental del almacén de datos garantizando que cada nuevo esquema en estrella se integre con los anteriores.",
+    "example": "En la matriz de bus de Mercado Brisa, los procesos de pedidos, pagos y reembolsos comparten las columnas de calendario, tienda y cliente.",
+    "relatedLessons": [
+      "c2-dimensional-01-hechos-dimensiones-bus",
+      "c2-dimensional-02-star-schema-obt"
+    ],
+    "relatedTerms": [
+      "dimension-conformada",
+      "drill-across",
+      "grano-dimensional"
+    ],
+    "sources": [
+      {
+        "title": "Enterprise Data Warehouse Bus Matrix",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/enterprise-data-warehouse-bus-matrix/",
+        "publisher": "Kimball Group",
+        "accessed": "2026-10-29",
+        "supports": "Estructura de la matriz de bus empresarial que cruza procesos de negocio y dimensiones conformadas.",
+        "type": "primary"
+      }
+    ]
+  },
+  {
+    "id": "dimension-degenerada",
+    "term": "Dimensión degenerada (Degenerate Dimension)",
+    "track": "core",
+    "definition": "Identificador operativo o número de documento transaccional que reside directamente en la tabla de hechos sin poseer una tabla de dimensión asociada, porque todos sus atributos descriptivos ya fueron extraídos hacia otras dimensiones. Sirve para agrupar líneas de un mismo evento o auditar transacciones.",
+    "example": "En una tabla de hechos a grano de línea (order_items), la columna order_id es una dimensión degenerada que permite contar órdenes mediante COUNT(DISTINCT order_id).",
+    "relatedLessons": [
+      "c2-dimensional-01-hechos-dimensiones-bus",
+      "c2-dimensional-02-star-schema-obt"
+    ],
+    "relatedTerms": [
+      "grano-dimensional",
+      "c06-star-vs-obt"
+    ],
+    "sources": [
+      {
+        "title": "Degenerate Dimensions",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/degenerate-dimension/",
+        "publisher": "Kimball Group",
+        "accessed": "2026-10-29",
+        "supports": "Uso de números de orden o factura como dimensiones degeneradas en tablas de hechos a nivel de línea.",
+        "type": "primary"
+      }
+    ]
+  },
+  {
+    "id": "drill-across",
+    "term": "Consulta multipaso (Drill-Across)",
+    "track": "core",
+    "definition": "Patrón de consulta analítica que combina medidas de dos o más tablas de hechos con distinto grano o proceso de negocio. Agrega cada tabla de hechos por separado en una subconsulta o CTE según los atributos de una dimensión conformada común antes de unirlas.",
+    "example": "Para comparar ventas brutas (orders) y reembolsos (refunds) por región en Mercado Brisa, se preagregan ambas tablas por store.region en CTEs separadas y luego se unen.",
+    "relatedLessons": [
+      "c2-dimensional-01-hechos-dimensiones-bus",
+      "c2-dimensional-02-star-schema-obt"
+    ],
+    "relatedTerms": [
+      "dimension-conformada",
+      "matriz-bus-kimball"
+    ],
+    "sources": [
+      {
+        "title": "Drilling Across Fact Tables",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/drilling-across/",
+        "publisher": "Kimball Group",
+        "accessed": "2026-10-29",
+        "supports": "Patrón de agregación previa por dimensiones conformadas para combinar múltiples tablas de hechos sin fan-out.",
+        "type": "primary"
+      }
+    ]
+  },
+  {
+    "id": "esquema-copo-de-nieve",
+    "term": "Esquema en copo de nieve (Snowflake Schema)",
+    "track": "core",
+    "definition": "Variante del esquema en estrella en la que las tablas de dimensión se normalizan en múltiples tablas secundarias siguiendo jerarquías en tercera forma normal. Aunque reduce la redundancia de atributos jerárquicos, añade uniones encadenadas que complican las consultas frente a dimensiones planas desnormalizadas.",
+    "example": "Separar category y subcategory de la tabla products en tablas independientes obligaría a encadenar tres JOINs para consultar las ventas por categoría.",
+    "relatedLessons": [
+      "c2-dimensional-02-star-schema-obt"
+    ],
+    "relatedTerms": [
+      "c06-star-vs-obt",
+      "dimension-conformada"
+    ],
+    "sources": [
+      {
+        "title": "Snowflaked Dimensions",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/snowflake-dimension/",
+        "publisher": "Kimball Group",
+        "accessed": "2026-10-29",
+        "supports": "Compromisos entre dimensiones planas en estrella y dimensiones normalizadas en copo de nieve.",
+        "type": "primary"
+      }
+    ]
+  },
+  {
+    "id": "scd-tipo-1-y-3",
+    "term": "SCD Tipo 1 y Tipo 3",
+    "track": "core",
+    "definition": "Estrategias de actualización dimensional sin versionado completo de filas. El Tipo 1 sobrescribe el valor antiguo por el nuevo perdiendo el rastro histórico (reporte As-Is), mientras que el Tipo 3 añade una columna específica para retener únicamente el valor inmediato anterior de un atributo.",
+    "example": "La columna current_tier en la tabla customers aplica SCD Tipo 1 porque refleja el nivel actual del cliente y reasigna todas sus compras pasadas a ese nivel.",
+    "relatedLessons": [
+      "c2-dimensional-03-scd2-history"
+    ],
+    "relatedTerms": [
+      "c07-scd-type-2",
+      "c08-point-in-time"
+    ],
+    "sources": [
+      {
+        "title": "Type 1: Overwrite",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/type-1/",
+        "publisher": "Kimball Group",
+        "accessed": "2026-10-29",
+        "supports": "Comportamiento de sobrescritura en SCD Tipo 1 y sus efectos sobre el historial de reportes.",
+        "type": "primary"
+      }
+    ]
+  },
+  {
+    "id": "descomposicion-kitagawa",
+    "term": "Descomposición de Kitagawa-Oaxaca",
+    "track": "core",
+    "definition": "Método algebraico que divide la diferencia total entre dos tasas agregadas o promedios globales en dos componentes aditivos: el efecto tasa (cambio real de rendimiento dentro de cada subgrupo) y el efecto mezcla o composición (cambio en la proporción de volumen entre subgrupos).",
+    "example": "En Mercado Brisa, la diferencia de $62.19 en el ticket medio entre desktop y mobile se descompone en +$54.81 de efecto tasa y +$7.38 de efecto mezcla por segmento.",
+    "relatedLessons": [
+      "c2-dimensional-04-metrics-simpson"
+    ],
+    "relatedTerms": [
+      "c10-simpsons-paradox",
+      "c11-additivity-hll"
+    ],
+    "sources": [
+      {
+        "title": "Simpson's Paradox",
+        "url": "https://plato.stanford.edu/entries/paradox-simpson/",
+        "publisher": "Stanford Encyclopedia of Philosophy",
+        "accessed": "2026-10-29",
+        "supports": "Fundamentos estadísticos de la inversión de tendencias por variables de confusión y pesos de mezcla.",
+        "type": "primary"
+      }
+    ]
+  },
+  {
+    "id": "hecho-instantanea-periodica",
+    "term": "Tabla de hechos de instantánea periódica (Periodic Snapshot)",
+    "track": "core",
+    "definition": "Tabla de hechos que registra el estado, saldo o nivel acumulado de una entidad a intervalos regulares y predecibles (diario, mensual o trimestral). Sus medidas de saldo son semiaditivas: se suman entre entidades independientes, pero no a lo largo de la dimensión temporal.",
+    "example": "Una instantánea mensual del saldo acumulado de ventas por región en el Q1 2024 debe evaluarse al cierre con ARG_MAX(ytd_balance_usd, month) en lugar de SUM.",
+    "relatedLessons": [
+      "c2-dimensional-05-hechos-instantanea-acumulativos",
+      "c2-dimensional-04-metrics-simpson"
+    ],
+    "relatedTerms": [
+      "hecho-instantanea-acumulativa",
+      "c11-additivity-hll",
+      "grano-dimensional"
+    ],
+    "sources": [
+      {
+        "title": "Periodic Snapshot Fact Tables",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/periodic-snapshot-fact-table/",
+        "publisher": "Kimball Group",
+        "accessed": "2026-10-29",
+        "supports": "Diseño de tablas de hechos de instantánea periódica y tratamiento de medidas semiaditivas.",
+        "type": "primary"
+      }
+    ]
+  },
+  {
+    "id": "hecho-instantanea-acumulativa",
+    "term": "Tabla de hechos de instantánea acumulativa (Accumulating Snapshot)",
+    "track": "core",
+    "definition": "Tabla de hechos donde cada fila representa el ciclo de vida completo de una instancia de proceso con inicio y fin definidos, como un pedido o reclamo. Contiene múltiples claves foráneas de fecha para cada hito y columnas de duración que se actualizan conforme avanza el flujo.",
+    "example": "En Mercado Brisa, una fila por order_id que consolida order_ts, captured_ts y first_refund_ts permite medir los minutos hasta la captura del pago y los días hasta el reembolso.",
+    "relatedLessons": [
+      "c2-dimensional-05-hechos-instantanea-acumulativos"
+    ],
+    "relatedTerms": [
+      "hecho-instantanea-periodica",
+      "grano-dimensional"
+    ],
+    "sources": [
+      {
+        "title": "Accumulating Snapshot Fact Tables",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/accumulating-snapshot-fact-table/",
+        "publisher": "Kimball Group",
+        "accessed": "2026-10-29",
+        "supports": "Modelado de flujos de trabajo mediante múltiples fechas de hito y métricas de duración en una fila por instancia.",
+        "type": "primary"
+      }
+    ]
+  }
+]

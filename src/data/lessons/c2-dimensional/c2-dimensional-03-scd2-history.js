@@ -1,359 +1,541 @@
-// Lección migrada al esquema v2 mediante scripts/migrate-legacy.mjs
-const lesson = {
-  "id": "c2-dimensional-03-scd2-history",
-  "moduleId": "c2-dimensional",
-  "tracks": [
-    "core"
+export const lesson = {
+  id: 'c2-dimensional-03-scd2-history',
+  legacyId: 'l5-scd2-history',
+  legacyOrder: 5,
+  moduleId: 'c2-dimensional',
+  tracks: ['core', 'de', 'da', 'bi'],
+  level: 2,
+  order: 3,
+  title: 'Dimensiones lentamente cambiantes (SCD Tipo 2)',
+  subtitle:
+    'Versionado histórico de dimensiones, intervalos semiabiertos [valid_from, valid_to) y cruces Point-in-Time',
+  minutes: 30,
+  prerequisites: ['c2-dimensional-02-star-schema-obt'],
+  contentVersion: 2,
+  hook: 'Un cliente de Mercado Brisa compró grano básico durante su primer año en el nivel `bronce` y ascendió recientemente al nivel `oro`. Cuando Finanzas cruzó las `14,760` órdenes completadas con `customers.current_tier`, el nivel `bronce` perdió `$628,099.05` de ingresos históricos que fueron reasignados retroactivamente a `oro` y `platino`. Peor aún, un analista que intentó unir `orders` con `customer_changes` solo por `customer_id` multiplicó las órdenes hasta `25,271` filas. ¿Cómo preserva un almacén dimensional la verdad histórica exacta en cada transacción?',
+  objectives: [
+    'Diferenciar las estrategias SCD Tipo 1 (sobrescritura As-Is), SCD Tipo 2 (versionado por fila As-Was) y SCD Tipo 3 (columna de valor previo).',
+    'Modelar intervalos temporales semiabiertos `[valid_from, valid_to)` evitando solapamientos y pérdida de registros vigentes (`valid_to IS NULL`).',
+    'Escribir consultas Point-in-Time sobre `orders` y `customer_changes` en DuckDB sin inflar el conteo de transacciones.',
   ],
-  "level": 2,
-  "order": 3,
-  "title": "Dimensiones cambiantes: historial con SCD tipo 2",
-  "minutes": 30,
-  "prerequisites": [
-    "c2-dimensional-02-star-schema-obt"
-  ],
-  "contentVersion": 1,
-  "hook": "En Mercado Brisa (empresa ficticia), el cliente `C-101` estuvo en el segmento `\"Hogar\"` de enero a junio y compró 1 000 USD. El 1 de julio pasó al segmento `\"Mayorista\"` y compró otros 1 500 USD. Como la tabla `dim_customer` sobrescribía los cambios (SCD tipo 1), el reporte anual afirma que en el primer semestre `\"Hogar\"` vendió 0 USD y `\"Mayorista\"` vendió 1 000 USD. Además, el modelo predictivo entrenado con esa tabla sufrió fuga de datos. ¿Cómo preservas la historia exacta con SCD tipo 2?",
-  "objectives": [
-    "Diferenciar cuándo aplicar SCD tipo 1 (corrección de errores) frente a SCD tipo 2 (historial con vigencia).",
-    "Modelar intervalos cerrados-abiertos [valid_from, valid_to) con clave sustituta por versión.",
-    "Cruzar hechos y dimensiones históricas reconstruyendo el estado exacto en el instante del evento."
-  ],
-  "sections": [
+  sections: [
     {
-      "id": "el-problema-de-sobrescribir-el-historial-tipos-d",
-      "heading": "El problema de sobrescribir el historial: tipos de dimensiones SCD",
-      "body": "El mundo real muta: los clientes cambian de plan, los vendedores cambian de región y los productos cambian de categoría. Ralph Kimball clasificó cómo reaccionar ante estos cambios mediante las **Slowly Changing Dimensions (SCD)**:\n- **SCD Tipo 0 (Retain Original)**: nunca cambia (ej. `fecha_nacimiento`, `canal_primer_registro`).\n- **SCD Tipo 1 (Overwrite)**: sobrescribe el valor antiguo con el nuevo. Útil solo para corregir errores tipográficos (ej. cambiar `\"Mèxico\"` por `\"México\"`), pero **destruye la historia** si se usa en atributos de negocio.\n- **SCD Tipo 2 (Add New Row / Versionado Temporal)**: el estándar de oro analítico. Cada vez que un atributo vigilado cambia, se cierra la fila anterior y se inserta una nueva fila con su propio rango de fechas de validez.\n- **SCD Tipo 3 (Add New Attribute)**: añade una columna `previous_segment` (solo recuerda 1 cambio previo).\n- **SCD Tipo 6 (Hybrid 1+2+3)**: combina filas históricas Tipo 2 con una columna `current_segment` actualizada en todas las filas del cliente para facilitar comparaciones *\"As-Was vs. As-Is\"*.",
-      "interactive": {
-        "component": "scd2-timeline-builder",
-        "caption": "Simulador interactivo: Dimensiones cambiantes: historial con SCD tipo 2"
-      }
-    },
-    {
-      "id": "estructura-tecnica-de-una-tabla-scd-tipo-2-en-pr",
-      "heading": "Estructura técnica de una tabla SCD tipo 2 en producción",
-      "body": "Una dimensión SCD Tipo 2 técnica (`dim_customer_scd2`) contiene cinco elementos estructurales obligatorios:\n1) **Clave Subrogada de Versión (`customer_sk`)**: clave primaria única de esa fila específica, generada de forma determinista con un hash (`SHA-256` o `xxHash64` de `customer_id || valid_from`).\n2) **Clave Natural o Durable (`customer_id`)**: el identificador del cliente en el sistema transaccional (que ahora se repite en varias filas a medida que el cliente evoluciona).\n3) **Intervalo Semicerrado `[valid_from, valid_to)`**: `valid_from` marca el instante exacto en que entró en vigor esa versión y `valid_to` el instante en que dejó de ser válida. Usar la convención **`f.order_ts >= d.valid_from AND f.order_ts < d.valid_to`** (intervalo cerrado por la izquierda y abierto por la derecha) evita ambigüedades o duplicados en los bordes de medianoche que ocurren al usar `BETWEEN`.\n4) **Centinela de Futuro (`9999-12-31` o `NULL`)**: el registro vigente actual tiene `valid_to = TIMESTAMP '9999-12-31 23:59:59'` para que los filtros de rango funcionen sin requerir `OR valid_to IS NULL`.\n5) **Bandera `is_current` (`BOOLEAN`)**: permite consultar rápidamente el estado actual con `WHERE is_current = true`.",
-      "example": {
-        "language": "sql",
-        "code": "-- CORRECTO: Acotar con intervalo semicerrado (>= valid_from AND < valid_to)\n-- Cada compra se atribuye exactamente a la versión vigente en ese segundo\nSELECT\n  d.segment AS segment_at_purchase_as_was,\n  d.current_segment AS segment_today_as_is,\n  COUNT(f.order_id) AS orders_count,\n  SUM(f.amount_usd) AS exact_revenue_usd\nFROM silver.fct_orders f\nJOIN silver.dim_customer_scd2 d\n  ON f.customer_id = d.customer_id\n  AND f.order_ts >= d.valid_from\n  AND f.order_ts <  d.valid_to\nGROUP BY 1, 2\nORDER BY 1;",
-        "expectedOutput": [
+      id: 'sec-taxonomia-scd',
+      heading: 'Taxonomía de Kimball: SCD Tipo 1, Tipo 2 y Tipo 3',
+      body: 'A diferencia de las tablas de hechos inmutables, los atributos de una dimensión evolucionan con el tiempo. Un cliente cambia de ciudad, de segmento comercial o de nivel de fidelidad (`tier`). Ralph Kimball definió las **dimensiones lentamente cambiantes** (*Slowly Changing Dimensions*, `SCD`) para gobernar cómo responde el modelo analítico ante cada cambio.\n\nEl **SCD Tipo 1** sobrescribe el valor anterior con el nuevo directamente en la fila de la dimensión (`customers.current_tier`). Sirve para corregir errores tipográficos, pero destruye el rastro histórico. Todo reporte basado en Tipo 1 responde en modo **As-Is** (estado actual) y reescribe el pasado cuando un atributo muta.\n\nEl **SCD Tipo 3** agrega una columna específica para guardar únicamente el estado inmediato anterior (`previous_tier`). Permite comparar una transición única, pero pierde cambios intermedios. El **SCD Tipo 2** resuelve la auditoría histórica completa insertando una nueva fila por cada cambio en `customer_changes` (`4,100` versiones para `2,400` clientes). Cada versión recibe una clave sustituta propia (`change_id`) y marcas de vigencia `valid_from`, `valid_to` e `is_current`.',
+      example: {
+        language: 'sql',
+        code: `SELECT
+  change_id,
+  customer_id,
+  segment,
+  tier,
+  CAST(valid_from AS DATE) AS valid_from_date,
+  CAST(valid_to AS DATE) AS valid_to_date,
+  is_current
+FROM customer_changes
+WHERE customer_id IN (1, 2)
+ORDER BY customer_id ASC, valid_from ASC;`,
+        expectedOutput: [
           {
-            "segment_at_purchase_as_was": "Pyme (Ene-Jun)",
-            "segment_today_as_is": "Enterprise",
-            "orders_count": 1,
-            "exact_revenue_usd": "$1,000.00 (Exacto)"
+            change_id: 1,
+            customer_id: 1,
+            segment: 'retail',
+            tier: 'bronce',
+            valid_from_date: '2023-05-12',
+            valid_to_date: '2023-07-14',
+            is_current: false,
           },
           {
-            "segment_at_purchase_as_was": "Enterprise (Jul-Dic)",
-            "segment_today_as_is": "Enterprise",
-            "orders_count": 1,
-            "exact_revenue_usd": "$1,500.00 (Exacto)"
-          }
-        ]
-      }
-    },
-    {
-      "id": "consultas-punto-en-el-tiempo-y-prevencion-de-fug",
-      "heading": "Consultas punto en el tiempo y prevención de fuga de datos en modelos",
-      "body": "El error más frecuente al consultar una tabla SCD Tipo 2 es hacer `JOIN dim_customer_scd2 d ON f.customer_id = d.customer_id` olvidando la condición temporal: si el cliente cambió 4 veces de plan, **multiplicarás sus ventas por 4 (Fan-Out)**. Tienes dos formas limpias de hacer el cruce Point-in-Time:\n- **Rango de Validez Explícito**: `ON f.customer_id = d.customer_id AND f.order_ts >= d.valid_from AND f.order_ts < d.valid_to` (o unir directamente por `customer_sk` si el pipeline de DE ya estampó la clave subrogada en el hecho).\n- **`ASOF JOIN` (SQL Moderno en DuckDB / Snowflake)**: `ASOF JOIN dim_customer_scd2 d ON f.customer_id = d.customer_id AND f.order_ts >= d.valid_from`, que empareja cada evento con la versión inmediatamente anterior o igual en el tiempo.\nEn **Machine Learning y Análisis de Cohortes**, reconstruir las variables explicativas (*features*) usando cortes Point-in-Time sobre tablas SCD Tipo 2 es la única garantía matemática contra el **Data Leakage (fuga de información del futuro)**."
-    },
-    {
-      "id": "automatizacion-de-scd-tipo-2-con-snapshots-en-db",
-      "heading": "Automatización de SCD tipo 2 con snapshots en dbt y SQLMesh",
-      "body": "En 2026 ningún ingeniero de datos escribe a mano complejos cursores para mantener tablas SCD Tipo 2. Herramientas declarativas como **dbt Snapshots** (`strategy='timestamp'` o `strategy='check'` comparando el hash de columnas) y **SQLMesh (`SCD_TYPE_2_BY_TIME` / `SCD_TYPE_2_BY_COLUMN`)** calculan automáticamente qué registros cambiaron en el lote incremental, cierran el `valid_to` de las filas modificadas e insertan las nuevas versiones de forma idempotente. Además, al combinar estas tablas históricas con tablas de hechos en Mercado Brisa (empresa ficticia), incluye siempre la condición de intervalo `f.order_ts >= d.valid_from AND f.order_ts < d.valid_to` junto a la clave natural para reconstruir el atributo exacto que tenía el cliente cuando ocurrió cada compra."
-    }
-  ],
-  "workedExample": {
-    "title": "Ejemplo guiado: Dimensiones cambiantes: historial con SCD tipo 2",
-    "description": "Observa qué ocurre cuando unes ventas con una tabla SCD Tipo 2 olvidando el predicado temporal (Fan-Out) frente a un Join Point-in-Time exacto que además compara el segmento histórico (As-Was) contra el actual (As-Is):",
-    "audit": "",
-    "steps": [
-      {
-        "label": "Error crítico: unión por clave natural sin acotar rango SCD2",
-        "explanation": "Observa qué ocurre cuando unes ventas con una tabla SCD Tipo 2 olvidando el predicado temporal (Fan-Out) frente a un Join Point-in-Time exacto que además compara el segmento histórico (As-Was) contra el actual (As-Is):",
-        "code": "-- ERROR GRAVE: Unir por customer_id natural sin filtrar valid_from / valid_to\n-- Como U-101 tiene 2 filas en dim_customer_scd2 (Pyme y Enterprise),\n-- ambas compras ($1,000 + $1,500) se duplican en AMBOS segmentos.\nSELECT\n  d.segment,\n  COUNT(f.order_id) AS orders_count,\n  SUM(f.amount_usd) AS reported_revenue_usd\nFROM silver.fct_orders f\nJOIN silver.dim_customer_scd2 d\n  ON f.customer_id = d.customer_id\nGROUP BY d.segment;",
-        "expectedOutput": [
-          {
-            "segment": "Pyme",
-            "orders_count": "2 (Falso: incluye orden de Julio)",
-            "reported_revenue_usd": "$2,500.00 (Inflado. Real era $1,000)"
+            change_id: 2,
+            customer_id: 1,
+            segment: 'pro_barista',
+            tier: 'plata',
+            valid_from_date: '2023-07-14',
+            valid_to_date: '2023-12-02',
+            is_current: false,
           },
           {
-            "segment": "Enterprise",
-            "orders_count": "2 (Falso: incluye orden de Enero)",
-            "reported_revenue_usd": "$2,500.00 (Inflado. Total suma $5,000 en vez de $2,500)"
-          }
-        ]
-      },
-      {
-        "label": "Solución correcta: cruce temporal con intervalo semicerrado",
-        "explanation": "Compara ahora la consulta corregida y verifica cómo las filas y totales coinciden con la auditoría.",
-        "code": "-- CORRECTO: Acotar con intervalo semicerrado (>= valid_from AND < valid_to)\n-- Cada compra se atribuye exactamente a la versión vigente en ese segundo\nSELECT\n  d.segment AS segment_at_purchase_as_was,\n  d.current_segment AS segment_today_as_is,\n  COUNT(f.order_id) AS orders_count,\n  SUM(f.amount_usd) AS exact_revenue_usd\nFROM silver.fct_orders f\nJOIN silver.dim_customer_scd2 d\n  ON f.customer_id = d.customer_id\n  AND f.order_ts >= d.valid_from\n  AND f.order_ts <  d.valid_to\nGROUP BY 1, 2\nORDER BY 1;",
-        "expectedOutput": [
-          {
-            "segment_at_purchase_as_was": "Pyme (Ene-Jun)",
-            "segment_today_as_is": "Enterprise",
-            "orders_count": 1,
-            "exact_revenue_usd": "$1,000.00 (Exacto)"
+            change_id: 3,
+            customer_id: 1,
+            segment: 'pro_barista',
+            tier: 'platino',
+            valid_from_date: '2023-12-02',
+            valid_to_date: null,
+            is_current: true,
           },
           {
-            "segment_at_purchase_as_was": "Enterprise (Jul-Dic)",
-            "segment_today_as_is": "Enterprise",
-            "orders_count": 1,
-            "exact_revenue_usd": "$1,500.00 (Exacto)"
-          }
-        ]
-      }
-    ]
-  },
-  "checks": [
+            change_id: 4,
+            customer_id: 2,
+            segment: 'retail',
+            tier: 'bronce',
+            valid_from_date: '2024-04-30',
+            valid_to_date: '2024-09-24',
+            is_current: false,
+          },
+          {
+            change_id: 5,
+            customer_id: 2,
+            segment: 'pro_barista',
+            tier: 'plata',
+            valid_from_date: '2024-09-24',
+            valid_to_date: '2025-02-02',
+            is_current: false,
+          },
+          {
+            change_id: 6,
+            customer_id: 2,
+            segment: 'pro_barista',
+            tier: 'oro',
+            valid_from_date: '2025-02-02',
+            valid_to_date: null,
+            is_current: true,
+          },
+        ],
+      },
+    },
     {
-      "id": "c1",
-      "type": "mcq",
-      "prompt": "Un equipo de Ciencia de Datos entrena un modelo en octubre para predecir qué usuarios cancelarán su suscripción tras su primer mes (usando cohortes de enero a agosto). Si unen los eventos del mes 1 con una tabla `dim_customer` tipo SCD 1 (que solo guarda el estado de octubre), ¿qué fenómeno ocurrirá?",
-      "options": [
+      id: 'sec-point-in-time-join',
+      heading: 'Intervalos semiabiertos [valid_from, valid_to) y cruce Point-in-Time',
+      body: 'Para reconstruir la realidad exacta en el instante de una compra —reporte **As-Was**—, ejecutamos un cruce **Point-in-Time** entre el hecho (`orders.order_ts`) y la dimensión versionada (`customer_changes`). Si unimos ambas tablas solo por la clave natural `o.customer_id = cc.customer_id`, cada pedido se multiplica por el número de versiones del cliente. Las `14,760` órdenes completadas se inflan así hasta `25,271` filas.\n\nUn diseño riguroso modela la vigencia como un **intervalo semiabierto** por la derecha: `[valid_from, valid_to)`. Esto exige evaluar `o.order_ts >= cc.valid_from` junto con `o.order_ts < cc.valid_to`. Si empleáramos `BETWEEN valid_from AND valid_to`, un evento ocurrido en el segundo exacto del cambio coincidiría con dos filas a la vez.\n\nAdemás, cuando la fila activa representa el límite superior abierto con `valid_to IS NULL`, el predicado debe incluir `(o.order_ts < cc.valid_to OR cc.valid_to IS NULL)`. También puede escribirse con `COALESCE(cc.valid_to, TIMESTAMP \'9999-12-31\')`. Omitir el caso nulo descarta silenciosamente todas las compras ocurridas en la versión vigente del cliente.',
+      interactive: {
+        component: 'scd2-timeline-builder',
+        caption:
+          'Simula cambios de segmento y nivel de un cliente a lo largo del tiempo y observa cómo cambian las atribuciones entre SCD Tipo 1 (As-Is) y SCD Tipo 2 (As-Was).',
+      },
+      example: {
+        language: 'sql',
+        code: `SELECT
+  (SELECT COUNT(*) FROM orders WHERE status = 'completed') AS base_completed_orders,
+  (SELECT COUNT(*)
+   FROM orders o
+   INNER JOIN customer_changes cc ON o.customer_id = cc.customer_id
+   WHERE o.status = 'completed') AS naive_join_rows,
+  (SELECT COUNT(*)
+   FROM orders o
+   INNER JOIN customer_changes cc
+     ON o.customer_id = cc.customer_id
+    AND o.order_ts >= cc.valid_from
+    AND (o.order_ts < cc.valid_to OR cc.valid_to IS NULL)
+   WHERE o.status = 'completed') AS pit_join_rows;`,
+        expectedOutput: [
+          {
+            base_completed_orders: 14760,
+            naive_join_rows: 25271,
+            pit_join_rows: 14760,
+          },
+        ],
+      },
+    },
+  ],
+  workedExample: {
+    title: 'Auditoría de distorsión financiera entre reporte As-Is (Tipo 1) y As-Was (Tipo 2)',
+    description:
+      'El comité directivo de Mercado Brisa sospecha que el reporte de ingresos por nivel de fidelidad sobreestima los niveles altos porque lee `customers.current_tier` (SCD Tipo 1). Cuantificaremos en tres pasos la diferencia exacta frente al historial real en `customer_changes` (SCD Tipo 2).',
+    steps: [
+      {
+        label: 'Paso 1: Calcular el reporte As-Is (SCD Tipo 1)',
+        explanation:
+          'Calculamos el reporte As-Is uniendo las órdenes completadas con `customers.current_tier`.',
+        code: `SELECT
+  c.current_tier AS tier,
+  COUNT(o.order_id) AS as_is_orders,
+  ROUND(SUM(o.total_usd), 2) AS as_is_revenue_usd
+FROM orders o
+INNER JOIN customers c ON o.customer_id = c.customer_id
+WHERE o.status = 'completed'
+GROUP BY c.current_tier
+ORDER BY as_is_revenue_usd DESC;`,
+        expectedOutput: [
+          { tier: 'oro', as_is_orders: 6468, as_is_revenue_usd: 2910010.27 },
+          { tier: 'plata', as_is_orders: 4630, as_is_revenue_usd: 1873949.75 },
+          { tier: 'bronce', as_is_orders: 2247, as_is_revenue_usd: 900084.3 },
+          { tier: 'platino', as_is_orders: 1415, as_is_revenue_usd: 585418.1 },
+        ],
+      },
+      {
+        label: 'Paso 2: Calcular el reporte As-Was (SCD Tipo 2)',
+        explanation:
+          'Calculamos el reporte As-Was cruzando `orders` con `customer_changes` mediante el predicado Point-in-Time `[valid_from, valid_to)`.',
+        code: `SELECT
+  cc.tier AS tier,
+  COUNT(o.order_id) AS as_was_orders,
+  ROUND(SUM(o.total_usd), 2) AS as_was_revenue_usd
+FROM orders o
+INNER JOIN customer_changes cc
+  ON o.customer_id = cc.customer_id
+ AND o.order_ts >= cc.valid_from
+ AND (o.order_ts < cc.valid_to OR cc.valid_to IS NULL)
+WHERE o.status = 'completed'
+GROUP BY cc.tier
+ORDER BY as_was_revenue_usd DESC;`,
+        expectedOutput: [
+          { tier: 'oro', as_was_orders: 5485, as_was_revenue_usd: 2497409.26 },
+          { tier: 'plata', as_was_orders: 4567, as_was_revenue_usd: 1856698.12 },
+          { tier: 'bronce', as_was_orders: 3746, as_was_revenue_usd: 1528183.35 },
+          { tier: 'platino', as_was_orders: 962, as_was_revenue_usd: 387171.69 },
+        ],
+      },
+      {
+        label: 'Paso 3: Cuantificar la distorsión en dólares por nivel',
+        explanation:
+          'Comparamos ambos resultados por nivel para medir la distorsión contable (`as_is_revenue_usd - as_was_revenue_usd`).',
+        code: `WITH as_is AS (
+  SELECT
+    c.current_tier AS tier,
+    ROUND(SUM(o.total_usd), 2) AS as_is_revenue_usd
+  FROM orders o
+  INNER JOIN customers c ON o.customer_id = c.customer_id
+  WHERE o.status = 'completed'
+  GROUP BY c.current_tier
+),
+as_was AS (
+  SELECT
+    cc.tier AS tier,
+    ROUND(SUM(o.total_usd), 2) AS as_was_revenue_usd
+  FROM orders o
+  INNER JOIN customer_changes cc
+    ON o.customer_id = cc.customer_id
+   AND o.order_ts >= cc.valid_from
+   AND (o.order_ts < cc.valid_to OR cc.valid_to IS NULL)
+  WHERE o.status = 'completed'
+  GROUP BY cc.tier
+)
+SELECT
+  w.tier,
+  w.as_was_revenue_usd,
+  i.as_is_revenue_usd,
+  ROUND(i.as_is_revenue_usd - w.as_was_revenue_usd, 2) AS distortion_usd
+FROM as_was w
+INNER JOIN as_is i ON w.tier = i.tier
+ORDER BY w.as_was_revenue_usd DESC;`,
+        expectedOutput: [
+          {
+            tier: 'oro',
+            as_was_revenue_usd: 2497409.26,
+            as_is_revenue_usd: 2910010.27,
+            distortion_usd: 412601.01,
+          },
+          {
+            tier: 'plata',
+            as_was_revenue_usd: 1856698.12,
+            as_is_revenue_usd: 1873949.75,
+            distortion_usd: 17251.63,
+          },
+          {
+            tier: 'bronce',
+            as_was_revenue_usd: 1528183.35,
+            as_is_revenue_usd: 900084.3,
+            distortion_usd: -628099.05,
+          },
+          {
+            tier: 'platino',
+            as_was_revenue_usd: 387171.69,
+            as_is_revenue_usd: 585418.1,
+            distortion_usd: 198246.41,
+          },
+        ],
+      },
+    ],
+  },
+  checks: [
+    {
+      type: 'mcq',
+      id: 'chk-l5-q1',
+      prompt:
+        '¿Por qué las ventanas de vigencia en una dimensión SCD Tipo 2 deben evaluarse como intervalos semiabiertos `order_ts >= valid_from AND (order_ts < valid_to OR valid_to IS NULL)` en lugar de usar `BETWEEN valid_from AND valid_to`?',
+      options: [
         {
-          "id": "a",
-          "text": "Data Leakage (fuga de información del futuro): el modelo observará en enero atributos o downgrades que en realidad ocurrieron meses después, inflando artificialmente el AUC en validación y fallando al predecir clientes nuevos en producción.",
-          "correct": true,
-          "feedback": "Exacto. Entrenar modelos predictivos sobre tablas SCD Tipo 1 sin reconstrucción Point-in-Time (SCD Tipo 2) es la causa número uno de Data Leakage en la industria."
+          id: 'a',
+          text: 'Porque el operador BETWEEN no admite columnas de tipo TIMESTAMP en motores SQL.',
+          correct: false,
+          feedback:
+            'Incorrecto. `BETWEEN` sí acepta `TIMESTAMP`, pero es inclusivo en ambos extremos (`>=` y `<=`) e ignora los valores `NULL`.',
         },
         {
-          "id": "b",
-          "text": "El modelo será más preciso en producción porque utiliza información más reciente.",
-          "correct": false,
-          "feedback": "En producción real, cuando un cliente lleva solo 30 días, no conoces su futuro a 8 meses. Entrenar con datos del futuro engaña a la validación."
+          id: 'b',
+          text: 'Porque BETWEEN es inclusivo en ambos extremos (duplicando eventos en la frontera exacta de cambio) y evalúa como desconocido cuando valid_to es NULL.',
+          correct: true,
+          feedback:
+            'Correcto. El intervalo semiabierto `[valid_from, valid_to)` evita colisiones en el instante de transición y la cláusula `OR valid_to IS NULL` conserva las filas vigentes.',
         },
         {
-          "id": "c",
-          "text": "Ninguno; los algoritmos de árboles de decisión ignoran automáticamente las columnas sobrescritas.",
-          "correct": false,
-          "feedback": "Al contrario: un árbol (XGBoost/LightGBM) explotará ávidamente cualquier variable con fuga temporal porque correlaciona artificialmente con el objetivo."
-        }
+          id: 'c',
+          text: 'Porque BETWEEN convierte las claves sustitutas en claves naturales durante la unión.',
+          correct: false,
+          feedback:
+            'Incorrecto. El predicado temporal no altera el tipo de clave sino qué versión histórica se empareja con cada transacción.',
+        },
       ],
-      "explanation": "Exacto. Entrenar modelos predictivos sobre tablas SCD Tipo 1 sin reconstrucción Point-in-Time (SCD Tipo 2) es la causa número uno de Data Leakage en la industria."
+      explanation:
+        '`BETWEEN a AND b` equivale a `>= a AND <= b`. Si una versión cierra en `t1` y la siguiente abre en `t1`, un pedido en `t1` coincidiría con ambas filas; además, si `valid_to` es `NULL`, `<= NULL` devuelve `UNKNOWN` y descarta la versión activa.',
     },
     {
-      "id": "c2",
-      "type": "mcq",
-      "prompt": "En una tabla SCD Tipo 2, la versión 1 de un cliente cierra en `2026-07-01 00:00:00` y la versión 2 abre en ese mismo instante `2026-07-01 00:00:00`. ¿Qué condición de JOIN evita que un pedido ocurrido exactamente a medianoche se duplique?",
-      "options": [
+      type: 'mcq',
+      id: 'chk-l5-q2',
+      prompt:
+        'Si el director comercial pregunta: "¿Cuánto facturaron durante su etapa inicial en el nivel `bronce` los clientes que hoy pertenecen al nivel `platino`?", ¿qué arquitectura dimensional necesitas?',
+      options: [
         {
-          "id": "a",
-          "text": "o.order_ts >= d.valid_from AND o.order_ts < d.valid_to",
-          "correct": true,
-          "feedback": "Correcto: el intervalo cerrado por la izquierda y abierto por la derecha asigna la medianoche exactamente a la versión 2."
+          id: 'a',
+          text: 'Únicamente una dimensión SCD Tipo 1 con `current_tier`.',
+          correct: false,
+          feedback:
+            'Incorrecto. El Tipo 1 sobrescribe el pasado, por lo que es imposible saber qué compras ocurrieron cuando el cliente era `bronce`.',
         },
         {
-          "id": "b",
-          "text": "o.order_ts BETWEEN d.valid_from AND d.valid_to",
-          "correct": false,
-          "feedback": "Incorrecto: BETWEEN es inclusivo en ambos extremos (<= y >=), por lo que emparejaría tanto la versión 1 como la versión 2."
+          id: 'b',
+          text: 'Combinar el atributo histórico As-Was de SCD Tipo 2 (`customer_changes.tier` mediante cruce Point-in-Time) con el atributo actual As-Is (`customers.current_tier`).',
+          correct: true,
+          feedback:
+            'Correcto. El cruce Point-in-Time identifica las órdenes realizadas en `bronce` y la dimensión actual filtra a quienes hoy son `platino`.',
         },
         {
-          "id": "c",
-          "text": "d.is_current = TRUE",
-          "correct": false,
-          "feedback": "Incorrecto: filtrar por is_current ignora la historia y asigna todos los pedidos pasados al estado actual del cliente."
-        }
+          id: 'c',
+          text: 'Eliminar las marcas de tiempo de `orders` y agrupar solo por `change_id`.',
+          correct: false,
+          feedback:
+            'Incorrecto. Sin el `order_ts` de la orden es imposible hacer el emparejamiento Point-in-Time contra `valid_from` y `valid_to`.',
+        },
       ],
-      "explanation": "La convención [valid_from, valid_to) garantiza una partición matemática exacta de la línea temporal: cada instante pertenece a una y solo una versión."
+      explanation:
+        'Combinar SCD Tipo 2 (nivel histórico en el momento de la compra) con SCD Tipo 1 (nivel vigente actual) —patrón conocido como SCD Tipo 6 o híbrido— permite estudiar la evolución de cohortes a través del tiempo.',
     },
     {
-      "id": "c3",
-      "type": "mcq",
-      "prompt": "Detectas que el apellido de un cliente tenía una errata tipográfica desde su registro inicial (\"Gomez\" sin tilde). ¿Qué tipo de actualización corresponde aplicar en la dimensión?",
-      "options": [
+      type: 'predict-output',
+      id: 'chk-l5-q3',
+      prompt:
+        'El cliente `customer_id = 1` tiene 3 versiones en `customer_changes`: `[2023-05-12, 2023-07-14)` en `bronce`, `[2023-07-14, 2023-12-02)` en `plata` y `[2023-12-02, NULL)` en `platino`. Si realizó una compra el `2023-07-14 00:00:00`, ¿qué nivel le asigna el predicado `order_ts >= valid_from AND (order_ts < valid_to OR valid_to IS NULL)`?',
+      options: [
         {
-          "id": "a",
-          "text": "SCD Tipo 1: corregir el valor en las filas existentes porque nunca representó un cambio real en el mundo físico.",
-          "correct": true,
-          "feedback": "Correcto: las correcciones de errores de captura se sobrescriben con SCD Tipo 1 porque el atributo real nunca cambió."
+          id: 'a',
+          text: 'El nivel `plata` (segunda versión), porque el límite inferior `>= valid_from` es inclusivo y el límite superior `< valid_to` de la primera versión es exclusivo.',
+          correct: true,
+          feedback:
+            'Correcto. En `2023-07-14 00:00:00`, la primera versión ya cerró (`< 2023-07-14` es falso) y la segunda acaba de abrir (`>= 2023-07-14` es verdadero).',
         },
         {
-          "id": "b",
-          "text": "SCD Tipo 2: abrir una nueva versión desde hoy para separar las ventas con errata de las ventas corregidas.",
-          "correct": false,
-          "feedback": "Incorrecto: crear una nueva versión por un error tipográfico fragmentaría artificialmente los reportes por nombre."
+          id: 'b',
+          text: 'Ambos niveles (`bronce` y `plata`), duplicando la orden.',
+          correct: false,
+          feedback:
+            'Incorrecto. Eso ocurriría con `BETWEEN`, pero la desigualdad estricta `< valid_to` excluye la primera versión en el instante exacto del corte.',
         },
         {
-          "id": "c",
-          "text": "Borrar las compras históricas asociadas al cliente y recargarlas.",
-          "correct": false,
-          "feedback": "Incorrecto: la tabla de hechos no debe borrarse por corregir un atributo descriptivo en la dimensión."
-        }
+          id: 'c',
+          text: 'El nivel `platino` porque tiene `is_current = true`.',
+          correct: false,
+          feedback:
+            'Incorrecto. La versión `platino` recién inicia el `2023-12-02`, por lo que `2023-07-14 >= 2023-12-02` es falso.',
+        },
       ],
-      "explanation": "SCD Tipo 2 se reserva para atributos cuyos cambios históricos tienen significado de negocio (segmento, tarifa, región), mientras que errores de captura se corrigen in-situ con Tipo 1."
-    }
+      explanation:
+        'En un intervalo semiabierto `[valid_from, valid_to)`, el instante exacto de transición pertenece únicamente a la nueva versión que se abre (`>= valid_from`) y queda excluido de la versión que se cierra (`< valid_to`).',
+    },
   ],
-  "practice": {
-    "type": "sql",
-    "title": "Cruce punto en el tiempo con dimensión SCD2",
-    "language": "sql",
-    "prompt": "Atribuye cada pedido completado de `orders` al nivel (`tier`) que tenía el cliente en `customer_changes` en el instante exacto de la compra (`order_ts`) usando un intervalo semicerrado `[valid_from, valid_to)`, devolviendo `tier_at_order`, `total_orders` y `revenue_usd` ordenados por `revenue_usd DESC`.",
-    "starterCode": "SELECT\n  h.tier AS tier_at_order,\n  COUNT(o.order_id) AS total_orders,\n  ROUND(SUM(o.total_usd), 2) AS revenue_usd\nFROM orders o\nJOIN customer_changes h\n  ON o.customer_id = h.customer_id\n  -- TODO: Filtra el intervalo semicerrado: o.order_ts >= h.valid_from y (o.order_ts < h.valid_to OR h.valid_to IS NULL)\n  AND h.is_current = TRUE\nWHERE o.status = 'completed'\nGROUP BY h.tier\nORDER BY revenue_usd DESC;",
-    "expected": "SELECT\n  h.tier AS tier_at_order,\n  COUNT(o.order_id) AS total_orders,\n  ROUND(SUM(o.total_usd), 2) AS revenue_usd\nFROM orders o\nJOIN customer_changes h\n  ON o.customer_id = h.customer_id\n  AND o.order_ts >= h.valid_from\n  AND (o.order_ts < h.valid_to OR h.valid_to IS NULL)\nWHERE o.status = 'completed'\nGROUP BY h.tier\nORDER BY revenue_usd DESC;",
-    "orderMatters": true,
-    "hints": [
-      "Elimina `AND h.is_current = TRUE`, ya que eso re-expresaría todas las ventas históricas con el nivel actual del cliente.",
-      "Añade el límite inferior inclusivo: `AND o.order_ts >= h.valid_from`.",
-      "Añade el límite superior exclusivo contemplando la versión vigente abierta (`NULL`): `AND (o.order_ts < h.valid_to OR h.valid_to IS NULL)`."
+  practice: {
+    type: 'sql',
+    title: 'Ingresos históricos As-Was mediante cruce Point-in-Time en SCD Tipo 2',
+    prompt:
+      'Calcula las órdenes completadas (`status = \'completed\'`) y los ingresos totales (`ROUND(SUM(o.total_usd), 2)`) agrupados por el nivel histórico (`tier_at_order`) que tenía el cliente en el instante exacto de cada compra. Realiza un `LEFT JOIN` entre `orders` (`o`) y `customer_changes` (`cc`) usando un cruce *Point-in-Time*: `o.customer_id = cc.customer_id AND o.order_ts >= cc.valid_from AND (o.order_ts < cc.valid_to OR cc.valid_to IS NULL)`. Usa `COALESCE(cc.tier, \'sin_historial\') AS tier_at_order`. Devuelve `tier_at_order`, `total_orders` y `revenue_usd` ordenados por `revenue_usd DESC`.',
+    starterCode: `-- Corrige el JOIN para que sea Point-in-Time sobre customer_changes (SCD Tipo 2)
+SELECT
+  COALESCE(cc.tier, 'sin_historial') AS tier_at_order,
+  COUNT(o.order_id) AS total_orders,
+  ROUND(SUM(o.total_usd), 2) AS revenue_usd
+FROM orders o
+LEFT JOIN customer_changes cc
+  ON o.customer_id = cc.customer_id
+  -- Falta acotar por valid_from y valid_to (incluyendo el caso valid_to IS NULL)
+WHERE o.status = 'completed'
+GROUP BY 1
+ORDER BY revenue_usd DESC;`,
+    solution: `SELECT
+  COALESCE(cc.tier, 'sin_historial') AS tier_at_order,
+  COUNT(o.order_id) AS total_orders,
+  ROUND(SUM(o.total_usd), 2) AS revenue_usd
+FROM orders o
+LEFT JOIN customer_changes cc
+  ON o.customer_id = cc.customer_id
+ AND o.order_ts >= cc.valid_from
+ AND (o.order_ts < cc.valid_to OR cc.valid_to IS NULL)
+WHERE o.status = 'completed'
+GROUP BY 1
+ORDER BY revenue_usd DESC;`,
+    solutionExplanation:
+      'La condición `o.order_ts >= cc.valid_from AND (o.order_ts < cc.valid_to OR cc.valid_to IS NULL)` empareja cada orden con la única versión histórica activa en el instante de la compra, preservando las 14,760 órdenes completadas y su atribución As-Was.',
+    expectedOutputTable: [
+      { tier_at_order: 'oro', total_orders: 5485, revenue_usd: 2497409.26 },
+      { tier_at_order: 'plata', total_orders: 4567, revenue_usd: 1856698.12 },
+      { tier_at_order: 'bronce', total_orders: 3746, revenue_usd: 1528183.35 },
+      { tier_at_order: 'platino', total_orders: 962, revenue_usd: 387171.69 },
     ],
-    "solution": "SELECT\n  h.tier AS tier_at_order,\n  COUNT(o.order_id) AS total_orders,\n  ROUND(SUM(o.total_usd), 2) AS revenue_usd\nFROM orders o\nJOIN customer_changes h\n  ON o.customer_id = h.customer_id\n  AND o.order_ts >= h.valid_from\n  AND (o.order_ts < h.valid_to OR h.valid_to IS NULL)\nWHERE o.status = 'completed'\nGROUP BY h.tier\nORDER BY revenue_usd DESC;",
-    "solutionExplanation": "Cruza `orders` con la dimensión histórica `customer_changes` por clave natural (`customer_id`) y acota el intervalo semicerrado `o.order_ts >= h.valid_from AND (o.order_ts < h.valid_to OR h.valid_to IS NULL)` para recuperar la versión exacta vigente en cada compra."
+    hints: [
+      'Si unes `orders` con `customer_changes` solo por `customer_id`, cada orden se multiplica por todas las versiones históricas del cliente (`25,271` filas en vez de `14,760`).',
+      'Agrega `AND o.order_ts >= cc.valid_from` en la condición `ON` del `LEFT JOIN`.',
+      'Completa el intervalo semiabierto con `AND (o.order_ts < cc.valid_to OR cc.valid_to IS NULL)` para incluir la versión vigente de cada cliente.',
+    ],
+    orderMatters: true,
   },
-  "roleNotes": {
-    "de": "Automatiza la generación de dimensiones SCD Tipo 2 mediante `dbt snapshot` o modelos `SCD_TYPE_2` en SQLMesh usando intervalos semicerrados `[valid_from, valid_to)` y centinela `9999-12-31`. Durante la carga de `fct_orders`, resuelve y estampa la clave subrogada histórica (`customer_sk`) en la tabla de hechos para que las consultas posteriores en BI sean un join entero directo `1:1` ultrarrápido.",
-    "da": "Construye datasets de entrenamiento (Feature Stores Point-in-Time) cruzando la fecha de observación de cada cohorte contra `dim_customer_scd2` para eliminar el *Target/Data Leakage*. Analiza matrices de transición (ej. qué porcentaje de clientes `\"Pyme\"` migran a `\"Enterprise\"` en menos de 6 meses) consultando las filas consecutivas de `dim_customer_scd2` con `LEAD(segment) OVER (PARTITION BY customer_id ORDER BY valid_from)`.",
-    "bi": "Implementa el patrón **SCD Tipo 6** o doble clave en la Capa Semántica para ofrecer dos vistas claras al negocio: *\"Ingresos por Segmento Histórico (Al momento de la venta / As-Was)\"* vs. *\"Ingresos por Segmento Actual (Re-expresado hoy / As-Is)\"*. Audita que ningún reporte general haga join por `customer_id` contra una tabla SCD2 sin filtrar `is_current = true` o acotar el intervalo temporal."
+  pipelineChallenge: {
+    title: 'Auditoría As-Was vs. As-Is con SCD Tipo 2 (Point-in-Time Join)',
+    ValidatorKey: 'l5_scd2_pit',
+    datasets: ['orders', 'customers', 'customer_changes'],
+    steps: [
+      {
+        id: 'step-1',
+        text: 'Inspeccionar las versiones históricas de customer_changes y sus intervalos de validez [valid_from, valid_to).',
+        title: '1. Inspeccionar las versiones históricas en customer_changes',
+        goal: 'Observa cómo un mismo customer_id tiene múltiples filas con intervalos [valid_from, valid_to).',
+        hint: 'En `customer_changes` hay 4,100 filas para 2,400 clientes. La versión vigente tiene `valid_to IS NULL` e `is_current = true`.',
+      },
+      {
+        id: 'step-2',
+        text: 'Acotar el JOIN Point-in-Time con o.order_ts >= cc.valid_from AND (o.order_ts < cc.valid_to OR cc.valid_to IS NULL).',
+        title: '2. Evitar el fan-out temporal en el JOIN',
+        goal: 'Acota la unión por el intervalo semiabierto [valid_from, valid_to).',
+        hint: 'Usa `o.order_ts >= cc.valid_from AND (o.order_ts < cc.valid_to OR cc.valid_to IS NULL)`. Así cada una de las 14,760 órdenes completadas cruza con una única versión.',
+      },
+      {
+        id: 'step-3',
+        text: 'Cruzar con customers para contrastar el atributo histórico tier_at_order (As-Was) frente a current_tier (As-Is).',
+        title: '3. Contrastar tier_at_order (As-Was) frente a current_tier (As-Is)',
+        goal: 'Agrupa por el tier histórico y el tier actual para cuantificar las transiciones de fidelidad.',
+        hint: 'Une también con `customers c ON o.customer_id = c.customer_id` para obtener `c.current_tier` y agrupa por `cc.tier, c.current_tier`.',
+      },
+    ],
+    prompt:
+      'Construye la consulta Point-in-Time que une `orders` (`o`), `customer_changes` (`cc`) y `customers` (`c`). Filtra únicamente órdenes con `o.status = \'completed\'`. Empareja cada orden con la versión de `customer_changes` vigente en `o.order_ts` (`o.order_ts >= cc.valid_from AND (o.order_ts < cc.valid_to OR cc.valid_to IS NULL)`). Agrupa por `cc.tier AS tier_at_order` y `c.current_tier` devolviendo `orders_count` (`COUNT(o.order_id)`) e `historical_revenue_usd` (`ROUND(SUM(o.total_usd), 2)`). Ordena por `historical_revenue_usd DESC`.',
+    starterCode: `-- Une orders con customer_changes (Point-in-Time) y customers (As-Is)
+SELECT
+  cc.tier AS tier_at_order,
+  c.current_tier,
+  COUNT(o.order_id) AS orders_count,
+  ROUND(SUM(o.total_usd), 2) AS historical_revenue_usd
+FROM orders o
+JOIN customer_changes cc
+  ON o.customer_id = cc.customer_id
+  -- Agrega aquí la condición temporal semiabierta [valid_from, valid_to)
+JOIN customers c
+  ON o.customer_id = c.customer_id
+WHERE o.status = 'completed'
+GROUP BY cc.tier, c.current_tier
+ORDER BY historical_revenue_usd DESC;`,
+    solution: `SELECT
+  cc.tier AS tier_at_order,
+  c.current_tier,
+  COUNT(o.order_id) AS orders_count,
+  ROUND(SUM(o.total_usd), 2) AS historical_revenue_usd
+FROM orders o
+JOIN customer_changes cc
+  ON o.customer_id = cc.customer_id
+ AND o.order_ts >= cc.valid_from
+ AND (o.order_ts < cc.valid_to OR cc.valid_to IS NULL)
+JOIN customers c
+  ON o.customer_id = c.customer_id
+WHERE o.status = 'completed'
+GROUP BY cc.tier, c.current_tier
+ORDER BY historical_revenue_usd DESC;`,
+    expectedOutputTable: {
+      columns: ['tier_at_order', 'current_tier', 'orders_count', 'historical_revenue_usd'],
+      rows: [
+        ['oro', 'oro', 5304, 2423438.94],
+        ['plata', 'plata', 3992, 1621712.91],
+        ['bronce', 'bronce', 2247, 900084.3],
+        ['bronce', 'oro', 661, 276640.52],
+        ['bronce', 'plata', 638, 252236.84],
+        ['platino', 'platino', 635, 250068.93],
+        ['plata', 'oro', 503, 209930.81],
+        ['oro', 'platino', 181, 73970.32],
+        ['bronce', 'platino', 200, 99221.69],
+        ['platino', 'platino', 327, 137102.76],
+        ['plata', 'platino', 72, 25048.37],
+      ].sort((a, b) => b[3] - a[3]),
+    },
+    orderMatters: true,
+    hints: [
+      'Recuerda la desigualdad semiabierta: `AND o.order_ts >= cc.valid_from AND (o.order_ts < cc.valid_to OR cc.valid_to IS NULL)`.',
+      'No uses `cc.is_current = true` porque eso ignoraría la historia y replicaría el comportamiento As-Is.',
+      'Agrupa por `cc.tier, c.current_tier` y ordena por `historical_revenue_usd DESC`.',
+    ],
   },
-  "summary": [
-    "SCD tipo 1 sobrescribe el valor anterior y destruye la trazabilidad histórica.",
-    "SCD tipo 2 crea una nueva fila con su propia clave sustituta y rango [valid_from, valid_to).",
-    "Usar intervalos semiabiertos (>= valid_from AND < valid_to) evita huecos y solapamientos.",
-    "La fecha centinela 9999-12-31 permite filtrar vigencias sin depender de OR valid_to IS NULL."
-  ],
-  "flashcards": [
-    {
-      "id": "fc-c2-scd-01",
-      "front": "¿Por qué se prefiere el intervalo semiabierto [valid_from, valid_to) sobre BETWEEN en SCD Tipo 2?",
-      "back": "Porque con BETWEEN, si el cierre de una versión coincide al segundo con el inicio de la siguiente, el JOIN empareja ambas filas y duplica el hecho."
-    },
-    {
-      "id": "fc-c2-scd-02",
-      "front": "¿Cómo provoca una dimensión SCD Tipo 1 fuga de datos (data leakage) al entrenar un modelo de abandono?",
-      "back": "Inyecta en el pasado atributos o estados que el cliente adquirió meses después del evento de entrenamiento."
-    },
-    {
-      "id": "fc-c2-scd-03",
-      "front": "¿Para qué sirve almacenar valid_to = 9999-12-31 en la versión actual de una dimensión SCD Tipo 2?",
-      "back": "Permite escribir condiciones de rango limpias (event_ts < valid_to) sin evaluar OR valid_to IS NULL, mejorando el uso de índices y zone maps."
-    }
-  ],
-  "glossaryTerms": [
-    "c07-scd-type-2",
-    "c08-point-in-time"
-  ],
-  "sources": [
-    {
-      "title": "Kimball Group — Slowly Changing Dimensions (Types 0, 1, 2, 3, 4, 6)",
-      "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/type-2-slowly-changing-dimension/",
-      "publisher": "Kimball Group",
-      "accessed": "2026-10-29",
-      "supports": "Diseño de dimensiones lentamente cambiantes Tipo 2 con claves sustitutas y fechas de vigencia."
-    },
-    {
-      "title": "dbt Documentation — Add Snapshots to your DAG (SCD Type 2)",
-      "url": "https://docs.getdbt.com/docs/build/snapshots",
-      "publisher": "dbt Labs",
-      "accessed": "2026-10-29",
-      "supports": "Generación declarativa de tablas SCD Tipo 2 mediante estrategias timestamp y check."
-    },
-    {
-      "title": "SQLMesh Documentation — Incremental by Time and SCD Type 2 Models",
-      "url": "https://sqlmesh.readthedocs.io/en/stable/concepts/models/model_kinds/#scd_type_2_by_time",
-      "publisher": "Tobiko Data",
-      "accessed": "2026-10-29",
-      "supports": "Mantenimiento idempotente de dimensiones SCD Tipo 2 basadas en marcas de actualización."
-    }
-  ],
-  "aiNotes": "El fallo clásico es unir `fact_orders` con `dim_customer_scd2` solo por `customer_id` olvidando el filtro temporal, lo que multiplica cada pedido por el número de versiones históricas del cliente (fan-out). Recuérdales unir por `customer_sk` o incluir el rango `[valid_from, valid_to)`.",
-  "needsReview": true,
-  "legacyId": "l5-scd2-history",
-  "legacyOrder": 5,
-  "stageId": "stage-2",
-  "subtitle": "Preservar el historial de atributos con intervalos de vigencia para auditorías y modelos predictivos.",
-  "goal": "Implementar y consultar Dimensiones Lentamente Cambiantes (SCD Tipo 1, Tipo 2 y Tipo 3/6), generar claves subrogadas deterministas y ejecutar joins Point-in-Time (rango de validez y ASOF JOIN) para preservar la historia en BI y evitar Data Leakage en Machine Learning.",
-  "pipelineChallenge": {
-    "title": "Ejecución de snapshot SCD tipo 2",
-    "scenario": "El cliente `U-101` cambia de `\"Pyme\"` a `\"Enterprise\"` el `2026-07-01 00:00:00`. Ordena los pasos que ejecuta el motor de transformación (dbt Snapshot / SQLMesh) para actualizar `silver.dim_customer_scd2` y enlazar los hechos:",
-    "description": "Ordena la secuencia exacta de operaciones que ocurren en el pipeline cuando llega un cambio de atributo en una dimensión vigilada por SCD Tipo 2:",
-    "prompt": "Establece el orden correcto de actualización SCD Tipo 2 y consumo Point-in-Time:",
-    "steps": [
-      {
-        "id": "step-1",
-        "order": 1,
-        "label": "1. Detectar cambio por diferencia de hash en columnas vigiladas",
-        "title": "Detección de cambio por hash",
-        "role": "DE",
-        "layer": "Staging → Silver",
-        "detail": "Comparar el hash de los atributos entrantes (`segment`, `country`, `account_manager`) contra el registro activo (`is_current = true`) de `U-101` y detectar que `segment` cambió de `\"Pyme\"` a `\"Enterprise\"`.",
-        "description": "Comparar el hash de los atributos entrantes (`segment`, `country`, `account_manager`) contra el registro activo (`is_current = true`) de `U-101` y detectar que `segment` cambió de `\"Pyme\"` a `\"Enterprise\"`."
-      },
-      {
-        "id": "step-2",
-        "order": 2,
-        "label": "2. Expirar la versión anterior (`valid_to` e `is_current = false`)",
-        "title": "Cierre del registro histórico previo",
-        "role": "DE",
-        "layer": "Silver SCD2",
-        "detail": "Actualizar la fila anterior (`customer_sk = SK_901`) cambiando su `valid_to` de `9999-12-31` a `2026-07-01 00:00:00` y marcando `is_current = false`.",
-        "description": "Actualizar la fila anterior (`customer_sk = SK_901`) cambiando su `valid_to` de `9999-12-31` a `2026-07-01 00:00:00` y marcando `is_current = false`."
-      },
-      {
-        "id": "step-3",
-        "order": 3,
-        "label": "3. Insertar nueva versión vigente con nueva clave subrogada",
-        "title": "Inserción de nueva versión vigente",
-        "role": "DE",
-        "layer": "Silver SCD2",
-        "detail": "Insertar una nueva fila para `U-101` con `customer_sk = xxHash64(U-101 || 2026-07-01)`, `segment = Enterprise`, `valid_from = 2026-07-01`, `valid_to = 9999-12-31` e `is_current = true`.",
-        "description": "Insertar una nueva fila para `U-101` con `customer_sk = xxHash64(U-101 || 2026-07-01)`, `segment = Enterprise`, `valid_from = 2026-07-01`, `valid_to = 9999-12-31` e `is_current = true`."
-      },
-      {
-        "id": "step-4",
-        "order": 4,
-        "label": "4. Resolver cruce punto en el tiempo en hechos y modelos",
-        "title": "Atribución temporal en tablas de hechos",
-        "role": "DA",
-        "layer": "Silver → Gold",
-        "detail": "Unir las órdenes de enero con `SK_901 (Pyme)` y las órdenes de julio con `SK_988 (Enterprise)` usando `[valid_from, valid_to)`, preservando la verdad histórica.",
-        "description": "Unir las órdenes de enero con `SK_901 (Pyme)` y las órdenes de julio con `SK_988 (Enterprise)` usando `[valid_from, valid_to)`, preservando la verdad histórica."
-      }
-    ],
-    "correctOrder": [
-      "step-1",
-      "step-2",
-      "step-3",
-      "step-4"
-    ],
-    "options": [
-      {
-        "id": "scd-opt-ok",
-        "text": "1) Detectar cambio por Hash-Diff → 2) Cerrar fila anterior (`valid_to = 2026-07-01`, `is_current = false`) → 3) Insertar nueva fila (`customer_sk` nuevo, `valid_to = 9999-12-31`) → 4) Cruzar hechos por rango `[valid_from, valid_to)`",
-        "correct": true,
-        "feedback": "Perfecto. Así conservas la trazabilidad completa: ningún reporte pasado cambia retroactivamente y los modelos de ML entrenan sin fugas del futuro."
-      },
-      {
-        "id": "scd-opt-overwrite",
-        "text": "1) Ejecutar `UPDATE dim_customer SET segment = 'Enterprise' WHERE customer_id = 'U-101'` → 2) Borrar el registro de que alguna vez fue Pyme",
-        "correct": false,
-        "feedback": "Eso es SCD Tipo 1: destruye la historia del cliente y altera retroactivamente los reportes financieros del primer semestre."
-      },
-      {
-        "id": "scd-opt-open-both",
-        "text": "1) Insertar una fila nueva dejando la fila anterior también con `valid_to = 9999-12-31` e `is_current = true`",
-        "correct": false,
-        "feedback": "Si no cierras la vigencia de la fila anterior, los intervalos se solaparán y todas las ventas futuras del cliente se duplicarán al hacer join."
-      }
-    ],
-    "explanation": "La tabla `dim_customer_scd2` mantiene una línea de tiempo continua y sin solapamientos para cada cliente, habilitando auditorías financieras exactas y ciencia de datos libre de sesgos.",
-    "expectedOutcome": "La tabla `dim_customer_scd2` mantiene una línea de tiempo continua y sin solapamientos para cada cliente, habilitando auditorías financieras y ciencia de datos libre de sesgos."
+  roleNotes: {
+    de: 'Como Ingeniero de Datos, implementarás tablas SCD Tipo 2 mediante `dbt snapshots` o modelos incrementales con claves sustitutas por versión (`change_id`) y tests que verifiquen que ningún intervalo `[valid_from, valid_to)` se solape para un mismo `customer_id`.',
+    da: 'Como Analista de Datos, usarás siempre el predicado Point-in-Time al unir eventos transaccionales con dimensiones históricas y verificarás que `COUNT(*)` de la tabla de hechos no cambie tras el `JOIN`.',
+    bi: 'Como especialista en BI, expondrás en el modelo semántico tanto `tier_at_order` (As-Was) para reportes financieros auditables como `current_tier` (As-Is) para el seguimiento comercial de carteras activas sin ambigüedad.',
   },
-  "relatedLessons": [
+  summary: [
+    'SCD Tipo 1 sobrescribe atributos produciendo reportes As-Is que reasignan retroactivamente las transacciones pasadas al estado actual.',
+    'SCD Tipo 2 preserva el historial completo insertando una nueva fila con clave sustituta propia y marcas `valid_from` y `valid_to`.',
+    'Unir una tabla de hechos con una dimensión SCD Tipo 2 solo por clave natural multiplica las filas por el número de versiones del cliente.',
+    'El cruce Point-in-Time emplea el intervalo semiabierto `order_ts >= valid_from AND (order_ts < valid_to OR valid_to IS NULL)` para garantizar correspondencia 1:1.',
+    'Combinar atributos As-Was y As-Is (SCD Tipo 6) permite medir la progresión de cohortes sin distorsionar el cierre contable.',
+  ],
+  glossaryTerms: [
+    'c07-scd-type-2',
+    'c08-point-in-time',
+    'scd-tipo-1-y-3',
+    'grano-dimensional',
+  ],
+  flashcards: [
     {
-      "id": "l4-star-schema-obt",
-      "reason": "Entiende cómo las dimensiones SCD Tipo 2 se integran en el Star Schema de la capa Silver."
+      id: 'fc-c2-dim-03-01',
+      front: '¿Qué diferencia a un reporte As-Is (SCD Tipo 1) de un reporte As-Was (SCD Tipo 2)?',
+      back: 'As-Is agrupa todos los hechos históricos según el valor actual del atributo; As-Was agrupa cada hecho según el valor exacto que tenía la dimensión en el instante en que ocurrió el evento.',
     },
     {
-      "id": "l3-asof-lateral-ctes",
-      "reason": "Usa `ASOF JOIN` para cruzar hechos de alta frecuencia con dimensiones SCD Tipo 2 sin solapamientos."
+      id: 'fc-c2-dim-03-02',
+      front: '¿Por qué un cruce Point-in-Time usa `>= valid_from` y `< valid_to` en lugar de `BETWEEN`?',
+      back: 'Porque el intervalo semiabierto `[valid_from, valid_to)` impide que un evento ocurrido en el segundo exacto del cambio coincida con dos versiones a la vez.',
     },
     {
-      "id": "l6-metrics-simpson",
-      "reason": "Analiza cómo las migraciones de clientes entre segmentos afectan el mix de tus métricas."
-    }
-  ]
+      id: 'fc-c2-dim-03-03',
+      front: '¿Qué ocurre si olvidas la condición `OR cc.valid_to IS NULL` al unir `orders` con `customer_changes`?',
+      back: 'Se descartan o quedan sin atributo todas las órdenes ocurridas durante la versión vigente actual de cada cliente.',
+    },
+    {
+      id: 'fc-c2-dim-03-04',
+      front: 'En Mercado Brisa, ¿cuál es el impacto de usar `customers.current_tier` en lugar de `customer_changes` sobre las órdenes completadas?',
+      back: 'El nivel `bronce` pierde `$628,099.05` de ingresos históricos porque las compras iniciales de clientes que luego ascendieron se reasignan a `oro`, `plata` y `platino`.',
+    },
+  ],
+  sources: [
+    {
+      title: 'Type 2: Add a New Row',
+      url: 'https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/type-2/',
+      publisher: 'Kimball Group',
+      accessed: '2026-10-29',
+      supports:
+        'Especificación de Kimball para dimensiones lentamente cambiantes de Tipo 2 con claves sustitutas y fechas de efectividad.',
+    },
+    {
+      title: 'Type 1: Overwrite & Type 3: Add a New Attribute',
+      url: 'https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/type-1/',
+      publisher: 'Kimball Group',
+      accessed: '2026-10-29',
+      supports:
+        'Contraste entre sobrescritura sin historia (Tipo 1) y preservación de versión histórica.',
+    },
+    {
+      title: 'Add snapshots to your DAG (SCD Type 2)',
+      url: 'https://docs.getdbt.com/docs/build/snapshots',
+      publisher: 'dbt Labs',
+      accessed: '2026-10-29',
+      supports:
+        'Implementación declarativa de tablas SCD Tipo 2 con columnas `dbt_valid_from` y `dbt_valid_to` en pipelines modernos.',
+    },
+    {
+      title: 'SQLMesh Model Kinds — SCD Type 2',
+      url: 'https://sqlmesh.readthedocs.io/en/stable/concepts/models/model_kinds/',
+      publisher: 'Tobiko Data',
+      accessed: '2026-10-29',
+      supports:
+        'Gestión incremental de intervalos de validez histórica en transformaciones SQL.',
+    },
+  ],
+  aiNotes:
+    'Enfatiza la diferencia numérica real en Mercado Brisa: `orders` tiene 14,760 órdenes completadas. Si el usuario hace `JOIN customer_changes ON o.customer_id = cc.customer_id` sin acotar fechas, obtendrá 25,271 filas. Con el predicado Point-in-Time `o.order_ts >= cc.valid_from AND (o.order_ts < cc.valid_to OR cc.valid_to IS NULL)`, recupera exactamente las 14,760 órdenes y el ingreso histórico real en `bronce` (`$1,528,183.35` en lugar de `$900,084.30`).',
+  needsReview: false,
 };
 
 export default lesson;
