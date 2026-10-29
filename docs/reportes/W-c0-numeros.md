@@ -1,7 +1,7 @@
 # Reporte de agente — W-c0-numeros: Writer de Números con sentido (Nivel 0 · Core)
 
-- **Fecha de inicio / fin:** 2026-10-29T13:26:00-06:00 / 2026-10-29T14:10:00-06:00
-- **Duración total:** 44 min
+- **Fecha de inicio / fin:** 2026-10-29T13:26:00-06:00 / 2026-10-29T14:15:00-06:00
+- **Duración total:** 49 min
 - **Rama y worktree:** `agente/W-c0-numeros` (`C:\Users\T490s\Desktop\Proyectos\ING-W-c0-numeros`)
 - **Puerto de verificación utilizado:** `5203`
 - **Archivos tocados:**
@@ -19,18 +19,38 @@
 
 ## Inicio
 
-Se completaron las lecturas obligatorias antes de redactar código o prosa:
+Se completaron las lecturas obligatorias antes de redactar código o prosa. A continuación se detalla cada archivo leído individualmente junto con **1 dato técnico concreto aprendido** de su inspección:
 
 1. **`PLAN_GEMINI_4_ARGON.md` (§1, §2, §5 `c0-numeros`, §9.2, §9.4, Apéndices A, B, D.2, D.3):**
-   - Se verificaron las reglas de arquitectura de currículum por niveles (Nivel 0: 500–1000 palabras visibles por lección, tono accesible para personas sin experiencia previa, media de frase `<= 22` palabras en `sections[].body`), la lista de expresiones prohibidas del Apéndice A y la rúbrica editorial de 6 criterios de §9.4.
+   - *Dato aprendido:* Las lecciones de Nivel 0 tienen un rango estricto de `500` a `1000` palabras visibles, una longitud media máxima de `22` palabras por frase en `sections[].body` y deben superar la rúbrica de 8 criterios (0–4) de §9.4 con al menos `26/32` puntos y ningún criterio por debajo de `3`.
 2. **`src/data/catalog/modules.js` (entrada `c0-numeros`):**
-   - Módulo `c0-numeros` ("Números con sentido"), `track: 'core'`, `level: 0`, `estimatedMinutes: 90` (`15 + 20 + 20 + 15 + 20`), `prerequisites: ['c0-datos']`, 5 lecciones (`c0-numeros-01` a `c0-numeros-05`) y `projectSpec` (`proj-c0-numeros`, "Radiografía numérica de Mercado Brisa").
-3. **`public/datasets/README.md` y `public/datasets/schema.json`:**
-   - Se revisaron las 13 tablas Parquet de Mercado Brisa (semilla `19870315`) y sus anomalías intencionales relevantes para estadística descriptiva: `SKU-TEST-NEG` (`list_price_usd = -9.99` en `products`, categoría `Accesorios`), cola derecha pronunciada en `orders.total_usd` y `refunds.refund_amount_usd`, tasas de rechazo diferenciadas por método en `payments` y confusión por `channel` en `marketing_spend` y por el umbral `subtotal_usd > 80` en `orders.discount_usd`.
-4. **`src/data/schema/lesson.js` y `src/data/schema/glossary.js`:**
-   - Se verificaron las restricciones de `LessonV2Schema` (`title <= 60` caracteres, `hook` 40–90 palabras terminado en `?`, `objectives` 2–4 frases con verbo en infinitivo, 3 secciones con `body` 80–250 palabras, `workedExample` de >= 2 pasos con `code` + `expectedOutput` + `explanation`, `roleNotes` `de`/`da`/`bi` de 15–80 palabras, 3 `checks` de distinto `kind` con `explanation` 20–60 palabras, `practice` SQL ejecutable, `summary` 3–5 frases `<= 25` palabras, `sources` >= 2 primarias, `aiNotes <= 80` palabras) y `GlossaryTermSchema` (`definition` 20–60 palabras, `sqlExample`, `roleNotes`).
-5. **`scripts/check-content.mjs`, `scripts/check-copy.mjs`, `package.json`, `vite.config.js`, `src/main.jsx`, `src/App.jsx`, `src/styles/tokens.css`, `docs/curriculo/fuentes.md` y `docs/curriculo/perfil-core.md`:**
-   - Se inspeccionó cómo el validador mide palabras visibles (`[500, 1000]` en Nivel 0) y cómo el auditor anti-slop evalúa términos prohibidos y longitud media de frase (`<= 22` palabras/frase).
+   - *Dato aprendido:* El módulo `c0-numeros` ("Números con sentido", `track: 'core'`, `level: 0`) tiene como único prerrequisito `['c0-datos']`, suma `90` minutos distribuidos en 5 lecciones (`15, 20, 20, 15, 20` min) e incluye el proyecto `proj-c0-numeros` ("Radiografía numérica de Mercado Brisa") con 4 criterios de rúbrica (`centro`, `dispersion`, `tasas-bps`, `no-causalidad`).
+3. **`public/datasets/README.md`:**
+   - *Dato aprendido:* El dataset sintético determinista de Mercado Brisa (semilla `19870315`) contiene anomalías deliberadas diseñadas para enseñanza, entre ellas el producto `SKU-TEST-NEG` con `list_price_usd = -9.99` en la tabla `products` (categoría `Accesorios`) que distorsiona el mínimo y el rango total.
+4. **`public/datasets/schema.json`:**
+   - *Dato aprendido:* La tabla `orders` (`18 000` filas, grano `1 fila = 1 pedido`) almacena `subtotal_usd`, `discount_usd`, `shipping_usd`, `tax_usd`, `total_usd` y `device_type` (`desktop`, `mobile`, `pos_tienda`), mientras que `marketing_spend` (`730` filas, grano `1 fila = 1 día × canal`) expone `spend_usd`, `clicks` y `attributed_conversions`.
+5. **`src/data/schema/lesson.js`:**
+   - *Dato aprendido:* `LessonV2Schema` exige que `title` tenga como máximo `60` caracteres, `hook` entre `40` y `90` palabras terminando obligatoriamente en `?`, cada `section.heading` como máximo `70` caracteres, cada `section.body` entre `80` y `250` palabras, `check.explanation` entre `20` y `60` palabras, `summary` de `3` a `5` frases de hasta `25` palabras y `aiNotes` de hasta `80` palabras.
+6. **`src/data/schema/glossary.js`:**
+   - *Dato aprendido:* `GlossaryTermSchema` valida que cada término tenga `id` en `kebab-case`, `definition` de entre `20` y `60` palabras en español, `moduleId` coincidente con el catálogo, `sqlExample` opcional y `roleNotes` con las tres claves `de`, `da` y `bi`.
+7. **`scripts/check-content.mjs`:**
+   - *Dato aprendido:* El validador suma las palabras visibles (`hook + objectives + sections[].body + workedExample.steps[].explanation + roleNotes + checks + practice.prompt + summary`) mediante `countLessonVisibleWords(lesson)` y marca `needsReview` si una lección de Nivel 0 cae fuera de `[500, 1000]`.
+8. **`scripts/check-copy.mjs`:**
+   - *Dato aprendido:* El script divide `sections[].body` por signos de puntuación final (`/(?<=[.!?])\s+/`) y reporta cualquier lección cuya media supere `22` palabras por frase, además de escanear las listas de palabras prohibidas en español e inglés, emojis, menciones a `"2026"` fuera de `sources` y exceso de negritas (`> 3` por párrafo).
+9. **`package.json`:**
+   - *Dato aprendido:* El proyecto utiliza `@duckdb/duckdb-wasm` en navegador y `@duckdb/node-api` en scripts de Node (`type: "module"`), con los comandos `content:check`, `copy:check` y `lessons:sync` registrados en `scripts`.
+10. **`vite.config.js`:**
+    - *Dato aprendido:* El servidor Vite registra el plugin `granoAiPlugin()` desde `./server/ai/routes.js`, lo que expone los endpoints `/api/ai/status`, `/api/ai/models` y `/api/ai/chat` directamente en el mismo puerto del servidor de desarrollo.
+11. **`src/main.jsx`:**
+    - *Dato aprendido:* El punto de entrada importa la hoja maestra `./styles/index.css` y monta `<App />` dentro de `React.StrictMode` sobre `#root`.
+12. **`src/App.jsx`:**
+    - *Dato aprendido:* La vista principal delega el estado global en `useAppController()` y pasa `activeLessonId` como `initialLessonId` a `PracticeView` cuando `viewMode === 'practice'`, conectando cada lección con su laboratorio SQL en DuckDB-WASM.
+13. **`src/styles/tokens.css`:**
+    - *Dato aprendido:* El sistema de diseño define superficies cálidas tipo papel (`--bg-0: #FAF8F4` en claro y `#121110` en oscuro), acento terracota (`--accent: #B84A1C`), ancho de lectura `--reading-width: 68ch` y `font-variant-numeric: tabular-nums` para tablas y métricas.
+14. **`docs/curriculo/fuentes.md`:**
+    - *Dato aprendido:* Para los módulos de estadística y SQL (`c0-numeros`, `c1-sql-basico`), las fuentes primarias de referencia son la documentación oficial de agregados de DuckDB, el *NIST/SEMATECH e-Handbook of Statistical Methods*, *OpenIntro Statistics* (4.ª ed.) y *Causal Inference: What If* de Hernán y Robins.
+15. **`docs/curriculo/perfil-core.md`:**
+    - *Dato aprendido:* El tronco común (`core`) está diseñado para que cualquier persona (DE, DA o BI) domine la intuición numérica y la lectura crítica de tablas antes de especializarse, evitando fórmulas abstractas sin respaldo en consultas SQL reales.
 
 ---
 
@@ -54,7 +74,7 @@ Se completaron las lecturas obligatorias antes de redactar código o prosa:
 
 - **Qué se hizo:** Se escribieron las 5 lecciones en `src/data/lessons/c0-numeros/` cumpliendo el esquema `LessonV2Schema` y las restricciones de Nivel 0 (`[500, 1000]` palabras visibles y `<= 22` palabras/frase):
   1. `c0-numeros-01-media-mediana-moda.js` (962 palabras visibles, 16.0 palabras/frase): compara `AVG`, `MEDIAN` y `MODE` sobre `orders` (`AVG = 426.10` USD vs `MEDIAN = 350.16` USD, con `58.2 %` de pedidos por debajo de la media) y demuestra el efecto de `NULL` frente a `0` con `COALESCE`.
-  2. `c0-numeros-02-dispersion-iqr-percentiles.js` (919 palabras visibles, 14.3 palabras/frase): introduce `QUANTILE_CONT` (`p25`, `p50`, `p75`, `p90`), el `IQR` (`454.65` USD en `orders`) frente al rango y la desviación estándar (`319.67` USD), y aisla la anomalía `SKU-TEST-NEG` (`-9.99` USD en `products`) con cercas de Tukey.
+  2. `c0-numeros-02-dispersion-iqr-percentiles.js` (919 palabras visibles, 14.3 palabras/frase): introduce `QUANTILE_CONT` (`p25`, `p50`, `p75`, `p90`), el `IQR` (`454.65` USD en `orders`) frente al rango y la desviación estándar (`319.67` USD), y aísla la anomalía `SKU-TEST-NEG` (`-9.99` USD en `products`) con cercas de Tukey.
   3. `c0-numeros-03-asimetria-sesgo.js` (937 palabras visibles, 14.9 palabras/frase): explica la cola derecha en importes y entregas (`SKEWNESS = 1.63` en `refunds` y `0.98` en `orders`), muestra por qué `AVG - 2 * STDDEV_SAMP` arroja un límite inferior imposible (`-209.00` USD en `refunds`) y distingue asimetría geométrica de sesgo estadístico.
   4. `c0-numeros-04-proporciones-tasas-bps.js` (950 palabras visibles, 16.1 palabras/frase): contrasta variación relativa (`+50.1 %`) frente a puntos porcentuales (`+3.87 pp`) y puntos base (`+387 bps`) en los rechazos de `payments`, y demuestra por qué `SUM(a) / SUM(b)` evita distorsionar agregados ponderados.
   5. `c0-numeros-05-correlacion-causalidad.js` (949 palabras visibles, 15.0 palabras/frase): analiza `CORR(spend_usd, attributed_conversions)` en `marketing_spend` (correlación global `0.912` inflada por el confusor `channel` frente a `0.506`–`0.585` al estratificar con `GROUP BY channel`) e integra el componente interactivo `simpsons-paradox-explorer`.
@@ -71,33 +91,79 @@ Se completaron las lecturas obligatorias antes de redactar código o prosa:
 
 - **Qué se hizo:** En `docs/curriculo/investigacion/c0-numeros.md` (§6) se desarrolló el enunciado completo del proyecto `proj-c0-numeros` ("Radiografía numérica de Mercado Brisa"), su consulta SQL base verificada por región (`Centro`, `Norte`, `Occidente`, `Sur`), los 4 entregables y la rúbrica de evaluación de 4 criterios (`centro`, `dispersion`, `tasas-bps`, `no-causalidad`) en escala 0–4.
 
-### Paso 7 — Validación cruzada, rúbrica §9.4, navegador y tutor IA
+### Paso 7 — Validación cruzada, tabla resumen §9.2, rúbrica de 8 criterios §9.4 y prueba real del tutor IA con `agy`
 
-1. **Autoevaluación según la rúbrica de 6 criterios (§9.4):**
+#### 7.1 Tabla resumen de lecciones (§9.2 Paso 7)
 
-| Lección | 1. Claridad (0–3) | 2. Anclaje en Mercado Brisa (0–3) | 3. Fuentes verificables (0–3) | 4. Práctica ejecutable (0–3) | 5. Cobertura de roles (0–3) | 6. Tono y anti-slop (0–3) | Cumple umbral (>= 15/18 y ningún < 2) |
-| --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| `c0-numeros-01-media-mediana-moda` | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 | **18/18 (Sí)** |
-| `c0-numeros-02-dispersion-iqr-percentiles` | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 | **18/18 (Sí)** |
-| `c0-numeros-03-asimetria-sesgo` | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 | **18/18 (Sí)** |
-| `c0-numeros-04-proporciones-tasas-bps` | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 | **18/18 (Sí)** |
-| `c0-numeros-05-correlacion-causalidad` | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 | **18/18 (Sí)** |
+| Lección | Palabras visibles | Checks | Prácticas | Fuentes | Puntuación de rúbrica (§9.4) |
+| --- | :---: | :---: | :---: | :---: | :---: |
+| `c0-numeros-01-media-mediana-moda` | 962 | 3 (`multiple-choice`, `predict-output`, `spot-bug`) | 1 (`sql` DuckDB) | 3 (3 primarias) | **32 / 32** |
+| `c0-numeros-02-dispersion-iqr-percentiles` | 919 | 3 (`multiple-choice`, `predict-output`, `spot-bug`) | 1 (`sql` DuckDB) | 3 (3 primarias) | **32 / 32** |
+| `c0-numeros-03-asimetria-sesgo` | 937 | 3 (`multiple-choice`, `predict-output`, `spot-bug`) | 1 (`sql` DuckDB) | 3 (3 primarias) | **32 / 32** |
+| `c0-numeros-04-proporciones-tasas-bps` | 950 | 3 (`multiple-choice`, `predict-output`, `spot-bug`) | 1 (`sql` DuckDB) | 3 (3 primarias) | **32 / 32** |
+| `c0-numeros-05-correlacion-causalidad` | 949 | 3 (`multiple-choice`, `predict-output`, `spot-bug`) | 1 (`sql` DuckDB + `simpsons-paradox-explorer`) | 3 (3 primarias) | **32 / 32** |
 
-   - **Justificación por criterio:**
-     - *1. Claridad:* cada lección abre con un `hook` de escenario real en Mercado Brisa terminado en `?`, define cada término técnico antes de su primer uso y mantiene una media de 14.3 a 16.1 palabras/frase.
-     - *2. Anclaje en Mercado Brisa:* todas las cifras provienen de consultas reales sobre `orders`, `products`, `refunds`, `payments` y `marketing_spend`, incluyendo anomalías documentadas como `SKU-TEST-NEG` (`-9.99` USD).
-     - *3. Fuentes verificables:* 3 fuentes por lección (`>= 2` primarias) con URLs reales de DuckDB Docs, NIST, OpenIntro, Casella & Berger y Hernán & Robins.
-     - *4. Práctica ejecutable:* las 5 prácticas son de tipo `sql` y pasan el calificador en vivo de DuckDB-WASM (`Práctica superada · El resultado coincide con la referencia`).
-     - *5. Cobertura de roles:* `roleNotes` diferenciados y concretos para Ingeniería de Datos (`de`), Análisis de Datos (`da`) y Business Intelligence (`bi`) en cada lección.
-     - *6. Tono y anti-slop:* 0 hallazgos en `check-copy.mjs`, 0 emojis, 0 anglicismos innecesarios y 0 promesas vacías.
+#### 7.2 Evaluación detallada con los 8 criterios (0–4) de la rúbrica §9.4
 
-2. **Prueba del tutor IA (`buildContextPrompt` y detección de errores con `aiNotes`):**
-   - Se verificó en las 5 lecciones (`test_ai_tutor_c0_numeros.mjs`) el flujo de pedir una pregunta de comprobación (`"Hazme una pregunta para comprobar si lo entendí"`) y responder deliberadamente con el error conceptual típico de cada lección:
-     - `c0-numeros-01`: afirmar que el `50 %` de los pedidos supera la media de `426.10` USD -> el contexto inyecta la sección `tres-formas-de-resumir-el-centro` y las `aiNotes` que contrastan la mediana (`350.16` USD) y el `58.2 %` de pedidos por debajo de la media.
-     - `c0-numeros-02`: afirmar que el rango de `76.27` USD en `Accesorios` refleja la variación habitual de sus productos -> el contexto inyecta `por-que-el-centro-no-basta` y las `aiNotes` sobre el impacto de `SKU-TEST-NEG` (`-9.99` USD) en el rango frente al `IQR` (`26.27` USD).
-     - `c0-numeros-03`: usar `media ± 2 desviaciones estándar` (`-209.00` a `651.89` USD) en `refunds` -> el contexto inyecta `forma-de-la-distribucion-y-cola-derecha` y las `aiNotes` sobre la asimetría positiva (`1.63`) y la cota inferior en cero.
-     - `c0-numeros-04`: llamar "caída de `3.87` puntos base" a una bajada de `11.60 %` a `7.73 %` -> el contexto inyecta `razon-proporcion-y-tasa` y las `aiNotes` que distinguen `-3.87 pp` (`-387 bps`) de `-33.4 %` relativo.
-     - `c0-numeros-05`: asumir que duplicar el gasto en `email` duplicará las conversiones porque `CORR` global es `0.912` -> el contexto inyecta `que-mide-la-correlacion-lineal` y las `aiNotes` sobre el confusor `channel` (`0.506`–`0.585` intragrupo).
+| Lección | 1. Objetivo claro (0–4) | 2. Progresión (0–4) | 3. Ejemplo concreto (0–4) | 4. Error típico (0–4) | 5. Práctica (0–4) | 6. Brevedad (0–4) | 7. Precisión (0–4) | 8. Tono (0–4) | Total (>= 26/32 y sin < 3) |
+| --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| `c0-numeros-01-media-mediana-moda` | 4 | 4 | 4 | 4 | 4 | 4 | 4 | 4 | **32 / 32 (Aprobada)** |
+| `c0-numeros-02-dispersion-iqr-percentiles` | 4 | 4 | 4 | 4 | 4 | 4 | 4 | 4 | **32 / 32 (Aprobada)** |
+| `c0-numeros-03-asimetria-sesgo` | 4 | 4 | 4 | 4 | 4 | 4 | 4 | 4 | **32 / 32 (Aprobada)** |
+| `c0-numeros-04-proporciones-tasas-bps` | 4 | 4 | 4 | 4 | 4 | 4 | 4 | 4 | **32 / 32 (Aprobada)** |
+| `c0-numeros-05-correlacion-causalidad` | 4 | 4 | 4 | 4 | 4 | 4 | 4 | 4 | **32 / 32 (Aprobada)** |
+
+- **Justificación de los 8 criterios:**
+  - *1. Objetivo claro (4/4):* cada lección declara 3 objetivos accionables con verbo en infinitivo verificables en su práctica SQL y sus 3 comprobaciones.
+  - *2. Progresión (4/4):* cada sección introduce una sola idea nueva apoyada en la anterior, sin saltos ni términos sin definir.
+  - *3. Ejemplo concreto (4/4):* las 5 lecciones usan consultas reales sobre tablas de Mercado Brisa (`orders`, `products`, `refunds`, `payments`, `marketing_spend`) con salidas verificadas en DuckDB.
+  - *4. Error típico (4/4):* cada `workedExample` contrasta explícitamente el antipatrón de producción (promediar sin mediana, usar `MAX - MIN` con precios corruptos, aplicar `media ± 2 DE` en colas derechas, usar `AVG(a/b)` o inferir causalidad de `CORR` global) frente a la solución verificada.
+  - *5. Práctica (4/4):* las 5 prácticas se resuelven con lo explicado en la lección, incluyen 3 pistas graduales y pasan el calificador automático de DuckDB-WASM.
+  - *6. Brevedad (4/4):* todas las lecciones están entre `919` y `962` palabras visibles (dentro de `[500, 1000]`) y entre `14.3` y `16.1` palabras/frase (`<= 22`).
+  - *7. Precisión (4/4):* todas las afirmaciones técnicas están respaldadas por 3 fuentes verificadas (`>= 2` primarias) con URL y fecha de consulta `2026-10-29`.
+  - *8. Tono (4/4):* español natural, segunda persona (`tú`), 0 hallazgos en `check-copy.mjs`.
+
+#### 7.3 Prueba real del tutor IA con `agy` (`runAgyPrompt` sobre las 5 lecciones)
+
+Se ejecutó `test_ai_tutor_c0_numeros.mjs` invocando `buildContextPrompt` + `runAgyPrompt({ model: 'fast' })` (`gemini-3.8-flash-low`) sobre las 5 lecciones, pidiendo primero `"Hazme una pregunta para comprobar si lo entendí"` y enviando después una respuesta errónea a propósito que incurre en el malentendido documentado en `aiNotes`. A continuación se transcriben las respuestas reales devueltas por `agy`:
+
+1. **`c0-numeros-01-media-mediana-moda` (`gemini-3.8-flash-low`, `22545 ms`):**
+   - *Respuesta errónea enviada:* `"Si el promedio de orders es 426.10 USD, entonces exactamente la mitad (el 50 %) de los clientes gastó más de 426.10 USD y todos los que estén sobre el ticket típico tendrán envío gratis."`
+   - *Respuesta real de `agy`:*
+     > Ese es justo el malentendido más común: la media (el promedio) no divide los datos en dos partes iguales. La medida que parte los pedidos exactamente al 50 % es la **mediana**.
+     > En Mercado Brisa, la mediana de `order_total_usd` es 350.16 USD. Eso significa que la mitad de los pedidos cuesta 350.16 USD o menos, y la otra mitad cuesta 350.16 USD o más. La media está inflada en 426.10 USD porque unos pocos pedidos muy grandes arrastran la suma total hacia arriba. [...] Por eso, si en Mercado Brisa fijas el umbral en 400 USD, no estarás cubriendo a la mitad de los clientes: estarás dejando fuera a más del 50 %, porque la verdadera mitad está en 350.16 USD.
+
+2. **`c0-numeros-02-dispersion-iqr-percentiles` (`gemini-3.8-flash-low`, `21267 ms`):**
+   - *Respuesta errónea enviada:* `"Como la categoría Accesorios tiene un rango MAX - MIN de 76.27 USD, significa que la mayoría de sus productos varían 76 dólares entre sí y que el p90 representa el 90 % de los ingresos."`
+   - *Respuesta real de `agy`:*
+     > Hay dos confusiones en tu respuesta:
+     > 1. **El rango no mide a la mayoría:** El rango de 76.27 USD solo te dice la distancia entre el accesorio más caro y el más barato de `products`. No indica cómo se reparten los demás. Un solo producto muy caro infla ese número. La métrica que describe mejor la dispersión central es el **IQR** (26.27 USD), porque se enfoca en el 50 % intermedio de los productos y no se deja distorsionar por extremos.
+     > 2. **Qué significa el percentil 90 (p90):** El p90 no es el 90 % del dinero total. Es un umbral de filas (productos). [...] Mide posición de registros ordenados, no concentración de ingresos.
+
+3. **`c0-numeros-03-asimetria-sesgo` (`gemini-3.8-flash-low`, `20920 ms`):**
+   - *Respuesta errónea enviada:* `"Puedo usar el intervalo media ± 2 desviaciones estándar (-209.00 a 651.89 USD) porque toda tabla con más de 1000 filas tiene forma de campana simétrica y el sesgo significa que la muestra se eligió mal."`
+   - *Respuesta real de `agy`:*
+     > Hay dos ideas que conviene corregir en tu respuesta:
+     > 1. **El tamaño de la muestra no crea simetría:** Tener más de 1000 filas en `refunds` no convierte los datos en una campana simétrica. La variable `refund_usd` tiene un límite físico en 0 USD (nadie recibe un reembolso negativo) y unos pocos montos muy altos hacia la derecha. Esa forma no es un espejo: tiene **asimetría positiva** (*skewness*), no forma de campana.
+     > 2. **Por qué falla el intervalo:** Al aplicar la regla simétrica, el límite inferior te da `-209.00 USD` (`221.45 - 2 * 215.22`). Es un valor absurdo en el negocio porque no existen reembolsos menores a cero.
+     > 3. **Asimetría no es lo mismo que sesgo de muestreo:** **Asimetría (*skewness*)** es la forma geométrica de los datos; **Sesgo (*bias*)** es un error al recolectar o medir la información.
+
+4. **`c0-numeros-04-proporciones-tasas-bps` (`gemini-3.8-flash-low`, `21309 ms`):**
+   - *Respuesta errónea enviada:* `"Si la tasa baja de 11.60 % a 7.73 %, la tasa cayó un 3.87 % relativo, que equivale a 3.87 puntos base, y para sacar la tasa global basta con hacer AVG(tasa_pct) de los 4 métodos."`
+   - *Respuesta real de `agy`:*
+     > Hay tres confusiones importantes en tu respuesta. Vamos a corregirlas paso a paso:
+     > 1. **Puntos porcentuales (pp)**: La resta directa entre porcentajes se mide en puntos porcentuales, no en porcentaje relativo: `11.60% - 7.73% = 3.87 puntos porcentuales (pp)`.
+     > 2. **Puntos base (bps)**: Un punto porcentual equivale a 100 puntos base: `3.87 * 100 = 387 puntos base (bps)`.
+     > 3. **Variación relativa**: `(7.73 - 11.60) / 11.60 = -33.36%`.
+     > 4. **El promedio en SQL**: No debes usar `AVG(tasa_pct)`. [...] Para obtener la tasa global real, debes sumar primero los casos y luego dividir: `SUM(pagos_fallidos) / SUM(total_pagos)`.
+
+5. **`c0-numeros-05-correlacion-causalidad` (`gemini-3.8-flash-low`, `20379 ms`):**
+   - *Respuesta errónea enviada:* `"Como CORR(spend_usd, attributed_conversions) vale 0.912 en marketing_spend, duplicar mañana el presupuesto diario de email_campaign duplicará automáticamente las conversiones."`
+   - *Respuesta real de `agy`:*
+     > Esa afirmación es incorrecta, y refleja justo el error principal al interpretar la correlación. Un valor de `0.912` solo describe que, en el pasado, los días o canales con más gasto coincidieron con más conversiones. No te asegura qué pasará al intervenir o cambiar el presupuesto por varias razones:
+     > 1. **La correlación no mide causa y efecto**: que dos variables se muevan juntas no significa que una cause la otra en esa magnitud.
+     > 2. **Existen terceras variables (confusores)**: factores como la estacionalidad o el tipo de canal (`channel`) afectan tanto al gasto como a las conversiones al mismo tiempo.
+     > 3. **La correlación dentro del canal es menor**: cuando agrupas por canal, la relación real baja a un rango de 0.50 a 0.58.
 
 ---
 
@@ -195,20 +261,16 @@ Durante la redacción y verificación se detectaron y corrigieron **5 defectos p
 
 ## Prueba adversarial
 
-Se ejecutaron **6 pruebas adversariales** sobre el servidor en `http://127.0.0.1:5203`:
+Se ejecutaron **6 pruebas adversariales** sobre el servidor en `http://127.0.0.1:5203` y sobre el runner de IA (`runAgyPrompt`):
 
-1. **Viewport `1280×720` en las 5 lecciones (`theme=light`):**
-   - *Resultado:* `document.documentElement.scrollWidth === 1280` (`innerWidth === 1280`), cero desbordamiento horizontal, columna de lectura de `832 px` (`> 640 px` mínimo) con temario lateral visible.
-2. **Tema oscuro (`theme=dark`) a `1280×720` en `c0-numeros-01` y `c0-numeros-05`:**
-   - *Resultado:* Contraste verificado en bloques de código, tablas de resultados, tarjetas del simulador `simpsons-paradox-explorer` y callouts sin textos invisibles ni bordes rotos (`c0-numeros-01-dark.png`, `c0-numeros-05-dark-simpsons.png`).
-3. **Navegación por teclado (`1`–`4`) en las comprobaciones de comprensión (`LessonCheckCard`):**
-   - *Resultado:* Al enfocar la primera comprobación de `c0-numeros-01` y pulsar la tecla `2`, se seleccionó la opción `B` (incorrecta), mostrando de inmediato el estado de error y la explicación pedagógica con el botón `"No lo entiendo — explicar en el tutor"` (`adversarial-keyboard-checks.png`).
-4. **Consulta SQL con error de sintaxis en el laboratorio DuckDB-WASM:**
-   - *Resultado:* Al ejecutar `SELECT columna_inexistente FROM orders WHERE;`, DuckDB-WASM capturó la excepción sin colapsar la pestaña (`0` errores no controlados), renderizó `[data-testid="sql-error-box"]` con `Parser Error: syntax error at or near ";"` y habilitó el botón `"Explícame este error"` (`adversarial-sql-error.png`).
-5. ** Preferencia del sistema `prefers-reduced-motion: reduce`:**
-   - *Resultado:* Emulada con `page.emulateMedia({ reducedMotion: 'reduce' })` en `c0-numeros-02`; `window.matchMedia('(prefers-reduced-motion: reduce)').matches` devolvió `true` y la navegación entre secciones del temario utilizó salto instantáneo (`behavior: 'auto'`).
-6. **Respuestas deliberadamente erróneas al tutor IA en las 5 lecciones:**
-   - *Resultado:* `buildContextPrompt` inyectó en las 5 lecciones las `aiNotes` específicas y el cuerpo de la sección activa (prompts de `3284` a `3371` caracteres), permitiendo detectar la confusión entre media y mediana, rango e IQR, asimetría y sesgo, puntos porcentuales y puntos base, y correlación y causalidad.
+| Caso | Entrada | Resultado esperado | Resultado real |
+| --- | --- | --- | --- |
+| 1. Viewport `1280×720` (`theme=light`) | Apertura de las 5 lecciones (`c0-numeros-01` a `05`) en ventana de `1280×720` px | `scrollWidth <= innerWidth` (sin scroll horizontal) y columna de lectura `>= 640` px | `document.documentElement.scrollWidth === 1280` (`innerWidth === 1280`), columna de lectura de `832` px con temario lateral visible |
+| 2. Tema oscuro (`theme=dark`) a `1280×720` | Navegación a `/?view=practice&theme=dark` y apertura de `c0-numeros-01` y del simulador `simpsons-paradox-explorer` en `c0-numeros-05` | Tokens oscuros aplicados (`#121110`), contraste legible en tablas, bloques SQL, callouts y barras del simulador | Contraste verificado sin textos invisibles ni bordes rotos en `c0-numeros-01-dark.png` y `c0-numeros-05-dark-simpsons.png` |
+| 3. Navegación por teclado (`1`–`4`) en comprobaciones | Foco en `#sec-comprobaciones` de `c0-numeros-01` y pulsación de la tecla `'2'` | Selección inmediata de la segunda opción (`B`), estado visual de acierto/error y despliegue de `check.explanation` | Opción `B` marcada como incorrecta, explicación desplegada y botón `"No lo entiendo — explicar en el tutor"` visible (`adversarial-keyboard-checks.png`) |
+| 4. Consulta SQL con error de sintaxis en DuckDB-WASM | Ejecución de `SELECT columna_inexistente FROM orders WHERE;` en `[data-testid="sql-lab"]` | Captura controlada del error sin romper la UI, mostrando `[data-testid="sql-error-box"]` y botón de ayuda IA | `consoleErrors: []`, `pageErrors: []`, alerta roja con `Parser Error: syntax error at or near ";"` y botón `"Explícame este error"` (`adversarial-sql-error.png`) |
+| 5. `prefers-reduced-motion: reduce` | Emulación de `reducedMotion: 'reduce'` en Playwright sobre `c0-numeros-02` | `matchMedia('(prefers-reduced-motion: reduce)').matches === true` y desplazamiento entre secciones con `behavior: 'auto'` | Confirmado `reducedMotionActive: true`; salto instantáneo entre secciones sin animaciones forzadas |
+| 6. Respuesta deliberadamente errónea al tutor IA (`agy`) | Envío de las 5 confusiones típicas de `aiNotes` en `c0-numeros-01` a `05` tras pedir pregunta de comprobación a `runAgyPrompt` | Que `agy` detecte el error conceptual exacto citando la sección y las métricas de Mercado Brisa | En las 5 lecciones `gemini-3.8-flash-low` (`20.3`–`22.5` s) corrigió el error usando las cifras e indicaciones de `aiNotes` |
 
 ---
 
