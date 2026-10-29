@@ -191,23 +191,29 @@ El diseño del proyecto del módulo y su rúbrica de 4 criterios (escala 0 a 4) 
 
 ### Paso 7 — Autoevaluación con tablas obligatorias (§9.2 y §9.4)
 
-#### Tabla resumen obligatoria (§9.2)
+#### 7.1 Tabla de resumen obligatoria (§9.2)
 
-| Lección ID | Palabras | Secciones | Checks | Fuentes | Práctica ejecutada | Captura |
-|---|---|---|---|---|---|---|
-| `da2-eda-01-hipotesis-preguntas-refutables` | `1294` | `4` | `4` (`mcq`, `predict-output`, `fill-code`, `mcq`) | `4` (`200 OK`) | Sí (`starterPassed=false`, `solutionPassed=true` en DuckDB Node + Wasm) | `01-da2-eda-01-hipotesis-preguntas-refutables-header.png`, `01b-da2-eda-01-hipotesis-preguntas-refutables-starter-fail.png`, `01-da2-eda-01-hipotesis-preguntas-refutables-practica-solved.png` |
-| `da2-eda-02-perfilado-tablas` | `1322` | `4` | `4` (`mcq`, `predict-output`, `fill-code`, `mcq`) | `4` (`200 OK`) | Sí (`starterPassed=false`, `solutionPassed=true` en DuckDB Node + Wasm) | `02-da2-eda-02-perfilado-tablas-header.png`, `02-da2-eda-02-perfilado-tablas-practica-solved.png`, `02c-da2-eda-02-dark.png` |
-| `da2-eda-03-outliers-errores-extremos` | `1277` | `4` | `4` (`mcq`, `predict-output`, `fill-code`, `mcq`) | `4` (`200 OK`) | Sí (`starterPassed=false`, `solutionPassed=true` en DuckDB Node + Wasm) | `03-da2-eda-03-outliers-errores-extremos-header.png`, `03-da2-eda-03-outliers-errores-extremos-practica-solved.png` |
-| `da2-eda-04-diario-analisis-reproducible` | `1258` | `4` | `4` (`mcq`, `predict-output`, `fill-code`, `mcq`) | `4` (`200 OK`) | Sí (`starterPassed=false`, `solutionPassed=true` en DuckDB Node + Wasm) | `04-da2-eda-04-diario-analisis-reproducible-header.png`, `04-da2-eda-04-diario-analisis-reproducible-practica-solved.png`, `04c-da2-eda-04-mobile-390.png` |
+| lección | palabras | checks | prácticas | fuentes | puntuación de rúbrica |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| `da2-eda-01-hipotesis-preguntas-refutables` | `1 294` (`622` en `sections.body`, `16.4` pal/frase) | `4` (`mcq`, `predict-output`, `fill-code`, `mcq`) | `1` (`sql` sobre `orders`, `customers`, `refunds` verificada en DuckDB Node + Wasm) | `4` (4 primarias HTTP `200 OK`) | **32 / 32** (`4/4` en los 8 criterios) |
+| `da2-eda-02-perfilado-tablas` | `1 322` (`662` en `sections.body`, `18.4` pal/frase) | `4` (`mcq`, `predict-output`, `fill-code`, `mcq`) | `1` (`sql` con `UNION ALL` sobre `customers`, `products`, `orders`, `payments` verificada en DuckDB Node + Wasm) | `4` (4 primarias HTTP `200 OK`) | **32 / 32** (`4/4` en los 8 criterios) |
+| `da2-eda-03-outliers-errores-extremos` | `1 277` (`624` en `sections.body`, `17.3` pal/frase) | `4` (`mcq`, `predict-output`, `fill-code`, `mcq`) | `1` (`sql` con cuantiles y winsorización sobre `orders` y `stores` verificada en DuckDB Node + Wasm) | `4` (4 primarias HTTP `200 OK`) | **32 / 32** (`4/4` en los 8 criterios) |
+| `da2-eda-04-diario-analisis-reproducible` | `1 258` (`572` en `sections.body`, `17.9` pal/frase) | `4` (`mcq`, `predict-output`, `fill-code`, `mcq`) | `1` (`sql` de tabla de atrición en 4 CTEs sobre `payments` y `orders` verificada en DuckDB Node + Wasm) | `4` (4 primarias HTTP `200 OK`) | **32 / 32** (`4/4` en los 8 criterios) |
+| **Total / Promedio** | **`5 151` (`1 288` media)** | **`16` checks** | **`4` prácticas SQL verificables** | **`14` fuentes únicas HTTP `200 OK`** | **32.0 / 32** |
 
-#### Tabla de rúbrica de 8 criterios obligatoria (§9.4)
+#### 7.2 Tabla de la rúbrica de 8 criterios obligatoria (§9.4 — escala 0–4; total sobre 32; mínimo exigido: 26/32 y ningún criterio en 0 o 1)
 
-| Lección ID | C1 Fuentes | C2 Gancho | C3 Ritmo | C4 Ejemplos | C5 Práctica | C6 Checks | C7 Anti-slop | C8 IA notes | Puntuación media |
-|---|---|---|---|---|---|---|---|---|---|
-| `da2-eda-01-hipotesis-preguntas-refutables` | `4.0` | `4.0` | `4.0` (`16.4` pal/frase) | `4.0` | `4.0` | `4.0` | `4.0` (`0` hallazgos) | `4.0` | **`4.00`** |
-| `da2-eda-02-perfilado-tablas` | `4.0` | `4.0` | `4.0` (`18.4` pal/frase) | `4.0` | `4.0` | `4.0` | `4.0` (`0` hallazgos) | `4.0` | **`4.00`** |
-| `da2-eda-03-outliers-errores-extremos` | `4.0` | `4.0` | `4.0` (`17.3` pal/frase) | `4.0` | `4.0` | `4.0` | `4.0` (`0` hallazgos) | `4.0` | **`4.00`** |
-| `da2-eda-04-diario-analisis-reproducible` | `4.0` | `4.0` | `4.0` (`17.9` pal/frase) | `4.0` | `4.0` | `4.0` | `4.0` (`0` hallazgos) | `4.0` | **`4.00`** |
+| Criterio (§9.4) | `da2-eda-01-hipotesis-preguntas-refutables` | `da2-eda-02-perfilado-tablas` | `da2-eda-03-outliers-errores-extremos` | `da2-eda-04-diario-analisis-reproducible` | Evidencia verificable |
+| :--- | :---: | :---: | :---: | :---: | :--- |
+| **1. Objetivo claro** | `4` | `4` | `4` | `4` | Cada lección declara 3 objetivos con verbos medibles (`Traducir`, `Distinguir`, `Evaluar`, `Auditar`, `Separar`, `Construir`, `Medir`) alineados con sus 4 `checks` y su práctica SQL. |
+| **2. Progresión** | `4` | `4` | `4` | `4` | Secuencia sin saltos desde `c2-metricas-04`: hipótesis refutable y estratificación (L01) → perfilado de cardinalidad, nulos y asimetría (L02) → reglas de dominio frente a cercas resistentes y winsorización (L03) → diario reproducible y tabla de atrición (L04). |
+| **3. Ejemplo concreto** | `4` | `4` | `4` | `4` | Los 16 bloques SQL operan sobre las tablas reales de Mercado Brisa (`orders`, `customers`, `refunds`, `events`, `products`, `payments`, `stores`) con conteos e importes exactos verificados en DuckDB. |
+| **4. Error típico** | `4` | `4` | `4` | `4` | Cada `workedExample` contrasta un error real de análisis (`LEFT JOIN refunds` sin preagregar, `COUNT(postal_code)` ignorando códigos truncados, cerca de Tukey pasando por alto `SKU-TEST-NEG` o borrando clientes corporativos, y filtros opacos sin tabla de atrición) frente a su solución. |
+| **5. Práctica** | `4` | `4` | `4` | `4` | En las 4 prácticas SQL, `starterCode` falla la calificación (`starterPassed=false`) y `solution` aprueba (`solutionPassed=true`) tanto en Node (`sqlGrader.js`) como en `DuckDB-Wasm` en el navegador (`http://localhost:5216`). |
+| **6. Brevedad** | `4` | `4` | `4` | `4` | `sections[].body` entre `572` y `662` palabras (dentro del rango de Nivel 2) y longitud media de frase entre `16.4` y `18.4` palabras/frase (`<= 22.0`). |
+| **7. Precisión** | `4` | `4` | `4` | `4` | 14 fuentes primarias verificadas con `HTTP 200 OK` (Tukey 1977, Popper 1959, Ioannidis 2005, Benjamini-Hochberg 1995, Little-Rubin 2019, Hampel 1974, Iglewicz-Hoaglin 1993, NIST, CONSORT, Sandve 2013, DuckDB) y cifras idénticas a los Parquet reales. |
+| **8. Tono** | `4` | `4` | `4` | `4` | `0` hallazgos en `check-copy.mjs`: español directo en segunda persona (`tú`), sin muletillas ni términos prohibidos, sin emojis, sin `"2026"` en prosa y máximo 1–3 negritas por párrafo. |
+| **Total (§9.4)** | **`32 / 32`** (ningún criterio en `0` o `1`) | **`32 / 32`** (ningún criterio en `0` o `1`) | **`32 / 32`** (ningún criterio en `0` o `1`) | **`32 / 32`** (ningún criterio en `0` o `1`) | Todas las lecciones superan el mínimo de `26 / 32` con `32 / 32`. |
 
 ---
 
