@@ -1,16 +1,218 @@
-/* Grano — tokens de diseño.
+/* Grano — tokens de diseño (§4 de PLAN_GEMINI_4_ARGON.md).
    Un solo acento de marca (--brand), tinta neutra para la interfaz y tres colores de área
-   usados solo como marcadores pequeños. Los nombres antiguos (--primary, --text, --stage…)
-   se mantienen como capa de compatibilidad y apuntan a la paleta nueva; la tarea T1/T7 del
-   plan los renombra. Contraste verificado (WCAG 2.x): ver PLAN_GEMINI_4_ARGON.md §4.1. */
+   usados solo como marcadores pequeños. Los nombres antiguos se agrupan al final bajo
+   "ALIAS TEMPORALES — eliminar en T7". */
 
 :root,
 [data-theme="light"] {
-  /* Tipografía */
+  /* Tipografía (§4.2) */
   --font-display: 'Newsreader Variable', Georgia, serif;
   --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 
+  /* Escala tipográfica en rem (base 16 px) */
+  --fs-1: 0.75rem;     /* 12 px — metadatos, chips, atajos */
+  --fs-2: 0.8125rem;   /* 13 px — botones pequeños, tablas densas */
+  --fs-3: 0.875rem;    /* 14 px — interfaz general, botones */
+  --fs-4: 1rem;        /* 16 px — lectura de lección */
+  --fs-5: 1.125rem;    /* 18 px — subtítulos */
+  --fs-6: 1.375rem;    /* 22 px — título de sección (Newsreader) */
+  --fs-7: 1.75rem;     /* 28 px — título de lección (Newsreader) */
+  --fs-8: 2.25rem;     /* 36 px — título de onboarding */
+
+  --lh-reading: 1.6;
+  --lh-ui: 1.4;
+
+  /* Color — Modo claro (§4.1) */
+  --bg: #FAFAF9;
+  --surface: #FFFFFF;
+  --sunken: #F4F4F2;
+  --line: #E7E5E1;
+  --line-strong: #D6D3CD;
+  --line-control: #928C85;
+  --ink: #1C1B19;
+  --ink-2: #57534E;
+  --ink-3: #78716C;
+  --brand: #C2410C;
+  --brand-soft: #FDF1EA;
+  --brand-deep: #9A3412;
+  --track-de: #2952CC;
+  --track-da: #167A52;
+  --track-bi: #7A3FC2;
+  --ok: #167A52;
+  --bad: #C2352B;
+  --warn: #A15C00;
+  --code-bg: #1C1B19;
+  --focus: #C2410C;
+
+  /* Espaciado en múltiplos de 4 px expresados en rem (§4.3) */
+  --sp-1: 0.25rem;     /* 4 px */
+  --sp-2: 0.5rem;      /* 8 px */
+  --sp-3: 0.75rem;     /* 12 px */
+  --sp-4: 1rem;        /* 16 px */
+  --sp-5: 1.25rem;     /* 20 px */
+  --sp-6: 1.5rem;      /* 24 px */
+  --sp-8: 2rem;        /* 32 px */
+  --sp-10: 2.5rem;     /* 40 px */
+  --sp-12: 3rem;       /* 48 px */
+  --sp-16: 4rem;       /* 64 px */
+
+  /* Radios y profundidad (§4.3) */
+  --r-1: 4px;
+  --r-2: 6px;
+  --r-3: 10px;
+  --shadow-pop: 0 8px 24px rgb(0 0 0 / .12), 0 1px 2px rgb(0 0 0 / .08);
+
+  /* Movimiento (§4.6) */
+  --ease-out: cubic-bezier(.2, .8, .2, 1);
+  --ease-in: cubic-bezier(.4, 0, 1, 1);
+  --ease-move: cubic-bezier(.65, 0, .35, 1);
+  --dur-1: 120ms;
+  --dur-2: 180ms;
+  --dur-3: 260ms;
+  --dur-4: 420ms;
+
+  /* Escala y dimensiones base de densidad (§4.5) */
+  --ui-scale: 1;
+  --topbar-h: 3.25rem;   /* 52 px */
+  --btn-h-sm: 1.75rem;   /* 28 px */
+  --btn-h-md: 2.125rem;  /* 34 px */
+  --btn-h-lg: 2.5rem;    /* 40 px */
+}
+
+/* Modo oscuro (sistema), salvo que se fuerce claro (§4.1) */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121211;
+    --surface: #1A1A18;
+    --sunken: #222220;
+    --line: #2E2D2A;
+    --line-strong: #3D3B37;
+    --line-control: #6B675F;
+    --ink: #EDECE9;
+    --ink-2: #B5B1AA;
+    --ink-3: #8F8A82;
+    --brand: #F07A3E;
+    --brand-soft: #2D1D14;
+    --brand-deep: #F5A47A;
+    --track-de: #7C9BF5;
+    --track-da: #5BC79A;
+    --track-bi: #B58CF0;
+    --ok: #5BC79A;
+    --bad: #F07A70;
+    --warn: #E0A345;
+    --code-bg: #1C1B19;
+    --focus: #F07A3E;
+
+    --shadow-pop: 0 8px 24px rgb(0 0 0 / .45), 0 1px 2px rgb(0 0 0 / .3);
+  }
+}
+
+/* Modo oscuro explícito (§4.1) */
+[data-theme="dark"] {
+  --bg: #121211;
+  --surface: #1A1A18;
+  --sunken: #222220;
+  --line: #2E2D2A;
+  --line-strong: #3D3B37;
+  --line-control: #6B675F;
+  --ink: #EDECE9;
+  --ink-2: #B5B1AA;
+  --ink-3: #8F8A82;
+  --brand: #F07A3E;
+  --brand-soft: #2D1D14;
+  --brand-deep: #F5A47A;
+  --track-de: #7C9BF5;
+  --track-da: #5BC79A;
+  --track-bi: #B58CF0;
+  --ok: #5BC79A;
+  --bad: #F07A70;
+  --warn: #E0A345;
+  --code-bg: #1C1B19;
+  --focus: #F07A3E;
+
+  --shadow-pop: 0 8px 24px rgb(0 0 0 / .45), 0 1px 2px rgb(0 0 0 / .3);
+}
+
+/* Densidad compacta (§4.5): reduce espaciado (--sp-* × 0.75), barra superior (52 -> 44 px),
+   botones md (34 -> 30 px) e interlineado de lectura (1.6 -> 1.5). */
+[data-density="compact"] {
+  --sp-1: 0.1875rem;
+  --sp-2: 0.375rem;
+  --sp-3: 0.5625rem;
+  --sp-4: 0.75rem;
+  --sp-5: 0.9375rem;
+  --sp-6: 1.125rem;
+  --sp-8: 1.5rem;
+  --sp-10: 1.875rem;
+  --sp-12: 2.25rem;
+  --sp-16: 3rem;
+  --topbar-h: 2.75rem;
+  --btn-h-md: 1.875rem;
+  --lh-reading: 1.5;
+}
+
+@media (max-height: 800px), (max-width: 1366px) {
+  [data-density="auto"] {
+    --sp-1: 0.1875rem;
+    --sp-2: 0.375rem;
+    --sp-3: 0.5625rem;
+    --sp-4: 0.75rem;
+    --sp-5: 0.9375rem;
+    --sp-6: 1.125rem;
+    --sp-8: 1.5rem;
+    --sp-10: 1.875rem;
+    --sp-12: 2.25rem;
+    --sp-16: 3rem;
+    --topbar-h: 2.75rem;
+    --btn-h-md: 1.875rem;
+    --lh-reading: 1.5;
+  }
+}
+
+/* Escala de la interfaz (§4.5): define --ui-scale y mantiene --zoom sobre <html>
+   para compatibilidad con las vistas actuales hasta que T7 decida en Fase 2. */
+html {
+  --ui-scale: 1;
+  --zoom: 1;
+  zoom: var(--zoom);
+}
+
+html[data-scale="0.8"] {
+  --ui-scale: 0.8;
+  --zoom: 0.8;
+}
+
+html[data-scale="0.9"] {
+  --ui-scale: 0.9;
+  --zoom: 0.9;
+}
+
+html[data-scale="1"] {
+  --ui-scale: 1;
+  --zoom: 1;
+}
+
+html[data-scale="1.1"] {
+  --ui-scale: 1.1;
+  --zoom: 1.1;
+}
+
+html[data-scale="1.25"] {
+  --ui-scale: 1.25;
+  --zoom: 1.25;
+}
+
+@media (min-width: 1024px) and (max-width: 1440px), (min-width: 1024px) and (max-height: 800px) {
+  html[data-scale="auto"] {
+    --ui-scale: 0.9;
+    --zoom: 0.9;
+  }
+}
+
+/* ALIAS TEMPORALES — eliminar en T7 */
+:root,
+[data-theme="light"] {
   --fs-xs: 12px;
   --fs-sm: 14px;
   --fs-md: 16px;
@@ -19,25 +221,6 @@
   --fs-2xl: 28px;
   --fs-3xl: 36px;
 
-  /* Paleta nueva */
-  --ink: #1C1B19;
-  --ink-2: #57534E;
-  --ink-3: #78716C;
-  --sunken: #F4F4F2;
-  --line: #E7E5E1;
-  --line-strong: #D6D3CD;
-  --line-control: #928C85;
-  --brand: #C2410C;
-  --brand-soft: #FDF1EA;
-  --brand-deep: #9A3412;
-  --track-de: #2952CC;
-  --track-da: #167A52;
-  --track-bi: #7A3FC2;
-  --focus: #C2410C;
-
-  /* Compatibilidad: nombres antiguos -> paleta nueva */
-  --bg: #FAFAF9;
-  --surface: #FFFFFF;
   --surface-2: var(--sunken);
   --border: var(--line);
   --text: var(--ink);
@@ -51,15 +234,12 @@
   --danger-soft: #FBECEA;
   --warning: #A15C00;
   --warning-soft: #FBF1E2;
-  --code-bg: #1C1B19;
 
-  /* Las etapas ya no tienen color propio: todas usan el acento de marca */
   --stage: var(--brand);
   --stage-soft: var(--brand-soft);
   --stage-deep: var(--brand-deep);
   --stage-contrast: #FFFFFF;
 
-  /* Áreas (DE, DA, BI) */
   --role-de: var(--track-de);
   --role-de-deep: #1F3F9E;
   --role-de-soft: color-mix(in oklab, var(--track-de) 8%, var(--surface));
@@ -70,7 +250,6 @@
   --role-bi-deep: #5B2C94;
   --role-bi-soft: color-mix(in oklab, var(--track-bi) 8%, var(--surface));
 
-  /* Forma, profundidad y movimiento */
   --r-sm: 4px;
   --r-md: 6px;
   --r-lg: 10px;
@@ -79,18 +258,8 @@
 
   --shadow-1: none;
   --shadow-2: 0 1px 2px rgb(0 0 0 / .06);
-  --shadow-pop: 0 8px 24px rgb(0 0 0 / .12), 0 1px 2px rgb(0 0 0 / .08);
-
-  --ease-out: cubic-bezier(.2, .8, .2, 1);
-  --ease-in: cubic-bezier(.4, 0, 1, 1);
-  --ease-move: cubic-bezier(.65, 0, .35, 1);
-  --dur-1: 120ms;
-  --dur-2: 180ms;
-  --dur-3: 260ms;
-  --dur-4: 420ms;
 }
 
-/* Compatibilidad: cualquier [data-stage] usa el acento de marca */
 [data-stage] {
   --stage: var(--brand);
   --stage-soft: var(--brand-soft);
@@ -98,26 +267,8 @@
   --stage-contrast: #FFFFFF;
 }
 
-/* Modo oscuro (sistema), salvo que se fuerce claro */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --ink: #EDECE9;
-    --ink-2: #B5B1AA;
-    --ink-3: #8F8A82;
-    --sunken: #222220;
-    --line: #2E2D2A;
-    --line-strong: #3D3B37;
-    --line-control: #6B675F;
-    --brand: #F07A3E;
-    --brand-soft: #2D1D14;
-    --brand-deep: #F5A47A;
-    --track-de: #7C9BF5;
-    --track-da: #5BC79A;
-    --track-bi: #B58CF0;
-    --focus: #F07A3E;
-
-    --bg: #121211;
-    --surface: #1A1A18;
     --primary-soft: #2A2926;
     --success: #5BC79A;
     --success-soft: #16261F;
@@ -125,7 +276,6 @@
     --danger-soft: #2E1A18;
     --warning: #E0A345;
     --warning-soft: #2B2112;
-    --code-bg: #0E0E0D;
     --stage-contrast: #121211;
 
     --role-de-deep: #A9BDF8;
@@ -136,7 +286,6 @@
     --role-bi-soft: color-mix(in oklab, var(--track-bi) 12%, var(--surface));
 
     --shadow-2: 0 1px 2px rgb(0 0 0 / .3);
-    --shadow-pop: 0 8px 24px rgb(0 0 0 / .45), 0 1px 2px rgb(0 0 0 / .3);
   }
 
   :root:not([data-theme="light"]) [data-stage] {
@@ -144,25 +293,7 @@
   }
 }
 
-/* Modo oscuro explícito */
 [data-theme="dark"] {
-  --ink: #EDECE9;
-  --ink-2: #B5B1AA;
-  --ink-3: #8F8A82;
-  --sunken: #222220;
-  --line: #2E2D2A;
-  --line-strong: #3D3B37;
-  --line-control: #6B675F;
-  --brand: #F07A3E;
-  --brand-soft: #2D1D14;
-  --brand-deep: #F5A47A;
-  --track-de: #7C9BF5;
-  --track-da: #5BC79A;
-  --track-bi: #B58CF0;
-  --focus: #F07A3E;
-
-  --bg: #121211;
-  --surface: #1A1A18;
   --primary-soft: #2A2926;
   --success: #5BC79A;
   --success-soft: #16261F;
@@ -170,7 +301,6 @@
   --danger-soft: #2E1A18;
   --warning: #E0A345;
   --warning-soft: #2B2112;
-  --code-bg: #0E0E0D;
   --stage-contrast: #121211;
 
   --role-de-deep: #A9BDF8;
@@ -181,22 +311,8 @@
   --role-bi-soft: color-mix(in oklab, var(--track-bi) 12%, var(--surface));
 
   --shadow-2: 0 1px 2px rgb(0 0 0 / .3);
-  --shadow-pop: 0 8px 24px rgb(0 0 0 / .45), 0 1px 2px rgb(0 0 0 / .3);
 }
 
 [data-theme="dark"] [data-stage] {
   --stage-contrast: #121211;
-}
-
-/* Tamaño de la interfaz (Ajustes → Tamaño). Se aplica con `zoom` sobre <html>; las unidades
-   de viewport de los CSS se dividen entre --zoom para que los paneles de altura completa
-   sigan ocupando toda la pantalla. "auto" reduce al 90 % en portátiles pequeños. */
-html { --zoom: 1; zoom: var(--zoom); }
-html[data-scale="0.8"] { --zoom: 0.8; }
-html[data-scale="0.9"] { --zoom: 0.9; }
-html[data-scale="1.1"] { --zoom: 1.1; }
-html[data-scale="1.25"] { --zoom: 1.25; }
-
-@media (min-width: 1024px) and (max-width: 1440px), (min-width: 1024px) and (max-height: 800px) {
-  html[data-scale="auto"] { --zoom: 0.9; }
 }
