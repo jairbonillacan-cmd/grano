@@ -1,0 +1,181 @@
+[
+  {
+    "id": "codificacion-visual",
+    "term": "Codificación visual",
+    "englishTerm": "Visual Encoding",
+    "track": "core",
+    "definition": "Asignación de una variable de datos a un atributo gráfico como posición, longitud, pendiente, área o color para compararla visualmente sin distorsión.",
+    "formula": "Posición en escala común > Longitud > Pendiente > Área > Ángulo (Cleveland & McGill, 1984)",
+    "example": "Representar el ingreso de cinco categorías con la longitud horizontal de barras alineadas en lugar de ángulos en un círculo.",
+    "confusedWith": "Decoración gráfica: añadir iconos, efectos 3D o colores arbitrarios que no representan ninguna columna de la tabla.",
+    "relatedLessons": [
+      "c1-viz-01-geometria-grafico"
+    ],
+    "relatedTerms": [
+      "jerarquia-perceptual",
+      "tinta-proporcional"
+    ],
+    "sources": [
+      {
+        "title": "Cleveland & McGill (1984) — Graphical Perception: Theory, Experimentation, and Application to the Development of Graphical Methods",
+        "url": "https://www.jstor.org/stable/2288400",
+        "publisher": "Journal of the American Statistical Association (JASA)",
+        "accessed": "2026-10-29",
+        "supports": "Definición formal de codificaciones visuales elementales y medición experimental de su tasa de error."
+      }
+    ]
+  },
+  {
+    "id": "jerarquia-perceptual",
+    "term": "Jerarquía de precisión perceptual",
+    "englishTerm": "Graphical Perception Hierarchy",
+    "track": "core",
+    "definition": "Orden empírico de exactitud con que el ojo humano estima magnitudes: la posición sobre una escala común supera a la longitud, área y ángulo.",
+    "formula": "Error perceptual(Posición alineada) < Error(Longitud) < Error(Área) < Error(Ángulo)",
+    "example": "Sustituir un gráfico circular de cinco categorías parecidas por barras horizontales ordenadas de mayor a menor ingreso.",
+    "confusedWith": "Preferencia estética subjetiva: elegir un gráfico porque luce llamativo aunque impida distinguir diferencias de 2 puntos porcentuales.",
+    "relatedLessons": [
+      "c1-viz-01-geometria-grafico",
+      "bi3-dashboards-01-bi-tufte-code"
+    ],
+    "relatedTerms": [
+      "codificacion-visual",
+      "tinta-proporcional"
+    ],
+    "sources": [
+      {
+        "title": "Cleveland & McGill (1984) — Graphical Perception: Theory, Experimentation, and Application to the Development of Graphical Methods",
+        "url": "https://www.jstor.org/stable/2288400",
+        "publisher": "Journal of the American Statistical Association (JASA)",
+        "accessed": "2026-10-29",
+        "supports": "Experimentos psicofísicos que ordenan los canales visuales según la precisión del juicio humano."
+      }
+    ]
+  },
+  {
+    "id": "tinta-proporcional",
+    "term": "Principio de tinta proporcional",
+    "englishTerm": "Principle of Proportional Ink",
+    "track": "core",
+    "definition": "Regla que exige que el área rellena de una barra o región sombreada sea directamente proporcional al valor numérico representado, partiendo siempre desde cero.",
+    "formula": "Factor de distorsión = (Cambio relativo en longitud de barra) / (Cambio relativo en el dato)",
+    "example": "Iniciar en 0 USD el eje vertical de un gráfico de barras de ventas para no cuadruplicar visualmente una diferencia del 4 %.",
+    "confusedWith": "Exigir cero en todos los gráficos: un gráfico de líneas codifica posición, no área rellena, y puede acotar su eje con contexto explícito.",
+    "relatedLessons": [
+      "c1-viz-02-ejes-escalas-cero"
+    ],
+    "relatedTerms": [
+      "codificacion-visual",
+      "indice-base-100"
+    ],
+    "sources": [
+      {
+        "title": "Fundamentals of Data Visualization — Chapter 17: The Principle of Proportional Ink",
+        "url": "https://clauswilke.com/dataviz/proportional-ink.html",
+        "publisher": "Claus O. Wilke / O'Reilly Media",
+        "accessed": "2026-10-29",
+        "supports": "Formulación del principio de tinta proporcional y obligatoriedad de incluir el cero en gráficos de barras."
+      }
+    ]
+  },
+  {
+    "id": "indice-base-100",
+    "term": "Índice base 100",
+    "englishTerm": "Indexed Series (Base 100)",
+    "track": "core",
+    "definition": "Transformación que divide cada valor de una serie temporal entre su valor inicial y multiplica por 100 para comparar ritmos relativos en una escala.",
+    "formula": "ROUND(100.0 * valor_t / FIRST_VALUE(valor_t) OVER (ORDER BY fecha), 1)",
+    "example": "Comparar la evolución trimestral del gasto en dólares y las conversiones en un solo eje donde el primer trimestre vale 100.0.",
+    "confusedWith": "Eje doble secundario: superponer dos escalas con unidades distintas en el mismo gráfico produce cruces falsos según cómo se estire cada eje.",
+    "relatedLessons": [
+      "c1-viz-02-ejes-escalas-cero"
+    ],
+    "relatedTerms": [
+      "tinta-proporcional"
+    ],
+    "sources": [
+      {
+        "title": "Dual-Scaled Axes in Graphs: Are They Ever the Best Solution?",
+        "url": "https://www.perceptualedge.com/articles/visual_business_intelligence/dual-scaled_axes.pdf",
+        "publisher": "Stephen Few / Perceptual Edge",
+        "accessed": "2026-10-29",
+        "supports": "Sustitución de gráficos con ejes dobles por series indexadas a un punto base común o paneles separados."
+      }
+    ]
+  },
+  {
+    "id": "paleta-divergente",
+    "term": "Paleta de color divergente",
+    "englishTerm": "Diverging Color Palette",
+    "track": "core",
+    "definition": "Escala cromática que parte de un tono neutro en un valor central con significado analítico, como cero variación, hacia dos extremos de color contrastantes.",
+    "formula": "Valor < 0 (Extremo A) <- Centro neutro (0 % vs. meta) -> Valor > 0 (Extremo B)",
+    "example": "Colorear la desviación porcentual contra la meta usando azul para sobrecumplimiento, gris neutro en rango y naranja para caídas.",
+    "confusedWith": "Paleta secuencial o cualitativa: usar dos extremos de color para una variable que solo crece desde cero o para categorías sin orden.",
+    "relatedLessons": [
+      "c1-viz-03-color-accesibilidad"
+    ],
+    "relatedTerms": [
+      "contraste-no-textual"
+    ],
+    "sources": [
+      {
+        "title": "ColorBrewer 2.0: Color Advice for Cartography and Sequential, Diverging, and Qualitative Schemes",
+        "url": "https://colorbrewer2.org/",
+        "publisher": "Cynthia A. Brewer & The Pennsylvania State University",
+        "accessed": "2026-10-29",
+        "supports": "Clasificación de escalas cromáticas en secuenciales, divergentes y cualitativas con filtro de daltonismo."
+      }
+    ]
+  },
+  {
+    "id": "contraste-no-textual",
+    "term": "Contraste no textual y redundancia accesible",
+    "englishTerm": "Non-text Contrast & Redundant Coding (WCAG 1.4.1 / 1.4.11)",
+    "track": "core",
+    "definition": "Requisitos de accesibilidad que exigen razón de luminancia mínima de 3:1 en marcas gráficas y prohibición de transmitir estados usando únicamente diferencias de color.",
+    "formula": "Razón de contraste WCAG = (L_claro + 0.05) / (L_oscuro + 0.05) >= 3.0",
+    "example": "Acompañar una alerta de costo por conversión con etiqueta textual explícita ('ALERTA [!]') además del color para personas con daltonismo.",
+    "confusedWith": "Semáforo rojo-verde sin texto: un círculo rojo frente a uno verde resulta indistinguible para lectores con deuteranopía o protanopía.",
+    "relatedLessons": [
+      "c1-viz-03-color-accesibilidad"
+    ],
+    "relatedTerms": [
+      "paleta-divergente"
+    ],
+    "sources": [
+      {
+        "title": "Web Content Accessibility Guidelines (WCAG) 2.2 — Success Criterion 1.4.1 Use of Color & 1.4.11 Non-text Contrast",
+        "url": "https://www.w3.org/TR/WCAG22/#non-text-contrast",
+        "publisher": "World Wide Web Consortium (W3C)",
+        "accessed": "2026-10-29",
+        "supports": "Umbral normativo de contraste 3:1 en elementos gráficos y obligación de redundancia no cromática."
+      }
+    ]
+  },
+  {
+    "id": "cifras-tabulares",
+    "term": "Cifras tabulares y alineación numérica",
+    "englishTerm": "Tabular Numerals (tabular-nums)",
+    "track": "core",
+    "definition": "Diseño tipográfico donde cada dígito del 0 al 9 ocupa el mismo ancho horizontal, permitiendo alinear columnas a la derecha por su punto decimal.",
+    "formula": "font-variant-numeric: tabular-nums; text-align: right; ROUND(metrica, 2)",
+    "example": "Formatear importes en dólares con dos decimales fijos y alineación derecha para distinguir al instante decenas de miles frente a cientos.",
+    "confusedWith": "Cifras proporcionales o texto centrado: centrar números con distinta cantidad de dígitos o decimales desalinea las unidades y frena la lectura.",
+    "relatedLessons": [
+      "c1-viz-04-tablas-numericas"
+    ],
+    "relatedTerms": [
+      "codificacion-visual"
+    ],
+    "sources": [
+      {
+        "title": "CSS Fonts Module Level 4 — Section 6.6: Numeric Formatting (font-variant-numeric: tabular-nums)",
+        "url": "https://www.w3.org/TR/css-fonts-4/#font-variant-numeric-prop",
+        "publisher": "World Wide Web Consortium (W3C)",
+        "accessed": "2026-10-29",
+        "supports": "Especificación de glifos numéricos de ancho uniforme para alineación vertical en tablas de datos."
+      }
+    ]
+  }
+]
