@@ -168,71 +168,20 @@ const lesson = {
     }
   ],
   "practice": {
-    "type": "fill-blanks",
+    "type": "sql",
     "title": "Pre-agregación en CTEs contra el fan-out",
     "language": "sql",
-    "prompt": "Completa la consulta para calcular por cada cliente sus ingresos brutos reales (`orders.order_total_usd`), total de unidades (`order_items.quantity`) y monto reembolsado (`refunds.refund_usd`) igualando primero la granularidad a `order_id`.",
-    "starterCode": "WITH items_agg AS (\n  SELECT\n    order_id,\n    SUM(quantity) AS total_units\n  FROM order_items\n  {{b1}}\n),\nrefunds_agg AS (\n  SELECT\n    order_id,\n    SUM(refund_usd) AS total_refund_usd\n  FROM refunds\n  GROUP BY order_id\n)\nSELECT\n  o.customer_id,\n  {{b2}} AS pedidos_unicos,\n  SUM(o.order_total_usd) AS gross_revenue_usd,\n  SUM(COALESCE(i.total_units, 0)) AS unidades_compradas,\n  SUM({{b3}}) AS refunded_usd\nFROM orders o\nLEFT JOIN items_agg i ON o.order_id = i.order_id\nLEFT JOIN refunds_agg r ON o.order_id = r.order_id\nGROUP BY o.customer_id;",
-    "expected": "WITH items_agg AS (\n  SELECT\n    order_id,\n    SUM(quantity) AS total_units\n  FROM order_items\n  {{b1}}\n),\nrefunds_agg AS (\n  SELECT\n    order_id,\n    SUM(refund_usd) AS total_refund_usd\n  FROM refunds\n  GROUP BY order_id\n)\nSELECT\n  o.customer_id,\n  {{b2}} AS pedidos_unicos,\n  SUM(o.order_total_usd) AS gross_revenue_usd,\n  SUM(COALESCE(i.total_units, 0)) AS unidades_compradas,\n  SUM({{b3}}) AS refunded_usd\nFROM orders o\nLEFT JOIN items_agg i ON o.order_id = i.order_id\nLEFT JOIN refunds_agg r ON o.order_id = r.order_id\nGROUP BY o.customer_id;",
+    "prompt": "Completa la consulta sobre Mercado Brisa para calcular en los primeros 10 clientes (`ORDER BY o.customer_id LIMIT 10`) sus ingresos reales (`gross_revenue_usd`), total de unidades (`unidades_compradas`) y monto reembolsado (`refunded_usd`) pre-agregando `order_items` y `refunds` a nivel `order_id`.",
+    "starterCode": "WITH items_agg AS (\n  SELECT\n    order_id,\n    SUM(qty) AS total_units\n  FROM order_items\n  -- TODO: Agrupa por order_id para evitar fan-out con orders\n),\nrefunds_agg AS (\n  SELECT\n    order_id,\n    SUM(refund_amount_usd) AS total_refund_usd\n  FROM refunds\n  GROUP BY order_id\n)\nSELECT\n  o.customer_id,\n  COUNT(o.order_id) AS pedidos_unicos,\n  ROUND(SUM(o.total_usd), 2) AS gross_revenue_usd,\n  SUM(COALESCE(i.total_units, 0)) AS unidades_compradas,\n  -- TODO: Suma r.total_refund_usd protegiendo nulos con COALESCE y redondeando a 2 decimales AS refunded_usd\n  0.0 AS refunded_usd\nFROM orders o\nLEFT JOIN items_agg i ON o.order_id = i.order_id\nLEFT JOIN refunds_agg r ON o.order_id = r.order_id\nGROUP BY o.customer_id\nORDER BY o.customer_id\nLIMIT 10;",
+    "expected": "WITH items_agg AS (\n  SELECT\n    order_id,\n    SUM(qty) AS total_units\n  FROM order_items\n  GROUP BY order_id\n),\nrefunds_agg AS (\n  SELECT\n    order_id,\n    SUM(refund_amount_usd) AS total_refund_usd\n  FROM refunds\n  GROUP BY order_id\n)\nSELECT\n  o.customer_id,\n  COUNT(o.order_id) AS pedidos_unicos,\n  ROUND(SUM(o.total_usd), 2) AS gross_revenue_usd,\n  SUM(COALESCE(i.total_units, 0)) AS unidades_compradas,\n  ROUND(SUM(COALESCE(r.total_refund_usd, 0)), 2) AS refunded_usd\nFROM orders o\nLEFT JOIN items_agg i ON o.order_id = i.order_id\nLEFT JOIN refunds_agg r ON o.order_id = r.order_id\nGROUP BY o.customer_id\nORDER BY o.customer_id\nLIMIT 10;",
     "orderMatters": true,
     "hints": [
-      "Cláusula para agrupar por pedido: Debes colapsar `order_items` para que quede exactamente 1 fila por `order_id`.",
-      "Conteo de pedidos: Como la relación ya es 1:1 a nivel `orders`, cuenta los `o.order_id`.",
-      "Manejo de nulos en reembolsos: No todos los pedidos tienen reembolso; convierte el `NULL` del `LEFT JOIN` en `0` con `COALESCE`."
+      "En la CTE `items_agg`, incluye `GROUP BY order_id` para colapsar las líneas de detalle a una sola fila por pedido.",
+      "Como `items_agg` y `refunds_agg` tienen relación `1:1` con `orders`, `SUM(o.total_usd)` y `COUNT(o.order_id)` no se multiplican.",
+      "Para `refunded_usd`, escribe `ROUND(SUM(COALESCE(r.total_refund_usd, 0)), 2) AS refunded_usd`."
     ],
-    "solution": "WITH items_agg AS (\n  SELECT\n    order_id,\n    SUM(quantity) AS total_units\n  FROM order_items\n  {{b1}}\n),\nrefunds_agg AS (\n  SELECT\n    order_id,\n    SUM(refund_usd) AS total_refund_usd\n  FROM refunds\n  GROUP BY order_id\n)\nSELECT\n  o.customer_id,\n  {{b2}} AS pedidos_unicos,\n  SUM(o.order_total_usd) AS gross_revenue_usd,\n  SUM(COALESCE(i.total_units, 0)) AS unidades_compradas,\n  SUM({{b3}}) AS refunded_usd\nFROM orders o\nLEFT JOIN items_agg i ON o.order_id = i.order_id\nLEFT JOIN refunds_agg r ON o.order_id = r.order_id\nGROUP BY o.customer_id;",
-    "solutionExplanation": "Pre-agrega la tabla hija `order_items` por `order_id` antes de unirla con la cabecera `orders`. Usa `LEFT JOIN` en lugar de `INNER JOIN` para no perder pedidos sin reembolsos o sin líneas accesorias. Protege las sumas de tablas opcionales con `COALESCE(..., 0)` para evitar resultados `NULL`.",
-    "blanks": [
-      {
-        "id": "b1",
-        "placeholder": "Cláusula para agrupar por pedido",
-        "acceptedAnswers": [
-          "GROUP BY order_id",
-          "GROUP BY 1"
-        ],
-        "hint": "Debes colapsar `order_items` para que quede exactamente 1 fila por `order_id`."
-      },
-      {
-        "id": "b2",
-        "placeholder": "Conteo de pedidos",
-        "acceptedAnswers": [
-          "COUNT(o.order_id)",
-          "COUNT(DISTINCT o.order_id)",
-          "COUNT(*)"
-        ],
-        "hint": "Como la relación ya es 1:1 a nivel `orders`, cuenta los `o.order_id`."
-      },
-      {
-        "id": "b3",
-        "placeholder": "Manejo de nulos en reembolsos",
-        "acceptedAnswers": [
-          "COALESCE(r.total_refund_usd, 0)",
-          "IFNULL(r.total_refund_usd, 0)"
-        ],
-        "hint": "No todos los pedidos tienen reembolso; convierte el `NULL` del `LEFT JOIN` en `0` con `COALESCE`."
-      }
-    ],
-    "expectedOutputTable": [
-      {
-        "customer_id": "CUST-01",
-        "pedidos_unicos": 2,
-        "gross_revenue_usd": "$350.00",
-        "unidades_compradas": 6,
-        "refunded_usd": "$25.00"
-      },
-      {
-        "customer_id": "CUST-02",
-        "pedidos_unicos": 1,
-        "gross_revenue_usd": "$120.00",
-        "unidades_compradas": 2,
-        "refunded_usd": "$0.00"
-      }
-    ],
-    "rubricCriteria": [
-      "Pre-agrega la tabla hija `order_items` por `order_id` antes de unirla con la cabecera `orders`.",
-      "Usa `LEFT JOIN` en lugar de `INNER JOIN` para no perder pedidos sin reembolsos o sin líneas accesorias.",
-      "Protege las sumas de tablas opcionales con `COALESCE(..., 0)` para evitar resultados `NULL`."
-    ]
+    "solution": "WITH items_agg AS (\n  SELECT\n    order_id,\n    SUM(qty) AS total_units\n  FROM order_items\n  GROUP BY order_id\n),\nrefunds_agg AS (\n  SELECT\n    order_id,\n    SUM(refund_amount_usd) AS total_refund_usd\n  FROM refunds\n  GROUP BY order_id\n)\nSELECT\n  o.customer_id,\n  COUNT(o.order_id) AS pedidos_unicos,\n  ROUND(SUM(o.total_usd), 2) AS gross_revenue_usd,\n  SUM(COALESCE(i.total_units, 0)) AS unidades_compradas,\n  ROUND(SUM(COALESCE(r.total_refund_usd, 0)), 2) AS refunded_usd\nFROM orders o\nLEFT JOIN items_agg i ON o.order_id = i.order_id\nLEFT JOIN refunds_agg r ON o.order_id = r.order_id\nGROUP BY o.customer_id\nORDER BY o.customer_id\nLIMIT 10;",
+    "solutionExplanation": "Pre-agrega las tablas hijas `order_items` y `refunds` por `order_id` en CTEs separadas antes de unirlas con `orders`. Usa `LEFT JOIN` y `COALESCE(..., 0)` para no perder pedidos sin devoluciones."
   },
   "roleNotes": {
     "de": "Diseña tablas Silver con granularidad homogénea: nunca mezcla medidas de cabecera sin prorratear en una tabla de líneas de detalle. Implementa tests automáticos en dbt/SQLMesh (`assert_sum_reconciliation`) que fallan el pipeline si `SUM(order_total)` cambia tras un enriquecimiento. Documenta explícitamente el `grain` en el contrato YAML de cada tabla del Lakehouse.",

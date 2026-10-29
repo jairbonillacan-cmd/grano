@@ -195,67 +195,20 @@ const lesson = {
     }
   ],
   "practice": {
-    "type": "fill-blanks",
-    "title": "Deduplicación con QUALIFY y media móvil",
+    "type": "sql",
+    "title": "Ingresos diarios con LAG y media móvil",
     "language": "sql",
-    "prompt": "Completa la consulta para: (1) quedarte únicamente con el último registro enviado por cada `store_id` y `sale_date` usando `QUALIFY`, y (2) calcular el ingreso previo con `LAG` y la media móvil de 7 días calendario usando un marco `RANGE`.",
-    "starterCode": "WITH daily_store_sales AS (\n  SELECT\n    store_id,\n    sale_date,\n    revenue_usd\n  FROM raw_pos_uploads\n  {{b1}} ROW_NUMBER() OVER (\n    PARTITION BY store_id, sale_date\n    ORDER BY ingested_at DESC\n  ) = 1\n)\nSELECT\n  store_id,\n  sale_date,\n  revenue_usd,\n  {{b2}}(revenue_usd, 1, 0) OVER (\n    PARTITION BY store_id\n    ORDER BY sale_date\n  ) AS prev_day_revenue_usd,\n  ROUND(\n    AVG(revenue_usd) OVER (\n      PARTITION BY store_id\n      ORDER BY sale_date\n      {{b3}} BETWEEN INTERVAL 6 DAYS PRECEDING AND CURRENT ROW\n    ),\n    2\n  ) AS rolling_7d_avg_usd\nFROM daily_store_sales;",
-    "expected": "WITH daily_store_sales AS (\n  SELECT\n    store_id,\n    sale_date,\n    revenue_usd\n  FROM raw_pos_uploads\n  {{b1}} ROW_NUMBER() OVER (\n    PARTITION BY store_id, sale_date\n    ORDER BY ingested_at DESC\n  ) = 1\n)\nSELECT\n  store_id,\n  sale_date,\n  revenue_usd,\n  {{b2}}(revenue_usd, 1, 0) OVER (\n    PARTITION BY store_id\n    ORDER BY sale_date\n  ) AS prev_day_revenue_usd,\n  ROUND(\n    AVG(revenue_usd) OVER (\n      PARTITION BY store_id\n      ORDER BY sale_date\n      {{b3}} BETWEEN INTERVAL 6 DAYS PRECEDING AND CURRENT ROW\n    ),\n    2\n  ) AS rolling_7d_avg_usd\nFROM daily_store_sales;",
+    "prompt": "Calcula sobre `orders` (`status = 'completed'`, `store_id = 1`) los primeros 10 días con ventas (`ORDER BY order_date LIMIT 10`): `store_id`, `order_date`, `revenue_usd`, el ingreso del día previo (`prev_day_revenue_usd` con `LAG`) y la media móvil de 3 filas (`rolling_3_avg_usd`).",
+    "starterCode": "WITH daily_store_sales AS (\n  SELECT\n    store_id,\n    order_date,\n    ROUND(SUM(total_usd), 2) AS revenue_usd\n  FROM orders\n  WHERE status = 'completed'\n    AND store_id = 1\n  GROUP BY store_id, order_date\n)\nSELECT\n  store_id,\n  order_date,\n  revenue_usd,\n  -- TODO: Usa LAG(revenue_usd, 1, 0) OVER (PARTITION BY store_id ORDER BY order_date)\n  0.0 AS prev_day_revenue_usd,\n  ROUND(\n    AVG(revenue_usd) OVER (\n      PARTITION BY store_id\n      ORDER BY order_date\n      ROWS BETWEEN 2 PRECEDING AND CURRENT ROW\n    ),\n    2\n  ) AS rolling_3_avg_usd\nFROM daily_store_sales\nORDER BY order_date\nLIMIT 10;",
+    "expected": "WITH daily_store_sales AS (\n  SELECT\n    store_id,\n    order_date,\n    ROUND(SUM(total_usd), 2) AS revenue_usd\n  FROM orders\n  WHERE status = 'completed'\n    AND store_id = 1\n  GROUP BY store_id, order_date\n)\nSELECT\n  store_id,\n  order_date,\n  revenue_usd,\n  LAG(revenue_usd, 1, 0) OVER (\n    PARTITION BY store_id\n    ORDER BY order_date\n  ) AS prev_day_revenue_usd,\n  ROUND(\n    AVG(revenue_usd) OVER (\n      PARTITION BY store_id\n      ORDER BY order_date\n      ROWS BETWEEN 2 PRECEDING AND CURRENT ROW\n    ),\n    2\n  ) AS rolling_3_avg_usd\nFROM daily_store_sales\nORDER BY order_date\nLIMIT 10;",
     "orderMatters": true,
     "hints": [
-      "Cláusula para filtrar ventanas: Es el equivalente a `HAVING`, pero diseñado específicamente para filtrar funciones de ventana sin subconsultas.",
-      "Función para leer la fila anterior: Esta función mira N filas hacia atrás dentro de la misma partición ordenada.",
-      "Tipo de marco por intervalo de fechas: Para ventanas basadas en `INTERVAL 6 DAYS` (fechas calendario y no conteo físico de filas), debes usar este tipo de marco."
+      "Sustituye `0.0 AS prev_day_revenue_usd` por `LAG(revenue_usd, 1, 0) OVER (PARTITION BY store_id ORDER BY order_date) AS prev_day_revenue_usd`.",
+      "El tercer argumento de `LAG(revenue_usd, 1, 0)` asigna `0` a la primera fecha de la tienda donde no existe fila previa.",
+      "Conserva el marco `ROWS BETWEEN 2 PRECEDING AND CURRENT ROW` y el `ORDER BY order_date LIMIT 10`."
     ],
-    "solution": "WITH daily_store_sales AS (\n  SELECT\n    store_id,\n    sale_date,\n    revenue_usd\n  FROM raw_pos_uploads\n  {{b1}} ROW_NUMBER() OVER (\n    PARTITION BY store_id, sale_date\n    ORDER BY ingested_at DESC\n  ) = 1\n)\nSELECT\n  store_id,\n  sale_date,\n  revenue_usd,\n  {{b2}}(revenue_usd, 1, 0) OVER (\n    PARTITION BY store_id\n    ORDER BY sale_date\n  ) AS prev_day_revenue_usd,\n  ROUND(\n    AVG(revenue_usd) OVER (\n      PARTITION BY store_id\n      ORDER BY sale_date\n      {{b3}} BETWEEN INTERVAL 6 DAYS PRECEDING AND CURRENT ROW\n    ),\n    2\n  ) AS rolling_7d_avg_usd\nFROM daily_store_sales;",
-    "solutionExplanation": "Filtra duplicados en la misma pasada usando `QUALIFY ROW_NUMBER() OVER (...) = 1`. Utiliza `LAG(revenue_usd, 1, 0)` particionando por tienda y ordenando por fecha. Selecciona `RANGE BETWEEN INTERVAL 6 DAYS PRECEDING AND CURRENT ROW` para respetar días sin ventas en la ventana de 7 días.",
-    "blanks": [
-      {
-        "id": "b1",
-        "placeholder": "Cláusula para filtrar ventanas",
-        "acceptedAnswers": [
-          "QUALIFY"
-        ],
-        "hint": "Es el equivalente a `HAVING`, pero diseñado específicamente para filtrar funciones de ventana sin subconsultas."
-      },
-      {
-        "id": "b2",
-        "placeholder": "Función para leer la fila anterior",
-        "acceptedAnswers": [
-          "LAG"
-        ],
-        "hint": "Esta función mira N filas hacia atrás dentro de la misma partición ordenada."
-      },
-      {
-        "id": "b3",
-        "placeholder": "Tipo de marco por intervalo de fechas",
-        "acceptedAnswers": [
-          "RANGE"
-        ],
-        "hint": "Para ventanas basadas en `INTERVAL 6 DAYS` (fechas calendario y no conteo físico de filas), debes usar este tipo de marco."
-      }
-    ],
-    "expectedOutputTable": [
-      {
-        "store_id": "MAD-01",
-        "sale_date": "2026-10-01",
-        "revenue_usd": "$1,200.00",
-        "prev_day_revenue_usd": "$0.00",
-        "rolling_7d_avg_usd": "$1,200.00"
-      },
-      {
-        "store_id": "MAD-01",
-        "sale_date": "2026-10-03",
-        "revenue_usd": "$1,500.00",
-        "prev_day_revenue_usd": "$1,200.00",
-        "rolling_7d_avg_usd": "$1,350.00"
-      }
-    ],
-    "rubricCriteria": [
-      "Filtra duplicados en la misma pasada usando `QUALIFY ROW_NUMBER() OVER (...) = 1`.",
-      "Utiliza `LAG(revenue_usd, 1, 0)` particionando por tienda y ordenando por fecha.",
-      "Selecciona `RANGE BETWEEN INTERVAL 6 DAYS PRECEDING AND CURRENT ROW` para respetar días sin ventas en la ventana de 7 días."
-    ]
+    "solution": "WITH daily_store_sales AS (\n  SELECT\n    store_id,\n    order_date,\n    ROUND(SUM(total_usd), 2) AS revenue_usd\n  FROM orders\n  WHERE status = 'completed'\n    AND store_id = 1\n  GROUP BY store_id, order_date\n)\nSELECT\n  store_id,\n  order_date,\n  revenue_usd,\n  LAG(revenue_usd, 1, 0) OVER (\n    PARTITION BY store_id\n    ORDER BY order_date\n  ) AS prev_day_revenue_usd,\n  ROUND(\n    AVG(revenue_usd) OVER (\n      PARTITION BY store_id\n      ORDER BY order_date\n      ROWS BETWEEN 2 PRECEDING AND CURRENT ROW\n    ),\n    2\n  ) AS rolling_3_avg_usd\nFROM daily_store_sales\nORDER BY order_date\nLIMIT 10;",
+    "solutionExplanation": "Agrega primero las ventas completadas por `(store_id, order_date)` en una CTE y luego calcula sobre ese grano `LAG(revenue_usd, 1, 0)` y el promedio móvil con marco explícito."
   },
   "roleNotes": {
     "de": "Estandariza la deduplicación idempotente en la capa Silver con `QUALIFY ROW_NUMBER() OVER (PARTITION BY pk ORDER BY ingested_at DESC) = 1`. Previene el Data Skew en clústeres reemplazando claves nulas por un identificador salado (`COALESCE(session_id, CONCAT('anon_', UUID()))`) antes de particionar. Reutiliza definiciones de ventana con la cláusula `WINDOW w AS (...)` para que el optimizador ejecute un único ordenamiento físico (`Sort`).",

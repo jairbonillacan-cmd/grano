@@ -168,73 +168,20 @@ const lesson = {
     }
   ],
   "practice": {
-    "type": "fill-blanks",
-    "title": "Materialización de tabla OBT desde esquema estrella",
+    "type": "sql",
+    "title": "Margen bruto sobre esquema estrella",
     "language": "sql",
-    "prompt": "Completa la consulta de transformación que une la tabla de hechos `silver.fct_orders` con las dimensiones conformadas `silver.dim_customer` y `silver.dim_product` mediante sus claves subrogadas (`customer_sk`, `product_sk`) y ordena físicamente la tabla resultante para optimizar la compresión RLE en Parquet.",
-    "starterCode": "CREATE OR REPLACE TABLE gold.obt_sales_wide AS\nSELECT\n  f.order_id,\n  f.order_date,\n  c.customer_id,\n  c.country_name AS customer_country,\n  c.segment_name AS customer_segment,\n  p.category_name AS product_category,\n  f.quantity,\n  f.net_amount_usd\nFROM silver.fct_orders f\nLEFT JOIN silver.dim_customer c\n  ON {{b1}}\nLEFT JOIN silver.dim_product p\n  ON {{b2}}\nORDER BY {{b3}};",
-    "expected": "CREATE OR REPLACE TABLE gold.obt_sales_wide AS\nSELECT\n  f.order_id,\n  f.order_date,\n  c.customer_id,\n  c.country_name AS customer_country,\n  c.segment_name AS customer_segment,\n  p.category_name AS product_category,\n  f.quantity,\n  f.net_amount_usd\nFROM silver.fct_orders f\nLEFT JOIN silver.dim_customer c\n  ON {{b1}}\nLEFT JOIN silver.dim_product p\n  ON {{b2}}\nORDER BY {{b3}};",
+    "prompt": "Une la tabla de hechos `order_items` con `orders` (`status = 'completed'`) y las dimensiones conformadas `products` y `stores` para obtener por `region` y `category`: `total_units`, `revenue_usd` y `gross_margin_usd` (`SUM(line_total_usd - qty * unit_cost_usd)`), ordenado por `revenue_usd DESC`.",
+    "starterCode": "SELECT\n  s.region,\n  p.category,\n  SUM(oi.qty) AS total_units,\n  ROUND(SUM(oi.line_total_usd), 2) AS revenue_usd,\n  -- TODO: Calcula el margen bruto redondeado a 2 decimales AS gross_margin_usd\n  0.0 AS gross_margin_usd\nFROM order_items oi\nJOIN orders o ON oi.order_id = o.order_id\nJOIN products p ON oi.product_id = p.product_id\n-- TODO: Une la dimensión stores s usando store_id\nWHERE o.status = 'completed'\nGROUP BY s.region, p.category\nORDER BY revenue_usd DESC;",
+    "expected": "SELECT\n  s.region,\n  p.category,\n  SUM(oi.qty) AS total_units,\n  ROUND(SUM(oi.line_total_usd), 2) AS revenue_usd,\n  ROUND(SUM(oi.line_total_usd - oi.qty * p.unit_cost_usd), 2) AS gross_margin_usd\nFROM order_items oi\nJOIN orders o ON oi.order_id = o.order_id\nJOIN products p ON oi.product_id = p.product_id\nJOIN stores s ON o.store_id = s.store_id\nWHERE o.status = 'completed'\nGROUP BY s.region, p.category\nORDER BY revenue_usd DESC;",
     "orderMatters": true,
     "hints": [
-      "Condición de join por clave subrogada de cliente: En un Star Schema, une la tabla de hechos con `dim_customer` usando la clave subrogada `customer_sk`.",
-      "Condición de join por clave subrogada de producto: Une `fct_orders` con `dim_product` mediante la clave subrogada `product_sk`.",
-      "Columnas de ordenamiento para Run-Length Encoding: Ordenar por `f.order_date, c.country_name` agrupa valores repetidos contiguos potenciando la compresión RLE y los Zone Maps."
+      "Añade `JOIN stores s ON o.store_id = s.store_id` después del join con `products`.",
+      "El margen bruto de cada línea es `oi.line_total_usd - oi.qty * p.unit_cost_usd`.",
+      "Envuelve la suma en `ROUND(SUM(oi.line_total_usd - oi.qty * p.unit_cost_usd), 2) AS gross_margin_usd`."
     ],
-    "solution": "CREATE OR REPLACE TABLE gold.obt_sales_wide AS\nSELECT\n  f.order_id,\n  f.order_date,\n  c.customer_id,\n  c.country_name AS customer_country,\n  c.segment_name AS customer_segment,\n  p.category_name AS product_category,\n  f.quantity,\n  f.net_amount_usd\nFROM silver.fct_orders f\nLEFT JOIN silver.dim_customer c\n  ON {{b1}}\nLEFT JOIN silver.dim_product p\n  ON {{b2}}\nORDER BY {{b3}};",
-    "solutionExplanation": "Enlaza hechos y dimensiones mediante claves subrogadas (`customer_sk`, `product_sk`) en lugar de nombres o textos descriptivos. Utiliza `LEFT JOIN` desde la tabla de hechos para garantizar que ninguna transacción financiera se pierda. Ordena físicamente la OBT por fecha y dimensión de baja cardinalidad para maximizar Run-Length Encoding (RLE) en Parquet.",
-    "blanks": [
-      {
-        "id": "b1",
-        "placeholder": "Condición de join por clave subrogada de cliente",
-        "acceptedAnswers": [
-          "f.customer_sk = c.customer_sk",
-          "c.customer_sk = f.customer_sk"
-        ],
-        "hint": "En un Star Schema, une la tabla de hechos con `dim_customer` usando la clave subrogada `customer_sk`."
-      },
-      {
-        "id": "b2",
-        "placeholder": "Condición de join por clave subrogada de producto",
-        "acceptedAnswers": [
-          "f.product_sk = p.product_sk",
-          "p.product_sk = f.product_sk"
-        ],
-        "hint": "Une `fct_orders` con `dim_product` mediante la clave subrogada `product_sk`."
-      },
-      {
-        "id": "b3",
-        "placeholder": "Columnas de ordenamiento para Run-Length Encoding",
-        "acceptedAnswers": [
-          "f.order_date, c.country_name",
-          "f.order_date, customer_country",
-          "order_date, customer_country"
-        ],
-        "hint": "Ordenar por `f.order_date, c.country_name` agrupa valores repetidos contiguos potenciando la compresión RLE y los Zone Maps."
-      }
-    ],
-    "expectedOutputTable": [
-      {
-        "order_id": "ORD-801",
-        "order_date": "2026-10-12",
-        "customer_country": "México",
-        "customer_segment": "Enterprise",
-        "product_category": "Pagos QR",
-        "net_amount_usd": "$1,240.00"
-      },
-      {
-        "order_id": "ORD-802",
-        "order_date": "2026-10-12",
-        "customer_country": "Colombia",
-        "customer_segment": "Pyme",
-        "product_category": "Link de Pago",
-        "net_amount_usd": "$310.00"
-      }
-    ],
-    "rubricCriteria": [
-      "Enlaza hechos y dimensiones mediante claves subrogadas (`customer_sk`, `product_sk`) en lugar de nombres o textos descriptivos.",
-      "Utiliza `LEFT JOIN` desde la tabla de hechos para garantizar que ninguna transacción financiera se pierda.",
-      "Ordena físicamente la OBT por fecha y dimensión de baja cardinalidad para maximizar Run-Length Encoding (RLE) en Parquet."
-    ]
+    "solution": "SELECT\n  s.region,\n  p.category,\n  SUM(oi.qty) AS total_units,\n  ROUND(SUM(oi.line_total_usd), 2) AS revenue_usd,\n  ROUND(SUM(oi.line_total_usd - oi.qty * p.unit_cost_usd), 2) AS gross_margin_usd\nFROM order_items oi\nJOIN orders o ON oi.order_id = o.order_id\nJOIN products p ON oi.product_id = p.product_id\nJOIN stores s ON o.store_id = s.store_id\nWHERE o.status = 'completed'\nGROUP BY s.region, p.category\nORDER BY revenue_usd DESC;",
+    "solutionExplanation": "Enlaza la tabla de hechos `order_items` con `orders` y las dimensiones conformadas `products` y `stores`. Como las dimensiones tienen relación `1:N` hacia los hechos, el cruce preserva el grano de línea de pedido."
   },
   "roleNotes": {
     "de": "Extrae cambios de la base OLTP mediante CDC (sin impactar producción), construye el Star Schema gobernado en la capa Silver con claves subrogadas (`_sk`) y materializa tablas OBT ordenadas en la capa Gold para lecturas críticas. Evalúa el trade-off de cómputo: mantiene en Star Schema las dimensiones muy volátiles y aplana en OBT los atributos estables o ya cruzados temporalmente (Point-in-Time).",
