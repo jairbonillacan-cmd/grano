@@ -1,327 +1,453 @@
-// Lección migrada al esquema v2 mediante scripts/migrate-legacy.mjs
-const lesson = {
-  "id": "bi3-dashboards-01-bi-tufte-code",
-  "moduleId": "bi3-dashboards",
-  "tracks": [
-    "bi"
+export const lesson = {
+  id: 'bi3-dashboards-01-bi-tufte-code',
+  moduleId: 'bi3-dashboards',
+  track: 'bi',
+  tracks: ['bi', 'da'],
+  level: 3,
+  order: 1,
+  legacyId: 'l15-bi-tufte-code',
+  legacyOrder: 15,
+  contentVersion: 2,
+  title: 'Percepción visual, razón dato-tinta y narrativa ejecutiva',
+  subtitle: 'Razón dato-tinta de Tufte, gráficos de bala de Few y títulos activos bajo el estándar IBCS',
+  minutes: 30,
+  prerequisites: ['c1-viz-04-tablas-numericas', 'bi2-dax-06-antipatrones-rendimiento-dax'],
+  glossaryTerms: [
+    'bi3-razon-dato-tinta',
+    'bi3-grafico-de-bala',
+    'bi3-sparkline',
+    'bi3-titulo-accion',
   ],
-  "level": 3,
-  "order": 1,
-  "title": "Percepción visual, razón dato-tinta y reportes como código",
-  "minutes": 30,
-  "prerequisites": [
-    "c1-viz-01"
+  datasets: ['orders', 'stores', 'refunds'],
+  needsReview: false,
+  hook: 'El comité de dirección de Mercado Brisa abre el tablero mensual y encuentra cuatro velocímetros circulares en 3D con leyendas de doce colores. Tras cinco minutos de discusión, nadie sabe qué región incumplió su meta anual ni cuánto restaron las devoluciones. ¿Cómo eliminamos el ruido gráfico para que cada píxel responda una pregunta de negocio?',
+  objectives: [
+    'Maximizar la razón dato-tinta de Edward Tufte eliminando adornos redundantes (chartjunk) sin suprimir los ejes de contexto.',
+    'Reemplazar velocímetros circulares por gráficos de bala (bullet graphs) de Stephen Few, minigráficos (sparklines) y pequeños múltiplos.',
+    'Redactar títulos de acción ejecutivos bajo el Principio de la Pirámide de Barbara Minto y la notación semántica IBCS.',
+    'Construir en DuckDB la consulta base de un gráfico de bala regional que cruza ingresos completados y metas anuales en Mercado Brisa.',
   ],
-  "contentVersion": 1,
-  "hook": "En Mercado Brisa (empresa ficticia), el tablero semanal que recibe la dirección contiene siete gráficos de pastel en 3D, velocímetros que ocupan media pantalla para mostrar una sola cifra sin contexto histórico, 14 colores saturados y títulos pasivos como `\"Gráfico de ventas por tienda\"`. Además, cada vez que alguien edita un filtro en la herramienta visual, nadie sabe quién lo cambió ni por qué contradice al repositorio SQL. ¿Cómo rediseñas el tablero aplicando principios perceptuales y reportes versionados en Git?",
-  "objectives": [
-    "Seleccionar codificaciones visuales según la jerarquía de precisión perceptual de Cleveland y McGill (posición sobre ángulo o área).",
-    "Maximizar la razón dato-tinta de Tufte eliminando ruido visual y aplicando color semántico de alerta con referencias explícitas.",
-    "Construir reportes declarativos en código (Markdown + SQL parametrizado) versionados en Git con pruebas de CI."
-  ],
-  "sections": [
+  sections: [
     {
-      "id": "jerarquia-de-precision-perceptual-segun-clevelan",
-      "heading": "Jerarquía de precisión perceptual según Cleveland y McGill",
-      "body": "El sistema visual humano no procesa todas las formas geométricas con la misma exactitud. Los experimentos psicofísicos de William Cleveland y Robert McGill demostraron un orden estricto de precisión al comparar magnitudes cuantitativas:\n1) **Posición a lo largo de una escala común alineada** (gráficos de barras horizontales, puntos en un eje común): máxima precisión.\n2) **Longitud no alineada y pendiente** (barras apiladas, gráficos de líneas).\n3) **Área y Volumen** (gráficos de burbujas, treemaps): el ojo humano subestima sistemáticamente las diferencias de área.\n4) **Ángulo, Curvatura y Saturación de color** (gráficos de pastel, donas, velocímetros radiales): mínima precisión.\nCuando usas un gráfico de pastel con 6 regiones (`19%, 18%, 17%, 16%...`), obligas al cerebro del ejecutivo a resolver geometría angular para la cual es torpe; una tabla ordenada con barras integradas o un **Bullet Graph** de Stephen Few transmite el ranking, el valor exacto y la distancia contra la meta en menos de 400 milisegundos.",
-      "interactive": {
-        "component": "bi-anti-slop-comparator",
-        "caption": "Simulador interactivo: Percepción visual, razón dato-tinta y reportes como código"
-      }
+      id: 'sec-tufte-razon-dato-tinta',
+      heading: 'Razón dato-tinta y erradicación del ruido gráfico (chartjunk)',
+      body: 'En *The Visual Display of Quantitative Information*, **Edward Tufte** definió la **razón dato-tinta** (*data-ink ratio*). Esta métrica mide la proporción de tinta dedicada a mostrar números reales no redundantes. Cada borde grueso, sombra 3D, fondo degradado o rejilla oscura reduce esa proporción. Todo adorno innecesario introduce **ruido gráfico** (*chartjunk*).\n\nMaximizar la razón dato-tinta no significa dejar el lienzo desnudo. Como advierte **Claus O. Wilke**, borrar las líneas de referencia obliga al lector a adivinar magnitudes. La regla práctica distingue tres capas: tinta de datos, tinta de contexto necesario y tinta decorativa.\n\nEn los tableros de Mercado Brisa aplicamos tres recortes sistemáticos. Primero, sustituimos las leyendas separadas por etiquetas directas junto a cada barra. Segundo, eliminamos los efectos 3D y las rejillas verticales cuando las cifras ya están rotuladas. Tercero, reservamos los bordes suaves únicamente para separar bloques funcionales.',
     },
     {
-      "id": "razon-dato-tinta-de-tufte-multiplos-pequenos-y-c",
-      "heading": "Razón dato-tinta de Tufte, múltiplos pequeños y color",
-      "body": "Edward Tufte formuló en *The Visual Display of Quantitative Information* la ley central del diseño analítico: **Maximizar la Relación Dato-Tinta (Data-Ink Ratio)** eliminando toda tinta que no represente información nueva (*Chartjunk*).\n- **Poda el ruido visual**: elimina bordes dobles, fondos oscuros decorativos, efectos 3D, rejillas gruesas y leyendas flotantes que obligan al ojo a viajar de un extremo al otro (*eye-ping-pong*). Etiqueta las líneas directamente al final de su serie.\n- **Rompe el \"gráfico saturado\" con Small Multiples**: si tienes que comparar la tendencia temporal de 8 países o 10 productos, nunca superpongas 10 líneas de colores en un solo eje. Crea una cuadrícula de pequeños gráficos idénticos (**Small Multiples**) o una tabla de alta densidad con **Sparklines**, donde cada fila tiene su propia pista limpia.\n- **Usa el color como señal de excepción, no como decoración**: pinta el histórico, el plan y las categorías normales en tonos neutros/grises serenos, y reserva el color saturado (rojo diagnóstico o esmeralda) exclusivamente para los puntos que rompen el umbral y requieren decisión.",
-      "example": {
-        "language": "sql",
-        "code": "# Reporte mensual del comité ejecutivo (Evidence.dev / BI-as-Code en Git)\n## LATAM y EMEA superaron el plan de octubre en +$130K (+12.7%), compensando a NORAM\n\n```sql regional_performance\nSELECT\n  region,\n  SUM(net_revenue_usd) AS actual_rev_usd,\n  SUM(plan_revenue_usd) AS plan_rev_usd,\n  ROUND(100.0 * (SUM(net_revenue_usd) - SUM(plan_revenue_usd)) / NULLIF(SUM(plan_revenue_usd), 0), 1) AS vs_plan_pct,\n  ROUND(100.0 * (SUM(net_revenue_usd) - SUM(prev_year_revenue_usd)) / NULLIF(SUM(prev_year_revenue_usd), 0), 1) AS yoy_pct\nFROM gold.fct_regional_revenue\nWHERE fiscal_month = '2026-10-01'\nGROUP BY region\nORDER BY actual_rev_usd DESC;\n```\n\n<DataTable data={regional_performance} rows=all>\n  <Column id=region title=\"Región\" />\n  <Column id=actual_rev_usd title=\"Ingreso Neto Real\" fmt=usd0 contentType=bar barColor=#cbd5e1 />\n  <Column id=plan_rev_usd title=\"Meta (Plan)\" fmt=usd0 />\n  <Column id=vs_plan_pct title=\"vs. Plan (%)\" fmt=pct1 contentType=delta />\n  <Column id=yoy_pct title=\"Crecimiento YoY\" fmt=pct1 contentType=delta />\n</DataTable>",
-        "expectedOutput": [
-          {
-            "region": "LATAM",
-            "actual_rev_usd": "$640,000",
-            "plan_rev_usd": "$540,000",
-            "vs_plan_pct": "+18.5% (Supera Plan)",
-            "yoy_pct": "+24.1%"
-          },
-          {
-            "region": "EMEA",
-            "actual_rev_usd": "$510,000",
-            "plan_rev_usd": "$480,000",
-            "vs_plan_pct": "+6.3% (Supera Plan)",
-            "yoy_pct": "+11.8%"
-          },
-          {
-            "region": "NORAM",
-            "actual_rev_usd": "$390,000",
-            "plan_rev_usd": "$430,000",
-            "vs_plan_pct": "-9.3% (Requiere Acción)",
-            "yoy_pct": "+2.4%"
-          }
-        ]
-      }
+      id: 'sec-bullet-graphs-sparklines',
+      heading: 'Gráficos de bala, sparklines y pequeños múltiplos',
+      body: 'Los velocímetros radiales (*gauges*) y los gráficos de tarta desperdician espacio en pantalla. Además, fuerzan al ojo a estimar ángulos y áreas de baja precisión perceptual. Para sustituirlos en tableros financieros, **Stephen Few** diseñó el **gráfico de bala** (*bullet graph*).\n\nUn gráfico de bala condensa cinco elementos en una fila horizontal. Incluye la etiqueta de la entidad, una escala lineal con base cero y una barra central con el valor real. A esto suma un marcador perpendicular de meta y bandas de fondo en tonos grises que delimitan umbrales cualitativos.\n\nCuando necesitamos mostrar la evolución temporal sin saturar el lienzo, combinamos dos estructuras de Tufte. Los **minigráficos en línea** (*sparklines*) se incrustan en las celdas de una tabla para mostrar la tendencia en el espacio de una palabra. Los **pequeños múltiplos** (*small multiples*) repiten el mismo diseño compacto por región con un eje compartido. Así comparamos las cuatro regiones de Mercado Brisa de un vistazo.',
+      example: {
+        language: 'sql',
+        code: `WITH store_targets AS (
+  SELECT
+    region,
+    ROUND(SUM(monthly_target_usd) * 12, 2) AS annual_target_usd
+  FROM stores
+  GROUP BY region
+),
+regional_sales AS (
+  SELECT
+    s.region,
+    ROUND(SUM(o.total_usd), 2) AS gross_revenue_usd
+  FROM orders o
+  JOIN stores s ON o.store_id = s.store_id
+  WHERE o.status = 'completed'
+    AND EXTRACT(YEAR FROM o.order_date) = 2024
+  GROUP BY s.region
+)
+SELECT
+  t.region,
+  rs.gross_revenue_usd,
+  t.annual_target_usd,
+  ROUND(rs.gross_revenue_usd * 100.0 / t.annual_target_usd, 1) AS attainment_pct
+FROM store_targets t
+JOIN regional_sales rs ON t.region = rs.region
+ORDER BY attainment_pct DESC;`,
+        explanation: 'Esta consulta genera la tabla fuente para cuatro gráficos de bala regionales en 2024. Cono Sur lidera el cumplimiento bruto con 45,6 % ($919.026,32 sobre una meta anual de $2.016.000,00), mientras Norteamérica registra apenas 10,2 % ($363.700,11 sobre $3.552.000,00).',
+      },
     },
     {
-      "id": "estructura-piramidal-de-minto-y-comparacion-con-",
-      "heading": "Estructura piramidal de Minto y comparación con referencias",
-      "body": "Un número aislado en una tarjeta (`\"$1.54M\"`) es mudo: el director general inmediatamente preguntará *\"¿Eso es bueno o malo? ¿Cómo íbamos el mes pasado? ¿Cuál era el presupuesto?\"*.\nTodo indicador ejecutivo bien diseñado incluye su **Tríada de Contexto**:\n1) El valor real observado (`$1.54M`).\n2) La comparación contra la Meta / Plan (`+$120K / +8.4% vs. Plan`) y contra el período anterior ajustado por estacionalidad (`+14.2% YoY`).\n3) Un **Título Activo (Principio de la Pirámide de Bárbara Minto)**: empieza siempre por la conclusión gobernante. Sustituye el título pasivo *\"Ventas por Región Q3\"* por *\"LATAM y EMEA superaron el plan en +$180K (+14.2%), compensando la desaceleración de NORAM (-9.3%)\"*."
+      id: 'sec-narrativa-minto-ibcs',
+      heading: 'Títulos activos con el Principio de Minto y el estándar IBCS',
+      body: 'Un gráfico limpio sigue incompleto si su encabezado dice únicamente *"Ventas por región"*. Ese rótulo describe los ejes, pero obliga al directivo a calcular restas para deducir qué ocurrió. La comunicación ejecutiva aplica el **Principio de la Pirámide** de **Barbara Minto**: empezar siempre por la conclusión respaldada por datos.\n\nLos estándares **IBCS** (*International Business Communication Standards*) exigen encabezados con un **título de acción** (*action title*) superior. Un título activo declara el sujeto, la métrica, la magnitud del desvío y el periodo. Por ejemplo: *"Cono Sur lidera el cumplimiento neto anual con 43,8 %, mientras Norteamérica cae a 9,8 % en 2024"*.\n\nAdemás, la notación semántica IBCS estandariza la apariencia de los escenarios en toda la empresa. Los valores reales (*Actual*) se representan con barras sólidas oscuras. El presupuesto (*Plan*) usa marcadores huecos o contorneados, y las variaciones se alinean en un eje secundario.',
+      diagram: `flowchart TD
+  T["Título activo (Minto / IBCS):<br/>Cono Sur lidera el ingreso neto con $882,6k (43,8 % de la meta anual) en 2024"]
+  R1["Arg. 1: Cono Sur y Andina concentran el 64,9 % de la venta neta completada ($1,70M)"]
+  R2["Arg. 2: Las devoluciones procesadas restan $116,6k (-4,3 % sobre el ingreso bruto)"]
+  R3["Arg. 3: Norteamérica opera al 9,8 % de su cuota anual por sobrecapacidad en almacén"]
+  T --> R1
+  T --> R2
+  T --> R3`,
     },
     {
-      "id": "reportes-declarativos-en-git-con-evidence-observ",
-      "heading": "Reportes declarativos en Git con Evidence, Observable y Rill",
-      "body": "El talón de Aquiles del BI tradicional de clic-y-arrastrar (Point-and-Click BI) es que la lógica visual y los filtros terminan encerrados en archivos binarios opacos fuera del control de versiones. Si Ingeniería de Datos renombra una columna en dbt/SQLMesh, nadie se entera de que el dashboard del CEO se rompió hasta el lunes a las 8:00 AM.\nCon **BI-as-Code** (herramientas como **Evidence.dev, Observable Framework y Rill**), los reportes ejecutivos se escriben en archivos `.md` o `.js` que combinan narrativa Markdown, bloques SQL parametrizados contra la Capa Semántica y componentes visuales declarativos (`<DataTable>`, `<BarChart>`, `<BulletChart>`) potenciados en el navegador por **DuckDB-Wasm**.\nEsto desbloquea tres superpoderes:\n1) **Gobernanza en Git y Pull Requests**: un cambio en un reporte se revisa en el mismo PR que el modelo SQL.\n2) **Continuous Integration (CI) para BI**: el pipeline de GitHub Actions compila todas las consultas del reporte en cada commit; si falta una columna o falla un contrato, el despliegue se bloquea automáticamente.\n3) **Interactividad sub-50ms**: DuckDB-Wasm filtra cubos Parquet pre-compilados directamente en la memoria del navegador del usuario sin latencia de red ni costos por consulta en el Data Warehouse."
-    }
+      id: 'sec-declarativo-y-auditoria',
+      heading: 'Consistencia entre consulta SQL y representación visual',
+      body: 'El diseño visual riguroso fracasa cuando la consulta subyacente suma granos incompatibles. Si alimentamos un gráfico de bala con `orders` sin filtrar `status = \'completed\'`, inflaremos el cumplimiento regional. Ese descuido incluiría pedidos cancelados o pendientes dentro del ingreso real.\n\nDel mismo modo, debemos cuidar el grano al comparar `orders` (`1 fila = 1 pedido`) con `stores` (`1 fila = 1 tienda`). Es obligatorio preagregar las metas de las tiendas por región antes de cruzar las tablas. Si multiplicamos `monthly_target_usd * 12` dentro del `JOIN` con los pedidos, la meta se multiplicará por el número de pedidos.\n\nPor ello separamos la preparación en expresiones de tabla comunes (`WITH`) para metas (`store_targets`), ventas (`regional_sales`) y devoluciones (`regional_refunds`). Así garantizamos que cada barra del tablero sea auditable hasta el céntimo.',
+    },
   ],
-  "workedExample": {
-    "title": "Ejemplo guiado: Percepción visual, razón dato-tinta y reportes como código",
-    "description": "Compara un flujo manual frágil con gráficos circulares de baja señal frente a un reporte declarativo BI-as-Code con alta densidad Dato-Tinta:",
-    "audit": "",
-    "steps": [
+  interactive: {
+    type: 'bi-anti-slop-comparator',
+    title: 'Comparador interactivo: Ruido gráfico (Chartjunk) vs. Diseño de alta densidad',
+  },
+  workedExample: {
+    title: 'Tabla maestra para gráficos de bala de ingresos netos frente a meta anual (2024)',
+    problem: 'Construir la tabla maestra para los gráficos de bala del Comité Ejecutivo de Mercado Brisa en 2024, reportando por región el número de tiendas, el ingreso bruto de pedidos completados, las devoluciones procesadas asociadas, el ingreso neto resultante, la meta anual agregada y el porcentaje de cumplimiento neto.',
+    steps: [
       {
-        "label": "Antipatrón: exportación CSV manual y gráfico de pastel 3D sin meta",
-        "explanation": "Compara un flujo manual frágil con gráficos circulares de baja señal frente a un reporte declarativo BI-as-Code con alta densidad Dato-Tinta:",
-        "code": "# FLUJO MANUAL FRÁGIL Y CON CHARTJUNK:\n# 1) Descargar manualmente \"ventas_octubre_v4_final_2.csv\" cada lunes a las 7am\n# 2) Pegar en hoja de cálculo local sin tests ni control de versiones Git\n# 3) Insertar Gráfico de Pastel 3D con 8 regiones y colores arcoíris\n# 4) Título pasivo: \"Gráfico de Ventas\" (sin mostrar Meta/Plan ni variación YoY)",
-        "expectedOutput": [
-          {
-            "claridad_perceptual": "Baja (El ojo no distingue ángulos de 16% vs 18% en un pastel 3D)",
-            "contexto_ejecutivo": "Nulo (Muestra $640K sin decir si la meta era $500K o $800K)",
-            "gobernanza_git": "0% (Archivo local desconectado de dbt/SQLMesh)"
-          }
-        ]
+        label: 'Paso 1: Preagregar la meta anual por región en el grano de stores',
+        sql: `SELECT
+  region,
+  COUNT(*) AS num_stores,
+  ROUND(SUM(monthly_target_usd) * 12, 2) AS annual_target_usd
+FROM stores
+GROUP BY region
+ORDER BY annual_target_usd DESC;`,
+        explanation: 'Calculamos primero la meta anual (12 meses) en el grano exacto de stores (14 tiendas en total): Norteamérica ($3.552.000), Andina ($2.880.000), Iberia ($2.652.000) y Cono Sur ($2.016.000). Esto evita cualquier abanico de filas al cruzar con pedidos.',
       },
       {
-        "label": "Solución óptima: reportes como código en Git y tabla de alta densidad",
-        "explanation": "Compara ahora la consulta corregida y verifica cómo las filas y totales coinciden con la auditoría.",
-        "code": "# Reporte mensual del comité ejecutivo (Evidence.dev / BI-as-Code en Git)\n## LATAM y EMEA superaron el plan de octubre en +$130K (+12.7%), compensando a NORAM\n\n```sql regional_performance\nSELECT\n  region,\n  SUM(net_revenue_usd) AS actual_rev_usd,\n  SUM(plan_revenue_usd) AS plan_rev_usd,\n  ROUND(100.0 * (SUM(net_revenue_usd) - SUM(plan_revenue_usd)) / NULLIF(SUM(plan_revenue_usd), 0), 1) AS vs_plan_pct,\n  ROUND(100.0 * (SUM(net_revenue_usd) - SUM(prev_year_revenue_usd)) / NULLIF(SUM(prev_year_revenue_usd), 0), 1) AS yoy_pct\nFROM gold.fct_regional_revenue\nWHERE fiscal_month = '2026-10-01'\nGROUP BY region\nORDER BY actual_rev_usd DESC;\n```\n\n<DataTable data={regional_performance} rows=all>\n  <Column id=region title=\"Región\" />\n  <Column id=actual_rev_usd title=\"Ingreso Neto Real\" fmt=usd0 contentType=bar barColor=#cbd5e1 />\n  <Column id=plan_rev_usd title=\"Meta (Plan)\" fmt=usd0 />\n  <Column id=vs_plan_pct title=\"vs. Plan (%)\" fmt=pct1 contentType=delta />\n  <Column id=yoy_pct title=\"Crecimiento YoY\" fmt=pct1 contentType=delta />\n</DataTable>",
-        "expectedOutput": [
-          {
-            "region": "LATAM",
-            "actual_rev_usd": "$640,000",
-            "plan_rev_usd": "$540,000",
-            "vs_plan_pct": "+18.5% (Supera Plan)",
-            "yoy_pct": "+24.1%"
-          },
-          {
-            "region": "EMEA",
-            "actual_rev_usd": "$510,000",
-            "plan_rev_usd": "$480,000",
-            "vs_plan_pct": "+6.3% (Supera Plan)",
-            "yoy_pct": "+11.8%"
-          },
-          {
-            "region": "NORAM",
-            "actual_rev_usd": "$390,000",
-            "plan_rev_usd": "$430,000",
-            "vs_plan_pct": "-9.3% (Requiere Acción)",
-            "yoy_pct": "+2.4%"
-          }
-        ]
-      }
-    ]
-  },
-  "checks": [
-    {
-      "id": "c1",
-      "type": "mcq",
-      "prompt": "En la revisión trimestral tienes que mostrar en una sola pantalla: 1) la evolución semanal de ingresos de 9 líneas de producto durante las últimas 52 semanas y 2) cómo cerró cada línea en el trimestre respecto a su meta en dólares y porcentaje. Según los principios de Cleveland & McGill, Edward Tufte y Stephen Few, ¿qué diseño debes construir?",
-      "options": [
-        {
-          "id": "a",
-          "text": "Una tabla ejecutiva ordenada de mayor a menor ingreso que integre por cada fila un Sparkline de las 52 semanas, una barra horizontal / Bullet Graph del ingreso real frente a la meta en tonos neutros, y una columna de variación % vs. Plan destacando en color únicamente las líneas fuera de umbral.",
-          "correct": true,
-          "feedback": "Exacto. Combinar una tabla estructurada con Sparklines (o una cuadrícula de Small Multiples) y Bullet Graphs aprovecha la comparación de longitudes alineadas, evita el caos de cruzar 9 líneas en un mismo eje y maximiza la relación Dato-Tinta."
-        },
-        {
-          "id": "b",
-          "text": "Un único gráfico de líneas con las 9 series reales más las 9 líneas de meta (18 líneas superpuestas en total) con una leyenda de 18 colores a la derecha y un gráfico de dona 3D al lado.",
-          "correct": false,
-          "feedback": "Superponer 18 líneas crea un \"gráfico saturado\" ilegible donde el ojo no puede seguir ninguna serie individual, y la dona 3D distorsiona las proporciones."
-        },
-        {
-          "id": "c",
-          "text": "Nueve velocímetros tipo tablero de automóvil a todo color que muestren solo el porcentaje final sin la serie semanal ni el monto en dólares.",
-          "correct": false,
-          "feedback": "Los velocímetros radiales tienen una pésima relación Dato-Tinta: desperdician el 80% de los píxeles de la pantalla para mostrar un único número y ocultan la tendencia de las 52 semanas y el volumen absoluto en dólares."
-        }
-      ],
-      "explanation": "Exacto. Combinar una tabla estructurada con Sparklines (o una cuadrícula de Small Multiples) y Bullet Graphs aprovecha la comparación de longitudes alineadas, evita el caos de cruzar 9 líneas en un mismo eje y maximiza la relación Dato-Tinta."
-    },
-    {
-      "id": "c2",
-      "type": "mcq",
-      "prompt": "Quieres mostrar la evolución mensual de ventas de las 12 categorías de supermercado durante los últimos 24 meses. Un único gráfico con 12 líneas de colores cruzándose resulta ilegible. ¿Qué diseño resuelve el problema sin ocultar datos?",
-      "options": [
-        {
-          "id": "a",
-          "text": "Múltiplos pequeños (small multiples): una cuadrícula de 12 minigráficos con escalas compartidas, destacando cada categoría en primer plano contra las demás en gris suave.",
-          "correct": true,
-          "feedback": "Correcto: separar las series en paneles alineados elimina el cruce de líneas (spaghetti chart) y permite comparar tendencias al instante."
-        },
-        {
-          "id": "b",
-          "text": "Un gráfico de pastel 3D con 12*24 = 288 rebanadas.",
-          "correct": false,
-          "feedback": "Incorrecto: 288 ángulos en un círculo son perceptualmente imposibles de leer."
-        },
-        {
-          "id": "c",
-          "text": "Usar 12 ejes verticales (Y) distintos en el mismo gráfico.",
-          "correct": false,
-          "feedback": "Incorrecto: múltiples ejes Y con distintas escalas inducen cruces falsos y confunden al lector."
-        }
-      ],
-      "explanation": "Los múltiplos pequeños aprovechan la constancia de diseño: el lector aprende los ejes una sola vez y escanea visualmente las diferencias entre categorías."
-    },
-    {
-      "id": "c3",
-      "type": "mcq",
-      "prompt": "¿Qué ventaja operativa aporta gestionar un reporte en herramientas BI-as-Code (como Evidence o Power BI Projects `.pbip` en Git) frente a editar un archivo binario cerrado en producción?",
-      "options": [
-        {
-          "id": "a",
-          "text": "Permite revisar en un Pull Request qué consulta o métrica cambió, ejecutar CI para comprobar que ninguna columna fue eliminada y revertir con git revert.",
-          "correct": true,
-          "feedback": "Correcto: integra la capa de visualización en el mismo ciclo de control de versiones y pruebas automáticas que los modelos de datos."
-        },
-        {
-          "id": "b",
-          "text": "Hace que las bases de datos no necesiten índices ni particiones.",
-          "correct": false,
-          "feedback": "Incorrecto: el control de versiones del reporte no sustituye la optimización física del almacén."
-        },
-        {
-          "id": "c",
-          "text": "Impide usar filtros interactivos en el navegador.",
-          "correct": false,
-          "feedback": "Incorrecto: los reportes declarativos compilan componentes interactivos con parámetros y filtros en el cliente."
-        }
-      ],
-      "explanation": "Tratar los reportes como código fuente en texto plano cierra la brecha entre los modelos de transformación y las pantallas que consume el negocio."
-    }
-  ],
-  "practice": {
-    "type": "sql",
-    "title": "Tabla ejecutiva de desempeño frente a meta por región",
-    "language": "sql",
-    "prompt": "Construye la consulta ejecutiva que compara las ventas completadas de `orders` en el año 2024 frente a la meta anual de cada tienda (`stores.monthly_target_usd * 12`) agrupando por `region`: `actual_rev_usd`, `plan_rev_usd` y `vs_plan_pct`, ordenado por `actual_rev_usd DESC`.",
-    "starterCode": "WITH store_sales_2024 AS (\n  SELECT\n    store_id,\n    SUM(total_usd) AS actual_rev_usd\n  FROM orders\n  WHERE status = 'completed'\n    AND order_date BETWEEN DATE '2024-01-01' AND DATE '2024-12-31'\n  GROUP BY store_id\n)\nSELECT\n  s.region,\n  ROUND(SUM(COALESCE(ss.actual_rev_usd, 0)), 2) AS actual_rev_usd,\n  ROUND(SUM(s.monthly_target_usd * 12), 2) AS plan_rev_usd,\n  -- TODO: Calcula vs_plan_pct redondeado a 1 decimal: 100.0 * (actual - plan) / NULLIF(plan, 0)\n  0.0 AS vs_plan_pct\nFROM stores s\nLEFT JOIN store_sales_2024 ss ON s.store_id = ss.store_id\nGROUP BY s.region\nORDER BY actual_rev_usd DESC;",
-    "expected": "WITH store_sales_2024 AS (\n  SELECT\n    store_id,\n    SUM(total_usd) AS actual_rev_usd\n  FROM orders\n  WHERE status = 'completed'\n    AND order_date BETWEEN DATE '2024-01-01' AND DATE '2024-12-31'\n  GROUP BY store_id\n)\nSELECT\n  s.region,\n  ROUND(SUM(COALESCE(ss.actual_rev_usd, 0)), 2) AS actual_rev_usd,\n  ROUND(SUM(s.monthly_target_usd * 12), 2) AS plan_rev_usd,\n  ROUND(\n    100.0 * (SUM(COALESCE(ss.actual_rev_usd, 0)) - SUM(s.monthly_target_usd * 12))\n      / NULLIF(SUM(s.monthly_target_usd * 12), 0),\n    1\n  ) AS vs_plan_pct\nFROM stores s\nLEFT JOIN store_sales_2024 ss ON s.store_id = ss.store_id\nGROUP BY s.region\nORDER BY actual_rev_usd DESC;",
-    "orderMatters": true,
-    "hints": [
-      "Pre-agregar las ventas de 2024 por `store_id` antes de unir con `stores` evita que `monthly_target_usd` se multiplique por cada pedido.",
-      "La desviación porcentual contra el plan es `ROUND(100.0 * (SUM(COALESCE(ss.actual_rev_usd, 0)) - SUM(s.monthly_target_usd * 12)) / NULLIF(SUM(s.monthly_target_usd * 12), 0), 1) AS vs_plan_pct`.",
-      "Conserva `ORDER BY actual_rev_usd DESC` para presentar las regiones jerárquicamente."
+        label: 'Paso 2: Agregar los ingresos brutos de pedidos completados en 2024',
+        sql: `SELECT
+  s.region,
+  COUNT(o.order_id) AS completed_orders,
+  ROUND(SUM(o.total_usd), 2) AS gross_revenue_usd
+FROM orders o
+JOIN stores s ON o.store_id = s.store_id
+WHERE o.status = 'completed'
+  AND EXTRACT(YEAR FROM o.order_date) = 2024
+GROUP BY s.region
+ORDER BY gross_revenue_usd DESC;`,
+        explanation: 'Filtramos exclusivamente status = \'completed\' en 2024 (6.497 pedidos y $2.731.516,50 en total). Cono Sur aporta $919.026,32 y Andina $858.331,08.',
+      },
+      {
+        label: 'Paso 3: Integrar devoluciones procesadas y calcular cumplimiento neto contra meta anual',
+        sql: `WITH store_targets AS (
+  SELECT
+    region,
+    COUNT(*) AS num_stores,
+    ROUND(SUM(monthly_target_usd) * 12, 2) AS annual_target_usd
+  FROM stores
+  GROUP BY region
+),
+regional_sales AS (
+  SELECT
+    s.region,
+    ROUND(SUM(o.total_usd), 2) AS gross_revenue_usd
+  FROM orders o
+  JOIN stores s ON o.store_id = s.store_id
+  WHERE o.status = 'completed'
+    AND EXTRACT(YEAR FROM o.order_date) = 2024
+  GROUP BY s.region
+),
+regional_refunds AS (
+  SELECT
+    s.region,
+    ROUND(SUM(r.refund_amount_usd), 2) AS processed_refunds_usd
+  FROM refunds r
+  JOIN orders o ON r.order_id = o.order_id
+  JOIN stores s ON o.store_id = s.store_id
+  WHERE o.status = 'completed'
+    AND r.status = 'processed'
+    AND EXTRACT(YEAR FROM o.order_date) = 2024
+  GROUP BY s.region
+)
+SELECT
+  t.region,
+  t.num_stores,
+  rs.gross_revenue_usd,
+  COALESCE(rr.processed_refunds_usd, 0) AS processed_refunds_usd,
+  ROUND(rs.gross_revenue_usd - COALESCE(rr.processed_refunds_usd, 0), 2) AS net_revenue_usd,
+  t.annual_target_usd,
+  ROUND((rs.gross_revenue_usd - COALESCE(rr.processed_refunds_usd, 0)) * 100.0 / t.annual_target_usd, 1) AS attainment_pct
+FROM store_targets t
+JOIN regional_sales rs ON t.region = rs.region
+LEFT JOIN regional_refunds rr ON t.region = rr.region
+ORDER BY net_revenue_usd DESC;`,
+        explanation: 'Al descontar las devoluciones procesadas ($116.562,26 en las cuatro regiones), obtenemos el ingreso neto real y el porcentaje de cumplimiento para el gráfico de bala: Cono Sur alcanza 43,8 %, Andina 28,3 %, Iberia 21,4 % y Norteamérica 9,8 %.',
+      },
     ],
-    "solution": "WITH store_sales_2024 AS (\n  SELECT\n    store_id,\n    SUM(total_usd) AS actual_rev_usd\n  FROM orders\n  WHERE status = 'completed'\n    AND order_date BETWEEN DATE '2024-01-01' AND DATE '2024-12-31'\n  GROUP BY store_id\n)\nSELECT\n  s.region,\n  ROUND(SUM(COALESCE(ss.actual_rev_usd, 0)), 2) AS actual_rev_usd,\n  ROUND(SUM(s.monthly_target_usd * 12), 2) AS plan_rev_usd,\n  ROUND(\n    100.0 * (SUM(COALESCE(ss.actual_rev_usd, 0)) - SUM(s.monthly_target_usd * 12))\n      / NULLIF(SUM(s.monthly_target_usd * 12), 0),\n    1\n  ) AS vs_plan_pct\nFROM stores s\nLEFT JOIN store_sales_2024 ss ON s.store_id = ss.store_id\nGROUP BY s.region\nORDER BY actual_rev_usd DESC;",
-    "solutionExplanation": "Pre-agrega las ventas reales de 2024 al grano `store_id` antes de unirlas con `stores`, y calcula la variación porcentual frente a la meta anual (`monthly_target_usd * 12`) protegiendo el denominador con `NULLIF(..., 0)`."
+    takeaway: 'Un gráfico de bala ejecutivo requiere separar en CTEs el grano de metas (stores), el grano de ventas (orders) y el grano de devoluciones (refunds) antes de calcular el porcentaje de cumplimiento.',
   },
-  "roleNotes": {
-    "de": "Integra el paso `npm run build:reports` del proyecto BI-as-Code dentro del pipeline CI/CD de dbt/SQLMesh para garantizar cero dashboards rotos tras cambios de esquema. Materializa extractos Parquet compactos y ordenados desde la capa Gold para que DuckDB-Wasm los sirva desde CDN con latencia inferior a 50ms. Audita que ningún reporte ejecute consultas pesadas directas contra tablas Bronze/Silver saltándose la Capa Semántica.",
-    "da": "Enriquece las tablas ejecutivas con bandas de variación esperada (intervalos de confianza o desviaciones estándar) para evitar que la dirección sobrerreaccione al ruido normal. Escribe documentos analíticos reproducibles (Data Memos en Evidence / Marimo) donde el texto explicativo se alimenta dinámicamente de variables SQL en vivo. Descompone las variaciones contra el Plan en efectos de volumen, precio y mix antes de presentarlas en el comité.",
-    "bi": "Reemplaza gráficos circulares, donas y velocímetros por tablas de alta densidad con barras integradas, Bullet Graphs y Small Multiples. Aplica títulos activos basados en la Pirámide de Minto y reserva el color semántico exclusivamente para desvíos accionables. Versiona los dashboards y árboles de KPIs en Git mediante BI-as-Code conectado a las métricas certificadas de MetricFlow / Cube."
-  },
-  "summary": [
-    "El ojo humano compara longitudes en una base común con mucha más precisión que ángulos de un pastel.",
-    "Cada elemento visual debe representar datos reales; elimina bordes redundantes, fondos pesados y efectos 3D.",
-    "Una cifra aislada no informa: acompáñala siempre de comparación temporal, objetivo y estado.",
-    "Definir reportes como código en Git permite revisar cambios en Pull Requests y detectar consultas rotas."
-  ],
-  "flashcards": [
+  checks: [
     {
-      "id": "fc-bi3-viz-01",
-      "front": "Según la jerarquía de Cleveland y McGill, ¿por qué un gráfico de barras horizontales supera a un gráfico de pastel para comparar 8 categorías?",
-      "back": "Porque la posición a lo largo de una escala común se juzga con mucha menor tasa de error perceptual que los ángulos o las áreas."
+      id: 'chk-bi3-01-q1',
+      type: 'mcq',
+      prompt: 'En un tablero ejecutivo de Mercado Brisa, un analista reemplaza cuatro velocímetros circulares 3D por cuatro gráficos de bala horizontales con escala compartida. ¿Qué ventaja perceptual y espacial logra este cambio?',
+      options: [
+        {
+          id: 'a',
+          text: 'Permite codificar el cumplimiento mediante ángulos radiales, que el ojo humano juzga con mayor exactitud que la longitud.',
+          correct: false,
+          feedback: 'Incorrecto. En la jerarquía de Cleveland y McGill, los ángulos y áreas tienen menor precisión perceptual que la posición en una escala común.',
+        },
+        {
+          id: 'b',
+          text: 'Sustituye la estimación angular por posición sobre una escala lineal común, integra meta y bandas cualitativas, y reduce el espacio desperdiciado.',
+          correct: true,
+          feedback: 'Correcto. El gráfico de bala de Stephen Few emplea longitud y posición alineadas, muestra el marcador de meta y los umbrales de fondo, y permite apilar múltiples regiones en poco espacio.',
+        },
+        {
+          id: 'c',
+          text: 'Elimina por completo las escalas numéricas y los ejes para alcanzar una razón dato-tinta del 100 %.',
+          correct: false,
+          feedback: 'Incorrecto. Suprimir la escala cuantitativa elimina el contexto necesario y contradice la especificación de Stephen Few y Claus Wilke.',
+        },
+        {
+          id: 'd',
+          text: 'Combina automáticamente las cuatro regiones en una sola barra apilada para ocultar las diferencias regionales.',
+          correct: false,
+          feedback: 'Incorrecto. Cada región conserva su propio gráfico de bala alineado en paralelo para facilitar la comparación directa.',
+        },
+      ],
+      explanation: 'Los velocímetros circulares ocupan gran superficie para mostrar un único número mediante ángulo. El gráfico de bala codifica valor real, meta y bandas de estado en una escala lineal compacta de alta precisión.',
     },
     {
-      "id": "fc-bi3-viz-02",
-      "front": "¿Qué propone la regla del uso intencional del color en un tablero operativo?",
-      "back": "Mantener el 90 % de las series contextuales en tonos neutros y reservar el color de acento o semántico solo para las anomalías o metas incumplidas."
+      id: 'chk-bi3-01-q2',
+      type: 'mcq',
+      prompt: 'Según el Principio de la Pirámide de Barbara Minto y el estándar IBCS, ¿cuál de los siguientes encabezados constituye un título de acción válido para el cierre 2024 de Mercado Brisa?',
+      options: [
+        {
+          id: 'a',
+          text: 'Gráfico comparativo de ventas brutas, devoluciones y metas anuales por región geográfica (USD).',
+          correct: false,
+          feedback: 'Incorrecto. Es un título meramente descriptivo de los ejes y variables, que no comunica ningún hallazgo ni conclusión.',
+        },
+        {
+          id: 'b',
+          text: 'Evolución comercial histórica de las tiendas físicas y almacenes.',
+          correct: false,
+          feedback: 'Incorrecto. No incluye sujeto específico, magnitud cuantificada ni conclusión accionable.',
+        },
+        {
+          id: 'c',
+          text: 'Cono Sur lidera el cumplimiento neto anual con 43,8 %, mientras Norteamérica cae a 9,8 % en 2024.',
+          correct: true,
+          feedback: 'Correcto. Declara el sujeto, la métrica, los valores cuantificados del hallazgo y el horizonte temporal en una sola oración.',
+        },
+        {
+          id: 'd',
+          text: 'Panel interactivo de indicadores clave de rendimiento (KPIs).',
+          correct: false,
+          feedback: 'Incorrecto. Es un rótulo genérico que no aporta información analítica al lector ejecutivo.',
+        },
+      ],
+      explanation: 'Un título de acción (action title) bajo Minto e IBCS presenta la conclusión principal cuantificada en el encabezado para que el comité comprenda el mensaje antes de inspeccionar las barras.',
     },
     {
-      "id": "fc-bi3-viz-03",
-      "front": "¿Qué es un título activo (Action Title) en la parte superior de un gráfico ejecutivo?",
-      "back": "Un encabezado que enuncia el hallazgo cuantitativo (\"El margen cayó 180 pb en Norte por costo de flete\") en vez de describir los ejes (\"Margen por región\")."
-    }
-  ],
-  "glossaryTerms": [
-    "c25-tufte-visual-perception",
-    "c21-semantic-layer"
-  ],
-  "sources": [
-    {
-      "title": "Cleveland & McGill (JASA 1984) — Graphical Perception: Theory, Experimentation, and Application to the Development of Graphical Methods",
-      "url": "https://www.jstor.org/stable/2288400",
-      "publisher": "Journal of the American Statistical Association",
-      "accessed": "2026-10-29",
-      "supports": "Jerarquía experimental de precisión en la percepción de atributos gráficos."
+      id: 'chk-bi3-01-q3',
+      type: 'predict-output',
+      prompt: 'Si un analista escribe `SELECT s.region, SUM(s.monthly_target_usd * 12) FROM orders o JOIN stores s ON o.store_id = s.store_id GROUP BY s.region`, ¿qué ocurre con la meta anual calculada?',
+      options: [
+        {
+          id: 'a',
+          text: 'Devuelve la meta anual exacta de cada región porque el GROUP BY elimina las repeticiones de tiendas.',
+          correct: false,
+          feedback: 'Incorrecto. GROUP BY agrupa al final, pero SUM() suma el valor de la tienda una vez por cada fila de pedido que coincida en el JOIN.',
+        },
+        {
+          id: 'b',
+          text: 'La meta anual de cada tienda se multiplica por la cantidad de pedidos que tuvo esa tienda, inflando masivamente el objetivo.',
+          correct: true,
+          feedback: 'Correcto. Se produce un abanico (fan-out) porque stores tiene grano de tienda y orders tiene grano de pedido; sumar una columna del lado 1 tras el JOIN la repite en cada pedido.',
+        },
+        {
+          id: 'c',
+          text: 'DuckDB arroja un error de sintaxis porque no permite multiplicar dentro de la función agregada SUM.',
+          correct: false,
+          feedback: 'Incorrecto. La expresión es sintácticamente válida en SQL, lo que hace que este error lógico sea silencioso y peligroso.',
+        },
+      ],
+      explanation: 'Sumar atributos numéricos de una tabla maestra (stores) después de unirla con una tabla de hechos (orders) multiplica la meta de cada tienda por su volumen de pedidos. Siempre debe preagregarse en una CTE separada.',
     },
-    {
-      "title": "Evidence Documentation — BI as Code with Markdown and Parameterized SQL",
-      "url": "https://docs.evidence.dev/",
-      "publisher": "Evidence",
-      "accessed": "2026-10-29",
-      "supports": "Construcción de reportes declarativos versionados en Git con consultas SQL y DuckDB."
-    },
-    {
-      "title": "Observable Framework Documentation — Data Loaders and Static Report Generation",
-      "url": "https://observablehq.com/framework/",
-      "publisher": "Observable",
-      "accessed": "2026-10-29",
-      "supports": "Arquitectura de cargadores de datos precompilados y tableros rápidos en código."
-    }
   ],
-  "aiNotes": "Evita que el alumno piense que el diseño de tableros es cuestión de gusto estético subjetivo: fundamenta cada corrección en carga cognitiva, precisión de comparación de longitudes y presencia de una referencia explícita.",
-  "needsReview": true,
-  "legacyId": "l15-bi-tufte-code",
-  "legacyOrder": 15,
-  "stageId": "stage-5",
-  "subtitle": "Jerarquía gráfica de Cleveland y Tufte combinada con tableros declarativos versionados en Git.",
-  "goal": "Diseñar tableros ejecutivos basados en la relación Dato-Tinta de Tufte y Stephen Few, estructurar narrativas con la Pirámide de Minto y construir reportes reproducibles mediante BI-as-Code.",
-  "pipelineChallenge": {
-    "title": "Publicación de reportes declarativos como código",
-    "scenario": "Ordena el ciclo de vida moderno de un reporte ejecutivo cuando Ingeniería (DE), Análisis (DA) y BI trabajan bajo un flujo BI-as-Code versionado en Git.",
-    "steps": [
+  pipelineChallenge: {
+    title: 'Secuencia de diseño de un bloque ejecutivo de alta razón dato-tinta',
+    description: 'Ordena los 4 pasos metodológicos para transformar una petición ejecutiva en una visualización limpia y auditable.',
+    steps: [
       {
-        "id": "step-1",
-        "label": "1. Exponer la métrica y la meta en la capa semántica Gold",
-        "role": "DE",
-        "detail": "Materializar `gold.fct_regional_revenue` con tests de contrato y exponer las medidas certificadas de ingreso real y presupuesto."
+        id: 'step-1-grain',
+        text: '1. Preagregar en CTEs separadas las métricas de distinto grano (ventas en orders y metas en stores) verificando los filtros canónicos.',
+        label: '1. Preagregar en CTEs separadas las métricas de distinto grano (ventas en orders y metas en stores) verificando los filtros canónicos.',
+        role: 'SQL / Grano',
+        detail: 'Evita el fan-out de metas y excluye pedidos cancelados o pendientes antes de calcular porcentajes.',
       },
       {
-        "id": "step-2",
-        "label": "2. Incorporar bandas de varianza y descomposición analítica en SQL",
-        "role": "DA",
-        "detail": "Escribir la consulta parametrizada que calcula deltas YoY, cumplimiento vs. Plan y significancia de las desviaciones."
+        id: 'step-2-encoding',
+        text: '2. Seleccionar la codificación de posición en escala común (gráfico de bala o pequeños múltiplos) descartando velocímetros y tartas 3D.',
+        label: '2. Seleccionar la codificación de posición en escala común (gráfico de bala o pequeños múltiplos) descartando velocímetros y tartas 3D.',
+        role: 'Codificación Visual',
+        detail: 'Aplica la jerarquía de Cleveland-McGill y la especificación de Stephen Few.',
       },
       {
-        "id": "step-3",
-        "label": "3. Diseñar la vista con alta relación dato-tinta y título activo en Markdown",
-        "role": "BI",
-        "detail": "Estructurar el reporte con titular ejecutivo (Pirámide de Minto), Small Multiples y tablas con barras alineadas y color solo por excepción."
+        id: 'step-3-dataink',
+        text: '3. Depurar la razón dato-tinta suprimiendo rejillas oscuras, bordes redundantes y leyendas separadas en favor de etiquetas directas.',
+        label: '3. Depurar la razón dato-tinta suprimiendo rejillas oscuras, bordes redundantes y leyendas separadas en favor de etiquetas directas.',
+        role: 'Razón Dato-Tinta',
+        detail: 'Elimina el chartjunk preservando el eje cero y las marcas de referencia.',
       },
       {
-        "id": "step-4",
-        "label": "4. Compilar consultas en CI/CD y publicar cubo Parquet a DuckDB-Wasm",
-        "role": "DE",
-        "detail": "Validar automáticamente en GitHub Actions que ninguna consulta SQL del reporte falle y desplegar los artefactos Parquet para lectura en <50ms."
-      }
+        id: 'step-4-title',
+        text: '4. Coronar el bloque con un título de acción (Minto / IBCS) que declare la conclusión cuantificada y el periodo evaluado.',
+        label: '4. Coronar el bloque con un título de acción (Minto / IBCS) que declare la conclusión cuantificada y el periodo evaluado.',
+        role: 'Narrativa Ejecutiva',
+        detail: 'Sintetiza qué región lidera o incumple la meta para responder en segundos.',
+      },
     ],
-    "explanation": "BI-as-Code cierra la brecha entre ingeniería y negocio: las métricas nacen gobernadas en Gold, se contextualizan estadísticamente, se presentan siguiendo los principios visuales de Tufte/Few y se validan en CI/CD antes de llegar al comité."
+    correctOrder: ['step-1-grain', 'step-2-encoding', 'step-3-dataink', 'step-4-title'],
+    hint: 'Comienza asegurando la exactitud del grano en SQL, elige luego la estructura geométrica, limpia el ruido visual y redacta finalmente el encabezado con el hallazgo.',
   },
-  "relatedLessons": [
+  practice: {
+    type: 'sql',
+    prompt: 'Construye la consulta que alimenta los gráficos de bala de ingresos brutos por región en 2024. Debes devolver 4 columnas exactas: `region`, `actual_revenue_usd` (suma de `total_usd` de pedidos con `status = \'completed\'` en el año `2024`, redondeada a 2 decimales), `annual_target_usd` (suma de `monthly_target_usd * 12` de las tiendas de cada región en `stores`, redondeada a 2 decimales) y `attainment_pct` (`actual_revenue_usd * 100.0 / annual_target_usd` redondeado a 1 decimal). Ordena el resultado por `attainment_pct` de mayor a menor.',
+    starterCode: `WITH store_targets AS (
+  SELECT
+    region,
+    -- TODO: calcula annual_target_usd sumando monthly_target_usd * 12 en stores
+    0 AS annual_target_usd
+  FROM stores
+  GROUP BY region
+),
+regional_sales AS (
+  SELECT
+    s.region,
+    -- TODO: suma o.total_usd redondeado a 2 decimales
+    0 AS actual_revenue_usd
+  FROM orders o
+  JOIN stores s ON o.store_id = s.store_id
+  -- TODO: filtra pedidos completados del año 2024
+  GROUP BY s.region
+)
+SELECT
+  t.region,
+  rs.actual_revenue_usd,
+  t.annual_target_usd,
+  -- TODO: calcula attainment_pct redondeado a 1 decimal
+  0 AS attainment_pct
+FROM store_targets t
+JOIN regional_sales rs ON t.region = rs.region
+ORDER BY attainment_pct DESC;`,
+    solution: `WITH store_targets AS (
+  SELECT
+    region,
+    ROUND(SUM(monthly_target_usd) * 12, 2) AS annual_target_usd
+  FROM stores
+  GROUP BY region
+),
+regional_sales AS (
+  SELECT
+    s.region,
+    ROUND(SUM(o.total_usd), 2) AS actual_revenue_usd
+  FROM orders o
+  JOIN stores s ON o.store_id = s.store_id
+  WHERE o.status = 'completed'
+    AND EXTRACT(YEAR FROM o.order_date) = 2024
+  GROUP BY s.region
+)
+SELECT
+  t.region,
+  rs.actual_revenue_usd,
+  t.annual_target_usd,
+  ROUND(rs.actual_revenue_usd * 100.0 / t.annual_target_usd, 1) AS attainment_pct
+FROM store_targets t
+JOIN regional_sales rs ON t.region = rs.region
+ORDER BY attainment_pct DESC;`,
+    expected: `WITH store_targets AS (
+  SELECT
+    region,
+    ROUND(SUM(monthly_target_usd) * 12, 2) AS annual_target_usd
+  FROM stores
+  GROUP BY region
+),
+regional_sales AS (
+  SELECT
+    s.region,
+    ROUND(SUM(o.total_usd), 2) AS actual_revenue_usd
+  FROM orders o
+  JOIN stores s ON o.store_id = s.store_id
+  WHERE o.status = 'completed'
+    AND EXTRACT(YEAR FROM o.order_date) = 2024
+  GROUP BY s.region
+)
+SELECT
+  t.region,
+  rs.actual_revenue_usd,
+  t.annual_target_usd,
+  ROUND(rs.actual_revenue_usd * 100.0 / t.annual_target_usd, 1) AS attainment_pct
+FROM store_targets t
+JOIN regional_sales rs ON t.region = rs.region
+ORDER BY attainment_pct DESC;`,
+    solutionExplanation: 'La consulta separa en dos CTEs la suma de metas anuales de stores (store_targets) y la suma de ingresos completados de 2024 en orders (regional_sales). Al unirlas por region (4 filas), calcula attainment_pct sin duplicar las cuotas de las tiendas: Cono Sur alcanza 45,6 %, Andina 29,8 %, Iberia 22,3 % y Norteamérica 10,2 %.',
+    orderMatters: true,
+    hints: [
+      'En la CTE store_targets calcula ROUND(SUM(monthly_target_usd) * 12, 2) AS annual_target_usd agrupando únicamente la tabla stores por region.',
+      'En la CTE regional_sales filtra WHERE o.status = \'completed\' AND EXTRACT(YEAR FROM o.order_date) = 2024 antes de agrupar por s.region.',
+      'En el SELECT final calcula ROUND(rs.actual_revenue_usd * 100.0 / t.annual_target_usd, 1) AS attainment_pct y ordena con ORDER BY attainment_pct DESC.',
+    ],
+  },
+  roleNotes: {
+    de: 'Expón vistas semánticas donde las metas de stores y los hechos de orders estén preagregados o documentados con su grano explícito, evitando que herramientas de BI multipliquen presupuestos al cruzar tablas.',
+    da: 'Sustituye los velocímetros y tartas por gráficos de bala y pequeños múltiplos; acompaña siempre cada bloque visual con un título activo que cuantifique el hallazgo principal.',
+    bi: 'Aplica las reglas de notación IBCS en tus plantillas corporativas: barras sólidas para el valor real, marcadores perpendiculares para la meta y cero efectos tridimensionales.',
+  },
+  summary: [
+    'La razón dato-tinta de Edward Tufte exige eliminar adornos decorativos conservando siempre los ejes y referencias de escala.',
+    'El gráfico de bala de Stephen Few reemplaza a los velocímetros codificando valor real, meta y umbrales en una escala lineal.',
+    'Los sparklines y pequeños múltiplos comparan tendencias temporales y regiones con escalas compartidas sin saturar el lienzo.',
+    'Bajo Minto e IBCS, todo bloque ejecutivo debe encabezarse con un título de acción que declare la conclusión cuantificada.',
+  ],
+  flashcards: [
     {
-      "id": "l12-contracts-semantic-layer",
-      "reason": "Los reportes BI-as-Code consumen las métricas certificadas de la Capa Semántica para garantizar que Finanzas y Marketing vean exactamente la misma cifra."
+      id: 'fc-bi3-01-1',
+      front: '¿Qué mide la razón dato-tinta (data-ink ratio) de Edward Tufte y cuál es su límite práctico?',
+      back: 'Mide la fracción de tinta del gráfico dedicada a datos no redundantes. Su límite práctico es no borrar nunca los ejes, unidades ni referencias necesarias para interpretar la escala.',
     },
     {
-      "id": "l9-duckdb-polars-marimo",
-      "reason": "Las plataformas modernas de BI-as-Code utilizan DuckDB-Wasm y archivos Parquet columnares para lograr filtrado instantáneo en el navegador."
+      id: 'fc-bi3-01-2',
+      front: '¿Cuáles son los 5 componentes de un gráfico de bala (bullet graph) según Stephen Few?',
+      back: 'Etiqueta de texto, escala cuantitativa lineal, barra central de medida principal, marcador perpendicular de comparación (meta) y bandas cualitativas de fondo.',
     },
     {
-      "id": "l18-mcp-semantic-ai-rag",
-      "reason": "Tanto tu dashboard BI-as-Code como los Agentes IA vía MCP leen el mismo catálogo semántico gobernado."
-    }
-  ]
+      id: 'fc-bi3-01-3',
+      front: '¿Qué diferencia a un título de acción (IBCS / Minto) de un título descriptivo?',
+      back: 'El título descriptivo solo nombra las variables ("Ventas por región"), mientras el título de acción enuncia la conclusión cuantificada ("Cono Sur lidera el cumplimiento con 45,6 % en 2024").',
+    },
+    {
+      id: 'fc-bi3-01-4',
+      front: '¿Por qué debe calcularse la meta anual de stores en una CTE separada antes de unirla con orders?',
+      back: 'Porque stores tiene grano de tienda y orders tiene grano de pedido; unir primero y sumar después multiplica la meta de cada tienda por su número de pedidos (fan-out).',
+    },
+  ],
+  sources: [
+    {
+      title: 'Bullet Graph Design Specification',
+      url: 'https://www.perceptualedge.com/articles/misc/Bullet_Graph_Design_Spec.pdf',
+      publisher: 'Stephen Few (Perceptual Edge)',
+      accessed: '2026-10-29',
+      supports: 'Especificación de los cinco componentes del gráfico de bala como reemplazo lineal de los velocímetros radiales.',
+    },
+    {
+      title: 'Fundamentals of Data Visualization — Cap. 23: Balance the data and the context',
+      url: 'https://clauswilke.com/dataviz/balance-data-context.html',
+      publisher: 'Claus O. Wilke (O\'Reilly)',
+      accessed: '2026-10-29',
+      supports: 'Formalización de la razón dato-tinta de Tufte, erradicación de chartjunk y preservación del contexto visual.',
+    },
+    {
+      title: 'International Business Communication Standards (IBCS) Version 2.0',
+      url: 'https://www.ibcs.com/ibcs-version-2-0/',
+      publisher: 'IBCS Association',
+      accessed: '2026-10-29',
+      supports: 'Estructura de títulos activos con mensaje ejecutivo y notación consistente entre valores reales y metas.',
+    },
+    {
+      title: 'Fundamentals of Data Visualization — Cap. 21: Multi-panel figures',
+      url: 'https://clauswilke.com/dataviz/multi-panel-figures.html',
+      publisher: 'Claus O. Wilke (O\'Reilly)',
+      accessed: '2026-10-29',
+      supports: 'Diseño de pequeños múltiplos con escalas compartidas para comparar regiones sin gráficos espagueti.',
+    },
+  ],
+  aiNotes: 'Guía al estudiante para que preagregue las metas de stores en una CTE independiente antes del JOIN con orders. Enfatiza que Cono Sur logra 45,6 % de cumplimiento bruto ($919.026,32 / $2.016.000,00) y 43,8 % neto en 2024, y pide siempre títulos de acción cuantificados.',
 };
 
 export default lesson;

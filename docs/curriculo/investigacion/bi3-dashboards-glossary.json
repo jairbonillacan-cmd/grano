@@ -1,0 +1,256 @@
+[
+  {
+    "id": "bi3-razon-dato-tinta",
+    "term": "Razón dato-tinta",
+    "englishTerm": "Data-ink ratio",
+    "track": "bi",
+    "definition": "Proporción de la tinta total de un gráfico dedicada a representar valores cuantitativos no redundantes (por ejemplo, la longitud de las barras de ventas por región). Se confunde con dejar el lienzo sin contexto, cuando obliga a borrar adornos preservando ejes y etiquetas.",
+    "formula": "Razón dato-tinta = Tinta de datos / Tinta total impresa en el gráfico",
+    "relatedLessons": [
+      "bi3-dashboards-01-bi-tufte-code"
+    ],
+    "relatedTerms": [
+      "bi3-grafico-de-bala",
+      "tinta-proporcional"
+    ],
+    "sources": [
+      {
+        "title": "Fundamentals of Data Visualization — Cap. 23: Balance the data and the context",
+        "url": "https://clauswilke.com/dataviz/balance-data-context.html",
+        "publisher": "Claus O. Wilke (O'Reilly)",
+        "accessed": "2026-10-29",
+        "supports": "Definición de razón dato-tinta de Edward Tufte y equilibrio entre tinta de datos y ejes de contexto."
+      }
+    ]
+  },
+  {
+    "id": "bi3-grafico-de-bala",
+    "term": "Gráfico de bala",
+    "englishTerm": "Bullet graph",
+    "track": "bi",
+    "definition": "Visualización lineal diseñada por Stephen Few que combina una barra central de valor real, un marcador perpendicular de meta y bandas de fondo cualitativas (por ejemplo, ingreso neto regional frente a cuota anual). Se confunde con una barra apilada, donde los segmentos suman un total.",
+    "relatedLessons": [
+      "bi3-dashboards-01-bi-tufte-code",
+      "bi3-dashboards-02-jerarquia-visual-reticula-10s"
+    ],
+    "relatedTerms": [
+      "bi3-razon-dato-tinta",
+      "bi3-sparkline"
+    ],
+    "sources": [
+      {
+        "title": "Bullet Graph Design Specification",
+        "url": "https://www.perceptualedge.com/articles/misc/Bullet_Graph_Design_Spec.pdf",
+        "publisher": "Stephen Few (Perceptual Edge)",
+        "accessed": "2026-10-29",
+        "supports": "Especificación de los cinco componentes del gráfico de bala como alternativa compacta a los velocímetros."
+      }
+    ]
+  },
+  {
+    "id": "bi3-sparkline",
+    "term": "Minigráfico en línea",
+    "englishTerm": "Sparkline",
+    "track": "bi",
+    "definition": "Gráfico temporal del tamaño de una palabra integrado dentro de una fila de tabla o tarjeta para mostrar la forma de la tendencia reciente (por ejemplo, doce semanas de pedidos por tienda). Se confunde con un gráfico de líneas completo con ejes y leyendas.",
+    "relatedLessons": [
+      "bi3-dashboards-01-bi-tufte-code"
+    ],
+    "relatedTerms": [
+      "bi3-grafico-de-bala",
+      "cifras-tabulares"
+    ],
+    "sources": [
+      {
+        "title": "Fundamentals of Data Visualization — Cap. 21: Multi-panel figures",
+        "url": "https://clauswilke.com/dataviz/multi-panel-figures.html",
+        "publisher": "Claus O. Wilke (O'Reilly)",
+        "accessed": "2026-10-29",
+        "supports": "Uso de micro-series y paneles múltiples con escalas consistentes para comparar tendencias."
+      }
+    ]
+  },
+  {
+    "id": "bi3-titulo-accion",
+    "term": "Título de acción",
+    "englishTerm": "Action title",
+    "track": "bi",
+    "definition": "Encabezado declarativo que resume el hallazgo cuantificado y su alcance en una oración (por ejemplo, \"Cono Sur lidera el cumplimiento anual con 45,6 % en 2024\"). Se confunde con una etiqueta descriptiva de ejes como \"Ventas por región\", que obliga al lector a deducir la conclusión.",
+    "relatedLessons": [
+      "bi3-dashboards-01-bi-tufte-code",
+      "bi3-dashboards-02-jerarquia-visual-reticula-10s"
+    ],
+    "relatedTerms": [
+      "bi3-jerarquia-visual"
+    ],
+    "sources": [
+      {
+        "title": "International Business Communication Standards (IBCS) Version 2.0",
+        "url": "https://www.ibcs.com/ibcs-version-2-0/",
+        "publisher": "IBCS Association",
+        "accessed": "2026-10-29",
+        "supports": "Estructura de títulos de mensaje activo con sujeto, métrica, variación y horizonte temporal."
+      }
+    ]
+  },
+  {
+    "id": "bi3-jerarquia-visual",
+    "term": "Jerarquía visual",
+    "englishTerm": "Visual hierarchy",
+    "track": "bi",
+    "definition": "Ordenamiento deliberado de los elementos de un tablero mediante tamaño, peso tipográfico, posición y espacio en blanco para guiar la atención en menos de diez segundos (por ejemplo, KPIs globales arriba y tabla de detalle abajo). Se confunde con resaltar todo el lienzo en negrita.",
+    "relatedLessons": [
+      "bi3-dashboards-02-jerarquia-visual-reticula-10s"
+    ],
+    "relatedTerms": [
+      "bi3-patron-lectura-f-z",
+      "bi3-titulo-accion"
+    ],
+    "sources": [
+      {
+        "title": "Visual Hierarchy in UX: Definition",
+        "url": "https://www.nngroup.com/articles/visual-hierarchy-ux-definition/",
+        "publisher": "Nielsen Norman Group",
+        "accessed": "2026-10-29",
+        "supports": "Principios de escala, contraste y agrupación espacial para dirigir la inspección ocular."
+      }
+    ]
+  },
+  {
+    "id": "bi3-patron-lectura-f-z",
+    "term": "Patrón de escaneo en F y Z",
+    "englishTerm": "F-pattern and Z-pattern scanning",
+    "track": "bi",
+    "definition": "Trayectorias oculares donde el usuario inicia la lectura en la esquina superior izquierda, barre horizontalmente la fila superior de métricas y desciende por el margen izquierdo o en diagonal. Se confunde con una lectura secuencial exhaustiva de cada celda del tablero.",
+    "relatedLessons": [
+      "bi3-dashboards-02-jerarquia-visual-reticula-10s"
+    ],
+    "relatedTerms": [
+      "bi3-jerarquia-visual"
+    ],
+    "sources": [
+      {
+        "title": "F-Shaped Pattern of Reading on the Web",
+        "url": "https://www.nngroup.com/articles/f-shaped-pattern-reading-web-content/",
+        "publisher": "Nielsen Norman Group",
+        "accessed": "2026-10-29",
+        "supports": "Evidencia de seguimiento ocular sobre anclaje superior izquierdo y escaneo horizontal-vertical."
+      }
+    ]
+  },
+  {
+    "id": "bi3-contraste-wcag",
+    "term": "Razón de contraste WCAG",
+    "englishTerm": "WCAG contrast ratio",
+    "track": "bi",
+    "definition": "Relación matemática de luminancia relativa entre primer plano y fondo que exige al menos 4,5:1 para texto normal y 3:1 para marcas gráficas en nivel AA (por ejemplo, etiquetas oscuras sobre tarjetas claras). Se confunde con usar colores saturados de igual luminancia como rojo sobre verde.",
+    "formula": "Contraste = (L1 + 0,05) / (L2 + 0,05)",
+    "relatedLessons": [
+      "bi3-dashboards-03-color-contraste-wcag-daltonismo"
+    ],
+    "relatedTerms": [
+      "bi3-doble-codificacion",
+      "contraste-no-textual"
+    ],
+    "sources": [
+      {
+        "title": "Understanding Success Criterion 1.4.3: Contrast (Minimum) (WCAG 2.2)",
+        "url": "https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html",
+        "publisher": "W3C Web Accessibility Initiative",
+        "accessed": "2026-10-29",
+        "supports": "Umbrales normativos de contraste 4,5:1 para texto normal y 3:1 para texto grande."
+      }
+    ]
+  },
+  {
+    "id": "bi3-doble-codificacion",
+    "term": "Doble codificación redundante",
+    "englishTerm": "Redundant double encoding",
+    "track": "bi",
+    "definition": "Práctica de accesibilidad que transmite un estado combinando al menos dos canales independientes como color más icono o prefijo textual (por ejemplo, \"[ALERT] Crítico\" junto a un marcador naranja). Se confunde con duplicar dos gráficos distintos para la misma métrica.",
+    "relatedLessons": [
+      "bi3-dashboards-03-color-contraste-wcag-daltonismo"
+    ],
+    "relatedTerms": [
+      "bi3-contraste-wcag",
+      "paleta-divergente"
+    ],
+    "sources": [
+      {
+        "title": "Understanding Success Criterion 1.4.1: Use of Color (WCAG 2.2)",
+        "url": "https://www.w3.org/WAI/WCAG22/Understanding/use-of-color.html",
+        "publisher": "W3C Web Accessibility Initiative",
+        "accessed": "2026-10-29",
+        "supports": "Obligación de no emplear el color como único medio visual para transmitir estados o categorías."
+      }
+    ]
+  },
+  {
+    "id": "bi3-perforacion-drill-through",
+    "term": "Perforación contextual",
+    "englishTerm": "Drill-through",
+    "track": "bi",
+    "definition": "Navegación que lleva al usuario desde una marca agregada (por ejemplo, una región o tienda) hacia una página dedicada de detalle filtrada automáticamente por esa entidad. Se confunde con un tooltip emergente, que solo muestra un micro-resumen temporal al pasar el cursor.",
+    "relatedLessons": [
+      "bi3-dashboards-04-interaccion-filtros-drill-tooltips"
+    ],
+    "relatedTerms": [
+      "bi3-estado-vacio-informativo"
+    ],
+    "sources": [
+      {
+        "title": "Set up drillthrough in Power BI reports",
+        "url": "https://learn.microsoft.com/en-us/power-bi/create-reports/desktop-drillthrough",
+        "publisher": "Microsoft Learn",
+        "accessed": "2026-10-29",
+        "supports": "Configuración de páginas de destino de perforación filtradas por el contexto de la entidad seleccionada."
+      }
+    ]
+  },
+  {
+    "id": "bi3-estado-vacio-informativo",
+    "term": "Estado vacío informativo",
+    "englishTerm": "Informative empty state",
+    "track": "bi",
+    "definition": "Respuesta visual y de datos que informa explícitamente cuando un filtro produce cero eventos (por ejemplo, mostrar 0 devoluciones con LEFT JOIN y COALESCE en Tienda El Poblado). Se confunde con un lienzo en blanco o con un fallo de carga del motor SQL.",
+    "relatedLessons": [
+      "bi3-dashboards-04-interaccion-filtros-drill-tooltips"
+    ],
+    "relatedTerms": [
+      "bi3-perforacion-drill-through",
+      "coalesce-nullif"
+    ],
+    "sources": [
+      {
+        "title": "Slicers in Power BI",
+        "url": "https://learn.microsoft.com/en-us/power-bi/visuals/power-bi-visualization-slicers",
+        "publisher": "Microsoft Learn",
+        "accessed": "2026-10-29",
+        "supports": "Comportamiento de filtros combinados y manejo explícito de selecciones sin registros coincidentes."
+      }
+    ]
+  },
+  {
+    "id": "bi3-tablero-ejecutivo-vs-operativo",
+    "term": "Tablero estratégico frente a operativo",
+    "englishTerm": "Executive vs. operational dashboard",
+    "track": "bi",
+    "definition": "Separación arquitectónica entre vistas ejecutivas de grano mensual o regional orientadas a metas de largo plazo y monitores operativos de grano diario o por pedido orientados a resolver colas de excepción. Se confunde con entregar el mismo tablero con más filtros a toda la empresa.",
+    "relatedLessons": [
+      "bi3-dashboards-05-tablero-ejecutivo-vs-operativo"
+    ],
+    "relatedTerms": [
+      "bi3-jerarquia-visual",
+      "arbol-de-kpis"
+    ],
+    "sources": [
+      {
+        "title": "Dashboards for business users of the Power BI service",
+        "url": "https://learn.microsoft.com/en-us/power-bi/explore-reports/end-user-dashboards",
+        "publisher": "Microsoft Learn",
+        "accessed": "2026-10-29",
+        "supports": "Diferencias de grano, frecuencia de actualización y propósito entre tableros ejecutivos y operativos."
+      }
+    ]
+  }
+]
