@@ -1,301 +1,598 @@
-// Lección migrada al esquema v2 mediante scripts/migrate-legacy.mjs
-const lesson = {
-  "id": "de3-transformacion-01-dbt-sqlmesh-dag",
-  "moduleId": "de3-transformacion",
-  "tracks": [
-    "de"
+export const lesson = {
+  id: 'de3-transformacion-01-dbt-sqlmesh-dag',
+  legacyId: 'l11-dbt-sqlmesh-dag',
+  title: 'Ingeniería de transformación: dbt, SQLMesh y el DAG',
+  subtitle: 'Compilación declarativa, modelos incrementales idempotentes y entornos virtuales sobre Mercado Brisa',
+  module: 'de3-transformacion',
+  moduleId: 'de3-transformacion',
+  contentVersion: 2,
+  order: 1,
+  legacyOrder: 11,
+  minutes: 30,
+  tracks: ['de'],
+  level: 3,
+  prerequisites: [
+    'de3-lakehouse-01-iceberg-v3-medallion',
+    'c2-dimensional-01-hechos-dimensiones-bus',
   ],
-  "level": 3,
-  "order": 1,
-  "title": "Transformación declarativa con dbt y SQLMesh",
-  "minutes": 30,
-  "prerequisites": [
-    "de3-lakehouse-01-iceberg-v3-medallion"
+  needsReview: false,
+  hook: 'Cada madrugada a las 03:00 UTC, un cron ejecuta doce scripts SQL encadenados para consolidar los cobros de Mercado Brisa. Ayer la pasarela de pagos reenvió con retraso 405 confirmaciones duplicadas y el script intermedio falló a mitad de camino, inflando el ingreso liquidado en $168,674.63 entre Cono Sur, Andina, Iberia y Norteamérica. ¿Cómo transformas una secuencia frágil de scripts imperativos en un grafo declarativo idempotente capaz de absorber eventos tardíos y promover entornos sin recalcular millones de filas?',
+  objectives: [
+    'Construir un grafo acíclico dirigido (DAG) declarativo mediante referencias explícitas y análisis sintáctico para garantizar el orden topológico de ejecución.',
+    'Diseñar modelos incrementales idempotentes con ventana deslizante y deduplicación determinista para absorber cobros tardíos sin inflar métricas financieras.',
+    'Contrastar la reconstrucción física por estado en dbt frente a los entornos virtuales de datos basados en vistas y huellas semánticas en SQLMesh.',
   ],
-  "contentVersion": 1,
-  "hook": "En Mercado Brisa (empresa ficticia), las transformaciones analíticas vivían en 18 procedimientos almacenados de 2 000 líneas ejecutados por cron a las 03:00. Nadie sabía en qué orden corrían y un filtro incremental `WHERE event_ts > (SELECT MAX(event_ts) FROM destino)` dejó un hueco de seis horas cuando un servicio entregó pedidos con retraso. Al migrar a un grafo declarativo (staging → intermediate → marts) con seguimiento de intervalos por estado, los huecos desaparecieron. ¿Cómo garantizan dbt y SQLMesh transformaciones idempotentes?",
-  "objectives": [
-    "Estructurar un proyecto de transformación en capas modulares: staging (1:1 con fuentes), intermediate y marts.",
-    "Reemplazar cargas incrementales ingenuas (`MAX(ts)`) por ventanas con retroceso (lookback) o intervalos de estado.",
-    "Utilizar análisis sintáctico SQL y entornos virtuales basados en vistas para validar cambios sin duplicar terabytes."
-  ],
-  "sections": [
+  sections: [
     {
-      "id": "de-procedimientos-almacenados-a-grafos-modulares",
-      "heading": "De procedimientos almacenados a grafos modulares (DAG)",
-      "body": "El principio central de la ingeniería de transformación moderna (popularizado por **dbt** y evolucionado por **SQLMesh**) es que toda transformación debe ser una sentencia `SELECT` declarativa, pura, idempotente y versionada en Git. El motor construye automáticamente el **DAG (Grafo Acíclico Dirigido)** de dependencias y lo organiza en tres capas disciplinadas:\n• **Staging (`stg_`)**: Relación 1:1 con las tablas fuente de Bronze. Solo renombra columnas al estándar de la empresa, aplica conversiones de tipos (`CAST`), limpia strings vacíos y deduplica por clave primaria. Cero joins complejos ni agregaciones.\n• **Intermediate (`int_`)**: Piezas modulares de lógica de negocio que unen múltiples modelos de Staging, resuelven intervalos temporales SCD2 o prorratean importes antes de exponerlos.\n• **Marts / Gold (`fct_` y `dim_`)**: Tablas de Hechos y Dimensiones listas para las áreas de negocio (`finance`, `product`, `growth`) y conectadas a la Capa Semántica.",
-      "interactive": {
-        "component": "dbt-sqlmesh-dag-explorer",
-        "caption": "Simulador interactivo: Transformación declarativa con dbt y SQLMesh"
-      }
+      id: 'sec-de3-t01-dag',
+      heading: 'De scripts imperativos al grafo declarativo (DAG)',
+      body: 'Ejecutar sentencias `CREATE TABLE` e `INSERT INTO` mediante scripts sueltos oculta las dependencias reales entre tablas. Si la limpieza de pagos se retrasa diez minutos, la tabla de ingresos regionales se calcula sobre datos incompletos. Ningún proceso emite errores y el fallo pasa inadvertido.\n\nLa ingeniería de transformación declarativa invierte esta responsabilidad. Cada archivo define una única consulta `SELECT` que expresa el estado deseado del modelo, nunca el procedimiento físico de inserción. En **dbt**, las funciones `{{ source() }}` y `{{ ref() }}` declaran las aristas del grafo acíclico dirigido y se guardan en `manifest.json`. En **SQLMesh**, un analizador léxico construye el árbol de sintaxis abstracta (AST) desde el SQL estándar. Así detecta las tablas origen y el linaje de columnas sin requerir plantillas Jinja.\n\nEl motor conoce el grafo completo antes de enviar una sola consulta al almacén. Por ello resuelve el orden topológico exacto, paraleliza ramas independientes y detiene los modelos descendientes si una tabla intermedia falla.',
+      callout: 'En un pipeline declarativo nunca escribes DDL manual para gestionar dependencias: declaras la consulta SELECT y el compilador deduce el orden topológico y el grado de paralelismo.',
+      example: {
+        language: 'sql',
+        code: `-- Modelo declarativo stg_payments_dedup sobre Mercado Brisa
+-- Filtra cobros capturados y elimina los 405 reintentos duplicados
+SELECT
+  payment_id,
+  order_id,
+  payment_method,
+  provider,
+  amount_usd,
+  payment_ts
+FROM payments
+WHERE status = 'captured'
+QUALIFY ROW_NUMBER() OVER (
+  PARTITION BY order_id
+  ORDER BY payment_ts DESC, payment_id DESC
+) = 1;`,
+        explanation:
+          'Al encapsular la deduplicación por `order_id` en el nodo staging del DAG, cualquier modelo intermedio o mart que referencie este nodo recibe exactamente un cobro capturado por pedido.',
+      },
+      interactive: {
+        type: 'dbt-sqlmesh-dag-explorer',
+        component: 'dbt-sqlmesh-dag-explorer',
+        title: 'Simulador de DAG: dbt (Reconstrucción Física) vs. SQLMesh (Entornos Virtuales)',
+        description:
+          'Compara cómo la edición de un nodo intermedio propaga cambios en el grafo declarativo y contrasta el coste de cómputo entre reconstruir tablas físicas y actualizar punteros de vistas.',
+      },
     },
     {
-      "id": "modelos-incrementales-frente-al-estado-por-inter",
-      "heading": "Modelos incrementales frente al estado por intervalos",
-      "body": "El patrón incremental tradicional en SQL (`WHERE event_date > (SELECT MAX(event_date) FROM {{ this }})`) tiene tres defectos graves en producción:\n1) Si llegan datos tardíos de hace 2 días mientras ya entró un evento de hoy, `MAX(event_date)` es hoy y los datos de hace 2 días se ignoran por completo.\n2) Si el trabajo de ayer miércoles falló pero el de hoy jueves corrió, queda un hueco (\"data gap\") permanente el miércoles que nadie detecta.\n3) Si necesitas reprocesar solo el mes de agosto porque hubo un error en una tarifa, tienes que ejecutar un `--full-refresh` de los últimos 5 años o escribir parches manuales peligrosos.\n**SQLMesh** resuelve esto mediante **State-Based Interval Tracking** (`INCREMENTAL_BY_TIME_RANGE`): divide la línea del tiempo en intervalos discretos (horas o días) y registra en su base de estado exactamente qué intervalos han sido calculados para cada versión de cada modelo. Si falta el miércoles 14 de octubre, recalcula únicamente ese intervalo usando las variables inyectadas `@start_ts` y `@end_ts`.",
-      "example": {
-        "language": "sql",
-        "code": "MODEL (\n  name silver.fct_payments,\n  kind INCREMENTAL_BY_TIME_RANGE (\n    time_column payment_date,\n    batch_size 30,\n    lookback 2\n  ),\n  owner 'revenue-analytics@novapay.io',\n  cron '@hourly',\n  grain (payment_id),\n  audits (\n    not_null(columns := (payment_id, customer_id, payment_date, amount_usd)),\n    unique_values(columns := (payment_id)),\n    accepted_range(column := amount_usd, min_v := 0.0, max_v := 500000.0)\n  )\n);\n\nSELECT\n  payment_id,\n  customer_id,\n  CAST(event_ts AS DATE) AS payment_date,\n  ROUND(amount_cents / 100.0, 2) AS amount_usd\nFROM bronze.raw_payments\nWHERE event_ts BETWEEN @start_ts AND @end_ts\nQUALIFY ROW_NUMBER() OVER (PARTITION BY payment_id ORDER BY ingested_at DESC) = 1;",
-        "expectedOutput": [
-          {
-            "eventos_tardios_2h": "Capturados al 100% gracias a lookback = 2 e idempotencia por rango",
-            "fallo_dia_intermedio": "Detectado y rellenado automáticamente por el registro de intervalos",
-            "costo_deploy_pr_a_prod": "0 seg en Prod (Promoción instantánea de puntero de vista)"
-          }
-        ]
-      }
+      id: 'sec-de3-t01-incremental',
+      heading: 'Materializaciones e idempotencia con ventana deslizante',
+      body: 'Elegir cómo persiste cada nodo del DAG determina el equilibrio entre latencia de lectura y coste de cómputo. Una vista (`view`) no almacena datos y recalcula su lógica al vuelo. Una tabla completa (`table` o `FULL`) reconstruye el activo desde cero en cada corrida. Un modelo incremental (`incremental` en dbt o `INCREMENTAL_BY_TIME_RANGE` en SQLMesh) procesa únicamente los intervalos nuevos.\n\nUn error habitual en cargas incrementales consiste en filtrar `WHERE payment_ts > (SELECT MAX(payment_ts) FROM destino)` e insertar filas con `APPEND`. Este patrón falla por dos razones técnicas. Primero, omite eventos tardíos (*late-arriving facts*) que llegan con marcas de tiempo pasadas tras reintentos de red. Segundo, duplica registros si el lote se reejecuta tras una caída.\n\nLa solución rigurosa combina una **ventana deslizante de retrospección** (*lookback window*, por ejemplo de 3 días) con una clave única (`unique_key = \'order_id\'`). La integración se aplica mediante `MERGE` o reemplazo de partición (`DELETE+INSERT`). En SQLMesh, el modelo `INCREMENTAL_BY_TIME_RANGE` parametriza cada corrida con `@start_ds` y `@end_ds`. Esto permite reprocesar cualquier ventana histórica de forma aislada e idempotente.',
+      callout: 'Una carga incremental solo es idempotente si reprocesar tres veces la misma ventana temporal produce exactamente el mismo conteo de filas y la misma suma monetaria.',
+      example: {
+        language: 'sql',
+        code: `-- Ventana deslizante de 3 días sobre payments de Mercado Brisa
+WITH bounds AS (
+  SELECT MAX(CAST(payment_ts AS DATE)) AS max_date FROM payments
+),
+incremental_window AS (
+  SELECT
+    p.payment_id,
+    p.order_id,
+    p.provider,
+    p.amount_usd,
+    p.payment_ts
+  FROM payments p
+  CROSS JOIN bounds b
+  WHERE p.status = 'captured'
+    AND CAST(p.payment_ts AS DATE) >= b.max_date - INTERVAL 3 DAY
+  QUALIFY ROW_NUMBER() OVER (
+    PARTITION BY p.order_id
+    ORDER BY p.payment_ts DESC, p.payment_id DESC
+  ) = 1
+)
+SELECT
+  provider,
+  COUNT(*) AS window_orders,
+  ROUND(SUM(amount_usd), 2) AS window_amount_usd
+FROM incremental_window
+GROUP BY provider
+ORDER BY window_amount_usd DESC;`,
+        explanation:
+          'Al retroceder 3 días desde la fecha máxima (`2025-11-26`) y deduplicar por `order_id`, el lote incremental captura cobros rezagados (`stripe_latam` suma $5,708.44 en 21 órdenes) sin duplicar filas previas.',
+      },
     },
     {
-      "id": "analisis-sintactico-de-sql-mediante-ast-sqlglot-",
-      "heading": "Análisis sintáctico de SQL mediante AST (SQLGlot) y linaje de columnas",
-      "body": "Una plantilla Jinja tradicional trata tu consulta SQL como texto plano: no sabe si cambiaste un comentario, añadiste una columna nueva o alteraste la fórmula de un `WHERE`. En cambio, **SQLMesh** incorpora **SQLGlot**, un parser y transpilador que convierte cada consulta SQL en un **Árbol Sintáctico Abstracto (AST)** antes de enviarla a la base de datos.\nGracias al AST, la plataforma:\n• Detecta errores de sintaxis, tipos incompatibles y referencias a columnas inexistentes en milisegundos localmente, antes de gastar un centavo en el almacén cloud.\n• Construye **Linaje a Nivel de Columna (Column-Level Lineage)** automático a través de decenas de tablas.\n• Clasifica semánticamente cada cambio en tu Pull Request como **Breaking** (modificaste la lógica de un filtro o de una columna usada por 10 tablas hijas) vs. **Non-Breaking / Forward-Only** (solo añadiste una columna nueva al final que ninguna tabla hija usa todavía, por lo que no hace falta recalcular las 10 tablas hijas)."
+      id: 'sec-de3-t01-vde',
+      heading: 'Ejecución consciente del estado y entornos virtuales',
+      body: 'Cuando un ingeniero modifica un modelo intermedio en desarrollo, necesita validar el impacto aguas abajo sin corromper producción ni duplicar el gasto del almacén. En **dbt**, la ejecución consciente del estado compara el `manifest.json` actual contra el de producción usando `--select state:modified+ --defer`. Así, dbt reconstruye físicamente en desarrollo solo el modelo alterado y sus hijos. Mientras tanto, lee las tablas padre intactas directamente desde producción.\n\n**SQLMesh** aborda este reto mediante **entornos virtuales de datos** (*Virtual Data Environments*). En vez de sobrescribir tablas con nombres fijos, SQLMesh calcula una huella criptográfica (*semantic hash*) a partir del AST de cada modelo. Los datos se guardan en tablas físicas inmutables versionadas (`sqlmesh__fct_payments__a8f92b`). Los esquemas `dev` y `prod` contienen únicamente vistas ligeras que apuntan a la tabla física vigente.\n\nAl crear un entorno `dev`, ninguna fila se clona. Cuando ejecutas `sqlmesh plan prod` tras validar tus cambios en `dev`, la promoción a producción no recalcula los datos. El motor ejecuta un `CREATE OR REPLACE VIEW` instantáneo que redirige el puntero hacia la tabla física ya validada.',
+      callout: 'Los entornos virtuales separan el almacenamiento físico (tablas versionadas por huella semántica) de la exposición lógica (vistas por entorno), reduciendo la promoción a producción a un cambio de puntero en milisegundos.',
+      example: {
+        language: 'sql',
+        code: `-- Verificación de equivalencia entre vista de entorno y tabla física
+WITH prod_pointer AS (
+  SELECT COUNT(*) AS rows_cnt, ROUND(SUM(total_usd), 2) AS total_usd
+  FROM orders
+  WHERE status IN ('completed', 'refunded')
+),
+candidate_version AS (
+  SELECT
+    COUNT(DISTINCT order_id) AS rows_cnt,
+    ROUND(SUM(amount_usd), 2) AS total_usd
+  FROM (
+    SELECT order_id, amount_usd
+    FROM payments
+    WHERE status = 'captured'
+    QUALIFY ROW_NUMBER() OVER (
+      PARTITION BY order_id
+      ORDER BY payment_ts DESC, payment_id DESC
+    ) = 1
+  )
+)
+SELECT
+  p.rows_cnt AS prod_orders,
+  c.rows_cnt AS candidate_orders,
+  p.total_usd AS prod_usd,
+  c.total_usd AS candidate_usd,
+  ROUND(p.total_usd - c.total_usd, 2) AS reconciliation_diff_usd
+FROM prod_pointer p
+CROSS JOIN candidate_version c;`,
+        explanation:
+          'Antes de intercambiar el puntero de la vista productiva, verificamos que la versión candidata (`16,200` órdenes y `$6,874,488.00`) concilie exactamente con las órdenes válidas (`reconciliation_diff_usd = 0`).',
+      },
     },
-    {
-      "id": "entornos-virtuales-de-datos-mediante-vistas-y-pr",
-      "heading": "Entornos virtuales de datos mediante vistas y promoción sin recálculo",
-      "body": "¿Cómo probar cambios sin duplicar terabytes entre `dev`, `staging` y `prod`? Mediante **Entornos Virtuales de Datos**:\n• Cada vez que modificas un modelo SQL, se calcula una huella criptográfica (*fingerprint*) de su AST y sus dependencias, creando una tabla física versionada en la capa interna (ej. `sqlmesh__silver__fct_orders__398a1f`).\n• Los entornos (`prod`, `dev_ana`, `pr_412`) son simplemente esquemas de **Vistas Ligeras** que apuntan a las tablas físicas correspondientes.\n• Si en tu rama `pr_412` solo modificaste 1 de los 240 modelos y el cambio es *Non-Breaking*, SQLMesh ejecuta el cálculo de ese único modelo para un rango de muestra y apunta las otras 239 vistas directamente a las tablas físicas ya calculadas en `prod` (Zero-Copy).\n• Cuando haces merge a `main`, **promover a producción no recalcula nada**: simplemente actualiza el puntero de la vista `prod.fct_orders` hacia la tabla física ya validada en el PR. Y si hay una alerta en BI, hacer rollback al estado anterior tarda menos de 1 segundo."
-    }
   ],
-  "workedExample": {
-    "title": "Ejemplo guiado: Transformación declarativa con dbt y SQLMesh",
-    "description": "Compara el peligroso patrón incremental basado en `MAX(timestamp)` frente a un modelo declarativo por intervalos temporales con auditorías integradas y AST validado:",
-    "audit": "",
-    "steps": [
+  workedExample: {
+    title: 'Diagnóstico y deduplicación declarativa de cobros en Mercado Brisa',
+    scenario:
+      'El equipo de Finanzas de Mercado Brisa nota que la suma de pagos capturados en `payments` supera al total facturado en `orders` para los pedidos completados y reembolsados. Debes diagnosticar la magnitud del sobrecobro en `payments`, construir el nodo declarativo de deduplicación y conciliar los ingresos liquidados por región de tienda.',
+    steps: [
       {
-        "label": "Antipatrón: modelo incremental con MAX(event_ts) sin auditoría",
-        "explanation": "Compara el peligroso patrón incremental basado en `MAX(timestamp)` frente a un modelo declarativo por intervalos temporales con auditorías integradas y AST validado:",
-        "code": "-- FRÁGIL: Si un día falla en un 50% o llegan eventos con 2 horas de retraso,\n-- el filtro MAX(event_ts) salta esos registros por completo y corrompe los totales financieros.\n{{ config(materialized='incremental', unique_key='payment_id') }}\n\nSELECT\n  payment_id,\n  customer_id,\n  CAST(event_ts AS DATE) AS payment_date,\n  amount_cents / 100.0 AS amount_usd\nFROM {{ source('bronze', 'raw_payments') }}\n{% if is_incremental() %}\n  WHERE event_ts > (SELECT MAX(event_ts) FROM {{ this }})\n{% endif %};",
-        "expectedOutput": [
+        label: 'Paso 1: Auditar los intentos de cobro por estado en payments',
+        explanation:
+          'Inspeccionamos la tabla `payments` (`19,200` filas) agrupando por `status` para comparar el total de intentos registrados frente al número de pedidos únicos (`COUNT(DISTINCT order_id)`).',
+        code: `SELECT
+  status,
+  COUNT(*) AS total_attempts,
+  COUNT(DISTINCT order_id) AS distinct_orders,
+  ROUND(SUM(amount_usd), 2) AS raw_amount_usd
+FROM payments
+GROUP BY status
+ORDER BY total_attempts DESC;`,
+        expectedOutput: [
           {
-            "eventos_tardios_2h": "Perdidos silenciosamente (No recarga ventana de lookback)",
-            "fallo_dia_intermedio": "Deja hueco permanente en la serie temporal",
-            "costo_deploy_pr_a_prod": "Recalcula en Dev y vuelve a recalcular en Prod (Doble gasto)"
-          }
-        ]
+            status: 'captured',
+            total_attempts: 16605,
+            distinct_orders: 16200,
+            raw_amount_usd: 7043162.63,
+          },
+          {
+            status: 'failed',
+            total_attempts: 1857,
+            distinct_orders: 1785,
+            raw_amount_usd: 820890.69,
+          },
+          {
+            status: 'pending',
+            total_attempts: 738,
+            distinct_orders: 720,
+            raw_amount_usd: 314046.86,
+          },
+        ],
       },
       {
-        "label": "Solución óptima: modelo incremental por intervalo con auditoría",
-        "explanation": "Compara ahora la consulta corregida y verifica cómo las filas y totales coinciden con la auditoría.",
-        "code": "MODEL (\n  name silver.fct_payments,\n  kind INCREMENTAL_BY_TIME_RANGE (\n    time_column payment_date,\n    batch_size 30,\n    lookback 2\n  ),\n  owner 'revenue-analytics@novapay.io',\n  cron '@hourly',\n  grain (payment_id),\n  audits (\n    not_null(columns := (payment_id, customer_id, payment_date, amount_usd)),\n    unique_values(columns := (payment_id)),\n    accepted_range(column := amount_usd, min_v := 0.0, max_v := 500000.0)\n  )\n);\n\nSELECT\n  payment_id,\n  customer_id,\n  CAST(event_ts AS DATE) AS payment_date,\n  ROUND(amount_cents / 100.0, 2) AS amount_usd\nFROM bronze.raw_payments\nWHERE event_ts BETWEEN @start_ts AND @end_ts\nQUALIFY ROW_NUMBER() OVER (PARTITION BY payment_id ORDER BY ingested_at DESC) = 1;",
-        "expectedOutput": [
+        label: 'Paso 2: Deduplicar cobros capturados por pedido y proveedor',
+        explanation:
+          'Observamos `16,605` intentos `captured` para `16,200` órdenes (`405` cobros duplicados). Aplicamos `QUALIFY ROW_NUMBER() OVER (PARTITION BY order_id ORDER BY payment_ts DESC, payment_id DESC) = 1` para retener un único cobro válido por pedido.',
+        code: `WITH dedup_payments AS (
+  SELECT
+    payment_id,
+    order_id,
+    provider,
+    amount_usd,
+    payment_ts
+  FROM payments
+  WHERE status = 'captured'
+  QUALIFY ROW_NUMBER() OVER (
+    PARTITION BY order_id
+    ORDER BY payment_ts DESC, payment_id DESC
+  ) = 1
+)
+SELECT
+  provider,
+  COUNT(*) AS settled_orders,
+  ROUND(SUM(amount_usd), 2) AS settled_amount_usd
+FROM dedup_payments
+GROUP BY provider
+ORDER BY settled_amount_usd DESC;`,
+        expectedOutput: [
           {
-            "eventos_tardios_2h": "Capturados al 100% gracias a lookback = 2 e idempotencia por rango",
-            "fallo_dia_intermedio": "Detectado y rellenado automáticamente por el registro de intervalos",
-            "costo_deploy_pr_a_prod": "0 seg en Prod (Promoción instantánea de puntero de vista)"
-          }
-        ]
-      }
-    ]
-  },
-  "checks": [
-    {
-      "id": "c1",
-      "type": "mcq",
-      "prompt": "Modificas un modelo intermedio `int_orders` que alimenta a 15 tablas Gold de 1 TB cada una. El único cambio que hiciste fue agregar una columna nueva `discount_coupon_code` que solo será usada por 1 de las 15 tablas Gold. ¿Cómo actúa SQLMesh al crear tu entorno de desarrollo?",
-      "options": [
-        {
-          "id": "a",
-          "text": "Al analizar el AST y el linaje por columna, clasifica el cambio como Non-Breaking (aditivo): recalcula únicamente `int_orders` y la única tabla Gold que usa la nueva columna, mientras que las otras 14 tablas Gold en tu entorno dev apuntan directamente a las tablas físicas de producción sin recalcularse.",
-          "correct": true,
-          "feedback": "Exacto. El análisis semántico del AST con SQLGlot junto a los Entornos Virtuales evita recalcular los otros 14 TB que no sufrieron ningún cambio lógico."
-        },
-        {
-          "id": "b",
-          "text": "Clona físicamente los 15 TB completos de producción en tu esquema `dev_usuario` antes de dejarte ejecutar una sola consulta.",
-          "correct": false,
-          "feedback": "Clonar todas las tablas hijas sin distinguir cambios aditivos es el antipatrón costoso que los Entornos Virtuales de Datos eliminan."
-        },
-        {
-          "id": "c",
-          "text": "Ignora el cambio y no crea la columna `discount_coupon_code` hasta que borres manualmente toda la base de datos de producción.",
-          "correct": false,
-          "feedback": "El motor sí materializa la nueva versión de `int_orders` con la nueva columna y la expone de inmediato en tu entorno virtual."
-        }
-      ],
-      "explanation": "Exacto. El análisis semántico del AST con SQLGlot junto a los Entornos Virtuales evita recalcular los otros 14 TB que no sufrieron ningún cambio lógico."
-    },
-    {
-      "id": "c2",
-      "type": "mcq",
-      "prompt": "Un modelo incremental en dbt procesa pedidos diarios, pero los pagos con tarjeta pueden tardar hasta 48 horas en confirmar su estado final. ¿Cómo configuras el filtro incremental para no perder esas actualizaciones?",
-      "options": [
-        {
-          "id": "a",
-          "text": "Aplicar una ventana deslizante de retroceso (lookback de 3 días) con estrategia MERGE o DELETE+INSERT por clave única.",
-          "correct": true,
-          "feedback": "Correcto: reprocesar los últimos 3 días con clave única actualiza los pedidos tardíos de forma idempotente."
-        },
-        {
-          "id": "b",
-          "text": "Filtrar únicamente WHERE created_at > (SELECT MAX(created_at) FROM {{ this }}) con modo append.",
-          "correct": false,
-          "feedback": "Incorrecto: append sin retroceso ignora cambios posteriores y si reprocesas duplica filas."
-        },
-        {
-          "id": "c",
-          "text": "Borrar manualmente la tabla en producción cada mañana.",
-          "correct": false,
-          "feedback": "Incorrecto: pierde las ventajas de una carga incremental sobre tablas históricas grandes."
-        }
-      ],
-      "explanation": "Combinar una clave única (`unique_key`) con una ventana de retroceso (`lookback`) asegura que los eventos retrasados actualicen su registro sin generar duplicados."
-    },
-    {
-      "id": "c3",
-      "type": "mcq",
-      "prompt": "¿Por qué no se recomienda hacer un `JOIN` directo contra una tabla cruda `raw.orders` desde cinco modelos `mart_` distintos?",
-      "options": [
-        {
-          "id": "a",
-          "text": "Porque duplica las reglas de limpieza y casteo en cinco sitios; debe existir un único modelo stg_orders como puerta de entrada.",
-          "correct": true,
-          "feedback": "Correcto: centralizar la limpieza en stg_orders garantiza que cualquier cambio en la fuente se corrija en un solo archivo."
-        },
-        {
-          "id": "b",
-          "text": "Porque el motor SQL prohíbe leer el esquema raw más de una vez.",
-          "correct": false,
-          "feedback": "Incorrecto: es una regla de arquitectura y mantenibilidad del grafo, no una limitación del motor SQL."
-        },
-        {
-          "id": "c",
-          "text": "Porque las tablas raw no tienen columnas de texto.",
-          "correct": false,
-          "feedback": "Incorrecto: las tablas raw suelen tener texto y JSON sin tipar, razón por la cual pasan primero por staging."
-        }
-      ],
-      "explanation": "La relación 1:1 entre fuente cruda y modelo `stg_` aísla al resto del grafo de renombres o cambios de formato en los sistemas transaccionales."
-    }
-  ],
-  "practice": {
-    "type": "sql",
-    "title": "Modelo de staging idempotente: deduplicación de payments",
-    "language": "sql",
-    "prompt": "La tabla `payments` contiene reenvíos duplicados de webhooks con el mismo `idempotency_key`. Construye una consulta con una CTE `stg_payments_dedup` que conserve solo el primer registro por `idempotency_key` (`QUALIFY ROW_NUMBER() OVER (PARTITION BY idempotency_key ORDER BY payment_ts ASC) = 1`) y agregue los cobros `status = 'captured'` por `payment_method`.",
-    "starterCode": "WITH stg_payments_dedup AS (\n  SELECT\n    payment_id,\n    order_id,\n    payment_method,\n    status,\n    amount_usd,\n    payment_ts,\n    idempotency_key\n  FROM payments\n  -- TODO: Filtra duplicados con QUALIFY ROW_NUMBER() OVER (PARTITION BY idempotency_key ORDER BY payment_ts ASC) = 1\n)\nSELECT\n  payment_method,\n  COUNT(*) AS captured_payments,\n  ROUND(SUM(amount_usd), 2) AS captured_volume_usd\nFROM stg_payments_dedup\nWHERE status = 'captured'\nGROUP BY payment_method\nORDER BY captured_volume_usd DESC;",
-    "expected": "WITH stg_payments_dedup AS (\n  SELECT\n    payment_id,\n    order_id,\n    payment_method,\n    status,\n    amount_usd,\n    payment_ts,\n    idempotency_key\n  FROM payments\n  QUALIFY ROW_NUMBER() OVER (\n    PARTITION BY idempotency_key\n    ORDER BY payment_ts ASC\n  ) = 1\n)\nSELECT\n  payment_method,\n  COUNT(*) AS captured_payments,\n  ROUND(SUM(amount_usd), 2) AS captured_volume_usd\nFROM stg_payments_dedup\nWHERE status = 'captured'\nGROUP BY payment_method\nORDER BY captured_volume_usd DESC;",
-    "orderMatters": true,
-    "hints": [
-      "En `stg_payments_dedup`, añade `QUALIFY ROW_NUMBER() OVER (PARTITION BY idempotency_key ORDER BY payment_ts ASC) = 1` después de `FROM payments`.",
-      "Sin la deduplicación por `idempotency_key`, las 450 filas duplicadas por reenvío de webhook inflan `captured_payments` y `captured_volume_usd`.",
-      "Mantén el filtro `WHERE status = 'captured'` y `ORDER BY captured_volume_usd DESC`."
+            provider: 'conekta',
+            settled_orders: 3960,
+            settled_amount_usd: 1935173.03,
+          },
+          {
+            provider: 'adyen_iberia',
+            settled_orders: 3960,
+            settled_amount_usd: 1927080.27,
+          },
+          {
+            provider: 'mercadopago',
+            settled_orders: 4140,
+            settled_amount_usd: 1539322.85,
+          },
+          {
+            provider: 'stripe_latam',
+            settled_orders: 4140,
+            settled_amount_usd: 1472911.85,
+          },
+        ],
+      },
+      {
+        label: 'Paso 3: Cuantificar el sobrecobro evitado por región en el modelo mart',
+        explanation:
+          'Unimos `orders` y `stores` con la agregación sin limpiar (`raw_captured`) y con el nodo limpio (`dedup_payments`) para medir exactamente cuántos dólares de sobrecobro eliminó nuestra transformación idempotente en cada región.',
+        code: `WITH dedup_payments AS (
+  SELECT
+    order_id,
+    amount_usd
+  FROM payments
+  WHERE status = 'captured'
+  QUALIFY ROW_NUMBER() OVER (
+    PARTITION BY order_id
+    ORDER BY payment_ts DESC, payment_id DESC
+  ) = 1
+),
+raw_captured AS (
+  SELECT
+    order_id,
+    SUM(amount_usd) AS raw_captured_usd
+  FROM payments
+  WHERE status = 'captured'
+  GROUP BY order_id
+)
+SELECT
+  s.region,
+  COUNT(o.order_id) AS valid_orders,
+  ROUND(SUM(r.raw_captured_usd), 2) AS uncleaned_captured_usd,
+  ROUND(SUM(dp.amount_usd), 2) AS clean_captured_usd,
+  ROUND(SUM(r.raw_captured_usd) - SUM(dp.amount_usd), 2) AS duplicate_overcount_usd
+FROM orders o
+INNER JOIN stores s ON o.store_id = s.store_id
+INNER JOIN raw_captured r ON o.order_id = r.order_id
+INNER JOIN dedup_payments dp ON o.order_id = dp.order_id
+WHERE o.status IN ('completed', 'refunded')
+GROUP BY s.region
+ORDER BY clean_captured_usd DESC;`,
+        expectedOutput: [
+          {
+            region: 'Cono Sur',
+            valid_orders: 5401,
+            uncleaned_captured_usd: 2307682.6,
+            clean_captured_usd: 2256477.18,
+            duplicate_overcount_usd: 51205.42,
+          },
+          {
+            region: 'Andina',
+            valid_orders: 5400,
+            uncleaned_captured_usd: 2235114.25,
+            clean_captured_usd: 2180511.86,
+            duplicate_overcount_usd: 54602.39,
+          },
+          {
+            region: 'Iberia',
+            valid_orders: 3085,
+            uncleaned_captured_usd: 1520043.57,
+            clean_captured_usd: 1482611.35,
+            duplicate_overcount_usd: 37432.22,
+          },
+          {
+            region: 'Norteamérica',
+            valid_orders: 2314,
+            uncleaned_captured_usd: 980322.21,
+            clean_captured_usd: 954887.61,
+            duplicate_overcount_usd: 25434.6,
+          },
+        ],
+      },
     ],
-    "solution": "WITH stg_payments_dedup AS (\n  SELECT\n    payment_id,\n    order_id,\n    payment_method,\n    status,\n    amount_usd,\n    payment_ts,\n    idempotency_key\n  FROM payments\n  QUALIFY ROW_NUMBER() OVER (\n    PARTITION BY idempotency_key\n    ORDER BY payment_ts ASC\n  ) = 1\n)\nSELECT\n  payment_method,\n  COUNT(*) AS captured_payments,\n  ROUND(SUM(amount_usd), 2) AS captured_volume_usd\nFROM stg_payments_dedup\nWHERE status = 'captured'\nGROUP BY payment_method\nORDER BY captured_volume_usd DESC;",
-    "solutionExplanation": "En la capa `stg_payments_dedup` se aplica deduplicación determinista por `idempotency_key` mediante `QUALIFY ROW_NUMBER() OVER (PARTITION BY idempotency_key ORDER BY payment_ts ASC) = 1`, eliminando los 450 webhooks repetidos antes de agregar en la capa intermedia."
   },
-  "roleNotes": {
-    "de": "Diseña modelos `INCREMENTAL_BY_TIME_RANGE` con `batch_size` y `lookback` configurados para absorber eventos tardíos de forma idempotente sin hacer full-refresh. Utiliza la transpilación de SQLGlot para ejecutar tests unitarios SQL en memoria con DuckDB en el servidor de CI/CD en menos de 3 segundos antes de desplegar sobre Iceberg / Snowflake / Databricks.",
-    "da": "Inspecciona el Linaje a Nivel de Columna antes de alterar una regla de atribución o limpieza para verificar qué modelos de Machine Learning y qué métricas de BI se verán afectados. Define `audits` estadísticos y pruebas unitarias con datos semilla (`seeds`) que validan casos borde (reembolsos parciales, años bisiestos, clientes con múltiples monedas).",
-    "bi": "Se beneficia de despliegues Blue-Green atómicos (intercambio de punteros de vistas en el entorno `prod`), eliminando las ventanas de mantenimiento donde los dashboards mostraban tablas vacías mientras se reconstruían. Compara en el Pull Request el diff automático de métricas de negocio (`prod` vs `dev`) antes de aprobar cambios en el DAG."
-  },
-  "summary": [
-    "Cada modelo declarativo es una sentencia SELECT pura; la herramienta gestiona el DDL y el grafo (DAG).",
-    "La capa staging renombra y tipa 1:1 sin agregar ni unir; intermediate aplica reglas; marts expone al negocio.",
-    "El patrón WHERE ts > MAX(ts) pierde eventos tardíos si no incluye ventana de retroceso o control por intervalos.",
-    "Los entornos virtuales evitan clonar tablas no modificadas al validar un Pull Request."
-  ],
-  "flashcards": [
+  checks: [
     {
-      "id": "fc-de3-dbt-01",
-      "front": "¿Qué operaciones están permitidas y cuáles deben evitarse en la capa `staging` (`stg_`)?",
-      "back": "Permitidas: renombrar columnas, castear tipos, limpiar cadenas y deduplicar 1:1. Evitar: JOINs entre fuentes o agregaciones que cambien el grano."
+      type: 'mcq',
+      id: 'chk-de3-t01-lookback',
+      prompt:
+        'Un modelo incremental filtra únicamente `WHERE payment_ts > (SELECT MAX(payment_ts) FROM {{ this }})`. Si una pasarela de pagos entrega eventos con 18 horas de retraso debido a una caída de webhook, ¿qué anomalía sufre la tabla destino?',
+      options: [
+        {
+          id: 'a',
+          text: 'El motor de base de datos aborta la consulta porque los timestamps no son estrictamente crecientes.',
+          correct: false,
+          feedback:
+            'Incorrecto. El motor SQL ejecuta el predicado sin error, descartando silenciosamente las filas anteriores a la marca máxima.',
+        },
+        {
+          id: 'b',
+          text: 'Los eventos tardíos tienen un timestamp menor al máximo ya registrado y quedan excluidos permanentemente del modelo incremental.',
+          correct: true,
+          feedback:
+            'Exacto. Como la marca de agua ya avanzó con eventos puntuales más recientes, los cobros rezagados quedan por debajo del umbral y se pierden si no existe una ventana deslizante.',
+        },
+        {
+          id: 'c',
+          text: 'La tabla se reconstruye automáticamente desde cero al detectar timestamps fuera de orden.',
+          correct: false,
+          feedback:
+            'Incorrecto. Ningún motor realiza un full-refresh automático a menos que se invoque explícitamente.',
+        },
+      ],
+      explanation:
+        'Para absorber eventos tardíos (*late-arriving facts*) sin hacer un *full refresh*, el predicado incremental debe restar una ventana de retrospección (por ejemplo, `MAX(payment_ts) - INTERVAL 3 DAY`) y aplicar `MERGE` o `DELETE+INSERT` sobre la clave única.',
     },
     {
-      "id": "fc-de3-dbt-02",
-      "front": "¿Por qué `WHERE event_ts > (SELECT MAX(event_ts) FROM destino)` pierde datos en la vida real?",
-      "back": "Porque si un evento con timestamp de las 09:50 llega a las 10:05 después de que ya entró un evento de las 10:00, queda por debajo del MAX y se ignora para siempre."
+      type: 'mcq',
+      id: 'chk-de3-t01-vde',
+      prompt:
+        '¿Qué mecanismo permite a los entornos virtuales de datos en SQLMesh promover a producción un cambio ya probado en desarrollo sin volver a ejecutar la consulta SQL sobre el almacén?',
+      options: [
+        {
+          id: 'a',
+          text: 'Guarda los resultados en la memoria RAM local del portátil del ingeniero y los sube por CSV a producción.',
+          correct: false,
+          feedback:
+            'Incorrecto. Las tablas físicas residen siempre dentro del almacén o lakehouse central.',
+        },
+        {
+          id: 'b',
+          text: 'Almacena cada versión de datos en una tabla física nombrada por su huella semántica (AST) y actualiza la vista de producción (`CREATE OR REPLACE VIEW`) para apuntar a ella.',
+          correct: true,
+          feedback:
+            'Correcto. Como la tabla física inmutable ya fue calculada y auditada durante el plan en dev, promover a prod solo requiere cambiar el puntero de la vista.',
+        },
+        {
+          id: 'c',
+          text: 'Desactiva las claves primarias y renombra el esquema de desarrollo como esquema de producción dejando a los desarrolladores sin entorno.',
+          correct: false,
+          feedback:
+            'Incorrecto. Cada entorno mantiene su propio conjunto de vistas independientes apuntando a las tablas físicas versionadas.',
+        },
+      ],
+      explanation:
+        'Al separar la capa física (tablas inmutables identificadas por el hash del árbol sintáctico SQL) de la capa virtual (vistas por entorno), la promoción a producción o la reversión (*rollback*) se reducen a una operación de metadatos instantánea.',
     },
     {
-      "id": "fc-de3-dbt-03",
-      "front": "¿Para qué sirve parsear el árbol sintáctico (AST) con SQLGlot antes de ejecutar un modelo en la nube?",
-      "back": "Detecta errores de sintaxis, extrae el linaje exacto de columnas y calcula una huella semántica para saber qué modelos aguas abajo se ven afectados."
-    }
-  ],
-  "glossaryTerms": [
-    "c20-sqlmesh-dbt-dag",
-    "c17-medallion-architecture"
-  ],
-  "sources": [
-    {
-      "title": "dbt Labs Best Practices — How We Structure Our dbt Projects (Staging, Intermediate, Marts)",
-      "url": "https://docs.getdbt.com/best-practices/how-we-structure/1-guide-overview",
-      "publisher": "dbt Labs",
-      "accessed": "2026-10-29",
-      "supports": "Organización modular del DAG en capas staging, intermediate y marts."
+      type: 'predict-output',
+      id: 'chk-de3-t01-predict',
+      prompt:
+        'En Mercado Brisa existen `16,200` órdenes con estado `completed` o `refunded`, pero la tabla `payments` contiene `16,605` filas con `status = \'captured\'` debido a reintentos duplicados. Si ejecutas `SELECT COUNT(*) FROM payments WHERE status = \'captured\' QUALIFY ROW_NUMBER() OVER (PARTITION BY order_id ORDER BY payment_ts DESC, payment_id DESC) = 1`, ¿qué valor devuelve?',
+      options: [
+        {
+          id: 'a',
+          text: '16200',
+          correct: true,
+          feedback:
+            'Correcto. Al particionar por `order_id` y filtrar `ROW_NUMBER() = 1`, los 405 reintentos duplicados se descartan y queda exactamente 1 fila por cada una de las 16,200 órdenes cobradas.',
+        },
+        {
+          id: 'b',
+          text: '16605',
+          correct: false,
+          feedback:
+            'Incorrecto. `16,605` es el conteo bruto antes de aplicar la cláusula `QUALIFY ROW_NUMBER() = 1`.',
+        },
+        {
+          id: 'c',
+          text: '405',
+          correct: false,
+          feedback:
+            'Incorrecto. `405` es el número de duplicados eliminados (`ROW_NUMBER() > 1`), no el número de órdenes únicas retenidas.',
+        },
+      ],
+      explanation:
+        'La cláusula `QUALIFY ROW_NUMBER() OVER (PARTITION BY order_id ...) = 1` garantiza la invariante de grano `1 fila = 1 order_id`, reduciendo las `16,605` filas capturadas a las `16,200` órdenes únicas.',
     },
-    {
-      "title": "dbt Documentation — Configure Incremental Models and Late-Arriving Data",
-      "url": "https://docs.getdbt.com/docs/build/incremental-models",
-      "publisher": "dbt Labs",
-      "accessed": "2026-10-29",
-      "supports": "Estrategias incrementales (merge, delete+insert) y ventanas de retroceso para eventos tardíos."
-    },
-    {
-      "title": "SQLMesh Documentation — Virtual Data Environments and Interval State Tracking",
-      "url": "https://sqlmesh.readthedocs.io/en/stable/concepts/overview/",
-      "publisher": "Tobiko Data",
-      "accessed": "2026-10-29",
-      "supports": "Seguimiento de intervalos procesados y entornos virtuales sin copia de tablas."
-    }
   ],
-  "aiNotes": "Insiste en que un modelo `stg_` nunca debe cambiar el grano ni hacer agregaciones, y explica con un ejemplo numérico en una línea temporal por qué `MAX(event_ts)` falla ante retrasos de red.",
-  "needsReview": true,
-  "legacyId": "l11-dbt-sqlmesh-dag",
-  "legacyOrder": 11,
-  "stageId": "stage-4",
-  "subtitle": "Grafos de dependencias SQL, análisis sintáctico de consultas y entornos virtuales sobre vistas.",
-  "goal": "Evaluar arquitecturas de transformación de datos comparando el enfoque basado en plantillas Jinja (dbt) frente al análisis de Árbol Sintáctico Abstracto (AST con SQLGlot) y Entornos Virtuales de Datos (SQLMesh), diseñando cargas incrementales idempotentes por rangos temporales.",
-  "pipelineChallenge": {
-    "title": "Entorno virtual de datos en SQLMesh",
-    "scenario": "Un analista añade una nueva columna calculada `net_expansion_usd` en un modelo intermedio. Ordena los 5 pasos exactos que ejecuta el motor moderno de transformación desde el cambio en código hasta su publicación en producción:",
-    "steps": [
+  practice: {
+    type: 'sql',
+    title: 'Conciliación declarativa de cobros liquidados por método de pago',
+    prompt:
+      'El script heredado del código inicial une `payments` y `orders` sin filtrar intentos fallidos ni eliminar los 405 cobros duplicados. Refactorízalo construyendo primero una CTE `dedup_payments` que filtre únicamente pagos con `status = \'captured\'` y deduplique por `order_id` conservando el registro más reciente (`QUALIFY ROW_NUMBER() OVER (PARTITION BY order_id ORDER BY payment_ts DESC, payment_id DESC) = 1`). Luego une `dedup_payments` (`dp`) con `orders` (`o`) filtrando `o.status IN (\'completed\', \'refunded\')` y agrupa por `dp.payment_method` para calcular: `settled_orders` (`COUNT(dp.order_id)`), `settled_amount_usd` (`ROUND(SUM(dp.amount_usd), 2)`) y `avg_ticket_usd` (`ROUND(AVG(dp.amount_usd), 2)`). Ordena por `settled_amount_usd DESC`.',
+    starterCode: `-- Refactoriza esta consulta defectuosa usando una CTE dedup_payments con QUALIFY ROW_NUMBER() = 1
+SELECT
+  p.payment_method,
+  COUNT(p.order_id) AS settled_orders,
+  ROUND(SUM(p.amount_usd), 2) AS settled_amount_usd,
+  ROUND(AVG(p.amount_usd), 2) AS avg_ticket_usd
+FROM payments p
+INNER JOIN orders o ON p.order_id = o.order_id
+GROUP BY p.payment_method
+ORDER BY settled_amount_usd DESC;`,
+    expected: `WITH dedup_payments AS (
+  SELECT
+    payment_id,
+    order_id,
+    payment_method,
+    amount_usd,
+    payment_ts
+  FROM payments
+  WHERE status = 'captured'
+  QUALIFY ROW_NUMBER() OVER (
+    PARTITION BY order_id
+    ORDER BY payment_ts DESC, payment_id DESC
+  ) = 1
+)
+SELECT
+  dp.payment_method,
+  COUNT(dp.order_id) AS settled_orders,
+  ROUND(SUM(dp.amount_usd), 2) AS settled_amount_usd,
+  ROUND(AVG(dp.amount_usd), 2) AS avg_ticket_usd
+FROM dedup_payments dp
+INNER JOIN orders o ON dp.order_id = o.order_id
+WHERE o.status IN ('completed', 'refunded')
+GROUP BY dp.payment_method
+ORDER BY settled_amount_usd DESC;`,
+    solution: `WITH dedup_payments AS (
+  SELECT
+    payment_id,
+    order_id,
+    payment_method,
+    amount_usd,
+    payment_ts
+  FROM payments
+  WHERE status = 'captured'
+  QUALIFY ROW_NUMBER() OVER (
+    PARTITION BY order_id
+    ORDER BY payment_ts DESC, payment_id DESC
+  ) = 1
+)
+SELECT
+  dp.payment_method,
+  COUNT(dp.order_id) AS settled_orders,
+  ROUND(SUM(dp.amount_usd), 2) AS settled_amount_usd,
+  ROUND(AVG(dp.amount_usd), 2) AS avg_ticket_usd
+FROM dedup_payments dp
+INNER JOIN orders o ON dp.order_id = o.order_id
+WHERE o.status IN ('completed', 'refunded')
+GROUP BY dp.payment_method
+ORDER BY settled_amount_usd DESC;`,
+    solutionExplanation:
+      'Al aislar en `dedup_payments` únicamente los cobros con `status = \'captured\'` y aplicar `QUALIFY ROW_NUMBER() OVER (PARTITION BY order_id ORDER BY payment_ts DESC, payment_id DESC) = 1`, eliminamos tanto los intentos fallidos/pendientes como los 405 cobros duplicados, obteniendo exactamente las 16,200 órdenes liquidadas.',
+    expectedOutputTable: [
       {
-        "id": "step-1-ast-parse",
-        "label": "1. Parseo del SQL a un Árbol Sintáctico Abstracto (AST) con SQLGlot y cálculo de huella digital (Fingerprint)",
-        "role": "DE",
-        "detail": "Valida tipos, sintaxis y linaje a nivel de columna localmente sin ejecutar consultas pesadas en la nube."
+        payment_method: 'transferencia_spei',
+        settled_orders: 3960,
+        settled_amount_usd: 1935173.03,
+        avg_ticket_usd: 488.68,
       },
       {
-        "id": "step-2-change-classification",
-        "label": "2. Clasificación semántica del cambio (Breaking vs. Non-Breaking) comparando el AST nuevo contra producción",
-        "role": "DE",
-        "detail": "Detecta que añadir `net_expansion_usd` no altera las columnas existentes que consumen los otros 20 modelos hijos."
+        payment_method: 'efectivo_tienda',
+        settled_orders: 3960,
+        settled_amount_usd: 1927080.27,
+        avg_ticket_usd: 486.64,
       },
       {
-        "id": "step-3-virtual-env-backfill",
-        "label": "3. Creación del Entorno Virtual Dev (`dev_pr`): materializa solo el modelo modificado y reutiliza vía vistas las 20 tablas hijas de Prod",
-        "role": "DA",
-        "detail": "Evita clonar o recalcular terabytes innecesarios; el entorno completo queda listo en segundos."
+        payment_method: 'billetera_digital',
+        settled_orders: 4140,
+        settled_amount_usd: 1539322.85,
+        avg_ticket_usd: 371.82,
       },
       {
-        "id": "step-4-unit-and-audit-tests",
-        "label": "4. Ejecución de Unit Tests SQL en DuckDB y Audits estadísticos sobre los intervalos calculados en el entorno virtual",
-        "role": "DA",
-        "detail": "Comprueba que la fórmula de expansión neta cumple todos los casos borde y conciliaciones financieras."
+        payment_method: 'card',
+        settled_orders: 4140,
+        settled_amount_usd: 1472911.85,
+        avg_ticket_usd: 355.78,
       },
-      {
-        "id": "step-5-pointer-swap-prod",
-        "label": "5. Promoción Virtual a Producción (Plan Apply): intercambia el puntero de la vista `prod` hacia la tabla física ya validada en 0 segundos",
-        "role": "BI",
-        "detail": "Cero doble cómputo al hacer merge a main y capacidad de rollback instantáneo si negocio lo solicita."
-      }
     ],
-    "explanation": "La ventaja competitiva de los Entornos Virtuales de Datos radica en analizar primero el AST con SQLGlot (1), clasificar el radio de impacto real por columna (2), calcular los intervalos afectados una única vez en el entorno virtual reutilizando el resto en Zero-Copy (3), auditar los resultados (4) y promover a producción intercambiando punteros de vistas sin volver a pagar cómputo (5)."
+    hints: [
+      'Define la CTE `WITH dedup_payments AS (...)` seleccionando de `payments WHERE status = \'captured\'` y añadiendo al final `QUALIFY ROW_NUMBER() OVER (PARTITION BY order_id ORDER BY payment_ts DESC, payment_id DESC) = 1`.',
+      'En la consulta principal, haz `INNER JOIN orders o ON dp.order_id = o.order_id` y filtra `WHERE o.status IN (\'completed\', \'refunded\')`.',
+      'Agrupa por `dp.payment_method`, redondea `SUM(dp.amount_usd)` y `AVG(dp.amount_usd)` a 2 decimales con `ROUND(..., 2)` y ordena por `settled_amount_usd DESC`.',
+    ],
+    orderMatters: true,
   },
-  "relatedLessons": [
+  pipelineChallenge: {
+    id: 'challenge-de3-t01-dag',
+    title: 'Ciclo de ejecución de un modelo incremental y promoción virtual',
+    prompt:
+      'Ordena los 5 pasos técnicos que ejecuta un motor declarativo moderno para actualizar un modelo incremental con ventana deslizante y promoverlo a producción.',
+    steps: [
+      {
+        id: 'step-parse-ast',
+        text: 'Analizar el código SQL (AST o referencias ref/source) para construir el grafo acíclico dirigido (DAG) y calcular su huella semántica.',
+      },
+      {
+        id: 'step-resolve-window',
+        text: 'Resolver el intervalo incremental restando la ventana de retrospección (lookback window) al límite temporal procesado previamente.',
+      },
+      {
+        id: 'step-dedup-staging',
+        text: 'Ejecutar la consulta sobre la ventana temporal aplicando deduplicación determinista (QUALIFY ROW_NUMBER = 1) en una tabla física aislada.',
+      },
+      {
+        id: 'step-merge-partition',
+        text: 'Integrar los registros deduplicados mediante MERGE o reemplazo atómico de partición sobre la clave única sin duplicar filas históricas.',
+      },
+      {
+        id: 'step-swap-view',
+        text: 'Promover el entorno actualizando el puntero de la vista de producción (CREATE OR REPLACE VIEW) hacia la tabla física validada.',
+      },
+    ],
+    correctOrder: [
+      'step-parse-ast',
+      'step-resolve-window',
+      'step-dedup-staging',
+      'step-merge-partition',
+      'step-swap-view',
+    ],
+    hint: 'Primero el compilador construye el grafo y la huella del código; luego determina qué intervalo temporal procesar, deduplica la ventana en aislamiento, aplica el MERGE idempotente y finalmente conmuta la vista productiva.',
+    explanation:
+      'Este flujo de cinco pasos garantiza que el orden topológico se respete, los eventos tardíos dentro de la ventana deslizante se reconcilien sin duplicados y los consumidores de producción nunca lean estados intermedios.',
+  },
+  roleNotes: {
+    de: 'Como Ingeniero de Datos, diseñarás la estrategia incremental (`merge` vs `delete+insert` por partición), dimensionarás la ventana de retrospección según el percentil 99 de retraso de las pasarelas de pago y gobernarás el despliegue continuo mediante selectores de estado o entornos virtuales.',
+    da: 'Como Analista de Datos, modularizarás las reglas de limpieza en modelos `staging` e `intermediate` reutilizables con `ref()` en lugar de copiar CTEs de 300 líneas en cada reporte, asegurando que la deduplicación de cobros sea idéntica en toda la empresa.',
+    bi: 'Como especialista en BI, conectarás los tableros únicamente a las vistas o tablas de la capa `marts` (`fct_` y `dim_`), confiando en que la conmutación atómica de vistas evita que los directivos observen caídas temporales de ingresos durante las recargas.',
+  },
+  summary: [
+    'La transformación declarativa construye el grafo DAG automáticamente a partir de referencias explícitas (`ref`) o análisis del árbol sintáctico SQL (AST).',
+    'Un modelo incremental requiere una ventana deslizante de retrospección y una operación idempotente (`MERGE` o `DELETE+INSERT`) para absorber eventos tardíos.',
+    'La cláusula `QUALIFY ROW_NUMBER() OVER (PARTITION BY order_id ...) = 1` elimina los 405 cobros duplicados de Mercado Brisa.',
+    'Los entornos virtuales de datos en SQLMesh promueven cambios mediante vistas sobre tablas versionadas por huella semántica sin recalcular filas.',
+  ],
+  flashcards: [
     {
-      "id": "l10-iceberg-v3-medallion",
-      "reason": "Las tablas físicas versionadas que gestionan dbt y SQLMesh se almacenan sobre Apache Iceberg v3."
+      id: 'fc-de3-t01-01',
+      front: '¿Por qué un modelo incremental con estrategia APPEND y filtro `ts > MAX(ts)` no es idempotente ni tolerante a eventos tardíos?',
+      back: 'Porque reejecutar el lote duplica filas al no verificar claves únicas, y cualquier evento que llegue con retraso tiene un timestamp menor al máximo y se ignora.',
     },
     {
-      "id": "l12-contracts-semantic-layer",
-      "reason": "Conecta los modelos Marts/Gold del DAG directamente con Data Contracts (ODCS) y la Capa Semántica."
+      id: 'fc-de3-t01-02',
+      front: '¿Qué contiene el archivo `manifest.json` en dbt y cómo habilita despliegues eficientes en CI/CD?',
+      back: 'Contiene la representación completa del proyecto (nodos, código compilado, tests y linaje); permite comparar estados (`state:modified+`) para ejecutar solo los modelos alterados y sus descendientes.',
     },
     {
-      "id": "l5-scd2-history",
-      "reason": "Automatiza la generación de dimensiones históricas SCD Tipo 2 dentro de tu DAG de transformación."
-    }
-  ]
+      id: 'fc-de3-t01-03',
+      front: '¿Cómo evita SQLMesh reconstruir las tablas físicas al promover un entorno `dev` a `prod`?',
+      back: 'Guarda los datos en tablas físicas nombradas según el hash semántico de su AST SQL y en producción solo actualiza la vista (`CREATE OR REPLACE VIEW`) hacia dicha tabla.',
+    },
+    {
+      id: 'fc-de3-t01-04',
+      front: 'En Mercado Brisa, ¿por qué debemos ordenar por `payment_ts DESC, payment_id DESC` dentro de `ROW_NUMBER()` al deduplicar pagos?',
+      back: 'Porque dos reintentos pueden compartir el mismo segundo en `payment_ts`; añadir `payment_id DESC` como desempate hace que la elección de la fila ganadora sea 100 % determinista.',
+    },
+  ],
+  glossaryTerms: [
+    'grafo-linaje-declarativo',
+    'modelo-incremental-ventana',
+    'entorno-virtual-datos',
+  ],
+  sources: [
+    {
+      title: 'dbt Labs — About incremental models',
+      url: 'https://docs.getdbt.com/docs/build/incremental-models',
+      publisher: 'dbt Labs',
+      accessed: '2026-10-29',
+      supports:
+        'Configuración de modelos incrementales, claves únicas (`unique_key`), estrategias `merge`/`delete+insert` y manejo de eventos tardíos con ventanas deslizantes.',
+    },
+    {
+      title: 'dbt Labs — About ref function',
+      url: 'https://docs.getdbt.com/reference/dbt-jinja-functions/ref',
+      publisher: 'dbt Labs',
+      accessed: '2026-10-29',
+      supports:
+        'Construcción declarativa del grafo de dependencias (DAG) e interpolación de esquemas por entorno.',
+    },
+    {
+      title: 'SQLMesh Documentation — Model Kinds',
+      url: 'https://sqlmesh.readthedocs.io/en/stable/concepts/models/model_kinds/',
+      publisher: 'Tobiko Data',
+      accessed: '2026-10-29',
+      supports:
+        'Semántica de modelos `INCREMENTAL_BY_TIME_RANGE`, `INCREMENTAL_BY_UNIQUE_KEY` y particionamiento por intervalos temporales idempotentes.',
+    },
+    {
+      title: 'SQLMesh Documentation — Virtual Data Environments',
+      url: 'https://sqlmesh.readthedocs.io/en/stable/concepts/environments/',
+      publisher: 'Tobiko Data',
+      accessed: '2026-10-29',
+      supports:
+        'Arquitectura de entornos virtuales mediante vistas y versionado físico basado en huellas semánticas del árbol sintáctico.',
+    },
+  ],
+  aiNotes:
+    'Guía al estudiante para distinguir el estado del pago (`payments.status = \'captured\'`) del estado del pedido (`orders.status IN (\'completed\', \'refunded\')`). Si su consulta devuelve 0 filas, verifica si filtró por error `status = \'succeeded\'` en lugar de `\'captured\'`. Si obtiene montos inflados, oriéntalo a deduplicar `payments` por `order_id` con `QUALIFY ROW_NUMBER() = 1` antes del `JOIN`.',
 };
-
 export default lesson;

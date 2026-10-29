@@ -1,380 +1,581 @@
-// Lección migrada al esquema v2 mediante scripts/migrate-legacy.mjs
-const lesson = {
-  "id": "de3-transformacion-03-contracts-semantic-layer",
-  "moduleId": "de3-transformacion",
-  "tracks": [
-    "de",
-    "bi"
+export const lesson = {
+  id: 'de3-transformacion-03-contracts-semantic-layer',
+  legacyId: 'l12-contracts-semantic-layer',
+  title: 'Contratos de datos ejecutables (ODCS v3) y capa semántica',
+  subtitle: 'Contratos de datos ejecutables (ODCS v3) y puente semántico sobre Mercado Brisa',
+  module: 'de3-transformacion',
+  moduleId: 'de3-transformacion',
+  contentVersion: 2,
+  order: 3,
+  legacyOrder: 12,
+  minutes: 30,
+  tracks: ['de', 'bi'],
+  level: 3,
+  prerequisites: [
+    'de3-transformacion-02-tests-unitarios-auditorias-dag',
+    'c2-dimensional-04-metrics-simpson',
   ],
-  "level": 3,
-  "order": 3,
-  "title": "Contratos de datos y capa semántica",
-  "minutes": 30,
-  "prerequisites": [
-    "de3-transformacion-01-dbt-sqlmesh-dag"
+  needsReview: false,
+  hook: 'El martes por la mañana, el equipo de catálogo de Mercado Brisa inserta un SKU de prueba con precio negativo (-$15.00) y el comité comercial presenta dos informes contradictorios: Marketing reporta el ingreso bruto de pedidos mientras que Finanzas descuenta todas las devoluciones de la tabla refunds sin cruzar el grano por pedido. ¿Cómo blindas la frontera técnica con un contrato de datos ejecutable (ODCS v3) y unificas las fórmulas de negocio en una capa semántica gobernada?',
+  objectives: [
+    'Especificar contratos de datos ejecutables bajo el estándar Bitol ODCS v3 y model contracts en dbt con verificación física de tipos y nulidad.',
+    'Gobernar la evolución de esquemas aplicando versionado de modelos (`v1` a `v2`) y cuarentena de registros que violan las garantías contractuales.',
+    'Construir consultas canónicas de capa semántica (MetricFlow / Cube) que calculen ingresos netos, retención e ingreso promedio por comprador sin fan-out.',
   ],
-  "contentVersion": 1,
-  "hook": "En Mercado Brisa (empresa ficticia), durante el cierre trimestral tres áreas presentaron cifras distintas de retención neta de ingresos: Marketing reportó 118 %, Finanzas 104 % y el asistente de consultas 126 %. Al investigar la discrepancia aparecieron dos causas: el microservicio de cobros había cambiado el significado de `status = 2` sin avisar, y cada área mantenía su propia fórmula SQL copiada en reportes locales con un `JOIN` que multiplicaba filas. ¿Cómo evitas ambos fallos con contratos de datos y una capa semántica?",
-  "objectives": [
-    "Definir contratos de datos verificables (esquema, semántica de valores, grano y SLA) entre productores y consumidores.",
-    "Bloquear cambios incompatibles en integración continua y desviar registros inválidos mediante corte de circuito.",
-    "Centralizar entidades, dimensiones y medidas en una capa semántica que genere SQL libre de fan-out."
-  ],
-  "sections": [
+  sections: [
     {
-      "id": "estructura-de-un-contrato-de-datos-bajo-el-estan",
-      "heading": "Estructura de un contrato de datos bajo el estándar ODCS",
-      "body": "Durante años, los equipos de Ingeniería de Datos funcionaron como \"bomberos a las 3:00 AM\": un desarrollador de backend renombraba un campo en PostgreSQL o en un evento de Kafka, se iba a dormir tranquilo porque sus tests de aplicación pasaban, y cuatro horas después explotaban 50 modelos de dbt y los tableros del CEO.\nLos **Data Contracts** aplican el principio **Shift-Left** (mover la calidad hacia el origen). Bajo el estándar abierto de la industria **ODCS v3.0 (Open Data Contract Standard)** de Bitol / Linux Foundation, un contrato es un archivo YAML versionado en Git que firma tres garantías entre el productor del microservicio y los consumidores de datos:\n1) **Esquema y Semántica**: Nombres de columnas, tipos lógicos/físicos, claves primarias, clasificación PII (datos personales) y descripción exacta de negocio.\n2) **Reglas de Calidad de Datos (Quality Checks)**: Invariantes ejecutables (ej. `mrr_cents >= 0`, `null_count(customer_id) = 0`, valores permitidos en enumeraciones).\n3) **Acuerdos de Nivel de Servicio (SLAs)**: Frescura máxima permitida (*latency: 15 minutes*), disponibilidad, ventana de retención y propietario responsable (`owner`) con canal de alerta.",
-      "interactive": {
-        "component": "dbt-sqlmesh-dag-explorer",
-        "caption": "Simulador interactivo: Contratos de datos y capa semántica"
-      }
+      id: 'sec-de3-t03-odcs',
+      heading: 'Contratos de datos ejecutables: ODCS v3 y model contracts',
+      body: 'Una prueba de datos tradicional evalúa una tabla después de haberla construido. Por el contrario, un **contrato de datos ejecutable** (*Data Contract*) es un acuerdo técnico vinculante entre productor y consumidores. Este acuerdo se compila directamente en las restricciones físicas del almacén antes de exponer la tabla.\n\nEl estándar **Open Data Contract Standard (ODCS v3.x)**, mantenido por Bitol dentro de la Linux Foundation AI & Data, formaliza cuatro compromisos en un archivo declarativo (`kind: DataContract`). Primero, define el esquema físico exacto con nombres de columna, tipos y restricciones `NOT NULL`. Segundo, declara las reglas de calidad de dominio. Tercero, fija acuerdos de nivel de servicio (SLA de frescura y disponibilidad). Cuarto, asigna el equipo propietario responsable.\n\nEn **dbt**, activar `contract: { enforced: true }` en un modelo público inyecta tipos explícitos y cláusulas `NOT NULL` dentro de la sentencia DDL (`CREATE TABLE`). Si una columna cambia de `DECIMAL(12,2)` a `VARCHAR` o entra un nulo prohibido, el almacén rechaza la escritura en el acto.',
+      callout: 'Un test de datos avisa que una columna cambió; un contrato ejecutable impide a nivel de DDL que una tabla incompatible llegue a crearse.',
+      example: {
+        language: 'sql',
+        code: `-- Verificación de violaciones de contrato en dim_products y dim_customers
+SELECT
+  'dim_products_contract' AS contract_name,
+  COUNT(*) AS total_rows,
+  SUM(CASE WHEN list_price_usd <= 0 OR sku IS NULL THEN 1 ELSE 0 END) AS contract_violations
+FROM products
+UNION ALL
+SELECT
+  'dim_customers_contract',
+  COUNT(*),
+  SUM(CASE WHEN postal_code IS NULL OR email IS NULL THEN 1 ELSE 0 END)
+FROM customers
+ORDER BY contract_name;`,
+        explanation:
+          'Al auditar ambos contratos sobre Mercado Brisa, detectamos 1 violación bloqueante en `products` (`list_price_usd <= 0`) y 218 códigos postales ausentes en `customers`.',
+      },
     },
     {
-      "id": "validacion-del-contrato-en-ci-y-corte-de-circuit",
-      "heading": "Validación del contrato en CI y corte de circuito en ingesta",
-      "body": "Un Data Contract que vive en un PDF o en una wiki que nadie lee es inútil. En una arquitectura moderna 2026, el archivo ODCS v3 se ejecuta automáticamente en dos puntos de control:\n• **En el CI/CD del Productor (GitHub Actions / GitLab CI)**: Cuando un ingeniero de software abre un Pull Request que modifica el esquema de base de datos o el protobuf/JSON del evento emitido, el linter de contratos compara el cambio contra `contract_billing_v3.yaml`. Si elimina una columna requerida o viola la compatibilidad hacia atrás sin incrementar la versión mayor y notificar a los consumidores en el grafo OpenLineage, el chequeo de CI bloquea el merge antes de llegar a producción.\n• **En la Frontera de Ingesta (Circuit Breaker / Dead-Letter Queue)**: Durante la ingesta hacia el Lakehouse Iceberg, las filas o lotes que violen las aserciones críticas del contrato se desvían a una tabla de cuarentena (*quarantine / DLQ*) o detienen la publicación de la rama WAP, protegiendo al 100% las tablas Silver y Gold.",
-      "example": {
-        "language": "sql",
-        "code": "# 1. Contrato de Datos Ejecutable (ODCS v3.0) — billing_subscriptions_contract.yaml\napiVersion: v3.0.0\nkind: DataContract\nid: urn:datacontract:novapay:billing_subscriptions\ninfo:\n  title: Suscripciones activas e ingreso recurrente\n  version: 3.1.0\n  owner: finops-data@novapay.io\nslaProperties:\n  - property: latency\n    value: 15\n    unit: minutes\nschema:\n  - name: subscription_id\n    logicalType: string\n    primaryKey: true\n    required: true\n  - name: mrr_usd\n    logicalType: number\n    quality:\n      - type: sql\n        query: \"SELECT COUNT(*) FROM {table} WHERE mrr_usd < 0\"\n        mustBe: 0\n\n---\n# 2. Capa Semántica Unificada (dbt Semantic Layer / MetricFlow) — semantic_mrr.yaml\nsemantic_models:\n  - name: subscriptions_model\n    model: ref('fct_subscriptions')\n    defaults:\n      agg_time_dimension: metric_date\n    entities:\n      - name: subscription\n        type: primary\n        expr: subscription_id\n      - name: customer\n        type: foreign\n        expr: customer_id\n    dimensions:\n      - name: plan_tier\n        type: categorical\n    measures:\n      - name: total_mrr_usd\n        agg: sum\n        expr: mrr_usd\n      - name: active_paying_customers\n        agg: count_distinct\n        expr: customer_id\n\nmetrics:\n  - name: net_arpu_usd\n    label: \"ARPU Neto Certificado (USD)\"\n    type: ratio\n    type_params:\n      numerator: total_mrr_usd\n      denominator: active_paying_customers",
-        "expectedOutput": [
+      id: 'sec-de3-t03-versioning',
+      heading: 'Evolución de esquemas, cuarentena y versionado de modelos',
+      body: 'Los sistemas transaccionales cambian con frecuencia, pero los consumidores analíticos necesitan estabilidad. Por ello los contratos dividen cualquier cambio de esquema en dos categorías. Los **cambios compatibles** añaden columnas opcionales sin romper consultas existentes. Los **cambios destructivos** (*breaking changes*) eliminan columnas, renombran atributos o alteran tipos físicos.\n\nCuando un cambio destructivo resulta obligatorio, el contrato prohíbe sobrescribir el modelo vigente. En su lugar, se publica una **nueva versión del modelo** (`fct_orders_v2`) manteniendo activa la versión previa (`fct_orders_v1`) durante una ventana de deprecación acordada. Así los tableros y pipelines consumidores migran de forma programada sin interrupciones.\n\nA nivel de filas, una fuente externa puede enviar registros que violen el dominio del contrato, como el SKU con `list_price_usd = -15.0` en `products`. El pipeline aplica entonces el patrón de **cuarentena** (*dead-letter table*). Separa las filas infractoras en una tabla de auditoría y publica el modelo oficial únicamente con los registros válidos.',
+      callout: 'Renombrar una columna en una tabla Gold sin publicar una versión v2 equivale a romper una API pública en producción.',
+      example: {
+        language: 'sql',
+        code: `-- Patrón de cuarentena: aislar SKUs que violan el contrato de precios
+WITH valid_products AS (
+  SELECT product_id, sku, category, list_price_usd, unit_cost_usd
+  FROM products
+  WHERE list_price_usd > 0 AND unit_cost_usd > 0
+),
+quarantined_products AS (
+  SELECT product_id, sku, category, list_price_usd, unit_cost_usd
+  FROM products
+  WHERE list_price_usd <= 0 OR unit_cost_usd <= 0
+)
+SELECT
+  (SELECT COUNT(*) FROM valid_products) AS published_skus,
+  (SELECT COUNT(*) FROM quarantined_products) AS quarantined_skus,
+  (SELECT ROUND(MIN(list_price_usd), 2) FROM valid_products) AS min_valid_price_usd;`,
+        explanation:
+          'El contrato publica los 179 SKUs válidos (`min_valid_price_usd = 12.16`) y desvía el único SKU corrupto a cuarentena sin contaminar los márgenes.',
+      },
+    },
+    {
+      id: 'sec-de3-t03-semantic',
+      heading: 'Puente hacia la capa semántica: MetricFlow y Cube',
+      body: 'Incluso con tablas contratadas, las discrepancias regresan si cada herramienta BI escribe sus propias fórmulas SQL. Si un analista calcula el ingreso neto uniendo `orders` con `refunds` (`1:N`) y otro suma `orders.total_usd` sin restar devoluciones, la dirección recibirá dos cifras opuestas.\n\nLa **capa semántica** (implementada en motores como dbt MetricFlow y Cube) actúa como traductor central entre las tablas físicas y todos los consumidores. En ella declaras tres bloques: las entidades (`order_id`, `customer_id`, `store_id`), las dimensiones de corte (`region`, `segment`, `category`) y las **métricas gobernadas** (`SUM`, `COUNT DISTINCT` y razones como `net_retention_pct`).\n\nCuando un usuario consulta una métrica que cruza dos tablas de distinto grano (`orders` y `refunds`), el motor semántico genera automáticamente una consulta multipaso (*Drill-Across*). Primero preagrega cada hecho por separado en CTEs y luego los une por su entidad común, impidiendo cualquier multiplicación de filas (*fan-out*).',
+      callout: 'En una capa semántica nunca promedias porcentajes ni unes tablas 1:N antes de sumar: preagregas cada hecho a su entidad común y calculas las razones al final con NULLIF.',
+      example: {
+        language: 'sql',
+        code: `-- Consulta generada por la capa semántica para Ingreso Neto por región
+WITH valid_orders AS (
+  SELECT order_id, store_id, customer_id, total_usd
+  FROM orders
+  WHERE status IN ('completed', 'refunded')
+),
+order_refunds AS (
+  SELECT order_id, SUM(refund_amount_usd) AS refunded_usd
+  FROM refunds
+  GROUP BY order_id
+)
+SELECT
+  s.region,
+  COUNT(vo.order_id) AS completed_orders,
+  ROUND(SUM(vo.total_usd), 2) AS gross_revenue_usd,
+  ROUND(SUM(COALESCE(rf.refunded_usd, 0.0)), 2) AS refunded_usd,
+  ROUND(SUM(vo.total_usd - COALESCE(rf.refunded_usd, 0.0)), 2) AS net_revenue_usd
+FROM valid_orders vo
+INNER JOIN stores s ON vo.store_id = s.store_id
+LEFT JOIN order_refunds rf ON vo.order_id = rf.order_id
+GROUP BY s.region
+ORDER BY net_revenue_usd DESC;`,
+        explanation:
+          'Al preagregar `refunds` por `order_id` antes de unir con `valid_orders`, la capa semántica garantiza que órdenes con múltiples reembolsos parciales jamás dupliquen `vo.total_usd`.',
+      },
+      interactive: {
+        type: 'semantic-contract-sim',
+        component: 'semantic-contract-sim',
+        title: 'Simulador de Contrato ODCS v3 y Capa Semántica',
+        description:
+          'Explora cómo un contrato ejecutable intercepta violaciones de esquema y cómo la capa semántica distribuye la misma definición de Ingreso Neto hacia BI, notebooks y APIs.',
+      },
+    },
+  ],
+  workedExample: {
+    title: 'Certificación de contrato ODCS v3 y métricas semánticas en Mercado Brisa',
+    scenario:
+      'La dirección de Mercado Brisa requiere certificar el contrato semántico de ingresos regionales (`sem_regional_revenue_v1`). Debes verificar primero las violaciones de contrato en las tablas maestras, cuantificar los reembolsos huérfanos de estado y finalmente materializar la tabla de métricas semánticas por región con tasa de retención neta.',
+    steps: [
+      {
+        label: 'Paso 1: Auditar el cumplimiento de contrato en productos y clientes',
+        explanation:
+          'Verificamos cuántas filas violan las restricciones de dominio (`list_price_usd <= 0`) en `products` y cuántas incumplen la completitud de dirección postal (`postal_code IS NULL`) en `customers`.',
+        code: `SELECT
+  'dim_products_contract' AS contract_name,
+  COUNT(*) AS total_rows,
+  SUM(CASE WHEN list_price_usd <= 0 OR sku IS NULL THEN 1 ELSE 0 END) AS contract_violations
+FROM products
+UNION ALL
+SELECT
+  'dim_customers_contract',
+  COUNT(*),
+  SUM(CASE WHEN postal_code IS NULL OR email IS NULL THEN 1 ELSE 0 END)
+FROM customers
+ORDER BY contract_name;`,
+        expectedOutput: [
           {
-            "plan_tier": "Enterprise",
-            "total_mrr_usd": "$610,000.00 (Sin Fan-Out: agregado al grain primario)",
-            "net_arpu_usd": "$1,220.00 (SUM(mrr_usd) / COUNT(DISTINCT customer_id))",
-            "consumidores_sincronizados": "Power BI + Polars DA + Agente MCP (100% Idéntico)"
-          }
-        ]
-      }
-    },
-    {
-      "id": "componentes-de-metricflow-y-cube-entidades-y-med",
-      "heading": "Componentes de MetricFlow y Cube: entidades y medidas",
-      "body": "Si los Data Contracts protegen la entrada al Lakehouse, la **Capa Semántica Unificada** (implementada con **dbt Semantic Layer / MetricFlow** o **Cube**) protege la salida hacia las decisiones de negocio. En lugar de escribir SQL manual en cada herramienta de visualización, declaras un grafo semántico compuesto por cuatro bloques:\n• **Semantic Models**: Conectan un modelo Gold/Silver (`ref('fct_orders')`) con su dimensión de tiempo predeterminada (`agg_time_dimension: order_date`).\n• **Entities (Claves del Grafo)**: Declaran cuál es la entidad `primary` de la tabla (ej. `order_id`), cuáles son `unique` y cuáles son `foreign` (ej. `customer_id`). Así el motor conoce la cardinalidad exacta (`1:1`, `1:N`) de toda tu empresa.\n• **Dimensions**: Atributos por los cuales se filtra o agrupa (`categorical` como `country_code`, `plan_tier`; o `time` con granularidades día/semana/mes/trimestre).\n• **Measures y Metrics**: Las *Measures* son agregaciones base sobre una tabla (`sum`, `count_distinct`), mientras que las *Metrics* son los KPIs de negocio expuestos al usuario final: métricas `simple`, `ratio` (`numerador / denominador` calculados por separado), `cumulative` (MTD, YTD, ventanas móviles) o `derived` (fórmulas compuestas como `NRR` o `LTV / CAC`)."
-    },
-    {
-      "id": "prevencion-de-fan-out-en-el-motor-semantico-y-co",
-      "heading": "Prevención de fan-out en el motor semántico y consumo BI",
-      "body": "¿Qué ocurre cuando un usuario en BI o un Agente de IA pide cruzar una métrica de `fct_orders` (nivel pedido) con una dimensión de otra tabla o con una métrica de `fct_marketing_spend` (nivel campaña diaria)?\nSi un humano escribe ese SQL a prisa, suele hacer un `JOIN` directo que multiplica el presupuesto de marketing por el número de pedidos (**Fan-Out Trap**). En cambio, el compilador de **MetricFlow / Cube** inspecciona los tipos de entidad (`primary` vs `foreign`): agrega primero cada tabla a su granularidad segura en subconsultas/CTEs separadas y recién después une los resultados por las dimensiones solicitadas. Si el usuario pide un cruce matemáticamente inválido, la Capa Semántica lo rechaza con una explicación clara en lugar de inventar un número falso.\nAdemás, en 2026 la Capa Semántica expone interfaces nativas para todos los consumidores: **JDBC / Arrow Flight SQL** para Power BI, Tableau y Evidence.dev; **SDK de Python** para que los analistas (DA) partan de las métricas oficiales en Polars/Marimo; y **Servidor MCP (Model Context Protocol)** para que agentes como Google AI Ultra consulten métricas certificadas con precisión determinista."
-    }
-  ],
-  "workedExample": {
-    "title": "Ejemplo guiado: Contratos de datos y capa semántica",
-    "description": "Compara el caos de tener fórmulas SQL dispersas y sin contrato de entrada frente a un Contrato ODCS v3 acoplado a una Capa Semántica declarativa en MetricFlow:",
-    "audit": "",
-    "steps": [
-      {
-        "label": "Antipatrón: sin contrato y promedio de razones en BI",
-        "explanation": "Compara el caos de tener fórmulas SQL dispersas y sin contrato de entrada frente a un Contrato ODCS v3 acoplado a una Capa Semántica declarativa en MetricFlow:",
-        "code": "-- CAOS MÉTRICO:\n-- 1) Nadie validó que 'mrr_cents' en origen ahora trae reembolsos negativos sin filtrar.\n-- 2) Unir 'subscriptions' (1 fila por cliente) con 'support_tickets' (N filas por cliente)\n--    provoca un Fan-Out que multiplica el MRR de los clientes que abrieron varios tickets.\n-- 3) Promediar ratios con AVG() distorsiona el ARPU real.\nSELECT\n  s.plan_tier,\n  SUM(s.mrr_cents) / 100.0 AS mrr_inflado_por_tickets_usd,\n  AVG(s.mrr_cents / 100.0) AS arpu_distorsionado_usd\nFROM gold.subscriptions s\nLEFT JOIN gold.support_tickets t ON s.customer_id = t.customer_id\nGROUP BY s.plan_tier;",
-        "expectedOutput": [
+            contract_name: 'dim_customers_contract',
+            total_rows: 2400,
+            contract_violations: 218,
+          },
           {
-            "plan_tier": "Enterprise",
-            "mrr_inflado_por_tickets_usd": "$1,890,000 (Inflado +210% por Fan-Out con tickets.)",
-            "arpu_distorsionado_usd": "$2,450 (Incorrecto: pondera por ticket, no por cliente)",
-            "confianza_comite": "Baja (Finanzas y Producto muestran cifras distintas)"
-          }
-        ]
+            contract_name: 'dim_products_contract',
+            total_rows: 180,
+            contract_violations: 1,
+          },
+        ],
       },
       {
-        "label": "Solución óptima: contrato ODCS v3 y métrica en MetricFlow",
-        "explanation": "Compara ahora la consulta corregida y verifica cómo las filas y totales coinciden con la auditoría.",
-        "code": "# 1. Contrato de Datos Ejecutable (ODCS v3.0) — billing_subscriptions_contract.yaml\napiVersion: v3.0.0\nkind: DataContract\nid: urn:datacontract:novapay:billing_subscriptions\ninfo:\n  title: Suscripciones activas e ingreso recurrente\n  version: 3.1.0\n  owner: finops-data@novapay.io\nslaProperties:\n  - property: latency\n    value: 15\n    unit: minutes\nschema:\n  - name: subscription_id\n    logicalType: string\n    primaryKey: true\n    required: true\n  - name: mrr_usd\n    logicalType: number\n    quality:\n      - type: sql\n        query: \"SELECT COUNT(*) FROM {table} WHERE mrr_usd < 0\"\n        mustBe: 0\n\n---\n# 2. Capa Semántica Unificada (dbt Semantic Layer / MetricFlow) — semantic_mrr.yaml\nsemantic_models:\n  - name: subscriptions_model\n    model: ref('fct_subscriptions')\n    defaults:\n      agg_time_dimension: metric_date\n    entities:\n      - name: subscription\n        type: primary\n        expr: subscription_id\n      - name: customer\n        type: foreign\n        expr: customer_id\n    dimensions:\n      - name: plan_tier\n        type: categorical\n    measures:\n      - name: total_mrr_usd\n        agg: sum\n        expr: mrr_usd\n      - name: active_paying_customers\n        agg: count_distinct\n        expr: customer_id\n\nmetrics:\n  - name: net_arpu_usd\n    label: \"ARPU Neto Certificado (USD)\"\n    type: ratio\n    type_params:\n      numerator: total_mrr_usd\n      denominator: active_paying_customers",
-        "expectedOutput": [
+        label: 'Paso 2: Aislar reembolsos elegibles según el contrato de órdenes válidas',
+        explanation:
+          'El contrato financiero estipula que solo pueden descontarse reembolsos de órdenes cuyo estado sea `completed` o `refunded`. Comparamos el total bruto de `refunds` frente a los reembolsos que cumplen el contrato.',
+        code: `SELECT
+  CASE
+    WHEN o.status IN ('completed', 'refunded') THEN 'eligible_by_contract'
+    ELSE 'quarantined_invalid_order_status'
+  END AS contract_bucket,
+  COUNT(r.refund_id) AS refund_rows,
+  ROUND(SUM(r.refund_amount_usd), 2) AS refund_amount_usd
+FROM refunds r
+INNER JOIN orders o ON r.order_id = o.order_id
+GROUP BY 1
+ORDER BY refund_rows DESC;`,
+        expectedOutput: [
           {
-            "plan_tier": "Enterprise",
-            "total_mrr_usd": "$610,000.00 (Sin Fan-Out: agregado al grain primario)",
-            "net_arpu_usd": "$1,220.00 (SUM(mrr_usd) / COUNT(DISTINCT customer_id))",
-            "consumidores_sincronizados": "Power BI + Polars DA + Agente MCP (100% Idéntico)"
-          }
-        ]
-      }
-    ]
-  },
-  "checks": [
-    {
-      "id": "c1",
-      "type": "mcq",
-      "prompt": "Un ejecutivo pide en un dashboard (o a un Agente IA) ver en una misma tabla el `Presupuesto Mensual de Campaña` (almacenado en `fct_campaigns`, 1 fila por campaña) junto con los `Ingresos por Pedidos` (almacenado en `fct_orders`, miles de pedidos por campaña) desglosados por canal. ¿Cómo resuelve la Capa Semántica (MetricFlow / Cube) esta consulta sin inflar el presupuesto?",
-      "options": [
-        {
-          "id": "a",
-          "text": "Al conocer las entidades primarias y foráneas de ambos modelos semánticos, compila una consulta multi-hop (CTEs separadas) que agrega primero `fct_campaigns` por canal y agrega por separado `fct_orders` por canal al mismo nivel de granularidad antes de unir ambos resultados mediante un FULL/LEFT JOIN.",
-          "correct": true,
-          "feedback": "Exacto. Esta capacidad (conocida como Symmetric Aggregates / Multi-fact CTE Join planning) es la razón principal por la que la Capa Semántica impide los errores de Fan-Out al cruzar tablas de distinta granularidad."
-        },
-        {
-          "id": "b",
-          "text": "Hace un INNER JOIN directo fila por fila entre `fct_campaigns` y `fct_orders` y luego divide el resultado entre un número aleatorio para compensar.",
-          "correct": false,
-          "feedback": "Unir tablas de distinta granularidad antes de agregar provoca el Fan-Out Trap; la Capa Semántica nunca hace eso."
-        },
-        {
-          "id": "c",
-          "text": "Obliga al ingeniero de datos a copiar manualmente los datos en una hoja de cálculo de Excel cada mañana.",
-          "correct": false,
-          "feedback": "La Capa Semántica automatiza en tiempo real la generación del SQL seguro directamente sobre el Lakehouse."
-        }
-      ],
-      "explanation": "Exacto. Esta capacidad (conocida como Symmetric Aggregates / Multi-fact CTE Join planning) es la razón principal por la que la Capa Semántica impide los errores de Fan-Out al cruzar tablas de distinta granularidad."
-    },
-    {
-      "id": "c2",
-      "type": "mcq",
-      "prompt": "El equipo de ingeniería de software quiere renombrar la columna `total_cents` a `amount_cents` en el evento de compras que alimenta el almacén.Con un contrato de datos activo en CI, ¿cuándo se detecta este cambio incompatible?",
-      "options": [
-        {
-          "id": "a",
-          "text": "En el Pull Request del repositorio del servicio productor, antes de desplegar a producción.",
-          "correct": true,
-          "feedback": "Correcto: el chequeo de contrato en CI compara el esquema emitido contra el contrato vigente y bloquea el merge hasta pactar una migración."
-        },
-        {
-          "id": "b",
-          "text": "Tres días después, cuando el director financiero abre el tablero y ve columnas vacías.",
-          "correct": false,
-          "feedback": "Incorrecto: detectar errores en el tablero ejecutivo significa que no existía validación preventiva en la frontera."
-        },
-        {
-          "id": "c",
-          "text": "Nunca, porque las columnas renombradas se corrigen solas en SQL.",
-          "correct": false,
-          "feedback": "Incorrecto: un cambio de nombre sin mapeo explícito rompe las consultas que referencian el identificador anterior."
-        }
-      ],
-      "explanation": "Desplazar la validación hacia la izquierda (shift-left) en el CI del productor convierte una caída nocturna del pipeline en un aviso inmediato al autor del cambio."
-    },
-    {
-      "id": "c3",
-      "type": "mcq",
-      "prompt": "En una capa semántica, defines una métrica de razón `ticket_promedio = revenue / orders_count`. ¿Cómo la calcula el motor cuando un usuario agrupa por `region` y otro agrupa por `trimestre`?",
-      "options": [
-        {
-          "id": "a",
-          "text": "Evalúa SUM(revenue) / NULLIF(SUM(orders), 0) en el nivel de agrupación solicitado en cada consulta.",
-          "correct": true,
-          "feedback": "Correcto: al declarar numerador y denominador como medidas base, el motor recalcula la razón agregando primero al grano pedido."
-        },
-        {
-          "id": "b",
-          "text": "Guarda un porcentaje precalculado fijo y hace AVG() de ese porcentaje.",
-          "correct": false,
-          "feedback": "Incorrecto: promediar razones precalculadas produce errores matemáticos ante volúmenes desiguales."
-        },
-        {
-          "id": "c",
-          "text": "Obliga a escribir una consulta SQL manual distinta en cada dashboard.",
-          "correct": false,
-          "feedback": "Incorrecto: justamente el propósito de la capa semántica es no repetir la fórmula en cada herramienta."
-        }
-      ],
-      "explanation": "Declarar métricas compuestas a partir de medidas aditivas base permite que la capa semántica las proyecte en cualquier dimensión respetando la aditividad."
-    }
-  ],
-  "practice": {
-    "type": "fill-blanks",
-    "title": "Contrato ODCS y métrica en MetricFlow",
-    "language": "sql",
-    "prompt": "Completa este archivo de gobernanza unificada para: 1) establecer en el Data Contract ODCS v3 que el conteo de valores negativos debe ser exactamente `0` (`mustBe: 0`), 2) declarar `order_id` como la entidad primaria (`primary`) del modelo semántico para impedir joins con fan-out, y 3) definir el ticket promedio (`aov_usd`) como una métrica de tipo `ratio` que divide `net_revenue_usd` entre `completed_orders`.",
-    "starterCode": "# Parte A: Regla de Calidad en Data Contract (ODCS v3.0)\nschema:\n  - name: order_net_usd\n    logicalType: number\n    quality:\n      - type: sql\n        query: \"SELECT COUNT(*) FROM {table} WHERE order_net_usd < 0\"\n        {{blank_1}}: 0\n\n---\n# Parte B: Modelo y Métrica en Capa Semántica (MetricFlow)\nsemantic_models:\n  - name: orders_semantic\n    model: ref('fct_orders')\n    defaults:\n      agg_time_dimension: order_date\n    entities:\n      - name: order\n        type: {{blank_2}}\n        expr: order_id\n      - name: customer\n        type: foreign\n        expr: customer_id\n    measures:\n      - name: net_revenue_usd\n        agg: sum\n        expr: order_net_usd\n      - name: completed_orders\n        agg: count_distinct\n        expr: order_id\n\nmetrics:\n  - name: average_order_value_usd\n    label: \"Ticket Promedio Neto (AOV)\"\n    type: {{blank_3}}\n    type_params:\n      numerator: net_revenue_usd\n      denominator: completed_orders",
-    "expected": "# Parte A: Regla de Calidad en Data Contract (ODCS v3.0)\nschema:\n  - name: order_net_usd\n    logicalType: number\n    quality:\n      - type: sql\n        query: \"SELECT COUNT(*) FROM {table} WHERE order_net_usd < 0\"\n        {{blank_1}}: 0\n\n---\n# Parte B: Modelo y Métrica en Capa Semántica (MetricFlow)\nsemantic_models:\n  - name: orders_semantic\n    model: ref('fct_orders')\n    defaults:\n      agg_time_dimension: order_date\n    entities:\n      - name: order\n        type: {{blank_2}}\n        expr: order_id\n      - name: customer\n        type: foreign\n        expr: customer_id\n    measures:\n      - name: net_revenue_usd\n        agg: sum\n        expr: order_net_usd\n      - name: completed_orders\n        agg: count_distinct\n        expr: order_id\n\nmetrics:\n  - name: average_order_value_usd\n    label: \"Ticket Promedio Neto (AOV)\"\n    type: {{blank_3}}\n    type_params:\n      numerator: net_revenue_usd\n      denominator: completed_orders",
-    "orderMatters": true,
-    "hints": [
-      "ASERCION_ODCS: En la especificación ODCS v3.0, ¿qué clave de la regla de calidad indica que el resultado de la consulta SQL debe ser igual a 0?",
-      "TIPO_ENTIDAD: Si cada fila de `fct_orders` representa un pedido único (`order_id`), ¿qué tipo de entidad es `order` en MetricFlow?",
-      "TIPO_METRICA: ¿Qué tipo de métrica en MetricFlow calcula de forma segura `SUM(numerador) / COUNT_DISTINCT(denominador)` en cualquier nivel de agrupación?"
-    ],
-    "solution": "# Parte A: Regla de Calidad en Data Contract (ODCS v3.0)\nschema:\n  - name: order_net_usd\n    logicalType: number\n    quality:\n      - type: sql\n        query: \"SELECT COUNT(*) FROM {table} WHERE order_net_usd < 0\"\n        {{blank_1}}: 0\n\n---\n# Parte B: Modelo y Métrica en Capa Semántica (MetricFlow)\nsemantic_models:\n  - name: orders_semantic\n    model: ref('fct_orders')\n    defaults:\n      agg_time_dimension: order_date\n    entities:\n      - name: order\n        type: {{blank_2}}\n        expr: order_id\n      - name: customer\n        type: foreign\n        expr: customer_id\n    measures:\n      - name: net_revenue_usd\n        agg: sum\n        expr: order_net_usd\n      - name: completed_orders\n        agg: count_distinct\n        expr: order_id\n\nmetrics:\n  - name: average_order_value_usd\n    label: \"Ticket Promedio Neto (AOV)\"\n    type: {{blank_3}}\n    type_params:\n      numerator: net_revenue_usd\n      denominator: completed_orders",
-    "solutionExplanation": "Aserciones ejecutables en contrato ODCS Declaración de entidades en grafo semántico Modelado de métricas de razón",
-    "blanks": [
-      {
-        "id": "blank_1",
-        "placeholder": "ASERCION_ODCS",
-        "acceptedAnswers": [
-          "mustBe",
-          "must_be"
+            contract_bucket: 'eligible_by_contract',
+            refund_rows: 1305,
+            refund_amount_usd: 274534.52,
+          },
+          {
+            contract_bucket: 'quarantined_invalid_order_status',
+            refund_rows: 145,
+            refund_amount_usd: 46562.73,
+          },
         ],
-        "hint": "En la especificación ODCS v3.0, ¿qué clave de la regla de calidad indica que el resultado de la consulta SQL debe ser igual a 0?",
-        "hints": [
-          "Nivel 1 (Concepto): Expresa la condición \"debe ser igual a\" en camelCase dentro del bloque `quality` de ODCS.",
-          "Nivel 2 (Sintaxis): Dos palabras en camelCase: must...",
-          "Nivel 3 (Solución): Escribe mustBe"
-        ]
       },
       {
-        "id": "blank_2",
-        "placeholder": "TIPO_ENTIDAD",
-        "acceptedAnswers": [
-          "primary",
-          "PRIMARY"
+        label: 'Paso 3: Calcular las métricas gobernadas de la capa semántica por región',
+        explanation:
+          'Con las órdenes válidas y los reembolsos preagregados por `order_id`, calculamos para cada `region` el ingreso bruto, el monto reembolsado elegible, el ingreso neto (`net_revenue_usd`) y el porcentaje de retención neta (`net_retention_pct`).',
+        code: `WITH valid_orders AS (
+  SELECT
+    order_id,
+    store_id,
+    customer_id,
+    total_usd
+  FROM orders
+  WHERE status IN ('completed', 'refunded')
+),
+order_refunds AS (
+  SELECT
+    order_id,
+    SUM(refund_amount_usd) AS refunded_usd
+  FROM refunds
+  GROUP BY order_id
+)
+SELECT
+  s.region,
+  COUNT(vo.order_id) AS completed_orders,
+  COUNT(DISTINCT vo.customer_id) AS active_customers,
+  ROUND(SUM(vo.total_usd), 2) AS gross_revenue_usd,
+  ROUND(SUM(COALESCE(rf.refunded_usd, 0.0)), 2) AS refunded_usd,
+  ROUND(SUM(vo.total_usd - COALESCE(rf.refunded_usd, 0.0)), 2) AS net_revenue_usd,
+  ROUND(
+    100.0 * SUM(vo.total_usd - COALESCE(rf.refunded_usd, 0.0)) / NULLIF(SUM(vo.total_usd), 0),
+    2
+  ) AS net_retention_pct
+FROM valid_orders vo
+INNER JOIN stores s ON vo.store_id = s.store_id
+LEFT JOIN order_refunds rf ON vo.order_id = rf.order_id
+GROUP BY s.region
+ORDER BY net_revenue_usd DESC;`,
+        expectedOutput: [
+          {
+            region: 'Cono Sur',
+            completed_orders: 5401,
+            active_customers: 780,
+            gross_revenue_usd: 2256477.18,
+            refunded_usd: 77991.82,
+            net_revenue_usd: 2178485.36,
+            net_retention_pct: 96.54,
+          },
+          {
+            region: 'Andina',
+            completed_orders: 5400,
+            active_customers: 780,
+            gross_revenue_usd: 2180511.86,
+            refunded_usd: 115379.23,
+            net_revenue_usd: 2065132.63,
+            net_retention_pct: 94.71,
+          },
+          {
+            region: 'Iberia',
+            completed_orders: 3085,
+            active_customers: 400,
+            gross_revenue_usd: 1482611.35,
+            refunded_usd: 43170.94,
+            net_revenue_usd: 1439440.41,
+            net_retention_pct: 97.09,
+          },
+          {
+            region: 'Norteamérica',
+            completed_orders: 2314,
+            active_customers: 380,
+            gross_revenue_usd: 954887.61,
+            refunded_usd: 37992.53,
+            net_revenue_usd: 916895.08,
+            net_retention_pct: 96.02,
+          },
         ],
-        "hint": "Si cada fila de `fct_orders` representa un pedido único (`order_id`), ¿qué tipo de entidad es `order` en MetricFlow?",
-        "hints": [
-          "Nivel 1 (Concepto): Define la clave principal que identifica la granularidad (grain) de esta tabla.",
-          "Nivel 2 (Sintaxis): En inglés, opuesto a `foreign`.",
-          "Nivel 3 (Solución): Escribe primary"
-        ]
       },
-      {
-        "id": "blank_3",
-        "placeholder": "TIPO_METRICA",
-        "acceptedAnswers": [
-          "ratio",
-          "RATIO"
-        ],
-        "hint": "¿Qué tipo de métrica en MetricFlow calcula de forma segura `SUM(numerador) / COUNT_DISTINCT(denominador)` en cualquier nivel de agrupación?",
-        "hints": [
-          "Nivel 1 (Concepto): Es el tipo de métrica no aditiva compuesta por un numerador y un denominador.",
-          "Nivel 2 (Sintaxis): Palabra de 5 letras en inglés para \"proporción / razón\".",
-          "Nivel 3 (Solución): Escribe ratio"
-        ]
-      }
     ],
-    "expectedOutputTable": [
+  },
+  checks: [
+    {
+      type: 'mcq',
+      id: 'chk-de3-t03-contract',
+      prompt:
+        '¿Qué ocurre en dbt cuando un modelo tiene configurado `contract: { enforced: true }` y la consulta SQL intenta devolver una columna cuyo tipo de dato no coincide con el declarado en el archivo YAML o incluye un valor nulo en un campo `not_null`?',
+      options: [
+        {
+          id: 'a',
+          text: 'El motor convierte automáticamente los valores nulos en cadenas vacías y publica la tabla sin avisar.',
+          correct: false,
+          feedback:
+            'Incorrecto. Un contrato ejecutable jamás muta silenciosamente los datos para ocultar un incumplimiento.',
+        },
+        {
+          id: 'b',
+          text: 'La compilación o la sentencia DDL falla explícitamente y aborta la materialización del modelo antes de sobrescribir la tabla pública.',
+          correct: true,
+          feedback:
+            'Correcto. `contract: { enforced: true }` compila los tipos físicos y restricciones `NOT NULL` en el DDL, impidiendo que la tabla inválida se materialice.',
+        },
+        {
+          id: 'c',
+          text: 'La tabla se publica normalmente en producción y se envía un correo resumen a final de mes.',
+          correct: false,
+          feedback:
+            'Incorrecto. La garantía clave de un contrato ejecutable es el bloqueo preventivo antes de afectar a los consumidores.',
+        },
+      ],
+      explanation:
+        'A diferencia de los tests post-hoc, los contratos de modelo (`model contracts`) verifican la firma de columnas, tipos de datos y restricciones `NOT NULL` en el momento mismo de construir la tabla.',
+    },
+    {
+      type: 'mcq',
+      id: 'chk-de3-t03-semantic-fanout',
+      prompt:
+        '¿Cómo evita una capa semántica (como MetricFlow o Cube) que se duplique `orders.total_usd` cuando un analista pide en el mismo reporte el total de ventas brutas de `orders` y el monto reembolsado de `refunds`?',
+      options: [
+        {
+          id: 'a',
+          text: 'Prohíbe consultar dos tablas distintas en el mismo dashboard.',
+          correct: false,
+          feedback:
+            'Incorrecto. La función principal de la capa semántica es permitir combinar métricas de múltiples tablas de hechos con seguridad.',
+        },
+        {
+          id: 'b',
+          text: 'Preagrega cada tabla de hechos a su entidad o dimensión conformada en CTEs separadas (Drill-Across) antes de unirlas.',
+          correct: true,
+          feedback:
+            'Exacto. Al resumir primero `refunds` por `order_id` (o por dimensión compartida) y luego hacer `LEFT JOIN`, preserva el grano 1:1 y elimina el fan-out.',
+        },
+        {
+          id: 'c',
+          text: 'Divide el resultado final entre dos de forma aproximada.',
+          correct: false,
+          feedback:
+            'Incorrecto. Una heurística aproximada rompería la exactitud contable.',
+        },
+      ],
+      explanation:
+        'El motor semántico conoce la cardinalidad de las entidades declaradas y genera automáticamente subconsultas preagregadas (*Drill-Across*) para que nunca se sumen cabeceras multiplicadas por líneas o eventos hijos.',
+    },
+    {
+      type: 'predict-output',
+      id: 'chk-de3-t03-predict',
+      prompt:
+        'En el segmento `cafeteria_b2b` de Mercado Brisa, el ingreso neto total (`net_revenue_usd`) es `$1,402,650.90` generado por `447` clientes únicos (`distinct_buyers`) a lo largo de `2,843` órdenes. Según la definición semántica de `net_arpu_usd` (Ingreso Neto Promedio por Comprador Único), ¿qué operación produce el valor correcto de `$3,137.92`?',
+      options: [
+        {
+          id: 'a',
+          text: 'ROUND(1402650.90 / NULLIF(447, 0), 2)',
+          correct: true,
+          feedback:
+            'Correcto. El ARPU neto divide la suma del ingreso neto entre el conteo de clientes únicos (`COUNT(DISTINCT customer_id) = 447`), dando `$3,137.92`.',
+        },
+        {
+          id: 'b',
+          text: 'ROUND(1402650.90 / NULLIF(2843, 0), 2)',
+          correct: false,
+          feedback:
+            'Incorrecto. Dividir entre el número de órdenes (`2,843`) calcula el ticket neto promedio por pedido (`AOV`), no el ingreso por comprador único (`ARPU`).',
+        },
+        {
+          id: 'c',
+          text: 'AVG(total_usd) agrupado sin descontar reembolsos.',
+          correct: false,
+          feedback:
+            'Incorrecto. Eso calcularía el ticket bruto por orden sin deducir reembolsos ni agrupar por cliente.',
+        },
+      ],
+      explanation:
+        '`net_arpu_usd` es una métrica de razón no aditiva que divide la medida agregada `SUM(net_revenue_usd)` (`$1,402,650.90`) entre la medida `COUNT(DISTINCT customer_id)` (`447`), resultando en `$3,137.92`.',
+    },
+  ],
+  practice: {
+    type: 'sql',
+    title: 'Métricas gobernadas de la capa semántica por segmento de cliente',
+    prompt:
+      'Construye la consulta canónica de la capa semántica de Mercado Brisa agrupada por segmento de cliente (`c.segment`). Primero define una CTE `valid_orders` con las órdenes cuyo `status IN (\'completed\', \'refunded\')` y una segunda CTE `order_refunds` que preagregue `refunds` por `order_id` (`SUM(refund_amount_usd) AS refunded_usd`). Luego une `valid_orders` (`vo`) con `customers` (`c`) mediante `INNER JOIN` y con `order_refunds` (`rf`) mediante `LEFT JOIN` para calcular por `c.segment`: `total_orders` (`COUNT(vo.order_id)`), `distinct_buyers` (`COUNT(DISTINCT vo.customer_id)`), `gross_revenue_usd` (`ROUND(SUM(vo.total_usd), 2)`), `total_refunded_usd` (`ROUND(SUM(COALESCE(rf.refunded_usd, 0.0)), 2)`), `net_revenue_usd` (`ROUND(SUM(vo.total_usd - COALESCE(rf.refunded_usd, 0.0)), 2)`) y `net_arpu_usd` (`ROUND(SUM(vo.total_usd - COALESCE(rf.refunded_usd, 0.0)) / NULLIF(COUNT(DISTINCT vo.customer_id), 0), 2)`). Ordena por `net_revenue_usd DESC`.',
+    starterCode: `-- Corrige el cálculo semántico por segmento evitando fan-out y filtrando órdenes válidas
+SELECT
+  c.segment,
+  COUNT(o.order_id) AS total_orders,
+  COUNT(DISTINCT o.customer_id) AS distinct_buyers,
+  ROUND(SUM(o.total_usd), 2) AS gross_revenue_usd,
+  0.0 AS total_refunded_usd,
+  ROUND(SUM(o.total_usd), 2) AS net_revenue_usd,
+  0.0 AS net_arpu_usd
+FROM orders o
+INNER JOIN customers c ON o.customer_id = c.customer_id
+GROUP BY c.segment
+ORDER BY net_revenue_usd DESC;`,
+    expected: `WITH valid_orders AS (
+  SELECT
+    order_id,
+    customer_id,
+    total_usd
+  FROM orders
+  WHERE status IN ('completed', 'refunded')
+),
+order_refunds AS (
+  SELECT
+    order_id,
+    SUM(refund_amount_usd) AS refunded_usd
+  FROM refunds
+  GROUP BY order_id
+)
+SELECT
+  c.segment,
+  COUNT(vo.order_id) AS total_orders,
+  COUNT(DISTINCT vo.customer_id) AS distinct_buyers,
+  ROUND(SUM(vo.total_usd), 2) AS gross_revenue_usd,
+  ROUND(SUM(COALESCE(rf.refunded_usd, 0.0)), 2) AS total_refunded_usd,
+  ROUND(SUM(vo.total_usd - COALESCE(rf.refunded_usd, 0.0)), 2) AS net_revenue_usd,
+  ROUND(
+    SUM(vo.total_usd - COALESCE(rf.refunded_usd, 0.0)) / NULLIF(COUNT(DISTINCT vo.customer_id), 0),
+    2
+  ) AS net_arpu_usd
+FROM valid_orders vo
+INNER JOIN customers c ON vo.customer_id = c.customer_id
+LEFT JOIN order_refunds rf ON vo.order_id = rf.order_id
+GROUP BY c.segment
+ORDER BY net_revenue_usd DESC;`,
+    solution: `WITH valid_orders AS (
+  SELECT
+    order_id,
+    customer_id,
+    total_usd
+  FROM orders
+  WHERE status IN ('completed', 'refunded')
+),
+order_refunds AS (
+  SELECT
+    order_id,
+    SUM(refund_amount_usd) AS refunded_usd
+  FROM refunds
+  GROUP BY order_id
+)
+SELECT
+  c.segment,
+  COUNT(vo.order_id) AS total_orders,
+  COUNT(DISTINCT vo.customer_id) AS distinct_buyers,
+  ROUND(SUM(vo.total_usd), 2) AS gross_revenue_usd,
+  ROUND(SUM(COALESCE(rf.refunded_usd, 0.0)), 2) AS total_refunded_usd,
+  ROUND(SUM(vo.total_usd - COALESCE(rf.refunded_usd, 0.0)), 2) AS net_revenue_usd,
+  ROUND(
+    SUM(vo.total_usd - COALESCE(rf.refunded_usd, 0.0)) / NULLIF(COUNT(DISTINCT vo.customer_id), 0),
+    2
+  ) AS net_arpu_usd
+FROM valid_orders vo
+INNER JOIN customers c ON vo.customer_id = c.customer_id
+LEFT JOIN order_refunds rf ON vo.order_id = rf.order_id
+GROUP BY c.segment
+ORDER BY net_revenue_usd DESC;`,
+    solutionExplanation:
+      'Al filtrar primero `valid_orders` (`completed` y `refunded`) y preagregar `refunds` por `order_id` antes del `LEFT JOIN`, excluimos automáticamente los 145 reembolsos huérfanos de órdenes canceladas/pendientes y calculamos sin fan-out el ingreso neto y el ARPU neto exacto de cada segmento.',
+    expectedOutputTable: [
       {
-        "contract_id": "urn:datacontract:novapay:orders",
-        "odcs_quality_gate": "PASS (0 negative rows)",
-        "semantic_metric": "average_order_value_usd (ratio)",
-        "fanout_protection": "Active (Primary entity: order_id)"
-      }
+        segment: 'pro_barista',
+        total_orders: 6835,
+        distinct_buyers: 950,
+        gross_revenue_usd: 2754749.75,
+        total_refunded_usd: 120090.47,
+        net_revenue_usd: 2634659.28,
+        net_arpu_usd: 2773.33,
+      },
+      {
+        segment: 'retail',
+        total_orders: 6522,
+        distinct_buyers: 943,
+        gross_revenue_usd: 2668605.9,
+        total_refunded_usd: 105962.6,
+        net_revenue_usd: 2562643.3,
+        net_arpu_usd: 2717.54,
+      },
+      {
+        segment: 'cafeteria_b2b',
+        total_orders: 2843,
+        distinct_buyers: 447,
+        gross_revenue_usd: 1451132.35,
+        total_refunded_usd: 48481.45,
+        net_revenue_usd: 1402650.9,
+        net_arpu_usd: 3137.92,
+      },
     ],
-    "rubricCriteria": [
-      {
-        "criterion": "Aserciones ejecutables en contrato ODCS",
-        "title": "Aserciones ejecutables en contrato ODCS",
-        "description": "Define reglas de calidad verificables automáticamente (mustBe: 0) en el contrato de datos antes de permitir el paso a las capas analíticas.",
-        "points": 30,
-        "role": "DE"
-      },
-      {
-        "criterion": "Declaración de entidades en grafo semántico",
-        "title": "Declaración de entidades en grafo semántico",
-        "description": "Distingue correctamente entre entidades primary y foreign para que el motor semántico prevenga joins con multiplicación de filas (Fan-Out).",
-        "points": 35,
-        "role": "BI"
-      },
-      {
-        "criterion": "Modelado de métricas de razón",
-        "title": "Modelado de métricas de razón",
-        "description": "Modela KPIs de razón (como AOV o ARPU) mediante numerator y denominator separados en lugar de promediar porcentajes o ratios precalculados.",
-        "points": 35,
-        "role": "DA"
-      }
-    ]
-  },
-  "roleNotes": {
-    "de": "Automatiza la validación de contratos ODCS v3 en los pipelines de CI/CD y configura pre-agregaciones declarativas (*Rollups / Caching* en Cube o tablas materializadas en Iceberg) para que la Capa Semántica responda en menos de 100 ms. Emite eventos **OpenLineage** que conectan cada contrato de entrada con los modelos SQLMesh/dbt y las métricas semánticas finales.",
-    "da": "Define las métricas `ratio`, `cumulative` y `derived` en el repositorio de la Capa Semántica, asegurando que ratios como `ARPU` o `Tasa de Conversión` siempre sumen el numerador y dividan entre la suma del denominador. Importa las métricas gobernadas directamente en sus notebooks con el cliente Python de MetricFlow/Cube para evitar discrepancias entre estudios ad-hoc y reportes ejecutivos.",
-    "bi": "Es el guardián funcional del catálogo de métricas certificadas: elimina medidas DAX/calculadas duplicadas en tableros aislados y las migra al código versionado de la Capa Semántica. Expone metadatos de confianza en cada dashboard (definición matemática, propietario del contrato ODCS y estado del SLA en tiempo real)."
-  },
-  "summary": [
-    "Un contrato de datos formaliza tipos, grano, valores permitidos y SLA entre el productor y el almacén.",
-    "Validar el contrato en CI evita que un cambio en backend rompa los pipelines a medianoche.",
-    "La capa semántica define cada métrica una sola vez en código versionado para todos los consumidores.",
-    "El motor semántico conoce las relaciones entre entidades y pre-agrega antes de unir para impedir fan-out."
-  ],
-  "flashcards": [
-    {
-      "id": "fc-de3-sem-01",
-      "front": "¿Qué diferencia un contrato de datos ejecutable de una página de documentación en un wiki?",
-      "back": "El contrato ejecutable es un archivo YAML/JSON validado automáticamente en el CI del productor y en la ingesta; un wiki queda desactualizado sin bloquear despliegues."
-    },
-    {
-      "id": "fc-de3-sem-02",
-      "front": "¿Qué hace un patrón de corte de circuito (circuit breaker) cuando el 15 % de un lote incumple el contrato?",
-      "back": "Detiene la publicación hacia las tablas Silver/Gold, desvía las filas inválidas a cuarentena (dead-letter) y mantiene visible la última versión íntegra."
-    },
-    {
-      "id": "fc-de3-sem-03",
-      "front": "¿Cómo evita MetricFlow o Cube el fan-out cuando pides métricas de dos tablas con distinto grano?",
-      "back": "Usa el grafo de entidades primarias y foráneas para agregar cada medida a su nivel común en subconsultas separadas antes de combinarlas."
-    }
-  ],
-  "glossaryTerms": [
-    "c19-data-contracts-odcs",
-    "c21-semantic-layer"
-  ],
-  "sources": [
-    {
-      "title": "Bitol / Linux Foundation AI & Data — Open Data Contract Standard (ODCS v3)",
-      "url": "https://bitol-io.github.io/open-data-contract-standard/latest/",
-      "publisher": "Linux Foundation AI & Data",
-      "accessed": "2026-10-29",
-      "supports": "Especificación abierta de contratos de datos con esquema, reglas de calidad y acuerdos de servicio."
-    },
-    {
-      "title": "dbt Documentation — Semantic Layer and MetricFlow Semantic Models",
-      "url": "https://docs.getdbt.com/docs/build/semantic-models",
-      "publisher": "dbt Labs",
-      "accessed": "2026-10-29",
-      "supports": "Definición de entidades, dimensiones y medidas gobernadas en MetricFlow."
-    },
-    {
-      "title": "Cube Documentation — Data Modeling and Pre-Aggregations in a Semantic Layer",
-      "url": "https://cube.dev/docs/product/data-modeling/overview",
-      "publisher": "Cube Dev",
-      "accessed": "2026-10-29",
-      "supports": "Prevención de fan-out y exposición uniforme de métricas hacia BI y aplicaciones."
-    }
-  ],
-  "aiNotes": "Recuerda que esta lección conecta Ingeniería de Datos (contratos en la entrada) y BI (capa semántica en la salida). Evita presentar el contrato como burocracia: es una prueba automática de esquema y rango.",
-  "needsReview": true,
-  "legacyId": "l12-contracts-semantic-layer",
-  "legacyOrder": 12,
-  "stageId": "stage-4",
-  "subtitle": "Validación de esquemas en el origen y definición centralizada de métricas en MetricFlow y Cube.",
-  "goal": "Crear Contratos de Datos ejecutables bajo el estándar abierto ODCS v3.0 y diseñar modelos en la Capa Semántica (MetricFlow / Cube) con entidades primarias/foráneas, medidas aditivas/no-aditivas y prevención automática de joins con fan-out.",
-  "pipelineChallenge": {
-    "title": "Cadena gobernada del microservicio a BI",
-    "scenario": "Ordena en todas sus etapas los 5 eslabones de una arquitectura gobernada en 2026 cuando el equipo de producto lanza una nueva funcionalidad de suscripciones y quiere analizarla en BI y en el Agente IA:",
-    "steps": [
-      {
-        "id": "step-1-odcs-contract-ci",
-        "label": "1. Definición y validación del Data Contract (ODCS v3.0) en el CI/CD del microservicio productor antes de fusionar el código",
-        "role": "DE",
-        "detail": "Garantiza que el esquema, tipos, semántica y reglas de no-negatividad se cumplan desde el origen (Shift-Left)."
-      },
-      {
-        "id": "step-2-iceberg-wap-ingest",
-        "label": "2. Ingesta hacia Apache Iceberg v3 y transformación incremental en SQLMesh/dbt validando los audits del contrato en una rama WAP",
-        "role": "DE",
-        "detail": "Construye las tablas limpias `dim_customer_scd2` y `fct_subscriptions` en Silver/Gold con trazabilidad OpenLineage."
-      },
-      {
-        "id": "step-3-semantic-model-entities",
-        "label": "3. Declaración del Semantic Model en MetricFlow / Cube especificando entidades primarias/foráneas y dimensión temporal",
-        "role": "BI",
-        "detail": "Registra la granularidad exacta de cada tabla para que el motor bloquee cualquier intento de join con fan-out."
-      },
-      {
-        "id": "step-4-governed-kpi-definitions",
-        "label": "4. Creación de las métricas certificadas (MRR, NRR, ARPU como ratio) en el repositorio Git de la Capa Semántica",
-        "role": "DA",
-        "detail": "Establece una única fórmula matemática auditada por Finanzas, Producto y Análisis."
-      },
-      {
-        "id": "step-5-universal-consumption",
-        "label": "5. Consumo unificado desde dashboards BI-as-Code, notebooks Polars y Agentes IA (vía Servidor MCP) contra la Capa Semántica",
-        "role": "BI",
-        "detail": "Todos los canales Ejecutivos, Analíticos y Conversacionales devuelven exactamente el mismo número en milisegundos."
-      }
+    hints: [
+      'Crea `WITH valid_orders AS (SELECT order_id, customer_id, total_usd FROM orders WHERE status IN (\'completed\', \'refunded\'))` y `order_refunds AS (SELECT order_id, SUM(refund_amount_usd) AS refunded_usd FROM refunds GROUP BY order_id)`.',
+      'Une `valid_orders vo INNER JOIN customers c ON vo.customer_id = c.customer_id LEFT JOIN order_refunds rf ON vo.order_id = rf.order_id`.',
+      'Usa `COALESCE(rf.refunded_usd, 0.0)` para órdenes sin devoluciones y calcula `net_arpu_usd` dividiendo `SUM(vo.total_usd - COALESCE(rf.refunded_usd, 0.0))` entre `NULLIF(COUNT(DISTINCT vo.customer_id), 0)`.',
     ],
-    "explanation": "La gobernanza moderna empieza en el borde izquierdo con el Data Contract ODCS en el CI/CD del microservicio (1), continúa con la materialización atómica en Iceberg v3 mediante SQLMesh/dbt (2), define las relaciones de entidad en el modelo semántico para impedir errores de fan-out (3), formaliza las métricas aditivas y de ratio en código (4) y finalmente sirve ese único cálculo a BI, Python y Agentes MCP (5)."
+    orderMatters: true,
   },
-  "relatedLessons": [
+  pipelineChallenge: {
+    id: 'challenge-de3-t03-contracts',
+    title: 'Flujo de gobernanza desde el contrato ODCS v3 hasta el consumo semántico',
+    prompt:
+      'Ordena los 5 pasos arquitectónicos para blindar un activo de datos con un contrato ejecutable y exponer sus métricas en la capa semántica.',
+    steps: [
+      {
+        id: 'step-define-odcs',
+        text: 'Declarar el contrato ODCS v3 especificando columnas, tipos físicos exactos, restricciones NOT NULL, reglas de dominio y SLA.',
+      },
+      {
+        id: 'step-enforce-ddl',
+        text: 'Compilar y validar el contrato en el motor de transformación (contract: enforced) bloqueando cambios destructivos de esquema.',
+      },
+      {
+        id: 'step-quarantine-rows',
+        text: 'Aislar en tablas de cuarentena los registros que violan las invariantes de negocio (como precios negativos o estados inválidos).',
+      },
+      {
+        id: 'step-declare-semantic',
+        text: 'Definir entidades, dimensiones y medidas aditivas o de razón en el modelo semántico (MetricFlow / Cube) sobre las tablas contratadas.',
+      },
+      {
+        id: 'step-serve-consumers',
+        text: 'Servir consultas multipaso (Drill-Across) consistentes hacia tableros de BI, hojas de cálculo y agentes analíticos.',
+      },
+    ],
+    correctOrder: [
+      'step-define-odcs',
+      'step-enforce-ddl',
+      'step-quarantine-rows',
+      'step-declare-semantic',
+      'step-serve-consumers',
+    ],
+    hint: 'Primero se acuerda el contrato ODCS v3, luego se impone en DDL, se ponen en cuarentena las filas inválidas, se modela la capa semántica y finalmente se sirve a los consumidores.',
+    explanation:
+      'La capa semántica solo puede garantizar cifras consistentes si descansa sobre tablas Gold cuyos tipos físicos, nulidad y dominios están protegidos previamente por contratos de datos ejecutables.',
+  },
+  roleNotes: {
+    de: 'Como Ingeniero de Datos, activarás `contract: { enforced: true }` en todos los modelos `marts` públicos, gestionarás el versionado `v1`/`v2` ante cambios destructivos y mantendrás los flujos de cuarentena para filas fuera de contrato.',
+    da: 'Como Analista de Datos, codificarás las fórmulas de ingresos netos, retención y ARPU directamente en el repositorio de la capa semántica en lugar de mantener definiciones aisladas dentro de cada libro de trabajo.',
+    bi: 'Como especialista en BI, conectarás tus visualizaciones a las métricas certificadas del motor semántico, asegurando que cualquier corte por región, tienda o segmento respete el grano y aplique `Drill-Across` automáticamente.',
+  },
+  summary: [
+    'Un contrato de datos ejecutable (ODCS v3 / dbt model contract) impone tipos físicos, restricciones `NOT NULL` y acuerdos de servicio antes de publicar.',
+    'Los cambios destructivos de esquema exigen publicar una nueva versión del modelo (`v2`) con una ventana de migración para no romper consumidores.',
+    'Las filas que violan invariantes de dominio (como el SKU negativo en `products`) deben aislarse en tablas de cuarentena.',
+    'La capa semántica centraliza entidades, dimensiones y métricas, generando consultas `Drill-Across` que evitan el fan-out entre `orders` y `refunds`.',
+  ],
+  flashcards: [
     {
-      "id": "l1-joins-fanout",
-      "reason": "Comprende cómo las entidades primary y foreign de la Capa Semántica eliminan automáticamente el Fan-Out Trap visto en la Lección 1."
+      id: 'fc-de3-t03-01',
+      front: '¿En qué se diferencia `contract: { enforced: true }` de un test `not_null` convencional en dbt?',
+      back: 'El contrato valida tipos de datos exactos, nombres de columna y restricciones `NOT NULL` en tiempo de compilación y DDL antes de publicar la tabla, mientras que el test convencional consulta la tabla después de creada.',
     },
     {
-      "id": "l6-metrics-simpson",
-      "reason": "Conecta el diseño conceptual de árboles de KPIs y métricas no aditivas con su implementación en código YAML de MetricFlow."
+      id: 'fc-de3-t03-02',
+      front: '¿Qué elementos estandariza la especificación Open Data Contract Standard (ODCS v3) de Bitol?',
+      back: 'Estandariza en formato YAML declarativo el esquema físico, las reglas de calidad de datos, los niveles de servicio (SLA de frescura y disponibilidad) y la propiedad del activo.',
     },
     {
-      "id": "l18-mcp-semantic-ai-rag",
-      "reason": "Descubre cómo exponer esta misma Capa Semántica a agentes de IA mediante un Servidor MCP para lograr Text-to-Semantic-Layer sin alucinaciones."
-    }
-  ]
+      id: 'fc-de3-t03-03',
+      front: '¿Cuándo se considera que un cambio en un modelo contratado es destructivo (*breaking change*)?',
+      back: 'Cuando se elimina o renombra una columna existente, se cambia su tipo de dato físico o se altera la semántica de su grano, obligando a emitir una nueva versión mayor (`v2`).',
+    },
+    {
+      id: 'fc-de3-t03-04',
+      front: '¿Por qué una métrica de razón como `net_arpu_usd` o `net_retention_pct` debe declararse en la capa semántica como cociente de agregaciones?',
+      back: 'Porque los ratios no son aditivos: promediar porcentajes o tickets individuales sesga el resultado; siempre debe calcularse `SUM(numerador) / NULLIF(SUM_o_COUNT_DISTINCT(denominador), 0)` al nivel de agrupación consultado.',
+    },
+  ],
+  glossaryTerms: [
+    'contrato-datos-odcs',
+    'capa-semantica-metricas',
+  ],
+  sources: [
+    {
+      title: 'dbt Labs — Model contracts',
+      url: 'https://docs.getdbt.com/docs/collaborate/govern/model-contracts',
+      publisher: 'dbt Labs',
+      accessed: '2026-10-29',
+      supports:
+        'Imposición en compilación y DDL de nombres de columna, tipos de datos físicos, restricciones NOT NULL y versionado de modelos.',
+    },
+    {
+      title: 'Bitol — Open Data Contract Standard (ODCS)',
+      url: 'https://bitol-io.github.io/open-data-contract-standard/latest/',
+      publisher: 'Bitol / Linux Foundation AI & Data',
+      accessed: '2026-10-29',
+      supports:
+        'Estructura estándar ODCS v3.x (`apiVersion`, `kind: DataContract`, `schema`, `quality`, `slaProperties`) para contratos entre productores y consumidores.',
+    },
+    {
+      title: 'dbt Labs — Semantic models & MetricFlow',
+      url: 'https://docs.getdbt.com/docs/build/semantic-models',
+      publisher: 'dbt Labs',
+      accessed: '2026-10-29',
+      supports:
+        'Modelado de entidades, dimensiones, medidas y métricas de razón gobernadas con prevención automática de fan-out.',
+    },
+    {
+      title: 'Cube Documentation — Data Modeling Overview',
+      url: 'https://cube.dev/docs/product/data-modeling/overview',
+      publisher: 'Cube Dev',
+      accessed: '2026-10-29',
+      supports:
+        'Arquitectura de capa semántica independiente para servir definiciones de negocio consistentes hacia herramientas de BI y APIs.',
+    },
+  ],
+  aiNotes:
+    'En la práctica SQL, verifica que el estudiante filtre `orders` con `WHERE status IN (\'completed\', \'refunded\')` en la primera CTE y que haga `LEFT JOIN` hacia `order_refunds` preagregada por `order_id`. Si une `orders` y `refunds` con `INNER JOIN`, perderá todas las órdenes sin devoluciones y su conteo caerá drásticamente.',
 };
-
 export default lesson;
