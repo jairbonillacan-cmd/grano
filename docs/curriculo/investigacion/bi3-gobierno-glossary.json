@@ -1,0 +1,248 @@
+[
+  {
+    "id": "capa-semantica-declarativa",
+    "term": "Capa semántica declarativa (MetricFlow y Cube)",
+    "englishTerm": "Declarative Semantic Layer (MetricFlow & Cube)",
+    "track": "bi",
+    "definition": "Capa intermedia que define en código YAML entidades, dimensiones, medidas y métricas de negocio sobre las tablas del almacén para generar consultas SQL consistentes hacia cualquier herramienta de consumo. Ejemplo: declarar `net_revenue_usd` una sola vez en MetricFlow o Cube. No se confunde con vistas SQL aisladas por cada informe.",
+    "formula": "metrics: [{ name: net_revenue_usd, type: derived, expr: gross_revenue_usd - refunded_usd }]",
+    "relatedLessons": [
+      "bi3-gobierno-01-capa-semantica-metricflow-cube",
+      "bi3-gobierno-05-equivalencia-lookml-tableau-pbi"
+    ],
+    "relatedTerms": [
+      "agregacion-simetrica",
+      "pre-agregacion-cube",
+      "c07-semantic-layer"
+    ],
+    "sources": [
+      {
+        "title": "dbt Documentation — About MetricFlow",
+        "url": "https://docs.getdbt.com/docs/build/about-metricflow",
+        "publisher": "dbt Labs",
+        "accessed": "2026-10-29",
+        "supports": "Arquitectura de grafo semántico declarativo que traduce peticiones de métricas y dimensiones en planes SQL optimizados."
+      }
+    ]
+  },
+  {
+    "id": "agregacion-simetrica",
+    "term": "Agregación simétrica y prevención de fan-out",
+    "englishTerm": "Symmetric Aggregates & Fan-Out Prevention",
+    "track": "bi",
+    "definition": "Técnica empleada por motores semánticos (Looker, MetricFlow, Cube) para calcular sumas y promedios exactos cuando un `JOIN` uno a muchos multiplica las filas de la tabla padre. Ejemplo: sumar `orders.total_usd` sin triplicarlo al unir con `order_items`. No se confunde con `SUM(DISTINCT importe)`, que descarta pedidos distintos con igual monto.",
+    "formula": "WITH orders_agg AS (SELECT store_id, SUM(total_usd) AS rev FROM orders GROUP BY store_id) SELECT * FROM orders_agg;",
+    "relatedLessons": [
+      "bi3-gobierno-01-capa-semantica-metricflow-cube",
+      "bi3-gobierno-05-equivalencia-lookml-tableau-pbi"
+    ],
+    "relatedTerms": [
+      "capa-semantica-declarativa",
+      "expresion-lod-tableau"
+    ],
+    "sources": [
+      {
+        "title": "Google Cloud Looker — symmetric_aggregates parameter",
+        "url": "https://docs.cloud.google.com/looker/docs/reference/param-explore-symmetric-aggregates",
+        "publisher": "Google Cloud",
+        "accessed": "2026-10-29",
+        "supports": "Protección matemática basada en claves primarias para evitar que joins uno a muchos inflen sumas, conteos y promedios."
+      }
+    ]
+  },
+  {
+    "id": "pre-agregacion-cube",
+    "term": "Pre-agregación declarativa (Cube Rollups)",
+    "englishTerm": "Declarative Pre-Aggregation (Cube Rollups)",
+    "track": "bi",
+    "definition": "Tabla resumida materializada y gestionada automáticamente por la capa semántica que almacena medidas agrupadas por un subconjunto de dimensiones y granularidad temporal para responder consultas en milisegundos. Ejemplo: un rollup mensual por `store_id` reduce 42 000 líneas de `order_items` a 486 filas. No se confunde con el caché efímero de resultados idénticos.",
+    "formula": "SELECT store_id, DATE_TRUNC('month', order_date) AS mes, SUM(line_total_usd) FROM orders JOIN order_items USING (order_id) GROUP BY 1, 2;",
+    "relatedLessons": [
+      "bi3-gobierno-01-capa-semantica-metricflow-cube",
+      "bi3-gobierno-04-import-directquery-direct-lake"
+    ],
+    "relatedTerms": [
+      "capa-semantica-declarativa",
+      "modelo-compuesto-dual"
+    ],
+    "sources": [
+      {
+        "title": "Cube Documentation — Using Pre-Aggregations",
+        "url": "https://docs.cube.dev/docs/pre-aggregations/using-pre-aggregations",
+        "publisher": "Cube Dev",
+        "accessed": "2026-10-29",
+        "supports": "Definición declarativa de rollups materializados por medidas, dimensiones y granularidad de tiempo con refresco incremental."
+      }
+    ]
+  },
+  {
+    "id": "seguridad-nivel-fila-rls",
+    "term": "Seguridad a nivel de fila (RLS) estática y dinámica",
+    "englishTerm": "Static and Dynamic Row-Level Security (RLS)",
+    "track": "bi",
+    "definition": "Mecanismo del modelo semántico que filtra las filas visibles según el rol o la identidad del usuario autenticado. En modo estático usa predicados fijos por rol (`region = 'Andina'`); en modo dinámico cruza `USERPRINCIPALNAME()` con una tabla de permisos. No se confunde con ocultar páginas visuales, que no bloquea consultas directas al modelo.",
+    "formula": "stores[region] IN SELECTCOLUMNS(FILTER(rls_policy, rls_policy[user_email] = USERPRINCIPALNAME()), \"reg\", rls_policy[allowed_region])",
+    "relatedLessons": [
+      "bi3-gobierno-02-rls-estatica-dinamica-columnas",
+      "bi3-gobierno-05-equivalencia-lookml-tableau-pbi"
+    ],
+    "relatedTerms": [
+      "seguridad-nivel-objeto-ols",
+      "filtro-cruzado-bidireccional"
+    ],
+    "sources": [
+      {
+        "title": "Microsoft Learn — Row-level security (RLS) with Power BI",
+        "url": "https://learn.microsoft.com/en-us/fabric/security/service-admin-row-level-security",
+        "publisher": "Microsoft Learn",
+        "accessed": "2026-10-29",
+        "supports": "Configuración de reglas estáticas y dinámicas con USERPRINCIPALNAME() para restringir filas por usuario en modelos semánticos."
+      }
+    ]
+  },
+  {
+    "id": "seguridad-nivel-objeto-ols",
+    "term": "Seguridad a nivel de objeto (OLS) y enmascaramiento de columnas",
+    "englishTerm": "Object-Level Security (OLS) & Column Masking",
+    "track": "bi",
+    "definition": "Control de seguridad que restringe el acceso a tablas o columnas sensibles. La OLS elimina la columna y sus metadatos para roles no autorizados (como `products.unit_cost_usd`), mientras que el enmascaramiento dinámico ofusca parcialmente valores PII (`customers.email`). No se confunde con la propiedad visual `IsHidden`, que permite seguir consultando la columna por DAX.",
+    "formula": "SELECT customer_id, CONCAT(LEFT(full_name, 1), '***') AS masked_name, CONCAT('***@', SPLIT_PART(email, '@', 2)) AS email_domain FROM customers;",
+    "relatedLessons": [
+      "bi3-gobierno-02-rls-estatica-dinamica-columnas"
+    ],
+    "relatedTerms": [
+      "seguridad-nivel-fila-rls"
+    ],
+    "sources": [
+      {
+        "title": "Microsoft Learn — Object-level security (OLS)",
+        "url": "https://learn.microsoft.com/en-us/fabric/security/service-admin-object-level-security",
+        "publisher": "Microsoft Learn",
+        "accessed": "2026-10-29",
+        "supports": "Ocultación estricta de datos y metadatos de columnas o tablas confidenciales mediante permisos de rol en modelos tabulares."
+      }
+    ]
+  },
+  {
+    "id": "certificacion-metricas-endorsement",
+    "term": "Certificación de métricas y respaldo (Promoted vs Certified)",
+    "englishTerm": "Metric Certification & Endorsement (Promoted vs Certified)",
+    "track": "bi",
+    "definition": "Proceso formal mediante el cual una organización distingue entre activos analíticos promocionados (`Promoted`, compartidos por el propio creador) y certificados (`Certified`, auditados en su fórmula, pruebas, linaje y propietario funcional por un comité autorizado). Ejemplo: certificar `net_revenue_usd` descontando devoluciones procesadas. No se confunde con publicar un informe sin revisión de contrato.",
+    "formula": "SUM(CASE WHEN o.status = 'completed' THEN o.total_usd - COALESCE(r.refund_usd, 0) ELSE 0 END)",
+    "relatedLessons": [
+      "bi3-gobierno-03-certificacion-metricas-obsolescencia"
+    ],
+    "relatedTerms": [
+      "deprecacion-versionado-metricas",
+      "capa-semantica-declarativa"
+    ],
+    "sources": [
+      {
+        "title": "Microsoft Learn — Endorsement: Promoting and certifying Fabric and Power BI content",
+        "url": "https://learn.microsoft.com/en-us/fabric/governance/endorsement-overview",
+        "publisher": "Microsoft Learn",
+        "accessed": "2026-10-29",
+        "supports": "Niveles de respaldo institucional Promoted y Certified y gobernanza de revisores autorizados en el catálogo analítico."
+      }
+    ]
+  },
+  {
+    "id": "deprecacion-versionado-metricas",
+    "term": "Control de obsolescencia y versionado semántico de métricas",
+    "englishTerm": "Metric Deprecation & Semantic Versioning",
+    "track": "bi",
+    "definition": "Práctica de gobierno que gestiona cambios incompatibles en la lógica de una métrica publicando una nueva versión (`v2`), declarando una fecha de retiro (`deprecation_date`) en la versión anterior (`v1`) y notificando a los propietarios de paneles aguas abajo (`exposures`). Ejemplo: migrar de ingresos brutos a ingresos netos sin romper paneles existentes.",
+    "formula": "ROUND(100.0 * (legacy_v1_revenue_usd - certified_v2_net_usd) / certified_v2_net_usd, 2) AS drift_pct",
+    "relatedLessons": [
+      "bi3-gobierno-03-certificacion-metricas-obsolescencia"
+    ],
+    "relatedTerms": [
+      "certificacion-metricas-endorsement",
+      "c08-data-contract"
+    ],
+    "sources": [
+      {
+        "title": "dbt Documentation — Model versions and deprecation",
+        "url": "https://docs.getdbt.com/docs/mesh/govern/model-versions",
+        "publisher": "dbt Labs",
+        "accessed": "2026-10-29",
+        "supports": "Gestión de versiones coexistentes, ventanas de migración y propiedad deprecation_date para evolucionar definiciones analíticas sin rupturas."
+      }
+    ]
+  },
+  {
+    "id": "modelo-compuesto-dual",
+    "term": "Modelo compuesto y almacenamiento Dual",
+    "englishTerm": "Composite Model & Dual Storage Mode",
+    "track": "bi",
+    "definition": "Arquitectura de modelo semántico que combina tablas almacenadas en memoria (`Import`) con tablas consultadas en vivo (`DirectQuery`). Las dimensiones compartidas (`stores`, `calendar`) se configuran en modo `Dual` para actuar en memoria cuando se cruzan con agregaciones Import y en SQL nativo cuando filtran hechos DirectQuery, evitando transferencias intermedias lentas.",
+    "formula": "StorageMode(stores) = Dual; StorageMode(agg_monthly_sales) = Import; StorageMode(order_items) = DirectQuery",
+    "relatedLessons": [
+      "bi3-gobierno-04-import-directquery-direct-lake"
+    ],
+    "relatedTerms": [
+      "direct-lake-parquet",
+      "motor-vertipaq",
+      "pre-agregacion-cube"
+    ],
+    "sources": [
+      {
+        "title": "Microsoft Learn — Use composite models in Power BI Desktop",
+        "url": "https://learn.microsoft.com/en-us/power-bi/transform-model/desktop-composite-models",
+        "publisher": "Microsoft Learn",
+        "accessed": "2026-10-29",
+        "supports": "Arquitectura de modelos compuestos, tablas de agregación en memoria y dimensiones en modo Dual para optimizar consultas híbridas."
+      }
+    ]
+  },
+  {
+    "id": "direct-lake-parquet",
+    "term": "Modo Direct Lake sobre archivos Parquet y Delta",
+    "englishTerm": "Direct Lake Mode over Parquet & Delta",
+    "track": "bi",
+    "definition": "Modo de almacenamiento semántico que carga bajo demanda únicamente las columnas necesarias desde archivos Parquet/Delta del lago de datos hacia la memoria de VertiPaq sin ejecutar un refresco completo de importación ni traducir las consultas a SQL. Si una consulta viola restricciones del motor o usa vistas SQL, aplica repliegue (`fallback`) a DirectQuery.",
+    "formula": "Delta/Parquet ColumnChunk -> Transcodificación en memoria VertiPaq (con fallback condicional a DirectQuery)",
+    "relatedLessons": [
+      "bi3-gobierno-04-import-directquery-direct-lake"
+    ],
+    "relatedTerms": [
+      "modelo-compuesto-dual",
+      "motor-vertipaq",
+      "c12-parquet-columnar"
+    ],
+    "sources": [
+      {
+        "title": "Microsoft Learn — Direct Lake overview",
+        "url": "https://learn.microsoft.com/en-us/fabric/fundamentals/direct-lake-overview",
+        "publisher": "Microsoft Learn",
+        "accessed": "2026-10-29",
+        "supports": "Carga directa de columnas desde archivos Delta Parquet en memoria VertiPaq y comportamiento de fallback hacia DirectQuery."
+      }
+    ]
+  },
+  {
+    "id": "expresion-lod-tableau",
+    "term": "Expresión de nivel de detalle (LOD: FIXED, INCLUDE, EXCLUDE)",
+    "englishTerm": "Level of Detail (LOD) Expression",
+    "track": "bi",
+    "definition": "Sintaxis de Tableau que permite calcular una agregación a una granularidad distinta de las dimensiones presentes en la visualización: `FIXED` evalúa el cálculo únicamente por las dimensiones listadas, `INCLUDE` añade dimensiones al grano visual y `EXCLUDE` las retira. Equivale en DAX a combinar `CALCULATE` con `ALLEXCEPT`, `SUMX` o `REMOVEFILTERS`.",
+    "formula": "{ FIXED [region] : SUM([total_usd]) }  <=>  CALCULATE(SUM(orders[total_usd]), ALLEXCEPT(stores, stores[region]))",
+    "relatedLessons": [
+      "bi3-gobierno-05-equivalencia-lookml-tableau-pbi"
+    ],
+    "relatedTerms": [
+      "agregacion-simetrica",
+      "capa-semantica-declarativa"
+    ],
+    "sources": [
+      {
+        "title": "Tableau Help — Overview: Level of Detail (LOD) Expressions",
+        "url": "https://help.tableau.com/current/pro/desktop/en-us/calculations_calculatedfields_lod.htm",
+        "publisher": "Salesforce / Tableau",
+        "accessed": "2026-10-29",
+        "supports": "Definición y semántica de evaluación de expresiones FIXED, INCLUDE y EXCLUDE frente al grano de la visualización."
+      }
+    ]
+  }
+]
