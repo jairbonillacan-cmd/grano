@@ -1,0 +1,194 @@
+[
+  {
+    "id": "hipotesis-refutable",
+    "term": "Hipótesis analítica refutable",
+    "englishTerm": "Refutable / Falsifiable Analytical Hypothesis",
+    "track": "da",
+    "definition": "Afirmación cuantitativa formulada antes de explorar los datos que especifica población, variable comparada, métrica e impacto esperado, de modo que una consulta SQL pueda demostrar que es falsa. No se confunde con una pregunta abierta ('¿cómo van las ventas?'), que no admite refutación empírica.",
+    "formula": "SELECT grupo_descuento, MEDIAN(subtotal_usd) AS mediana_usd FROM orders GROUP BY grupo_descuento;",
+    "relatedLessons": [
+      "da2-eda-01-hipotesis-preguntas-refutables"
+    ],
+    "relatedTerms": [
+      "pesca-correlaciones",
+      "perfilado-datos"
+    ],
+    "sources": [
+      {
+        "title": "R for Data Science (2nd Edition) — Chapter 10: Exploratory Data Analysis",
+        "url": "https://r4ds.hadley.nz/EDA.html",
+        "publisher": "O'Reilly Media",
+        "accessed": "2026-10-29",
+        "supports": "Formulación de preguntas estructuradas sobre variación y covariación para contrastar expectativas con datos reales."
+      }
+    ]
+  },
+  {
+    "id": "pesca-correlaciones",
+    "term": "Pesca de correlaciones (Data Dredging)",
+    "englishTerm": "Data Dredging / P-Hacking / Texas Sharpshooter Fallacy",
+    "track": "da",
+    "definition": "Error metodológico que consiste en cruzar decenas de columnas y segmentos sin hipótesis previa hasta hallar una diferencia llamativa por puro azar muestral y presentarla como hallazgo confirmado. Si una relación nace al explorar, debe registrarse como conjetura pendiente de validación en datos nuevos.",
+    "formula": "Probabilidad de al menos 1 falso positivo en k=20 cruces independientes al 5%: 1 - (0.95)^20 = 64.15%",
+    "relatedLessons": [
+      "da2-eda-01-hipotesis-preguntas-refutables"
+    ],
+    "relatedTerms": [
+      "hipotesis-refutable",
+      "c09-simpsons-paradox"
+    ],
+    "sources": [
+      {
+        "title": "NIST/SEMATECH e-Handbook of Statistical Methods — Section 1.1.1: What is Exploratory Data Analysis?",
+        "url": "https://www.itl.nist.gov/div898/handbook/eda/section1/eda11.htm",
+        "publisher": "National Institute of Standards and Technology (NIST)",
+        "accessed": "2026-10-29",
+        "supports": "Separación entre el descubrimiento exploratorio de patrones y la inferencia confirmatoria para evitar falsos positivos."
+      }
+    ]
+  },
+  {
+    "id": "perfilado-datos",
+    "term": "Perfilado sistemático de tablas (Data Profiling)",
+    "englishTerm": "Systematic Data Profiling",
+    "track": "da",
+    "definition": "Inspección estadística de una tabla desconocida en una sola lectura para cuantificar conteo de filas, razón de cardinalidad, porcentaje de completitud, dominios categóricos, cuantiles y asimetría antes de construir gráficos o modelos. En DuckDB se ejecuta con `SUMMARIZE` o agregaciones condicionales con `FILTER`.",
+    "formula": "SUMMARIZE orders;",
+    "relatedLessons": [
+      "da2-eda-02-perfilado-tablas"
+    ],
+    "relatedTerms": [
+      "cardinalidad-relativa",
+      "nulo-estructural"
+    ],
+    "sources": [
+      {
+        "title": "DuckDB Documentation — SUMMARIZE Statement",
+        "url": "https://duckdb.org/docs/guides/meta/summarize.html",
+        "publisher": "DuckDB Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Cálculo de estadísticas descriptivas, cardinalidad aproximada y porcentaje de nulos para todas las columnas de una tabla."
+      }
+    ]
+  },
+  {
+    "id": "cardinalidad-relativa",
+    "term": "Cardinalidad y razón de unicidad de columna",
+    "englishTerm": "Column Cardinality & Uniqueness Ratio",
+    "track": "da",
+    "definition": "La cardinalidad de una columna es su número de valores distintos (`COUNT(DISTINCT col)`), y la razón de unicidad la divide entre el total de filas (`COUNT(*)`). Una razón igual a 1.0 identifica una clave candidata; una razón muy baja identifica un dominio categórico discreto.",
+    "formula": "SELECT COUNT(DISTINCT event_id) * 1.0 / COUNT(*) AS razon_unicidad FROM events;",
+    "relatedLessons": [
+      "da2-eda-02-perfilado-tablas"
+    ],
+    "relatedTerms": [
+      "perfilado-datos",
+      "clave-primaria-subrogada"
+    ],
+    "sources": [
+      {
+        "title": "DuckDB Documentation — Aggregate Functions (COUNT DISTINCT)",
+        "url": "https://duckdb.org/docs/sql/functions/aggregates.html",
+        "publisher": "DuckDB Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Evaluación de cardinalidad exacta y aproximada sobre columnas de tablas analíticas."
+      }
+    ]
+  },
+  {
+    "id": "nulo-estructural",
+    "term": "Nulo estructural frente a nulo por fallo de captura",
+    "englishTerm": "Structural Missingness vs. Data Capture Missingness",
+    "track": "da",
+    "definition": "Un nulo estructural ocurre cuando un atributo no aplica por la naturaleza del evento, como `product_id IS NULL` en las 9 400 filas de `page_view` de `events`. No se confunde con un nulo por fallo de captura, como los 218 clientes sin `postal_code` en `customers`.",
+    "formula": "SELECT event_type, COUNT(*) FILTER (WHERE product_id IS NULL) AS nulos_producto FROM events GROUP BY event_type;",
+    "relatedLessons": [
+      "da2-eda-02-perfilado-tablas"
+    ],
+    "relatedTerms": [
+      "perfilado-datos",
+      "idempotencia-duplicados"
+    ],
+    "sources": [
+      {
+        "title": "Polars User Guide — Missing Data",
+        "url": "https://docs.pola.rs/user-guide/expressions/missing-data/",
+        "publisher": "Polars Project",
+        "accessed": "2026-10-29",
+        "supports": "Representación mediante mapas de validez y análisis contextual de valores ausentes antes de imputar o descartar filas."
+      }
+    ]
+  },
+  {
+    "id": "puntaje-z-modificado-mad",
+    "term": "Desviación absoluta mediana (MAD) y puntaje Z modificado",
+    "englishTerm": "Median Absolute Deviation (MAD) & Modified Z-Score",
+    "track": "da",
+    "definition": "La MAD es la mediana de las distancias absolutas respecto a la mediana de la columna (`MAD(x)` en DuckDB). El puntaje Z modificado de Iglewicz y Hoaglin (`0.6745 * ABS(x - mediana) / MAD`) detecta valores atípicos sin hincharse por los propios extremos como ocurre con la desviación estándar.",
+    "formula": "SELECT ROUND(0.6745 * ABS(list_price_usd - MEDIAN(list_price_usd) OVER ()) / MAD(list_price_usd) OVER (), 2) FROM products;",
+    "relatedLessons": [
+      "da2-eda-03-outliers-errores-extremos"
+    ],
+    "relatedTerms": [
+      "rango-intercuartilico",
+      "winsorizacion"
+    ],
+    "sources": [
+      {
+        "title": "NIST/SEMATECH e-Handbook of Statistical Methods — Section 1.3.5.17: Detection of Outliers",
+        "url": "https://www.itl.nist.gov/div898/handbook/eda/section3/eda35h.htm",
+        "publisher": "National Institute of Standards and Technology (NIST)",
+        "accessed": "2026-10-29",
+        "supports": "Fórmula del puntaje Z modificado basado en la mediana y la MAD con factor de consistencia normal 0.6745."
+      }
+    ]
+  },
+  {
+    "id": "winsorizacion",
+    "term": "Winsorización (acotación por percentiles) frente a recorte",
+    "englishTerm": "Winsorization vs. Trimming",
+    "track": "da",
+    "definition": "Técnica que limita el peso de los valores extremos sustituyendo todo dato que supere un percentil umbral (como `p99`) por el valor exacto de ese percentil (`LEAST(x, p99)`), conservando la fila en la muestra. Se diferencia del recorte (*trimming*), que elimina la fila completa.",
+    "formula": "SELECT ROUND(AVG(LEAST(total_usd, 1343.24)), 2) AS media_winsorizada_p99 FROM orders WHERE status = 'completed';",
+    "relatedLessons": [
+      "da2-eda-03-outliers-errores-extremos"
+    ],
+    "relatedTerms": [
+      "puntaje-z-modificado-mad",
+      "percentil"
+    ],
+    "sources": [
+      {
+        "title": "NIST/SEMATECH e-Handbook of Statistical Methods — Section 1.3.5.6: Measures of Scale",
+        "url": "https://www.itl.nist.gov/div898/handbook/eda/section3/eda356.htm",
+        "publisher": "National Institute of Standards and Technology (NIST)",
+        "accessed": "2026-10-29",
+        "supports": "Uso de estimadores resistentes para resumir distribuciones con colas largas sin distorsión por valores extremos."
+      }
+    ]
+  },
+  {
+    "id": "tabla-atricion-descartes",
+    "term": "Tabla de atrición y diario de análisis reproducible",
+    "englishTerm": "Attrition Table & Reproducible Analysis Log",
+    "track": "da",
+    "definition": "Registro secuencial en SQL (mediante CTEs encadenadas y `UNION ALL`) que documenta cuántas filas, entidades e importe monetario permanecen y cuántos se descartan tras cada filtro aplicado sobre los datos crudos. Impide que exclusiones silenciosas sesguen la muestra o impidan reproducir un estudio.",
+    "formula": "SELECT 1 AS paso, '0_crudo' AS etapa, COUNT(*) AS filas FROM paso_0 UNION ALL SELECT 2, '1_limpio', COUNT(*) FROM paso_1;",
+    "relatedLessons": [
+      "da2-eda-04-diario-analisis-reproducible"
+    ],
+    "relatedTerms": [
+      "perfilado-datos",
+      "validacion-bloqueante-wap"
+    ],
+    "sources": [
+      {
+        "title": "DuckDB Documentation — Common Table Expressions (WITH Clause)",
+        "url": "https://duckdb.org/docs/sql/query_syntax/with.html",
+        "publisher": "DuckDB Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Estructuración modular de consultas en pasos secuenciales auditables mediante expresiones de tabla común."
+      }
+    ]
+  }
+]
