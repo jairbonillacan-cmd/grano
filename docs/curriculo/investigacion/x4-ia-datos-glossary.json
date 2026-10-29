@@ -1,0 +1,232 @@
+[
+  {
+    "id": "model-context-protocol",
+    "term": "Model Context Protocol (MCP)",
+    "track": "core",
+    "definition": "Estándar abierto basado en JSON-RPC 2.0 que desacopla los clientes de inteligencia artificial de los almacenes de datos y herramientas empresariales. En lugar de abrir conexiones SQL directas al motor analítico, el servidor MCP expone recursos de metadatos gobernados y herramientas parametrizadas con control estricto de identidad y auditoría.",
+    "relatedLessons": [
+      "x4-ia-datos-01-mcp-semantic-ai-rag",
+      "x4-ia-datos-02-text-to-sql-capa-semantica"
+    ],
+    "relatedTerms": [
+      "mcp-resources-tools",
+      "c28-mcp-semantic-rag-evals",
+      "c21-semantic-layer"
+    ],
+    "sources": [
+      {
+        "title": "Model Context Protocol — Architecture Specification",
+        "url": "https://modelcontextprotocol.io/docs/concepts/architecture",
+        "publisher": "Model Context Protocol Specification",
+        "accessed": "2026-10-29",
+        "supports": "Arquitectura Host-Client-Server sobre JSON-RPC 2.0 y aislamiento de conexiones de datos."
+      }
+    ]
+  },
+  {
+    "id": "mcp-resources-tools",
+    "term": "Primitivas Resources y Tools en MCP",
+    "track": "core",
+    "definition": "Dos primitivas complementarias de un servidor MCP. Los recursos (resources) exponen contexto de solo lectura identificado por URI, como el catálogo YAML de métricas o contratos de datos. Las herramientas (tools) son funciones ejecutables con esquemas JSON tipados que permiten al modelo consultar métricas gobernadas sin redactar SQL arbitrario.",
+    "relatedLessons": [
+      "x4-ia-datos-01-mcp-semantic-ai-rag"
+    ],
+    "relatedTerms": [
+      "model-context-protocol",
+      "c19-data-contracts-odcs"
+    ],
+    "sources": [
+      {
+        "title": "Model Context Protocol — Server Tools Specification",
+        "url": "https://modelcontextprotocol.io/docs/concepts/tools",
+        "publisher": "Model Context Protocol Specification",
+        "accessed": "2026-10-29",
+        "supports": "Definición de herramientas ejecutables tipadas con JSON Schema y separación frente a recursos pasivos."
+      }
+    ]
+  },
+  {
+    "id": "text-to-sql-hallucination",
+    "term": "Alucinación estructural en Text-to-SQL",
+    "track": "core",
+    "definition": "Fallo en el que un modelo de lenguaje genera una consulta SQL sintácticamente válida que el motor ejecuta sin errores, pero que devuelve cifras falsas de negocio. Ocurre cuando el agente desconoce reintentos duplicados de webhooks, registros centinela de prueba, versiones históricas SCD Tipo 2 o diferencias de grano entre tablas.",
+    "relatedLessons": [
+      "x4-ia-datos-01-mcp-semantic-ai-rag",
+      "x4-ia-datos-02-text-to-sql-capa-semantica",
+      "x4-ia-datos-04-golden-evals-barreras-ast-sqlglot"
+    ],
+    "relatedTerms": [
+      "chasm-trap-semantic",
+      "c01-grain-fanout",
+      "c07-scd-type-2"
+    ],
+    "sources": [
+      {
+        "title": "BIRD-bench: Big Bench for Large-Scale Database Grounded Text-to-SQL Evaluation",
+        "url": "https://bird-bench.github.io/",
+        "publisher": "HKU Data Lab / DAMO Academy",
+        "accessed": "2026-10-29",
+        "supports": "Evidencia de errores de ejecución de modelos Text-to-SQL sobre bases de datos con valores sucios y reglas implícitas."
+      }
+    ]
+  },
+  {
+    "id": "chasm-trap-semantic",
+    "term": "Trampa de abismo (Chasm Trap) en IA",
+    "track": "core",
+    "definition": "Defecto clásico en generación automática de SQL cuando dos tablas con relación uno a muchos respecto a una entidad común, como líneas de pedido y reembolsos asociados a una orden, se unen en la misma cláusula FROM. Provoca un producto cartesiano parcial por orden que multiplica los importes agregados.",
+    "relatedLessons": [
+      "x4-ia-datos-02-text-to-sql-capa-semantica"
+    ],
+    "relatedTerms": [
+      "semantic-query-compilation",
+      "c01-grain-fanout",
+      "text-to-sql-hallucination"
+    ],
+    "sources": [
+      {
+        "title": "Cube Documentation — Data Modeling and Chasm Trap Prevention",
+        "url": "https://docs.cube.dev/docs/data-modeling/overview",
+        "publisher": "Cube Dev",
+        "accessed": "2026-10-29",
+        "supports": "Prevención de fan-out y chasm traps al cruzar medidas con relaciones uno a muchos."
+      }
+    ]
+  },
+  {
+    "id": "semantic-query-compilation",
+    "term": "Compilación de consultas en capa semántica",
+    "track": "core",
+    "definition": "Proceso determinista mediante el cual un motor semántico como MetricFlow o Cube traduce una petición de métricas y dimensiones en SQL libre de fan-out. El compilador agrupa primero cada medida atómica en una CTE independiente al grano de su entidad base y realiza el cruce dimensional al final.",
+    "relatedLessons": [
+      "x4-ia-datos-02-text-to-sql-capa-semantica"
+    ],
+    "relatedTerms": [
+      "c21-semantic-layer",
+      "chasm-trap-semantic",
+      "c10-simpsons-paradox"
+    ],
+    "sources": [
+      {
+        "title": "dbt Semantic Layer and MetricFlow Documentation",
+        "url": "https://docs.getdbt.com/docs/use-dbt-semantic-layer/dbt-sl",
+        "publisher": "dbt Labs",
+        "accessed": "2026-10-29",
+        "supports": "Compilación de entidades, dimensiones, medidas y métricas en consultas SQL pre-agregadas por grano."
+      }
+    ]
+  },
+  {
+    "id": "okapi-bm25",
+    "term": "Función de ranking léxico Okapi BM25",
+    "track": "core",
+    "definition": "Algoritmo probabilístico de recuperación de información sobre índices invertidos que puntúa documentos según la frecuencia de aparición de los términos buscados, aplicando saturación no lineal de frecuencia, penalización por longitud del documento y peso por frecuencia inversa de documento (IDF). Sobresale al localizar códigos SKU, nombres de tablas e identificadores exactos.",
+    "relatedLessons": [
+      "x4-ia-datos-03-rag-hibrido-bm25-hnsw-rrf"
+    ],
+    "relatedTerms": [
+      "hnsw-vector-index",
+      "reciprocal-rank-fusion"
+    ],
+    "sources": [
+      {
+        "title": "DuckDB Full-Text Search Extension (BM25)",
+        "url": "https://duckdb.org/docs/stable/extensions/full_text_search",
+        "publisher": "DuckDB Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Implementación de índices invertidos y función de puntuación BM25 en SQL analítico."
+      }
+    ]
+  },
+  {
+    "id": "hnsw-vector-index",
+    "term": "Índice vectorial jerárquico HNSW",
+    "track": "core",
+    "definition": "Estructura de datos en grafo multicapa denominada Hierarchical Navigable Small World, diseñada para resolver búsquedas de vecinos más cercanos aproximados (ANN) sobre vectores densos de alta dimensión en tiempo logarítmico. Sus capas superiores contienen enlaces largos para saltar regiones del espacio vectorial y la capa base refina la vecindad local.",
+    "relatedLessons": [
+      "x4-ia-datos-03-rag-hibrido-bm25-hnsw-rrf"
+    ],
+    "relatedTerms": [
+      "okapi-bm25",
+      "reciprocal-rank-fusion"
+    ],
+    "sources": [
+      {
+        "title": "Efficient and robust approximate nearest neighbor search using HNSW graphs",
+        "url": "https://arxiv.org/abs/1603.09320",
+        "publisher": "IEEE TPAMI / arXiv (Malkov & Yashunin)",
+        "accessed": "2026-10-29",
+        "supports": "Diseño algorítmico de grafos jerárquicos de mundo pequeño navegable para búsqueda ANN."
+      }
+    ]
+  },
+  {
+    "id": "reciprocal-rank-fusion",
+    "term": "Reciprocal Rank Fusion (RRF)",
+    "track": "core",
+    "definition": "Algoritmo de fusión de rankings formulado por Cormack, Clarke y Büttcher que combina listas ordenadas procedentes de motores heterogéneos calculando para cada documento la suma del inverso de su posición más una constante de amortiguamiento k, habitualmente 60. Elimina la necesidad de calibrar escalas incompatibles entre BM25 y distancias vectoriales.",
+    "relatedLessons": [
+      "x4-ia-datos-03-rag-hibrido-bm25-hnsw-rrf"
+    ],
+    "relatedTerms": [
+      "okapi-bm25",
+      "hnsw-vector-index",
+      "c28-mcp-semantic-rag-evals"
+    ],
+    "sources": [
+      {
+        "title": "Reciprocal Rank Fusion outperforms Condorcet and individual Rank Learning Methods",
+        "url": "https://cormack.uwaterloo.ca/cormacksigir09-rrf.pdf",
+        "publisher": "ACM SIGIR (Cormack, Clarke & Büttcher)",
+        "accessed": "2026-10-29",
+        "supports": "Fórmula RRF con constante k=60 e invariancia de escala al combinar múltiples recuperadores."
+      }
+    ]
+  },
+  {
+    "id": "golden-eval-set",
+    "term": "Conjunto de evaluación Golden Evals",
+    "track": "core",
+    "definition": "Colección curada, determinista y controlada por versiones de casos de prueba compuesta por preguntas de negocio en lenguaje natural, sus consultas SQL o llamadas semánticas canónicas y el resultado tabular exacto esperado sobre un dataset fijo. Permite medir la exactitud de ejecución en integración continua antes de desplegar cambios.",
+    "relatedLessons": [
+      "x4-ia-datos-04-golden-evals-barreras-ast-sqlglot"
+    ],
+    "relatedTerms": [
+      "ast-sql-guardrail",
+      "c28-mcp-semantic-rag-evals",
+      "text-to-sql-hallucination"
+    ],
+    "sources": [
+      {
+        "title": "Spider: A Large-Scale Human-Labeled Dataset for Complex and Cross-Domain Semantic Parsing",
+        "url": "https://yale-lily.github.io/spider",
+        "publisher": "Yale LILY Lab",
+        "accessed": "2026-10-29",
+        "supports": "Evaluación determinista de sistemas Text-to-SQL mediante pares pregunta-SQL canónico y exactitud de ejecución."
+      }
+    ]
+  },
+  {
+    "id": "ast-sql-guardrail",
+    "term": "Barrera determinista de AST (SQLGlot)",
+    "track": "core",
+    "definition": "Mecanismo de seguridad que analiza sintácticamente el SQL generado por un agente convirtiéndolo en un árbol de sintaxis abstracta (AST) antes de su ejecución. Permite inspeccionar programáticamente cada nodo para rechazar sentencias destructivas, bloquear el acceso a columnas con datos personales e inyectar predicados de aislamiento por cliente.",
+    "relatedLessons": [
+      "x4-ia-datos-04-golden-evals-barreras-ast-sqlglot"
+    ],
+    "relatedTerms": [
+      "golden-eval-set",
+      "model-context-protocol",
+      "c28-mcp-semantic-rag-evals"
+    ],
+    "sources": [
+      {
+        "title": "SQLGlot Documentation — Python SQL Parser and Transpiler",
+        "url": "https://sqlglot.com/sqlglot.html",
+        "publisher": "SQLGlot (Toby Mao)",
+        "accessed": "2026-10-29",
+        "supports": "Inspección y transformación programática del árbol de sintaxis abstracta (AST) en múltiples dialectos SQL."
+      }
+    ]
+  }
+]

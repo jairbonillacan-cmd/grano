@@ -1,354 +1,429 @@
-// Lección migrada al esquema v2 mediante scripts/migrate-legacy.mjs
-const lesson = {
-  "id": "x4-ia-datos-01-mcp-semantic-ai-rag",
-  "moduleId": "x4-ia-datos",
-  "tracks": [
-    "core"
+export const lesson = {
+  id: 'x4-ia-datos-01-mcp-semantic-ai-rag',
+  legacyId: 'l18-mcp-semantic-ai-rag',
+  moduleId: 'x4-ia-datos',
+  tracks: ['core', 'de', 'da', 'bi'],
+  order: 1,
+  legacyOrder: 18,
+  contentVersion: 2,
+  title: 'Servidores MCP conectados a la capa semántica y RAG híbrido',
+  subtitle: 'Arquitectura JSON-RPC 2.0, primitivas resources/tools y aislamiento frente a tablas crudas',
+  level: 4,
+  minutes: 30,
+  prerequisites: [
+    'c2-dimensional-04-metrics-simpson',
+    'c2-dimensional-05-hechos-instantanea-acumulativos'
   ],
-  "level": 4,
-  "order": 1,
-  "title": "Servidores MCP, capa semántica y RAG híbrido",
-  "minutes": 30,
-  "prerequisites": [
-    "de3-transformacion-03-contracts-semantic-layer"
+  hook: 'El comité directivo de Mercado Brisa conecta un modelo de lenguaje directamente a las tablas crudas del almacén para consultar la facturación capturada del trimestre. El agente escribe una unión sintácticamente válida entre orders y payments y reporta 7,043,162.63 USD en lugar de los 6,874,488.00 USD reales porque suma 405 reintentos duplicados de webhooks. ¿Cómo diseñamos una frontera determinista con Model Context Protocol para que el agente consuma métricas gobernadas sin tocar jamás las tablas crudas?',
+  objectives: [
+    'Diagnosticar por qué conectar agentes de IA directamente a tablas crudas provoca inflación financiera, fugas de PII y deriva de métricas.',
+    'Diseñar la topología Host-Client-Server del Model Context Protocol (MCP) diferenciando entre recursos pasivos (resources) y herramientas ejecutables (tools).',
+    'Construir consultas SQL gobernadas sobre Mercado Brisa que respalden herramientas MCP deduplicando pagos y pre-agregando reembolsos al grano de la orden.'
   ],
-  "contentVersion": 1,
-  "hook": "En Mercado Brisa (empresa ficticia), un equipo conectó un modelo de lenguaje directamente a las 450 tablas crudas del almacén para responder preguntas en lenguaje natural. Cuando finanzas preguntó por la retención neta del segmento mayorista en el tercer trimestre, el modelo escribió un `JOIN` directo entre `raw.customers` y `raw.invoices` sin filtrar facturas anuladas ni cuentas de prueba, provocando un fan-out y respondiendo `184.2 %` cuando el valor real era `116.4 %`. ¿Cómo diseñas un sistema de IA sobre datos usando servidores MCP, capa semántica y evaluaciones deterministas?",
-  "objectives": [
-    "Sustituir la generación libre de SQL sobre tablas crudas por llamadas gobernadas a la capa semántica a través de un servidor MCP.",
-    "Combinar búsqueda léxica (BM25) y vectorial (HNSW) mediante Reciprocal Rank Fusion (RRF) para recuperar definiciones y esquemas.",
-    "Construir un conjunto de evaluación (evals) que compare el resultado numérico devuelto contra consultas SQL de referencia."
-  ],
-  "sections": [
+  sections: [
     {
-      "id": "limites-del-text-to-sql-directo-frente-a-la-capa",
-      "heading": "Límites del text-to-SQL directo frente a la capa semántica",
-      "body": "Pedirle a un LLM que escriba SQL desde cero sobre cientos de tablas físicas crudas falla en producción por tres razones estructurales:\n1) **Ambigüedad de Esquema**: En una empresa real existen tablas llamadas `orders`, `orders_v2`, `OrdersFinal` y `stg_orders_clean`. Sin gobernanza, el modelo elige al azar.\n2) **Reglas de Negocio Implícitas**: Saber que para calcular ingresos netos hay que filtrar `status NOT IN ('CANCELLED', 'TEST')`, excluir empleados internos y usar la tasa de cambio `ASOF JOIN` del momento del cobro no está escrito en los tipos de columna `VARCHAR/NUMERIC`.\n3) **Joins Asimétricos (Fan-Out)**: Un LLM tiende a encadenar `LEFT JOIN` entre tablas de diferente granularidad multiplicando sumas.\nLa solución en 2026 es **Text-to-Semantic-Layer**: el agente IA no inventa `JOINs` ni fórmulas matemáticas; traduce la pregunta del usuario a una llamada estructurada contra la **Capa Semántica (MetricFlow / Cube)** indicando `metrics: [\"net_revenue_retention_pct\"]`, `dimensions: [\"customer__segment\"]`, y el compilador determinista de la Capa Semántica genera el SQL garantizado.",
-      "interactive": {
-        "component": "mcp-semantic-vs-raw-sql",
-        "caption": "Simulador interactivo: Servidores MCP, capa semántica y RAG híbrido"
-      }
-    },
-    {
-      "id": "arquitectura-de-un-servidor-mcp-conectado-al-cat",
-      "heading": "Arquitectura de un servidor MCP conectado al catálogo",
-      "body": "El **Model Context Protocol (MCP)** es el estándar abierto universal que conecta clientes de IA (Google AI Ultra, Gemini CLI, Antigravity, IDEs y aplicaciones corporativas) con servidores de contexto y herramientas.\nUn **Servidor MCP de Datos** bien diseñado por DE, DA y BI expone tres primitivas limpias:\n- **Resources (Recursos de solo lectura)**: el catálogo de contratos ODCS, el glosario de métricas certificadas y el linaje de OpenLineage.\n- **Tools (Herramientas ejecutables con esquema JSON estricto)**:\n  1) `search_catalog_hybrid(query)`: busca tablas, columnas y métricas relevantes.\n  2) `query_semantic_metrics(metrics, group_by, where, limit)`: consulta la Capa Semántica con validación determinista.\n  3) `execute_guarded_sql(sql)`: para exploración ad-hoc de DA sobre la capa Silver, protegido por un **parser AST (`SQLGlot`)** que rechaza cualquier sentencia que no sea `SELECT`, inyecta un `LIMIT` máximo, prohíbe acceder a columnas PII y verifica el presupuesto de bytes escaneados antes de tocar el motor.",
-      "example": {
-        "language": "sql",
-        "code": "// 1. El Agente IA consulta el Servidor MCP usando la herramienta gobernada:\nconst response = await mcpServer.callTool(\"query_semantic_metrics\", {\n  metrics: [\"net_revenue_retention_pct\", \"active_paying_customers\"],\n  dimensions: [\"customer__segment\"],\n  where: \"metric_time >= '2026-07-01' AND metric_time < '2026-10-01'\",\n  order_by: [\"-net_revenue_retention_pct\"]\n});\n\n/* 2. El Servidor MCP valida permisos RLS, invoca MetricFlow/Cube y ejecuta\n      el SQL determinista certificado sobre el Snapshot de Apache Iceberg v3: */\n-- SQL Compilado y Auditado por SQLGlot AST (Solo Lectura, Cero Fan-Out):\nSELECT\n  dim_c.segment AS customer__segment,\n  ROUND(100.0 * SUM(fct.retained_mrr_usd) / NULLIF(SUM(fct.starting_mrr_usd), 0), 2)\n    AS net_revenue_retention_pct,\n  COUNT(DISTINCT fct.customer_id) AS active_paying_customers\nFROM gold.fct_mrr_retention_monthly fct\nJOIN gold.dim_customer_scd2 dim_c\n  ON fct.customer_sk = dim_c.customer_sk\nWHERE fct.metric_month BETWEEN DATE '2026-07-01' AND DATE '2026-09-01'\n  AND dim_c.is_test_account = FALSE\nGROUP BY 1;",
-        "expectedOutput": [
+      id: 'riesgo-acceso-crudo-llm',
+      heading: 'El fallo estructural de conectar un LLM a tablas crudas',
+      body: 'Dar a un modelo de lenguaje credenciales de lectura sobre el esquema físico traslada el modelado dimensional a un predictor de tokens. Aunque el modelo conozca la gramática de DuckDB, desconoce las anomalías operativas del negocio.\n\nEn **Mercado Brisa**, la pasarela de cobros registra reintentos de webhook en la tabla `payments`. De las 16,605 filas con estado `captured` vinculadas a órdenes pagadas (`completed` o `refunded`), existen 405 cobros duplicados sobre la misma orden. Un agente sin contexto semántico ejecuta un `SUM(p.amount_usd)` directo. Como resultado, sobreestima el volumen bruto en 168,674.63 USD.\n\nA este error contable se suma el riesgo de seguridad y el desborde de ventana de contexto. Exponer cientos de tablas crudas satura el prompt con columnas irrelevantes. Además, permite que una consulta generada filtre datos personales como `customers.email` o `customers.full_name`. La solución arquitectónica consiste en interponer un protocolo estandarizado entre el modelo y la **capa semántica**.',
+      interactive: {
+        component: 'mcp-semantic-vs-raw-sql',
+        caption: 'Contraste arquitectónico entre acceso SQL directo a tablas crudas y ejecución gobernada mediante servidor MCP.'
+      },
+      example: {
+        language: 'sql',
+        code: `WITH raw_llm AS (
+  SELECT
+    COUNT(p.payment_id) AS payment_rows,
+    ROUND(SUM(p.amount_usd), 2) AS naive_gmv_usd
+  FROM orders o
+  JOIN payments p ON o.order_id = p.order_id
+  WHERE o.status IN ('completed', 'refunded') AND p.status = 'captured'
+),
+governed_mcp AS (
+  SELECT
+    COUNT(DISTINCT o.order_id) AS paid_orders,
+    ROUND(SUM(dp.captured_usd), 2) AS governed_gmv_usd
+  FROM orders o
+  JOIN (
+    SELECT order_id, MIN(amount_usd) AS captured_usd
+    FROM payments
+    WHERE status = 'captured'
+    GROUP BY order_id
+  ) dp ON o.order_id = dp.order_id
+  WHERE o.status IN ('completed', 'refunded')
+)
+SELECT
+  r.payment_rows,
+  g.paid_orders,
+  r.naive_gmv_usd,
+  g.governed_gmv_usd,
+  ROUND(r.naive_gmv_usd - g.governed_gmv_usd, 2) AS webhook_inflation_usd
+FROM raw_llm r
+CROSS JOIN governed_mcp g;`,
+        expectedOutput: [
           {
-            "customer__segment": "Enterprise",
-            "net_revenue_retention_pct": "116.40% (100% Exacto y Reconciliado)",
-            "active_paying_customers": 1240,
-            "linaje_mcp": "Verificado · Contrato ODCS v3 · Snapshot #814"
+            payment_rows: 16605,
+            paid_orders: 16200,
+            naive_gmv_usd: 7043162.63,
+            governed_gmv_usd: 6874488,
+            webhook_inflation_usd: 168674.63
           }
         ]
       }
     },
     {
-      "id": "recuperacion-hibrida-busqueda-bm25-vectorial-hns",
-      "heading": "Recuperación híbrida: búsqueda BM25, vectorial HNSW y RRF",
-      "body": "Cuando una organización tiene 2,500 métricas, 800 modelos en dbt/SQLMesh y miles de documentos de reglas de negocio, no caben ni deben meterse todos en cada prompt. Necesitas recuperar solo los 5–10 elementos relevantes (**Retrieval-Augmented Generation — RAG**).\nSin embargo, usar **únicamente búsqueda vectorial por embeddings** falla estrepitosamente en ingeniería de datos: un embedding denso entiende que *\"cancelación de clientes\"* se parece a *\"churn\"*, pero confunde códigos exactos como `SKU-9941-B`, nombres técnicos de columnas como `fct_mrr_net_v3` o siglas internas.\nLa arquitectura estándar en producción (ejecutable directamente en **DuckDB** con `fts` + `vss` o en formato columnar **Lance**) es la **Búsqueda Híbrida con Reciprocal Rank Fusion (RRF)**:\n$$\\text{RRF\\_Score}(d) = \\frac{1}{k + \\text{rank}_{\\text{BM25}}(d)} + \\frac{1}{k + \\text{rank}_{\\text{Vector}}(d)}$$\nDonde $k = 60$. Así combinas la precisión quirúrgica de palabras clave (**BM25**) con la comprensión conceptual de vectores (**HNSW**)."
-    },
-    {
-      "id": "conjuntos-de-evaluacion-deterministas-y-validaci",
-      "heading": "Conjuntos de evaluación deterministas y validación de SQL",
-      "body": "En 2026, ningún equipo serio despliega un Agente de Datos a producción diciendo *\"lo probé con 3 preguntas y se veía bien\"*. DA y BI construyen un **Golden Evaluation Dataset (Golden Evals)**: una tabla versionada con 100 a 300 preguntas reales de negocio emparejadas con:\n1) Las métricas y dimensiones semánticas esperadas.\n2) El resultado numérico exacto sobre un snapshot fijo de Apache Iceberg (`FOR SYSTEM_TIME AS OF ...`).\nEn cada Pull Request donde se modifica el prompt del agente, las descripciones de la Capa Semántica o el servidor MCP, el pipeline de CI/CD ejecuta los 200 casos y exige **>98% de Execution Accuracy** y **0 violaciones de seguridad** (incluyendo pruebas de *Indirect Prompt Injection* donde un texto malicioso dentro de una columna de comentarios de clientes intenta engañar al LLM para exfiltrar datos)."
+      id: 'arquitectura-mcp-resources-tools',
+      heading: 'Arquitectura del Model Context Protocol (MCP): Resources y Tools',
+      body: 'El **Model Context Protocol (MCP)** estandariza la comunicación entre aplicaciones de IA y fuentes de datos mediante sesiones sobre **JSON-RPC 2.0**. Su arquitectura divide responsabilidades en tres componentes: el **Host** (la aplicación donde interactúa el usuario), el `Client` (el conector interno de sesión) y el `Server` (el proceso ligero que gobierna el acceso).\n\nUn servidor MCP analítico expone dos primitivas centrales. Los **resources** representan metadatos pasivos de solo lectura identificados por un URI, como `semantic://mercado-brisa/metrics/revenue.yaml` o el contrato de datos ODCS de la tabla `stores`. Leer un recurso entrega definiciones verificadas sin ejecutar cómputo pesado.\n\nLas **tools** son funciones ejecutables con parámetros validados mediante **JSON Schema**. En lugar de permitir una herramienta `execute_raw_sql(query)`, el servidor publica `query_regional_revenue(status_filter)`. Esta función invoca internamente una consulta pre-agregada sobre DuckDB, excluye el registro centinela `SKU-TEST-NEG` y garantiza trazabilidad por rol.',
+      example: {
+        language: 'sql',
+        code: `WITH items_by_order AS (
+  SELECT
+    oi.order_id,
+    SUM(oi.line_total_usd) AS gross_item_usd
+  FROM order_items oi
+  JOIN products p ON oi.product_id = p.product_id
+  WHERE p.sku <> 'SKU-TEST-NEG'
+  GROUP BY oi.order_id
+)
+SELECT
+  s.region,
+  COUNT(o.order_id) AS completed_orders,
+  ROUND(SUM(i.gross_item_usd), 2) AS governed_revenue_usd
+FROM orders o
+JOIN stores s ON o.store_id = s.store_id
+JOIN items_by_order i ON o.order_id = i.order_id
+WHERE o.status = 'completed'
+GROUP BY s.region
+ORDER BY governed_revenue_usd DESC;`,
+        expectedOutput: [
+          { region: 'Cono Sur', completed_orders: 4920, governed_revenue_usd: 1797472.18 },
+          { region: 'Andina', completed_orders: 4921, governed_revenue_usd: 1733571.64 },
+          { region: 'Iberia', completed_orders: 2811, governed_revenue_usd: 1174460.14 },
+          { region: 'Norteamérica', completed_orders: 2108, governed_revenue_usd: 758647.22 }
+        ]
+      }
     }
   ],
-  "workedExample": {
-    "title": "Ejemplo guiado: Servidores MCP, capa semántica y RAG híbrido",
-    "description": "Compara el peligro de dejar que un LLM escriba SQL libre sobre tablas crudas frente a un Servidor MCP con validación AST, Búsqueda Híbrida RRF y Capa Semántica:",
-    "audit": "",
-    "steps": [
+  workedExample: {
+    title: 'Implementación de la herramienta MCP get_country_net_captured_revenue',
+    description: 'Debes implementar la lógica SQL que respalda la herramienta MCP `get_country_net_captured_revenue` en Mercado Brisa. El comité financiero exige reportar por `country_code` las órdenes pagadas (`completed` o `refunded`), el monto capturado deduplicando webhooks en `payments`, los reembolsos procesados en `refunds` y el ingreso neto capturado.',
+    audit: 'Cada herramienta MCP debe encapsular las reglas de deduplicación y el alineamiento de grano en el servidor, devolviendo al modelo únicamente agregados certificados.',
+    steps: [
       {
-        "label": "Peligroso: Text-to-SQL Crudo sin Gobernanza ni Validación AST",
-        "explanation": "Compara el peligro de dejar que un LLM escriba SQL libre sobre tablas crudas frente a un Servidor MCP con validación AST, Búsqueda Híbrida RRF y Capa Semántica:",
-        "code": "-- SQL generado a ciegas por un LLM conectado directo al esquema crudo:\n-- 1) Une orders con invoices por user_id provocando un Fan-Out masivo (N:M)\n-- 2) Olvida excluir cuentas de prueba (is_internal_test = false)\n-- 3) Expone emails personales (PII) sin filtro de seguridad\nSELECT\n  u.email,\n  SUM(i.invoice_amount_usd) / SUM(o.order_total_usd) AS nrr_inventado\nFROM raw.users u\nJOIN raw.orders o ON u.user_id = o.user_id\nJOIN raw.invoices i ON u.user_id = i.user_id\nWHERE o.created_at >= '2026-07-01'\nGROUP BY u.email;",
-        "expectedOutput": [
-          {
-            "nrr_reportado": "184.2% (Alucinación grave por Fan-Out N:M)",
-            "fuga_pii": "Expuso 14,200 emails sin enmascarar",
-            "auditabilidad": "Nula (Cada ejecución inventa un SQL distinto)"
-          }
+        label: 'Paso 1: Deduplicar cobros capturados al grano de order_id',
+        explanation: 'Construimos la primera CTE `dedup_payments` al grano exacto de `order_id`. Filtramos `status = \'captured\'` y aplicamos `MIN(amount_usd)` agrupado por orden para eliminar los 405 reintentos de webhook sin alterar el importe real cobrado.',
+        code: `SELECT
+  order_id,
+  MIN(amount_usd) AS captured_usd
+FROM payments
+WHERE status = 'captured'
+GROUP BY order_id
+ORDER BY order_id
+LIMIT 3;`,
+        expectedOutput: [
+          { order_id: 1, captured_usd: 505.84 },
+          { order_id: 2, captured_usd: 208.16 },
+          { order_id: 3, captured_usd: 364.26 }
         ]
       },
       {
-        "label": "Estándar Actual: Servidor MCP + Búsqueda Híbrida RRF + Capa Semántica",
-        "explanation": "Compara ahora la consulta corregida y verifica cómo las filas y totales coinciden con la auditoría.",
-        "code": "// 1. El Agente IA consulta el Servidor MCP usando la herramienta gobernada:\nconst response = await mcpServer.callTool(\"query_semantic_metrics\", {\n  metrics: [\"net_revenue_retention_pct\", \"active_paying_customers\"],\n  dimensions: [\"customer__segment\"],\n  where: \"metric_time >= '2026-07-01' AND metric_time < '2026-10-01'\",\n  order_by: [\"-net_revenue_retention_pct\"]\n});\n\n/* 2. El Servidor MCP valida permisos RLS, invoca MetricFlow/Cube y ejecuta\n      el SQL determinista certificado sobre el Snapshot de Apache Iceberg v3: */\n-- SQL Compilado y Auditado por SQLGlot AST (Solo Lectura, Cero Fan-Out):\nSELECT\n  dim_c.segment AS customer__segment,\n  ROUND(100.0 * SUM(fct.retained_mrr_usd) / NULLIF(SUM(fct.starting_mrr_usd), 0), 2)\n    AS net_revenue_retention_pct,\n  COUNT(DISTINCT fct.customer_id) AS active_paying_customers\nFROM gold.fct_mrr_retention_monthly fct\nJOIN gold.dim_customer_scd2 dim_c\n  ON fct.customer_sk = dim_c.customer_sk\nWHERE fct.metric_month BETWEEN DATE '2026-07-01' AND DATE '2026-09-01'\n  AND dim_c.is_test_account = FALSE\nGROUP BY 1;",
-        "expectedOutput": [
-          {
-            "customer__segment": "Enterprise",
-            "net_revenue_retention_pct": "116.40% (100% Exacto y Reconciliado)",
-            "active_paying_customers": 1240,
-            "linaje_mcp": "Verificado · Contrato ODCS v3 · Snapshot #814"
-          }
+        label: 'Paso 2: Pre-agregar devoluciones procesadas al grano de order_id',
+        explanation: 'Construimos la segunda CTE `order_refunds` también al grano de `order_id`, sumando `refund_amount_usd` únicamente para devoluciones con `status = \'processed\'`. Aislar ambos hechos en CTEs separadas impide cualquier multiplicación cruzada de filas.',
+        code: `SELECT
+  order_id,
+  ROUND(SUM(refund_amount_usd), 2) AS refunded_usd
+FROM refunds
+WHERE status = 'processed'
+GROUP BY order_id
+ORDER BY order_id
+LIMIT 3;`,
+        expectedOutput: [
+          { order_id: 8, refunded_usd: 158.95 },
+          { order_id: 18, refunded_usd: 418.42 },
+          { order_id: 22, refunded_usd: 56.6 }
+        ]
+      },
+      {
+        label: 'Paso 3: Unir CTEs 1:1 con orders y stores para el payload MCP',
+        explanation: 'Unimos `orders` y `stores` con ambas CTEs pre-agregadas usando `LEFT JOIN` para `order_refunds` y `COALESCE(..., 0)`. Así obtenemos la tabla exacta que el servidor MCP serializa en JSON-RPC hacia el cliente.',
+        code: `WITH dedup_payments AS (
+  SELECT order_id, MIN(amount_usd) AS captured_usd
+  FROM payments
+  WHERE status = 'captured'
+  GROUP BY order_id
+),
+order_refunds AS (
+  SELECT order_id, SUM(refund_amount_usd) AS refunded_usd
+  FROM refunds
+  WHERE status = 'processed'
+  GROUP BY order_id
+)
+SELECT
+  s.country_code,
+  COUNT(DISTINCT o.order_id) AS paid_orders,
+  ROUND(SUM(dp.captured_usd), 2) AS captured_gmv_usd,
+  ROUND(COALESCE(SUM(r.refunded_usd), 0), 2) AS refunded_usd,
+  ROUND(SUM(dp.captured_usd) - COALESCE(SUM(r.refunded_usd), 0), 2) AS net_captured_revenue_usd
+FROM orders o
+JOIN stores s ON o.store_id = s.store_id
+JOIN dedup_payments dp ON o.order_id = dp.order_id
+LEFT JOIN order_refunds r ON o.order_id = r.order_id
+WHERE o.status IN ('completed', 'refunded')
+GROUP BY s.country_code
+ORDER BY net_captured_revenue_usd DESC;`,
+        expectedOutput: [
+          { country_code: 'ES', paid_orders: 3085, captured_gmv_usd: 1482611.35, refunded_usd: 43170.94, net_captured_revenue_usd: 1439440.41 },
+          { country_code: 'AR', paid_orders: 3086, captured_gmv_usd: 1213180.17, refunded_usd: 37523.35, net_captured_revenue_usd: 1175656.82 },
+          { country_code: 'CO', paid_orders: 3086, captured_gmv_usd: 1213387.55, refunded_usd: 75353.66, net_captured_revenue_usd: 1138033.89 },
+          { country_code: 'CL', paid_orders: 2315, captured_gmv_usd: 1043297.01, refunded_usd: 40468.47, net_captured_revenue_usd: 1002828.54 },
+          { country_code: 'PE', paid_orders: 2314, captured_gmv_usd: 967124.31, refunded_usd: 40025.57, net_captured_revenue_usd: 927098.74 },
+          { country_code: 'MX', paid_orders: 2314, captured_gmv_usd: 954887.61, refunded_usd: 37992.53, net_captured_revenue_usd: 916895.08 }
         ]
       }
     ]
   },
-  "checks": [
+  checks: [
     {
-      "id": "c1",
-      "type": "mcq",
-      "prompt": "En una auditoría de un servidor MCP de datos, encuentras una herramienta `execute_sql(query)` protegida solo con `if (!query.startsWith(\"SELECT\"))` y una nota en el prompt pidiendo no leer la tabla de salarios. ¿Por qué esta defensa falla y qué control se debe aplicar?",
-      "options": [
+      id: 'chk-x4-01-mcp-primitives',
+      type: 'mcq',
+      prompt: 'En la especificación del Model Context Protocol (MCP), ¿qué primitiva debe utilizarse para exponer de forma pasiva el archivo YAML con definiciones de métricas y contratos de datos identificado por un URI?',
+      options: [
         {
-          "id": "a",
-          "text": "Las instrucciones en el prompt son vulnerables a Prompt Injection y una regex simple puede evadirse con comentarios, CTEs o funciones laterales; en producción se exige defensa en profundidad: credenciales de base de datos nativas de solo lectura con permisos restringidos a vistas autorizadas, Row-Level Security (RLS) y validación del Árbol Sintáctico Abstracto (AST con SQLGlot) que inspeccione cada tabla y columna referenciada.",
-          "correct": true,
-          "feedback": "Exacto. Un System Prompt jamás es una frontera de seguridad. La seguridad de un Servidor MCP reside en permisos reales de motor (Read-Only + vistas gobernadas + RLS), parseo AST estricto con SQLGlot y límites de recursos."
+          id: 'a',
+          text: 'Tools, porque permiten ejecutar funciones con efectos secundarios sobre el motor.',
+          correct: false,
+          feedback: 'Incorrecto. Las tools están diseñadas para invocar acciones o consultas parametrizadas, no para exponer archivos de catálogo pasivos.'
         },
         {
-          "id": "b",
-          "text": "Escribir \"POR FAVOR NUNCA BORRES NADA\" en mayúsculas dentro del System Prompt garantiza matemáticamente el 100% de seguridad en cualquier motor SQL.",
-          "correct": false,
-          "feedback": "Un modelo de lenguaje siempre puede ser manipulado mediante Prompt Injection directo o indirecto; la seguridad debe aplicarse de forma determinista fuera del LLM."
+          id: 'b',
+          text: 'Resources, porque exponen datos y metadatos contextuales de solo lectura direccionables mediante URI.',
+          correct: true,
+          feedback: 'Correcto. Los resources en MCP entregan definiciones, esquemas y contratos identificados por URI sin efectos secundarios.'
         },
         {
-          "id": "c",
-          "text": "Basta con ocultar los nombres de las tablas porque ningún LLM puede ejecutar `SELECT * FROM information_schema.tables`.",
-          "correct": false,
-          "feedback": "La seguridad por oscuridad no protege los datos; una cuenta con permisos excesivos puede listar el catálogo del sistema si no está restringida a nivel de motor y AST."
+          id: 'c',
+          text: 'Sampling, porque delega en el cliente la generación de SQL libre sobre tablas crudas.',
+          correct: false,
+          feedback: 'Incorrecto. Sampling permite que el servidor solicite completaciones al cliente, pero no expone catálogos por URI.'
+        },
+        {
+          id: 'd',
+          text: 'Prompts, porque abren una conexión ODBC directa entre el navegador y DuckDB.',
+          correct: false,
+          feedback: 'Incorrecto. Los prompts son plantillas de interacción reutilizables y nunca abren conexiones directas al motor.'
         }
       ],
-      "explanation": "Exacto. Un System Prompt jamás es una frontera de seguridad. La seguridad de un Servidor MCP reside en permisos reales de motor (Read-Only + vistas gobernadas + RLS), parseo AST estricto con SQLGlot y límites de recursos."
+      explanation: 'En MCP, los resources representan contenido contextual pasivo y de solo lectura identificado por URI (como esquemas, contratos ODCS o catálogos YAML), mientras que las tools ejecutan acciones o consultas parametrizadas.'
     },
     {
-      "id": "c2",
-      "type": "mcq",
-      "prompt": "Un usuario busca en el catálogo la columna exacta `cust_tax_id_mx`. La búsqueda solo por embeddings vectoriales devuelve columnas genéricas de clientes pero no acierta el identificador exacto. ¿Qué componente soluciona este fallo?",
-      "options": [
+      id: 'chk-x4-01-webhook-inflation',
+      type: 'predict-output',
+      prompt: 'En Mercado Brisa existen 16,200 órdenes pagadas (`completed` o `refunded`), pero la tabla `payments` contiene 16,605 registros con `status = \'captured\'` debido a reintentos de webhook. ¿Qué ocurre si un agente ejecuta `SELECT COUNT(*), SUM(p.amount_usd) FROM orders o JOIN payments p USING (order_id)`?',
+      options: [
         {
-          "id": "a",
-          "text": "Combinar búsqueda léxica BM25 con búsqueda vectorial mediante Reciprocal Rank Fusion (RRF).",
-          "correct": true,
-          "feedback": "Correcto: BM25 puntúa alto las coincidencias exactas de tokens raros como cust_tax_id_mx y RRF fusiona ambos rankings."
+          id: 'a',
+          text: 'Devuelve 16,200 órdenes y el GMV exacto porque DuckDB deduplica claves foráneas automáticamente.',
+          correct: false,
+          feedback: 'Incorrecto. Ningún motor SQL deduplica filas automáticamente en un INNER JOIN cuando existen varios registros hijos por clave.'
         },
         {
-          "id": "b",
-          "text": "Subir la temperatura del modelo generativo a 1.5.",
-          "correct": false,
-          "feedback": "Incorrecto: aumentar la temperatura incrementa la aleatoriedad de la respuesta, no la precisión del recuperador."
+          id: 'b',
+          text: 'Devuelve 16,605 filas e infla el GMV en 168,674.63 USD al sumar dos veces los cobros con webhook duplicado.',
+          correct: true,
+          feedback: 'Correcto. Los 405 reintentos de webhook multiplican las órdenes afectadas y elevan la suma de 6,874,488.00 USD a 7,043,162.63 USD.'
         },
         {
-          "id": "c",
-          "text": "Eliminar los nombres de columnas de la base de datos.",
-          "correct": false,
-          "feedback": "Incorrecto: empeoraría tanto la recuperación como la generación de consultas."
+          id: 'c',
+          text: 'Falla con un error de sintaxis por no incluir una cláusula GROUP BY.',
+          correct: false,
+          feedback: 'Incorrecto. COUNT(*) y SUM(...) sin columnas adicionales son agregaciones globales válidas sin GROUP BY.'
+        },
+        {
+          id: 'd',
+          text: 'Devuelve NULL porque las órdenes reembolsadas anulan la tabla payments.',
+          correct: false,
+          feedback: 'Incorrecto. Las órdenes con estado refunded conservan su cobro capturado en payments.'
         }
       ],
-      "explanation": "En catálogos de datos coexisten preguntas conceptuales (\"abandono de clientes\") y términos literales (\"col_churn_30d\"), por lo que la fusión híbrida BM25 + HNSW es el estándar."
+      explanation: 'Al existir una relación 1:N accidental en payments por los 405 reintentos de webhook, el JOIN directo multiplica las órdenes afectadas y suma 7,043,162.63 USD en lugar de 6,874,488.00 USD.'
     },
     {
-      "id": "c3",
-      "type": "mcq",
-      "prompt": "Antes de actualizar el modelo o el prompt de tu agente de consultas, ejecutas tu suite de 100 preguntas de referencia (evals). ¿Qué criterio verifica realmente que la respuesta del agente es matemáticamente correcta?",
-      "options": [
+      id: 'chk-x4-01-spot-bug-mcp',
+      type: 'mcq',
+      prompt: 'Un ingeniero implementa la herramienta MCP `get_category_revenue` con `SELECT p.category, SUM(oi.line_total_usd) FROM orders o JOIN order_items oi USING (order_id) JOIN products p USING (product_id) WHERE o.status = \'completed\' GROUP BY 1`. ¿Qué regla de gobernanza de Mercado Brisa falta aplicar?',
+      options: [
         {
-          "id": "a",
-          "text": "Ejecutar la consulta generada en un entorno de prueba y comparar el DataFrame resultante (filas y valores con tolerancia numérica) contra la consulta de referencia.",
-          "correct": true,
-          "feedback": "Correcto: dos consultas SQL escritas de forma distinta son equivalentes si producen exactamente el mismo resultado sobre el dataset de prueba."
+          id: 'a',
+          text: 'Falta excluir el producto centinela con `p.sku <> \'SKU-TEST-NEG\'`, cuyo precio negativo distorsiona la categoría.',
+          correct: true,
+          feedback: 'Correcto. El registro de prueba SKU-TEST-NEG tiene list_price_usd = -9.99 y debe excluirse en la capa semántica.'
         },
         {
-          "id": "b",
-          "text": "Comprobar únicamente con `===` si el texto SQL generado es idéntico carácter por carácter al SQL de referencia.",
-          "correct": false,
-          "feedback": "Incorrecto: una consulta puede usar un alias distinto o una CTE equivalente y dar el resultado exacto aunque el string difiera."
+          id: 'b',
+          text: 'Falta usar RIGHT JOIN con la tabla events para contar sesiones anónimas.',
+          correct: false,
+          feedback: 'Incorrecto. Unir eventos de telemetría con líneas de pedido provocaría un fan-out masivo.'
         },
         {
-          "id": "c",
-          "text": "Preguntarle al mismo modelo si cree que su respuesta suena convincente.",
-          "correct": false,
-          "feedback": "Incorrecto: un LLM puede validar como \"convincente\" un número que proviene de un JOIN con fan-out."
+          id: 'c',
+          text: 'Falta agrupar por `oi.order_item_id` en el SELECT final.',
+          correct: false,
+          feedback: 'Incorrecto. Agrupar por order_item_id destruiría la agregación por categoría de producto.'
+        },
+        {
+          id: 'd',
+          text: 'Falta convertir `line_total_usd` a texto mediante CAST.',
+          correct: false,
+          feedback: 'Incorrecto. SUM requiere un tipo numérico como DOUBLE o DECIMAL, nunca VARCHAR.'
         }
       ],
-      "explanation": "La evaluación por ejecución (execution accuracy) sobre datos controlados verifica la exactitud del resultado final sin penalizar variaciones sintácticas válidas."
+      explanation: 'El catálogo de Mercado Brisa incluye el registro de prueba `SKU-TEST-NEG` con precio de lista `-9.99`. La capa semántica detrás de toda tool MCP debe filtrarlo sistemáticamente.'
+    },
+    {
+      id: 'chk-x4-01-fill-blank',
+      type: 'fill-code',
+      prompt: 'Completa el protocolo de transporte estándar que utiliza MCP para intercambiar mensajes estructurados de solicitud, respuesta y notificación entre el cliente y el servidor:',
+      template: 'Protocolo de mensajería MCP: {{b1}} 2.0',
+      blanks: [
+        {
+          id: 'b1',
+          accepted: ['JSON-RPC', 'json-rpc', 'JSONRPC', 'jsonrpc']
+        }
+      ],
+      explanation: 'Model Context Protocol utiliza JSON-RPC 2.0 como protocolo de mensajería sobre stdio o HTTP con Server-Sent Events (SSE) para negociar capacidades e invocar resources y tools.'
     }
   ],
-  "practice": {
-    "type": "fill-blanks",
-    "title": "Reto Hybrid RAG en SQL: Reciprocal Rank Fusion (BM25 + Vectores HNSW) para Catálogo MCP",
-    "language": "sql",
-    "prompt": "Completa la consulta en DuckDB que implementa el buscador híbrido del Servidor MCP para encontrar las métricas más relevantes del catálogo: combina el ranking léxico exacto (`bm25_rank`) con el ranking semántico vectorial (`vec_rank`) usando la fórmula estándar de **Reciprocal Rank Fusion (RRF)** con constante `60`, une ambos resultados con `FULL OUTER JOIN` para no perder candidatos que aparezcan en un solo índice y ordena por `rrf_score DESC`.",
-    "starterCode": "WITH lexical_bm25 AS (\n  SELECT\n    metric_name,\n    ROW_NUMBER() OVER (ORDER BY bm25_score DESC) AS bm25_rank\n  FROM catalog.metrics_fts_search('nrr retencion neta enterprise')\n  LIMIT 25\n),\nsemantic_vector AS (\n  SELECT\n    metric_name,\n    ROW_NUMBER() OVER (ORDER BY array_cosine_distance(embedding, $query_vec) ASC) AS vec_rank\n  FROM catalog.metrics_embeddings\n  LIMIT 25\n)\nSELECT\n  COALESCE(l.metric_name, s.metric_name) AS metric_name,\n  l.bm25_rank,\n  s.vec_rank,\n  ROUND(\n    COALESCE(1.0 / ({{b1}} + l.bm25_rank), 0.0) +\n    COALESCE(1.0 / (60 + s.vec_rank), 0.0),\n    5\n  ) AS rrf_score\nFROM lexical_bm25 l\n{{b2}} semantic_vector s\n  ON l.metric_name = s.metric_name\nORDER BY {{b3}}\nLIMIT 5;",
-    "expected": "WITH lexical_bm25 AS (\n  SELECT\n    metric_name,\n    ROW_NUMBER() OVER (ORDER BY bm25_score DESC) AS bm25_rank\n  FROM catalog.metrics_fts_search('nrr retencion neta enterprise')\n  LIMIT 25\n),\nsemantic_vector AS (\n  SELECT\n    metric_name,\n    ROW_NUMBER() OVER (ORDER BY array_cosine_distance(embedding, $query_vec) ASC) AS vec_rank\n  FROM catalog.metrics_embeddings\n  LIMIT 25\n)\nSELECT\n  COALESCE(l.metric_name, s.metric_name) AS metric_name,\n  l.bm25_rank,\n  s.vec_rank,\n  ROUND(\n    COALESCE(1.0 / ({{b1}} + l.bm25_rank), 0.0) +\n    COALESCE(1.0 / (60 + s.vec_rank), 0.0),\n    5\n  ) AS rrf_score\nFROM lexical_bm25 l\n{{b2}} semantic_vector s\n  ON l.metric_name = s.metric_name\nORDER BY {{b3}}\nLIMIT 5;",
-    "orderMatters": true,
-    "hints": [
-      "Constante de suavizado RRF estándar: En Reciprocal Rank Fusion (`1 / (k + rank)`), la constante estándar `k` que evita que un único #1 domine desproporcionadamente es `60`.",
-      "Tipo de JOIN para conservar hallazgos de ambos buscadores: Una métrica puede aparecer en el top 25 de BM25 (por sigla exacta) o solo en el top 25 vectorial (por sinónimo); usa `FULL OUTER JOIN` para unir ambas listas.",
-      "Criterio de ordenamiento final: Ordena de mayor a menor puntaje fusionado (`rrf_score DESC`)."
+  practice: {
+    type: 'sql',
+    title: 'Herramienta MCP get_category_governed_revenue sobre Mercado Brisa',
+    language: 'sql',
+    prompt: 'Implementa la consulta SQL que respalda la herramienta MCP `get_category_governed_revenue` sobre Mercado Brisa. Para todos los pedidos con `o.status = \'completed\'` y excluyendo el SKU centinela (`p.sku <> \'SKU-TEST-NEG\'`), calcula por cada `category` de `products`: el número de órdenes distintas completadas (`completed_orders`), el ingreso bruto de líneas redondeado a 2 decimales (`gross_item_revenue_usd` usando `SUM(oi.line_total_usd)`) y el ticket promedio por orden en la categoría redondeado a 2 decimales (`avg_category_order_usd`, dividiendo `SUM(oi.line_total_usd)` entre `COUNT(DISTINCT o.order_id)`). Ordena por `gross_item_revenue_usd DESC`.',
+    starterCode: `-- Corrige la consulta de la herramienta MCP get_category_governed_revenue:
+-- 1. Usa COUNT(DISTINCT o.order_id) para no inflar órdenes por número de líneas.
+-- 2. Filtra el producto de prueba p.sku <> 'SKU-TEST-NEG'.
+SELECT
+  p.category,
+  COUNT(*) AS completed_orders,
+  ROUND(SUM(oi.line_total_usd), 2) AS gross_item_revenue_usd,
+  ROUND(SUM(oi.line_total_usd) / COUNT(*), 2) AS avg_category_order_usd
+FROM orders o
+JOIN order_items oi ON o.order_id = oi.order_id
+JOIN products p ON oi.product_id = p.product_id
+WHERE o.status = 'completed'
+GROUP BY p.category
+ORDER BY gross_item_revenue_usd DESC;`,
+    solution: `SELECT
+  p.category,
+  COUNT(DISTINCT o.order_id) AS completed_orders,
+  ROUND(SUM(oi.line_total_usd), 2) AS gross_item_revenue_usd,
+  ROUND(SUM(oi.line_total_usd) / COUNT(DISTINCT o.order_id), 2) AS avg_category_order_usd
+FROM orders o
+JOIN order_items oi ON o.order_id = oi.order_id
+JOIN products p ON oi.product_id = p.product_id
+WHERE o.status = 'completed'
+  AND p.sku <> 'SKU-TEST-NEG'
+GROUP BY p.category
+ORDER BY gross_item_revenue_usd DESC;`,
+    solutionExplanation: 'Al usar COUNT(DISTINCT o.order_id) respetamos el grano de orden en lugar de contar líneas de artículos, y al filtrar p.sku <> \'SKU-TEST-NEG\' evitamos que el producto centinela de prueba distorsione los ingresos de la categoría.',
+    expectedOutputTable: [
+      { category: 'Molinos', completed_orders: 6245, gross_item_revenue_usd: 2163162.27, avg_category_order_usd: 346.38 },
+      { category: 'Cafeteras', completed_orders: 6250, gross_item_revenue_usd: 1643366.45, avg_category_order_usd: 262.94 },
+      { category: 'Suscripciones', completed_orders: 6167, gross_item_revenue_usd: 657384.31, avg_category_order_usd: 106.6 },
+      { category: 'Accesorios', completed_orders: 6247, gross_item_revenue_usd: 586859.56, avg_category_order_usd: 93.94 },
+      { category: 'Café en grano', completed_orders: 6246, gross_item_revenue_usd: 413378.59, avg_category_order_usd: 66.18 }
     ],
-    "solution": "WITH lexical_bm25 AS (\n  SELECT\n    metric_name,\n    ROW_NUMBER() OVER (ORDER BY bm25_score DESC) AS bm25_rank\n  FROM catalog.metrics_fts_search('nrr retencion neta enterprise')\n  LIMIT 25\n),\nsemantic_vector AS (\n  SELECT\n    metric_name,\n    ROW_NUMBER() OVER (ORDER BY array_cosine_distance(embedding, $query_vec) ASC) AS vec_rank\n  FROM catalog.metrics_embeddings\n  LIMIT 25\n)\nSELECT\n  COALESCE(l.metric_name, s.metric_name) AS metric_name,\n  l.bm25_rank,\n  s.vec_rank,\n  ROUND(\n    COALESCE(1.0 / ({{b1}} + l.bm25_rank), 0.0) +\n    COALESCE(1.0 / (60 + s.vec_rank), 0.0),\n    5\n  ) AS rrf_score\nFROM lexical_bm25 l\n{{b2}} semantic_vector s\n  ON l.metric_name = s.metric_name\nORDER BY {{b3}}\nLIMIT 5;",
-    "solutionExplanation": "Combina búsqueda léxica (BM25) y búsqueda vectorial (distancia coseno / HNSW) mediante Reciprocal Rank Fusion (`1 / (60 + rank)`). Utiliza `FULL OUTER JOIN` junto con `COALESCE` para puntuar correctamente documentos presentes en uno o en ambos índices. Prioriza los resultados con mayor `rrf_score` antes de inyectar las definiciones semánticas en el contexto del Servidor MCP.",
-    "blanks": [
-      {
-        "id": "b1",
-        "placeholder": "Constante de suavizado RRF estándar",
-        "acceptedAnswers": [
-          "60",
-          "60.0"
-        ],
-        "hint": "En Reciprocal Rank Fusion (`1 / (k + rank)`), la constante estándar `k` que evita que un único #1 domine desproporcionadamente es `60`."
-      },
-      {
-        "id": "b2",
-        "placeholder": "Tipo de JOIN para conservar hallazgos de ambos buscadores",
-        "acceptedAnswers": [
-          "FULL OUTER JOIN",
-          "FULL JOIN"
-        ],
-        "hint": "Una métrica puede aparecer en el top 25 de BM25 (por sigla exacta) o solo en el top 25 vectorial (por sinónimo); usa `FULL OUTER JOIN` para unir ambas listas."
-      },
-      {
-        "id": "b3",
-        "placeholder": "Criterio de ordenamiento final",
-        "acceptedAnswers": [
-          "rrf_score DESC",
-          "rrf_score desc",
-          "4 DESC"
-        ],
-        "hint": "Ordena de mayor a menor puntaje fusionado (`rrf_score DESC`)."
-      }
-    ],
-    "expectedOutputTable": [
-      {
-        "metric_name": "net_revenue_retention_pct",
-        "bm25_rank": 1,
-        "vec_rank": 1,
-        "rrf_score": 0.03279
-      },
-      {
-        "metric_name": "enterprise_gross_retention_pct",
-        "bm25_rank": 2,
-        "vec_rank": 3,
-        "rrf_score": 0.032
-      },
-      {
-        "metric_name": "expansion_mrr_net_usd",
-        "bm25_rank": 5,
-        "vec_rank": 2,
-        "rrf_score": 0.03151
-      }
-    ],
-    "rubricCriteria": [
-      "Combina búsqueda léxica (BM25) y búsqueda vectorial (distancia coseno / HNSW) mediante Reciprocal Rank Fusion (`1 / (60 + rank)`).",
-      "Utiliza `FULL OUTER JOIN` junto con `COALESCE` para puntuar correctamente documentos presentes en uno o en ambos índices.",
-      "Prioriza los resultados con mayor `rrf_score` antes de inyectar las definiciones semánticas en el contexto del Servidor MCP."
+    orderMatters: true,
+    hints: [
+      'Cada orden puede tener múltiples líneas en order_items; reemplaza COUNT(*) por COUNT(DISTINCT o.order_id) tanto en completed_orders como en el denominador de avg_category_order_usd.',
+      'Agrega la condición AND p.sku <> \'SKU-TEST-NEG\' en la cláusula WHERE para excluir el artículo de prueba con precio negativo.',
+      'Verifica que las cuatro columnas se llamen exactamente category, completed_orders, gross_item_revenue_usd y avg_category_order_usd.'
     ]
   },
-  "roleNotes": {
-    "de": "Construye el Servidor MCP con credenciales de base de datos estrictamente `READ ONLY`, timeouts de 10 segundos y validación sintáctica AST mediante `SQLGlot` (bloqueando `DROP`, `GRANT`, `COPY` o tablas fuera de la lista blanca). Indexa los metadatos del catálogo, contratos ODCS y documentación en tablas **Lance / DuckDB** con índices híbridos BM25 + HNSW actualizados en cada despliegue de CI/CD.",
-    "da": "Crea y mantiene el benchmark de **Golden Evals** estratificado por dificultad (agregaciones simples, comparativas temporales YoY, cohortes, casos ambiguos que requieren pedir aclaración). Programa herramientas MCP de verificación estadística para que el agente calcule intervalos de confianza y chequeos de Paradoja de Simpson antes de afirmar por qué subió o bajó un KPI.",
-    "bi": "Enriquece cada métrica y dimensión en la Capa Semántica YAML con `description`, `synonyms` (ej. *\"facturación recurrente\", \"ARR mensual\", \"MRR\"*) y ejemplos de uso: **en 2026, documentar BI es programar el contexto del Agente IA**. Diseña experiencias de **GenBI Auditable**: cada respuesta del asistente IA en el portal incluye obligatoriamente el badge de la métrica oficial, el bloque SQL compilado desplegable y el enlace al dashboard certificado."
-  },
-  "summary": [
-    "Pedir a un LLM que escriba JOINs sobre tablas crudas sin contexto semántico produce errores de grano y filtros.",
-    "El protocolo MCP expone herramientas tipadas de solo lectura hacia el catálogo y la capa semántica.",
-    "La recuperación híbrida (BM25 + vectores con fusión RRF) localiza tanto nombres exactos de columnas como conceptos.",
-    "Un sistema de IA de datos se audita con un conjunto de preguntas y resultados de referencia antes de cada despliegue."
-  ],
-  "flashcards": [
-    {
-      "id": "fc-x4-mcp-01",
-      "front": "¿Por qué es más fiable que un agente invoque `query_semantic_layer(metrics, dimensions)` en vez de generar SQL libre sobre tablas crudas?",
-      "back": "Porque el motor semántico ya tiene codificadas las fórmulas auditadas, los filtros de exclusión y las pre-agregaciones contra fan-out."
-    },
-    {
-      "id": "fc-x4-mcp-02",
-      "front": "¿Por qué la búsqueda híbrida (BM25 + Embeddings con RRF) supera a la búsqueda vectorial pura al buscar metadatos de tablas?",
-      "back": "Porque los embeddings capturan sinónimos conceptuales, pero BM25 es exacto para identificadores técnicos literales como `sku_id_v2` o códigos de error."
-    },
-    {
-      "id": "fc-x4-mcp-03",
-      "front": "¿Por qué una instrucción en el prompt del sistema (\"No leas la tabla de salarios\") NO es un control de seguridad válido?",
-      "back": "Porque es vulnerable a inyección de prompts; la seguridad real exige credenciales de base de datos de solo lectura, RLS y vistas restringidas en el servidor."
-    }
-  ],
-  "glossaryTerms": [
-    "c28-mcp-semantic-rag-evals",
-    "c21-semantic-layer"
-  ],
-  "sources": [
-    {
-      "title": "Model Context Protocol (MCP) Official Specification — Architecture, Resources, and Tools",
-      "url": "https://modelcontextprotocol.io/specification/2025-03-26",
-      "publisher": "Model Context Protocol Project",
-      "accessed": "2026-10-29",
-      "supports": "Arquitectura cliente-servidor MCP y exposición segura de herramientas tipadas hacia modelos."
-    },
-    {
-      "title": "Cormack, Clarke & Buettcher (SIGIR 2009) — Reciprocal Rank Fusion Outperforms Condorcet and Individual Rank Learning Methods",
-      "url": "https://plg.uwaterloo.ca/~gvcormac/cormacksigir09-rrf.pdf",
-      "publisher": "ACM SIGIR",
-      "accessed": "2026-10-29",
-      "supports": "Fórmula de fusión de rankings RRF para combinar recuperadores léxicos y vectoriales."
-    },
-    {
-      "title": "Yu et al. / Yale LILY Lab — Spider & BIRD Text-to-SQL Execution Accuracy Benchmarks",
-      "url": "https://bird-bench.github.io/",
-      "publisher": "HKU / DAMO Academy",
-      "accessed": "2026-10-29",
-      "supports": "Metodología de evaluación de agentes SQL mediante exactitud de ejecución frente a consultas de referencia."
-    }
-  ],
-  "aiNotes": "Insiste en dos principios: un LLM nunca debe conectarse con permisos de escritura o sin capa semántica a tablas crudas, y el prompt del sistema no sustituye a los permisos del motor de base de datos.",
-  "needsReview": true,
-  "legacyId": "l18-mcp-semantic-ai-rag",
-  "legacyOrder": 18,
-  "stageId": "stage-6",
-  "subtitle": "Conexión de agentes de lenguaje a métricas gobernadas, búsqueda léxico-vectorial y evaluación sistemática.",
-  "goal": "Diseñar una arquitectura de Agentes de Datos en producción usando Model Context Protocol (MCP) conectado a la Capa Semántica, implementar búsqueda híbrida (BM25 + Vectores HNSW con Reciprocal Rank Fusion) sobre esquemas y documentos, aplicar guardrails de seguridad SQLGlot AST y certificar la precisión con un conjunto de Golden Evals.",
-  "pipelineChallenge": {
-    "title": "Arquitectura Agente IA + Datos 2026: De la Pregunta en Lenguaje Natural al KPI Certificado",
-    "scenario": "Ordena el flujo de ejecución seguro cuando un directivo o analista realiza una pregunta de negocio al Agente conectado por Model Context Protocol (MCP).",
-    "steps": [
-      {
-        "id": "mcp-1",
-        "label": "1. Recuperación de Contexto con Búsqueda Híbrida (BM25 + HNSW + RRF) vía MCP",
-        "role": "DE",
-        "detail": "El servidor MCP busca en el catálogo de métricas y contratos ODCS los términos exactos y sinónimos semánticos sin saturar la ventana de contexto."
-      },
-      {
-        "id": "mcp-2",
-        "label": "2. Resolución Semántica de Métricas, Dimensiones y Filtros Certificados",
-        "role": "BI",
-        "detail": "El agente selecciona la métrica gobernada (`net_revenue_retention_pct`) en la Capa Semántica en lugar de adivinar joins sobre tablas crudas."
-      },
-      {
-        "id": "mcp-3",
-        "label": "3. Compilación Determinista y Guardrail de Seguridad AST (SQLGlot + RLS)",
-        "role": "DE",
-        "detail": "El servidor compila el SQL, verifica con SQLGlot que sea estrictamente `SELECT` sin acceso a columnas PII y aplica los permisos del usuario."
-      },
-      {
-        "id": "mcp-4",
-        "label": "4. Ejecución sobre Snapshot Reproducible (Iceberg v3) y Chequeo Estadístico",
-        "role": "DA",
-        "detail": "La consulta corre sobre el Lakehouse devolviendo el resultado exacto junto con el ID de Snapshot y validaciones de tamaño muestral."
-      },
-      {
-        "id": "mcp-5",
-        "label": "5. Respuesta Auditable con Linaje y Validación Continua contra Golden Evals",
-        "role": "BI",
-        "detail": "El usuario recibe el KPI exacto con el código SQL transparente y el sistema registra la traza para el benchmark de Golden Evals."
-      }
+  pipelineChallenge: {
+    title: 'Flujo de ejecución segura en un servidor MCP analítico',
+    prompt: 'Ordena cronológicamente los 5 pasos desde que una analista formula una pregunta en lenguaje natural hasta que recibe la cifra gobernada desde DuckDB:',
+    steps: [
+      { id: 's1', text: 'El Host recibe la pregunta de negocio e inspecciona los resources MCP para consultar las métricas y dimensiones disponibles.' },
+      { id: 's2', text: 'El modelo selecciona la tool MCP tipada (por ejemplo, get_category_governed_revenue) y emite una solicitud JSON-RPC 2.0 con parámetros estructurados.' },
+      { id: 's3', text: 'El servidor MCP valida los argumentos contra el JSON Schema y verifica los permisos del rol solicitante.' },
+      { id: 's4', text: 'El servidor MCP ejecuta la plantilla SQL pre-agregada sobre DuckDB excluyendo SKU-TEST-NEG y webhooks duplicados.' },
+      { id: 's5', text: 'El servidor devuelve el resultado tabular certificado al Host para que el modelo redacte la respuesta final con trazabilidad.' }
     ],
-    "explanation": "Al combinar Búsqueda Híbrida RRF, Capa Semántica, validación AST con SQLGlot y Golden Evals sobre snapshots de Iceberg v3, transformas un LLM probabilístico en un sistema analítico determinista, seguro y 100% auditable."
+    correctOrder: ['s1', 's2', 's3', 's4', 's5'],
+    hint: 'Primero se consulta el catálogo mediante resources, luego se invoca la tool por JSON-RPC, se valida el esquema en el servidor, se ejecuta en DuckDB y finalmente se entrega la respuesta.'
   },
-  "relatedLessons": [
+  roleNotes: {
+    de: 'Como Ingeniero de Datos, tu responsabilidad es construir y mantener los servidores MCP y las vistas semánticas subyacentes. Nunca expongas credenciales de superusuario ni herramientas de SQL libre; encapsula la deduplicación de webhooks y exclusión de SKUs de prueba en la capa gobernada.',
+    da: 'Como Analista de Datos, defines la lógica canónica de cada métrica y auditas que los recursos expuestos en el catálogo MCP reflejen fielmente los denominadores, filtros de estado y reglas de grano del negocio.',
+    bi: 'Como especialista en BI, conectas asistentes conversacionales y tableros al mismo servidor de métricas gobernadas, asegurando que el número reportado en el chat ejecutivo coincida al centavo con el informe oficial.'
+  },
+  summary: [
+    'Conectar un LLM directamente a tablas crudas genera alucinaciones contables por webhooks duplicados, SKUs de prueba y diferencias de grano.',
+    'El Model Context Protocol (MCP) desacopla los clientes de IA del almacén mediante sesiones JSON-RPC 2.0 con aislamiento de permisos.',
+    'Los resources de MCP exponen metadatos pasivos por URI, mientras que las tools ejecutan consultas parametrizadas validadas con JSON Schema.',
+    'Toda herramienta MCP analítica debe pre-agregar hechos al grano correcto antes de devolver cifras certificadas al modelo.'
+  ],
+  flashcards: [
     {
-      "id": "l12-contracts-semantic-layer",
-      "reason": "La Capa Semántica y los Data Contracts de la Etapa 4 son el cimiento que impide que el Agente MCP alucine métricas."
+      id: 'fc-x4-01-1',
+      front: '¿Por qué un agente Text-to-SQL directo sobreestima el GMV capturado en Mercado Brisa en 168,674.63 USD?',
+      back: 'Porque suma directamente las 16,605 filas de payments con status captured sin deduplicar los 405 reintentos de webhook sobre las 16,200 órdenes pagadas.'
     },
     {
-      "id": "l14-ab-testing-cuped",
-      "reason": "Aplica el mismo rigor estadístico de la Etapa 5 para evaluar cambios en tu agente mediante Golden Evals."
+      id: 'fc-x4-01-2',
+      front: '¿Cuál es la diferencia operativa entre un resource y una tool en un servidor MCP?',
+      back: 'Un resource expone metadatos o esquemas de solo lectura identificados por URI sin efectos secundarios; una tool ejecuta una función parametrizada y validada por JSON Schema.'
+    },
+    {
+      id: 'fc-x4-01-3',
+      front: '¿Qué componentes integran la topología tripartita del Model Context Protocol?',
+      back: 'El Host (aplicación de usuario), el Client (conector de protocolo dentro del host) y el Server (proceso que gobierna el acceso a datos y herramientas).'
+    },
+    {
+      id: 'fc-x4-01-4',
+      front: '¿Por qué debe usarse COUNT(DISTINCT o.order_id) al calcular métricas de órdenes sobre order_items?',
+      back: 'Porque order_items tiene grano de línea de pedido (1:N respecto a orders), y usar COUNT(*) contaría líneas de artículos en lugar de órdenes únicas.'
     }
-  ]
+  ],
+  glossaryTerms: [
+    'model-context-protocol',
+    'mcp-resources-tools',
+    'text-to-sql-hallucination',
+    'c28-mcp-semantic-rag-evals',
+    'c21-semantic-layer'
+  ],
+  sources: [
+    {
+      title: 'Model Context Protocol — Introduction & Getting Started',
+      url: 'https://modelcontextprotocol.io/introduction',
+      publisher: 'Model Context Protocol Specification',
+      accessed: '2026-10-29',
+      supports: 'Fundamentos del estándar MCP para conectar aplicaciones LLM con fuentes de datos externas.'
+    },
+    {
+      title: 'Model Context Protocol — Core Architecture',
+      url: 'https://modelcontextprotocol.io/docs/concepts/architecture',
+      publisher: 'Model Context Protocol Specification',
+      accessed: '2026-10-29',
+      supports: 'Topología Host-Client-Server y protocolo de transporte basado en mensajes JSON-RPC 2.0.'
+    },
+    {
+      title: 'Model Context Protocol — Server Resources Specification',
+      url: 'https://modelcontextprotocol.io/docs/concepts/resources',
+      publisher: 'Model Context Protocol Specification',
+      accessed: '2026-10-29',
+      supports: 'Exposición de metadatos de esquemas y catálogos como recursos de solo lectura identificados por URI.'
+    },
+    {
+      title: 'Model Context Protocol — Server Tools Specification',
+      url: 'https://modelcontextprotocol.io/docs/concepts/tools',
+      publisher: 'Model Context Protocol Specification',
+      accessed: '2026-10-29',
+      supports: 'Diseño de herramientas ejecutables tipadas mediante JSON Schema con validación en el servidor.'
+    }
+  ],
+  aiNotes: 'Al asistir al estudiante en esta lección, enfatiza por qué una consulta sintácticamente válida puede producir errores financieros graves en Mercado Brisa (405 webhooks duplicados en payments y el registro SKU-TEST-NEG en products). Guía al alumno para distinguir entre resources (lectura de catálogo por URI) y tools (ejecución parametrizada) en MCP, evitando que proponga ejecutar SQL libre desde el LLM.',
+  needsReview: false
 };
-
 export default lesson;
