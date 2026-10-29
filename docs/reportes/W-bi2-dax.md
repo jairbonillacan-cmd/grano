@@ -31,7 +31,9 @@ Lecturas obligatorias realizadas al iniciar la sesión (un hecho concreto aprend
 - `docs/curriculo/fuentes.md`: cataloga las fuentes oficiales de referencia del currículo para BI y DAX, encabezadas por Microsoft Learn DAX Reference, Microsoft Power BI Guidance y SQLBI (`dax.guide`).
 - `docs/curriculo/perfil-bi.md`: establece el estándar del perfil Business Intelligence en Grano: dominio de modelos en estrella, DAX con rigor (contexto de fila vs. filtro, `CALCULATE`, transición de contexto, iteradores, variables) y reconciliación matemática frente a SQL.
 - `docs/curriculo/estado-herramientas.md`: recoge el estado vigente de Power BI / Fabric y VertiPaq (Storage Engine multihilo vs. Formula Engine monohilo, `REMOVEFILTERS`, `DIVIDE`, desactivación de *Auto date/time*).
-- `docs/reportes/W-c1-sql-joins.md`, `docs/curriculo/investigacion/c1-sql-joins.md` y `src/data/lessons/c1-sql-joins/c1-sql-joins-01-tipos-join.js`: sirvieron como referencia de formato para el documento de investigación, la estructura de lecciones v2 y el reporte de cierre con checklist D.3.
+- `docs/reportes/W-c1-sql-joins.md`: muestra el formato esperado del reporte de cierre con checklist D.3, incluyendo salidas literales de `check-content.mjs`, `check-copy.mjs`, `agy` y la tabla de pruebas adversariales.
+- `docs/curriculo/investigacion/c1-sql-joins.md`: estructura el documento de investigación previa en tabla de fuentes primarias verificadas con fecha ISO, decisiones pedagógicas y mapa de progresión entre lecciones.
+- `src/data/lessons/c1-sql-joins/c1-sql-joins-01-tipos-join.js`: ejemplifica cómo acotar `title` a `<= 60` caracteres conservando el título largo del catálogo en `subtitle` y cómo integrar `workedExample` en dos pasos contrastados sobre Mercado Brisa.
 
 ---
 
@@ -147,14 +149,14 @@ Se definieron 6 términos validados contra `GlossaryListSchema` (`src/data/schem
 
 | # | Criterio (§9.4) | `L1` | `L2` | `L3` | `L4` | `L5` | `L6` | Evidencia verificable |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | **Claridad del gancho y objetivos** | 4 | 4 | 4 | 4 | 4 | 4 | Cada `hook` presenta una discrepancia real en Mercado Brisa con cifras exactas y `3` objetivos con verbos en infinitivo verificables. |
-| 2 | **Rigor técnico y progresión** | 4 | 4 | 4 | 4 | 4 | 4 | Cobertura rigurosa de contextos, `CALCULATE`, transición de contexto, `calendar` continua, iteradores, inmutabilidad de `VAR` y motores VertiPaq (SE vs. FE). |
-| 3 | **Anclaje en Mercado Brisa** | 4 | 4 | 4 | 4 | 4 | 4 | Todas las consultas y ejemplos operan sobre `orders`, `order_items`, `products`, `customers`, `stores`, `refunds` y `calendar` con cifras exactas al céntimo. |
-| 4 | **Calidad del ejemplo guiado (`workedExample`)** | 4 | 4 | 4 | 4 | 4 | 4 | En las 6 lecciones, el Paso 1 reproduce el antipatrón o fallo numérico y el Paso 2 demuestra la solución correcta y concilia las 10 medidas del módulo. |
-| 5 | **Comprobaciones (`checks`) y feedback** | 4 | 4 | 4 | 4 | 4 | 4 | 19 `checks` combinando `mcq`, `predict-output` y `fill-code`, con `feedback` específico por opción y `explanation` de `20–60` palabras. |
-| 6 | **Práctica verificable (`practice`)** | 4 | 4 | 4 | 4 | 4 | 4 | Las 6 prácticas `type: 'sql'` pasan en `sqlGrader.js` y en DuckDB-Wasm con `solution` (`passed: true`) y fallan con `starterCode` (`passed: false`). |
-| 7 | **Calidad de prosa y longitud** | 4 | 4 | 4 | 4 | 4 | 4 | Entre `845` y `1045` palabras visibles por lección (`0` `needsReview`), `0` hallazgos en `check-copy.mjs` y media de `15.7–21.4` palabras/frase. |
-| 8 | **Fuentes, glosario y Tutor IA (`aiNotes`)** | 4 | 4 | 4 | 4 | 4 | 4 | 18 fuentes primarias (`HTTP 200`), 6 términos en `bi2-dax-glossary.json` y verificación real con `agy` en las 6 lecciones. |
+| 1 | **1. Objetivo claro** | 4 | 4 | 4 | 4 | 4 | 4 | Cada `hook` presenta una discrepancia real en Mercado Brisa con cifras exactas y `3` objetivos con verbos en infinitivo verificables. |
+| 2 | **2. Progresión** | 4 | 4 | 4 | 4 | 4 | 4 | Secuencia sin saltos: contextos (`L1`) → `CALCULATE` y transición (`L2`) → tiempo (`L3`) → iteradores (`L4`) → `VAR`/`DIVIDE` (`L5`) → antipatrones y 10 medidas (`L6`). |
+| 3 | **3. Ejemplo concreto** | 4 | 4 | 4 | 4 | 4 | 4 | Todas las secciones y `workedExample` operan sobre `orders`, `order_items`, `products`, `customers`, `stores`, `refunds` y `calendar` con cifras exactas al céntimo. |
+| 4 | **4. Error típico** | 4 | 4 | 4 | 4 | 4 | 4 | En las 6 lecciones, el Paso 1 del `workedExample` reproduce el fallo numérico o antipatrón real en DAX y el Paso 2 demuestra la solución correcta. |
+| 5 | **5. Práctica** | 4 | 4 | 4 | 4 | 4 | 4 | 19 `checks` (`mcq`, `predict-output`, `fill-code`) y 6 prácticas `type: 'sql'` que pasan con `solution` (`passed: true`) y fallan con `starterCode` (`passed: false`). |
+| 6 | **6. Brevedad** | 4 | 4 | 4 | 4 | 4 | 4 | Entre `845` y `1045` palabras visibles por lección (`0` `needsReview`) y media de `15.7–21.4` palabras/frase en `sections[].body` (límite `<= 22`). |
+| 7 | **7. Precisión** | 4 | 4 | 4 | 4 | 4 | 4 | 18 fuentes primarias (`HTTP 200`, Microsoft Learn y SQLBI), reconciliación matemática exacta en DuckDB y verificación real con `agy` en las 6 lecciones. |
+| 8 | **8. Tono** | 4 | 4 | 4 | 4 | 4 | 4 | Español técnico directo, `0` hallazgos de términos prohibidos, emojis o exceso de negritas en `check-copy.mjs`. |
 | — | **Total por lección (mínimo 26/32)** | **32/32** | **32/32** | **32/32** | **32/32** | **32/32** | **32/32** | Ningún criterio `< 3`; todas las lecciones alcanzan `32/32`. |
 
 ---
