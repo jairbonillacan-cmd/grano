@@ -26,6 +26,14 @@
 | Fase 3 (Ola A) | `W-c1-viz` (4 lecciones) | `55e6be83-1fc2-40c5-bec5-9a21258e9de8` | Fusionada (`W-c1-viz.md` D.3 OK) | `8382734` | Ninguno |
 | Fase 3 (Ola A) | `W-c1-modelo` (5 lecciones) | `848f29fa-ab21-4fb9-ad45-d6dfae901a37` | Fusionada (`W-c1-modelo.md` D.3 OK) | `6c33c20` | Ninguno |
 | Fase 3 (Ola A) | `W-c1-python` (5 lecciones) | `a7f6c9d1-3d21-49a3-8e4f-1029384756ab` | Fusionada (`W-c1-python.md` D.3 OK) | `3e688f9` | Ninguno |
-| Fase 3 (Ola B) | `W-*` (9 módulos Nivel 2: 45 lecciones) | En lanzamiento | En curso | — | Ola B → Ola C + `F1` + `E1` |
-| Fase 3 (Ola C) | `W-*` (13 módulos Niveles 3–4: 60 lecciones), `F1`, `E1` | Pendiente (Ola B) | Pendiente | — | Espera cierre de Ola B |
+| Fase 3 (Ola B) | `W-bi2-modelo-semantico` (5 lecciones) | `d58d66d8-e1c3-432b-b3a4-820d36514bd2` | Fusionada (`W-bi2-modelo-semantico.md` D.3 OK) | `d10675e` | Ninguno |
+| Fase 3 (Ola B) | `W-bi2-dax` (6 lecciones) | `2a38d73b-831d-4d04-9549-8385c77bc577` | Fusionada (`W-bi2-dax.md` D.3 OK) | `247b1fd` | Ninguno |
+| Fase 3 (Ola B) | `W-c2-sql-analitico` (4 lecciones) | `b58505aa-625b-4083-94ec-75498047df8f` | Fusionada (`W-c2-sql-analitico.md` D.3 OK) | `1278a6b` | Ninguno |
+| Fase 3 (Ola B) | `W-da2-eda` (4 lecciones) | `66299e5b-8991-4bc8-a8c7-6fdb96344a3b` | Fusionada (`W-da2-eda.md` D.3 OK) | `dc3f2fb` | Ninguno |
+| Fase 3 (Ola B) | `W-bi2-metricas` (4 lecciones) | `7bb77c39-cfd5-45ff-ad40-98af8220a150` | Fusionada (`W-bi2-metricas.md` D.3 OK) | `5b13e0b` | Ninguno |
+| Fase 3 (Ola B) | `W-da2-inferencia` (6 lecciones) | `49f7a5ef-ec96-4464-8672-4ad7ecffb857` | Fusionada (`W-da2-inferencia.md` D.3 OK) | `063b149` | Ninguno |
+| Fase 3 (Ola B) | `W-de2-pipelines` (6 lecciones) | `35ef7ba6-ff44-4389-8f9e-ff6d9246939e` | Fusionada (`W-de2-pipelines.md` D.3 OK) | `8f853b5` | Ninguno |
+| Fase 3 (Ola B) | `W-c2-dimensional` (5 lecciones) | `fc158661-a087-4e4c-9fbe-17906d904365` | Fusionada (`W-c2-dimensional.md` D.3 OK) | `dafa63b` | Ninguno |
+| Fase 3 (Ola B) | `W-de2-formatos` (5 lecciones) | `a139a401-b1d4-4aee-baf5-911697a46c27` | Fusionada (`W-de2-formatos.md` D.3 OK) | `2c9aea5` | Ninguno |
+| Fase 3 (Ola C) | `W-*` (13 módulos Niveles 3–4: 60 lecciones), `F1`, `E1` | En lanzamiento | En curso | — | Ola C → `F1` + `E1` |
 | Fase 4 | `Q1`, `Q2`, `Q3`, `FINAL` | Pendiente (Fase 3) | Pendiente | — | Espera cierre de Fase 3 |

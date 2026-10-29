@@ -67,6 +67,43 @@ import lesson_63 from './c1-viz/c1-viz-01-geometria-grafico.js';
 import lesson_64 from './c1-viz/c1-viz-02-ejes-escalas-cero.js';
 import lesson_65 from './c1-viz/c1-viz-03-color-accesibilidad.js';
 import lesson_66 from './c1-viz/c1-viz-04-tablas-numericas.js';
+import lesson_67 from './bi2-dax/bi2-dax-01-contexto-fila-filtro.js';
+import lesson_68 from './bi2-dax/bi2-dax-02-calculate-transicion-contexto.js';
+import lesson_69 from './bi2-dax/bi2-dax-03-inteligencia-tiempo.js';
+import lesson_70 from './bi2-dax/bi2-dax-04-funciones-iteradoras.js';
+import lesson_71 from './bi2-dax/bi2-dax-05-variables-divide-formato.js';
+import lesson_72 from './bi2-dax/bi2-dax-06-antipatrones-rendimiento-dax.js';
+import lesson_73 from './bi2-metricas/bi2-metricas-01-anatomia-metrica.js';
+import lesson_74 from './bi2-metricas/bi2-metricas-02-arboles-kpis-palancas.js';
+import lesson_75 from './bi2-metricas/bi2-metricas-03-metricas-guardia.js';
+import lesson_76 from './bi2-metricas/bi2-metricas-04-north-star-goodhart.js';
+import lesson_77 from './bi2-modelo-semantico/bi2-modelo-semantico-01-estrella-vertipaq.js';
+import lesson_78 from './bi2-modelo-semantico/bi2-modelo-semantico-02-relaciones-cardinalidad.js';
+import lesson_79 from './bi2-modelo-semantico/bi2-modelo-semantico-03-direccion-filtro-cruzado.js';
+import lesson_80 from './bi2-modelo-semantico/bi2-modelo-semantico-04-tablas-fechas-userelationship.js';
+import lesson_81 from './bi2-modelo-semantico/bi2-modelo-semantico-05-medidas-vs-columnas-calculadas.js';
+import lesson_82 from './c2-dimensional/c2-dimensional-01-hechos-dimensiones-bus.js';
+import lesson_83 from './c2-dimensional/c2-dimensional-05-hechos-instantanea-acumulativos.js';
+import lesson_84 from './c2-sql-analitico/c2-sql-analitico-03-zonas-horarias-date-spine.js';
+import lesson_85 from './c2-sql-analitico/c2-sql-analitico-04-explain-analyze.js';
+import lesson_86 from './da2-eda/da2-eda-01-hipotesis-preguntas-refutables.js';
+import lesson_87 from './da2-eda/da2-eda-02-perfilado-tablas.js';
+import lesson_88 from './da2-eda/da2-eda-03-outliers-errores-extremos.js';
+import lesson_89 from './da2-eda/da2-eda-04-diario-analisis-reproducible.js';
+import lesson_90 from './da2-inferencia/da2-inferencia-01-probabilidad-bayes.js';
+import lesson_91 from './da2-inferencia/da2-inferencia-02-distribuciones-probabilidad.js';
+import lesson_92 from './da2-inferencia/da2-inferencia-03-muestreo-tlc-error-estandar.js';
+import lesson_93 from './da2-inferencia/da2-inferencia-04-intervalos-confianza.js';
+import lesson_94 from './da2-inferencia/da2-inferencia-05-pruebas-hipotesis-valor-p.js';
+import lesson_95 from './da2-inferencia/da2-inferencia-06-errores-potencia-tamano-muestra.js';
+import lesson_96 from './de2-formatos/de2-formatos-04-codificacion-compresion-zstd.js';
+import lesson_97 from './de2-formatos/de2-formatos-05-particionado-archivos-pequenos.js';
+import lesson_98 from './de2-pipelines/de2-pipelines-01-etl-vs-elt.js';
+import lesson_99 from './de2-pipelines/de2-pipelines-02-idempotencia-backfill.js';
+import lesson_100 from './de2-pipelines/de2-pipelines-03-cargas-incrementales-merge.js';
+import lesson_101 from './de2-pipelines/de2-pipelines-04-ingesta-apis-http.js';
+import lesson_102 from './de2-pipelines/de2-pipelines-05-orquestacion-airflow-dagster.js';
+import lesson_103 from './de2-pipelines/de2-pipelines-06-contenedores-docker-compose.js';
 
 export const LESSONS_V2 = [
   lesson_1,
@@ -135,6 +172,43 @@ export const LESSONS_V2 = [
   lesson_64,
   lesson_65,
   lesson_66,
+  lesson_67,
+  lesson_68,
+  lesson_69,
+  lesson_70,
+  lesson_71,
+  lesson_72,
+  lesson_73,
+  lesson_74,
+  lesson_75,
+  lesson_76,
+  lesson_77,
+  lesson_78,
+  lesson_79,
+  lesson_80,
+  lesson_81,
+  lesson_82,
+  lesson_83,
+  lesson_84,
+  lesson_85,
+  lesson_86,
+  lesson_87,
+  lesson_88,
+  lesson_89,
+  lesson_90,
+  lesson_91,
+  lesson_92,
+  lesson_93,
+  lesson_94,
+  lesson_95,
+  lesson_96,
+  lesson_97,
+  lesson_98,
+  lesson_99,
+  lesson_100,
+  lesson_101,
+  lesson_102,
+  lesson_103,
 ];
 
 /**

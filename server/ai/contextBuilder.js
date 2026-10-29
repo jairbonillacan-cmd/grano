@@ -56,7 +56,9 @@ export async function loadCurriculumData({ forceReload = false } = {}) {
   if (fs.existsSync(v2IndexPath)) {
     try {
       const mod = await import(pathToFileURL(v2IndexPath).href);
-      if (Array.isArray(mod.LESSONS)) {
+      if (Array.isArray(mod.LESSONS_V2) && mod.LESSONS_V2.length > 0) {
+        v2Lessons = mod.LESSONS_V2;
+      } else if (Array.isArray(mod.LESSONS)) {
         v2Lessons = mod.LESSONS;
       }
       if (Array.isArray(mod.MODULES)) {
@@ -104,6 +106,7 @@ export async function loadCurriculumData({ forceReload = false } = {}) {
   for (const lesson of v2Lessons) {
     if (lesson?.id) lessonsById.set(lesson.id, lesson);
     if (lesson?.legacyId) lessonsById.set(lesson.legacyId, lesson);
+    if (lesson?.v2Id) lessonsById.set(lesson.v2Id, lesson);
   }
 
   cachedCatalogData = {

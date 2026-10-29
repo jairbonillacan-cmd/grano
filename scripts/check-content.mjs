@@ -88,6 +88,8 @@ async function main() {
     }
   }
 
+  for (const fp of collectLessonFiles(LESSONS_DIR, null)) { knownLessonIds.add(path.basename(fp, '.js')); }
+
   const loadedLessons = [];
   for (const filePath of lessonFiles) {
     const modUrl = pathToFileURL(filePath).href;
