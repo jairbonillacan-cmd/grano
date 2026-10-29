@@ -1,0 +1,152 @@
+[
+  {
+    "id": "c2-sql-qualify",
+    "term": "Cláusula QUALIFY",
+    "englishTerm": "QUALIFY Clause",
+    "track": "core",
+    "definition": "Cláusula que filtra directamente el resultado de funciones de ventana en la misma consulta. Se confunde con HAVING, que solo filtra agregaciones de GROUP BY.",
+    "formula": "SELECT order_id, payment_id, amount_usd FROM payments WHERE status = 'captured' QUALIFY ROW_NUMBER() OVER (PARTITION BY idempotency_key ORDER BY payment_ts DESC) = 1;",
+    "relatedLessons": [
+      "c2-sql-analitico-01-window-functions",
+      "l2-window-functions"
+    ],
+    "relatedTerms": [
+      "c03-window-qualify",
+      "c2-sql-marco-ventana"
+    ],
+    "sources": [
+      {
+        "title": "DuckDB SQL Reference — QUALIFY Clause",
+        "url": "https://duckdb.org/docs/sql/query_syntax/qualify.html",
+        "publisher": "DuckDB Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Evaluación de la cláusula QUALIFY después del cálculo de funciones de ventana sin requerir una CTE o subconsulta envolvente."
+      }
+    ]
+  },
+  {
+    "id": "c2-sql-marco-ventana",
+    "term": "Marco de ventana (ROWS frente a RANGE)",
+    "englishTerm": "Window Frame (ROWS vs. RANGE)",
+    "track": "core",
+    "definition": "Subconjunto deslizante de filas dentro de una partición. ROWS cuenta filas físicas adyacentes; se confunde con RANGE, que agrupa valores dentro de un intervalo lógico.",
+    "formula": "AVG(ventas_usd) OVER (PARTITION BY store_id ORDER BY order_date RANGE BETWEEN INTERVAL 6 DAYS PRECEDING AND CURRENT ROW)",
+    "relatedLessons": [
+      "c2-sql-analitico-01-window-functions",
+      "c2-sql-analitico-03-zonas-horarias-date-spine"
+    ],
+    "relatedTerms": [
+      "c05-window-frames",
+      "c2-sql-date-spine"
+    ],
+    "sources": [
+      {
+        "title": "PostgreSQL 17 Documentation — Section 4.2.8: Window Function Calls (Frame Clause)",
+        "url": "https://www.postgresql.org/docs/current/sql-expressions.html#SYNTAX-WINDOW-FUNCTIONS",
+        "publisher": "PostgreSQL Global Development Group",
+        "accessed": "2026-10-29",
+        "supports": "Diferencia semántica entre marcos ROWS, RANGE y GROUPS y comportamiento por defecto RANGE UNBOUNDED PRECEDING al incluir ORDER BY."
+      }
+    ]
+  },
+  {
+    "id": "c2-sql-asof-join",
+    "term": "Unión temporal ASOF JOIN",
+    "englishTerm": "ASOF JOIN (Point-in-Time Join)",
+    "track": "core",
+    "definition": "Unión que empareja cada evento con la única fila previa más cercana en el tiempo. Se confunde con un JOIN desigual, que multiplica las filas.",
+    "formula": "FROM orders o ASOF LEFT JOIN events e ON o.customer_id = e.customer_id AND o.order_ts >= e.event_ts",
+    "relatedLessons": [
+      "c2-sql-analitico-02-asof-lateral-ctes",
+      "l3-asof-lateral-ctes"
+    ],
+    "relatedTerms": [
+      "c04-asof-join",
+      "c08-point-in-time",
+      "c2-sql-lateral-join"
+    ],
+    "sources": [
+      {
+        "title": "DuckDB SQL Reference — ASOF Join",
+        "url": "https://duckdb.org/docs/sql/query_syntax/from.html#asof-join",
+        "publisher": "DuckDB Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Emparejamiento punto en el tiempo con preservación de cardinalidad 1:1 sobre la tabla izquierda."
+      }
+    ]
+  },
+  {
+    "id": "c2-sql-lateral-join",
+    "term": "Subconsulta correlacionada LATERAL",
+    "englishTerm": "LATERAL JOIN",
+    "track": "core",
+    "definition": "Unión que evalúa una subconsulta por cada fila izquierda pudiendo devolver N filas ordenadas. Se confunde con una subconsulta escalar, limitada a un único valor.",
+    "formula": "FROM orders o LEFT JOIN LATERAL (SELECT tier, valid_from FROM customer_changes c WHERE c.customer_id = o.customer_id AND c.valid_from <= o.order_ts ORDER BY c.valid_from DESC LIMIT 1) cc ON TRUE",
+    "relatedLessons": [
+      "c2-sql-analitico-02-asof-lateral-ctes",
+      "c1-sql-joins-03-subconsultas"
+    ],
+    "relatedTerms": [
+      "c2-sql-asof-join",
+      "c04-asof-join"
+    ],
+    "sources": [
+      {
+        "title": "PostgreSQL 17 Documentation — Section 7.2.1.5: LATERAL Subqueries",
+        "url": "https://www.postgresql.org/docs/current/queries-table-expressions.html#QUERIES-LATERAL",
+        "publisher": "PostgreSQL Global Development Group",
+        "accessed": "2026-10-29",
+        "supports": "Referencia a columnas de tablas previas del FROM y uso con ORDER BY ... LIMIT N por entidad."
+      }
+    ]
+  },
+  {
+    "id": "c2-sql-date-spine",
+    "term": "Espina de calendario (Date Spine)",
+    "englishTerm": "Date Spine / Time Spine",
+    "track": "core",
+    "definition": "Tabla continua de fechas sin huecos usada como base izquierda para rellenar días con cero ventas. Se confunde con agrupar directamente la tabla de hechos.",
+    "formula": "SELECT c.calendar_date, COALESCE(v.ventas_usd, 0) AS ventas_usd FROM calendar c LEFT JOIN ventas_diarias v ON c.calendar_date = v.order_date;",
+    "relatedLessons": [
+      "c2-sql-analitico-03-zonas-horarias-date-spine",
+      "c2-sql-analitico-01-window-functions"
+    ],
+    "relatedTerms": [
+      "c2-sql-marco-ventana",
+      "c1-joins-left-join"
+    ],
+    "sources": [
+      {
+        "title": "dbt Semantic Layer (MetricFlow) Documentation — Time Spine",
+        "url": "https://docs.getdbt.com/docs/build/metricflow-time-spine",
+        "publisher": "dbt Labs",
+        "accessed": "2026-10-29",
+        "supports": "Uso de una tabla continua de fechas para materializar períodos sin actividad y calcular métricas acumulativas o medias móviles sin sesgo."
+      }
+    ]
+  },
+  {
+    "id": "c2-sql-explain-analyze",
+    "term": "Plan físico con EXPLAIN ANALYZE",
+    "englishTerm": "EXPLAIN ANALYZE Execution Plan",
+    "track": "core",
+    "definition": "Instrucción que ejecuta la consulta y mide tiempos y filas reales de cada operador físico. Se confunde con EXPLAIN, que solo muestra estimaciones sin ejecutar.",
+    "formula": "EXPLAIN ANALYZE SELECT store_id, SUM(total_usd) FROM orders WHERE status = 'completed' GROUP BY store_id;",
+    "relatedLessons": [
+      "c2-sql-analitico-04-explain-analyze"
+    ],
+    "relatedTerms": [
+      "c2-sql-qualify",
+      "c12-parquet-columnar"
+    ],
+    "sources": [
+      {
+        "title": "DuckDB Documentation — Profiling and EXPLAIN ANALYZE",
+        "url": "https://duckdb.org/docs/guides/meta/explain.html",
+        "publisher": "DuckDB Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Diferencia entre el plan estimado de EXPLAIN y la medición en tiempo de ejecución de EXPLAIN ANALYZE por operador."
+      }
+    ]
+  }
+]
