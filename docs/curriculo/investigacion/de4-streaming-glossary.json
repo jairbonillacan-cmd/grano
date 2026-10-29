@@ -1,0 +1,250 @@
+[
+  {
+    "id": "captura-cambios-log-wal",
+    "term": "Captura de cambios basada en registro (Log-Based CDC)",
+    "englishTerm": "Log-Based Change Data Capture (CDC)",
+    "track": "de",
+    "definition": "Técnica que extrae inserciones, actualizaciones y borrados leyendo secuencialmente el registro transaccional (WAL o binlog) sin ejecutar consultas sobre tablas operativas ni omitir eliminaciones físicas.",
+    "formula": "Evento CDC = (before, after, op ∈ {'c','u','d','r'}, source.lsn, source.ts_ms) | Ejemplo: en Mercado Brisa, Debezium lee customer_changes desde pgoutput en orden de LSN. Se confunde con: CDC por consulta (query-based polling sobre updated_at), que sobrecarga el motor OLTP y no detecta filas borradas con DELETE.",
+    "relatedLessons": [
+      "de4-streaming-01-cdc-kafka-streaming",
+      "de4-streaming-04-entrega-at-least-once-exactly-once"
+    ],
+    "relatedTerms": [
+      "patron-transactional-outbox",
+      "cdc-debezium"
+    ],
+    "sources": [
+      {
+        "title": "Debezium Connector for PostgreSQL Documentation",
+        "url": "https://debezium.io/documentation/reference/stable/connectors/postgresql.html",
+        "publisher": "Red Hat / Debezium Community",
+        "accessed": "2026-10-29",
+        "supports": "Arquitectura de lectura del WAL mediante decodificación lógica con pgoutput y estructura de eventos before/after/op."
+      }
+    ]
+  },
+  {
+    "id": "patron-transactional-outbox",
+    "term": "Patrón de bandeja de salida transaccional (Transactional Outbox)",
+    "englishTerm": "Transactional Outbox Pattern",
+    "track": "de",
+    "definition": "Patrón que evita la doble escritura insertando el cambio de negocio y el evento de dominio dentro de una misma transacción ACID en base local.",
+    "formula": "BEGIN; UPDATE orders ...; INSERT INTO outbox (id, aggregatetype, aggregateid, payload) ...; COMMIT; -> Debezium Outbox Event Router -> Kafka | Ejemplo: confirmar un pedido en Mercado Brisa y registrar su evento en outbox atómicamente. Se confunde con: publicar directamente en Kafka desde el microservicio tras hacer COMMIT en PostgreSQL (dual write).",
+    "relatedLessons": [
+      "de4-streaming-01-cdc-kafka-streaming",
+      "de4-streaming-04-entrega-at-least-once-exactly-once"
+    ],
+    "relatedTerms": [
+      "captura-cambios-log-wal",
+      "entrega-exactamente-una-vez-2pc"
+    ],
+    "sources": [
+      {
+        "title": "Debezium Outbox Event Router SMT",
+        "url": "https://debezium.io/documentation/reference/stable/transformations/outbox-event-router.html",
+        "publisher": "Red Hat / Debezium Community",
+        "accessed": "2026-10-29",
+        "supports": "Diseño de la tabla outbox y enrutamiento de eventos mediante Kafka Connect Single Message Transform."
+      }
+    ]
+  },
+  {
+    "id": "particionamiento-hash-kafka",
+    "term": "Particionamiento por hash de clave en Kafka",
+    "englishTerm": "Key-Hash Partitioning in Apache Kafka",
+    "track": "de",
+    "definition": "Asignación determinista de cada mensaje a una partición aplicando una función hash sobre su clave, garantizando orden secuencial únicamente dentro de esa partición específica.",
+    "formula": "partición_destino = Utils.toPositive(Utils.murmur2(key_bytes)) mod N_particiones | Ejemplo: en Mercado Brisa, usar order_id como clave envía todos los cambios de un pedido a la misma partición; usar un valor estático para customer_id nulo concentra el 14,3 % de page_view en una partición caliente. Se confunde con: orden global en todo el tópico.",
+    "relatedLessons": [
+      "de4-streaming-02-kafka-kraft-tiered-storage",
+      "de4-streaming-01-cdc-kafka-streaming"
+    ],
+    "relatedTerms": [
+      "consenso-kraft-kafka",
+      "almacenamiento-niveles-kafka"
+    ],
+    "sources": [
+      {
+        "title": "Apache Kafka 4.0 Documentation — Design and Partitioning",
+        "url": "https://kafka.apache.org/40/documentation.html",
+        "publisher": "Apache Software Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Asignación de particiones por murmur2 y garantía de orden por partición."
+      }
+    ]
+  },
+  {
+    "id": "consenso-kraft-kafka",
+    "term": "Consenso KRaft (Kafka Raft Metadata Mode)",
+    "englishTerm": "KRaft Consensus Protocol",
+    "track": "de",
+    "definition": "Protocolo de consenso basado en Raft integrado en Apache Kafka que gestiona los metadatos del clúster en un tópico interno, eliminando la dependencia de ZooKeeper.",
+    "formula": "Quórum de controladores KRaft -> registro de eventos en __cluster_metadata -> replicación en memoria hacia brokers | Ejemplo: en Kafka 4.0 un cambio de líder de controlador se completa en milisegundos porque el controlador en espera ya tiene el estado cargado. Se confunde con: el protocolo de replicación de datos ISR entre brokers.",
+    "relatedLessons": [
+      "de4-streaming-02-kafka-kraft-tiered-storage"
+    ],
+    "relatedTerms": [
+      "particionamiento-hash-kafka",
+      "almacenamiento-niveles-kafka"
+    ],
+    "sources": [
+      {
+        "title": "KIP-833: Mark KRaft as Production Ready",
+        "url": "https://cwiki.apache.org/confluence/display/KAFKA/KIP-833%3A+Mark+KRaft+as+Production+Ready",
+        "publisher": "Apache Software Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Arquitectura del quórum KRaft sobre __cluster_metadata y retiro de ZooKeeper."
+      }
+    ]
+  },
+  {
+    "id": "almacenamiento-niveles-kafka",
+    "term": "Almacenamiento por niveles en Kafka (Tiered Storage)",
+    "englishTerm": "Kafka Tiered Storage (KIP-405)",
+    "track": "de",
+    "definition": "Arquitectura que separa el registro de una partición en segmentos recientes en discos locales del broker y segmentos cerrados transferidos a almacenamiento de objetos remoto.",
+    "formula": "Retención total (remote.log.storage.system.enable=true) = local.retention.ms (NVMe caliente) + retention.ms (S3/GCS frío) | Ejemplo: conservar 12 horas de events de Mercado Brisa en NVMe local y 90 días en S3 para reprocesamientos históricos sin escalar discos de brokers. Se confunde con: un conector Kafka Connect que exporta archivos Parquet a un data lake.",
+    "relatedLessons": [
+      "de4-streaming-02-kafka-kraft-tiered-storage"
+    ],
+    "relatedTerms": [
+      "consenso-kraft-kafka",
+      "particionamiento-hash-kafka"
+    ],
+    "sources": [
+      {
+        "title": "KIP-405: Kafka Tiered Storage",
+        "url": "https://cwiki.apache.org/confluence/display/KAFKA/KIP-405%3A+Kafka+Tiered+Storage",
+        "publisher": "Apache Software Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Separación entre segmento activo local y segmentos sellados en almacenamiento de objetos."
+      }
+    ]
+  },
+  {
+    "id": "marca-agua-acotada-flink",
+    "term": "Marca de agua por desorden acotado (Bounded-Out-of-Orderness Watermark)",
+    "englishTerm": "Bounded-Out-of-Orderness Watermark",
+    "track": "de",
+    "definition": "Marcador temporal monótono creciente que avanza restando una holgura fija al mayor tiempo de evento observado, indicando cuándo cerrar ventanas y emitir resultados en streaming.",
+    "formula": "W(t) = max(event_time_observado) - delta_tolerancia; en operador multi-partición: W_op = min(W_1, ..., W_k) | Ejemplo: con delta = 30 s, cuando llega un pago con event_time 10:02:00, el watermark avanza a 10:01:30 y cierra la ventana [10:00:00, 10:01:00). Se confunde con: un temporizador de reloj del servidor (Processing Time).",
+    "relatedLessons": [
+      "de4-streaming-03-flink-watermarks-mv",
+      "de4-streaming-05-vistas-materializadas-streaming-olap"
+    ],
+    "relatedTerms": [
+      "join-intervalo-temporal",
+      "event-time-watermark"
+    ],
+    "sources": [
+      {
+        "title": "Apache Flink Documentation — Generating Watermarks",
+        "url": "https://nightlies.apache.org/flink/flink-docs-stable/docs/dev/datastream/event-time/generating_watermarks/",
+        "publisher": "Apache Software Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Generación de marcas de agua por desorden acotado y propagación del mínimo entre particiones."
+      }
+    ]
+  },
+  {
+    "id": "join-intervalo-temporal",
+    "term": "Unión por intervalo temporal (Interval Join)",
+    "englishTerm": "Event-Time Interval Join",
+    "track": "de",
+    "definition": "Operador que empareja registros de dos flujos con igual clave solo cuando sus marcas de tiempo de evento caen dentro de un rango acotado.",
+    "formula": "f1.key = f2.key AND f2.ts BETWEEN f1.ts - límite_inferior AND f1.ts + límite_superior | Ejemplo: unir orders y payments de Mercado Brisa con p.payment_ts BETWEEN o.order_ts AND o.order_ts + INTERVAL '120 seconds' para capturar reintentos legítimos y purgar estado antiguo en RocksDB. Se confunde con: un Regular Join sin filtro temporal, que retiene estado de forma indefinida.",
+    "relatedLessons": [
+      "de4-streaming-03-flink-watermarks-mv",
+      "de4-streaming-05-vistas-materializadas-streaming-olap"
+    ],
+    "relatedTerms": [
+      "marca-agua-acotada-flink",
+      "event-time-watermark"
+    ],
+    "sources": [
+      {
+        "title": "Apache Flink Table API & SQL — Joins",
+        "url": "https://nightlies.apache.org/flink/flink-docs-stable/docs/dev/table/sql/queries/joins/",
+        "publisher": "Apache Software Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Semántica de Interval Joins y liberación automática de estado según el avance del watermark."
+      }
+    ]
+  },
+  {
+    "id": "barreras-checkpoint-chandy-lamport",
+    "term": "Barreras de punto de control (Chandy-Lamport Checkpoint Barriers)",
+    "englishTerm": "Chandy-Lamport Checkpoint Barriers",
+    "track": "de",
+    "definition": "Marcadores inyectados en los flujos que separan registros entre instantáneas consecutivas, permitiendo guardar el estado distribuido de los operadores sin detener el procesamiento.",
+    "formula": "Flujo: [registros <= n] -> |Barrera n| -> [registros > n]; el operador alinea barreras de todos sus canales antes de volcar su estado a RocksDB/S3 | Ejemplo: si un nodo de Flink falla, el trabajo retrocede el offset de Kafka y restaura el estado exacto de la última barrera confirmada. Se confunde con: un bloqueo global stop-the-world.",
+    "relatedLessons": [
+      "de4-streaming-04-entrega-at-least-once-exactly-once",
+      "de4-streaming-03-flink-watermarks-mv"
+    ],
+    "relatedTerms": [
+      "entrega-exactamente-una-vez-2pc",
+      "marca-agua-acotada-flink"
+    ],
+    "sources": [
+      {
+        "title": "Apache Flink Documentation — Checkpointing",
+        "url": "https://nightlies.apache.org/flink/flink-docs-stable/docs/dev/datastream/fault-tolerance/checkpointing/",
+        "publisher": "Apache Software Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Alineación de barreras Chandy-Lamport y captura asíncrona de instantáneas de estado."
+      }
+    ]
+  },
+  {
+    "id": "entrega-exactamente-una-vez-2pc",
+    "term": "Entrega exactamente una vez mediante compromiso en dos fases (2PC)",
+    "englishTerm": "End-to-End Exactly-Once via Two-Phase Commit",
+    "track": "de",
+    "definition": "Garantía donde el motor de streaming coordina sus instantáneas de estado con transacciones en el destino para que cada evento impacte una sola vez.",
+    "formula": "Fase 1 (barrera llega al sink): preCommit(tx_n) + snapshot de estado -> Fase 2 (JobManager confirma checkpoint n): commit(tx_n) visible para isolation.level=read_committed | Ejemplo: cuando el origen es un webhook externo sin 2PC (como los 405 cobros repetidos en payments de Mercado Brisa), se requiere deduplicar por idempotency_key. Se confunde con: creer que activar checkpointing en Flink evita duplicados hacia cualquier API HTTP.",
+    "relatedLessons": [
+      "de4-streaming-04-entrega-at-least-once-exactly-once",
+      "de4-streaming-01-cdc-kafka-streaming"
+    ],
+    "relatedTerms": [
+      "barreras-checkpoint-chandy-lamport",
+      "patron-transactional-outbox"
+    ],
+    "sources": [
+      {
+        "title": "An Overview of End-to-End Exactly-Once Processing in Apache Flink",
+        "url": "https://flink.apache.org/2018/02/28/an-overview-of-end-to-end-exactly-once-processing-in-apache-flink-with-apache-kafka-too/",
+        "publisher": "Apache Software Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Protocolo TwoPhaseCommitSinkFunction y lectura transaccional read_committed en Kafka."
+      }
+    ]
+  },
+  {
+    "id": "vista-materializada-incremental-streaming",
+    "term": "Vista materializada mantenida incrementalmente en streaming",
+    "englishTerm": "Streaming Incrementally Maintained Materialized View",
+    "track": "de",
+    "definition": "Consulta continua cuyo resultado almacenado se actualiza propagando únicamente los cambios de inserción y retracción de cada evento nuevo, sin reescanear las tablas base completas.",
+    "formula": "Estado_nuevo = Estado_anterior + Delta(+1 nueva versión) + Delta(-1 versión anterior) | Ejemplo: en Materialize o RisingWave, un reembolso procesado en Mercado Brisa emite un delta que actualiza al instante el ingreso neto de la tienda; en ClickHouse, ReplacingMergeTree deduplica de forma asíncrona durante fusiones en segundo plano. Se confunde con: una vista materializada por lotes que ejecuta REFRESH completo programado.",
+    "relatedLessons": [
+      "de4-streaming-05-vistas-materializadas-streaming-olap",
+      "de4-streaming-03-flink-watermarks-mv"
+    ],
+    "relatedTerms": [
+      "marca-agua-acotada-flink",
+      "captura-cambios-log-wal"
+    ],
+    "sources": [
+      {
+        "title": "Materialize Documentation — CREATE MATERIALIZED VIEW",
+        "url": "https://materialize.com/docs/sql/create-materialized-view/",
+        "publisher": "Materialize Inc.",
+        "accessed": "2026-10-29",
+        "supports": "Mantenimiento incremental de vistas sobre flujos de cambios mediante Differential Dataflow."
+      }
+    ]
+  }
+]
