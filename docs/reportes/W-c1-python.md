@@ -6,52 +6,71 @@
 **Estado:** Completado
 
 ## Inicio
-Lecturas obligatorias realizadas antes de escribir código o contenido, con hecho concreto verificado en cada archivo:
+Lecturas obligatorias realizadas antes de escribir código o contenido, con 1 dato técnico concreto aprendido de cada archivo individual:
 
 1. `PLAN_GEMINI_4_ARGON.md`:
-   - **§1 y §2:** La misión del proyecto es construir la aplicación web local-first **Grano** con estética **Editorial Analítica Cálida** (superficie `#FAF7F2` en claro y `#111110` en oscuro, acento terracota `#B84A27` / `#E06B47`, tipografías `Newsreader`, `Plus Jakarta Sans` y `JetBrains Mono`), datos reales de **Mercado Brisa** (13 tablas Parquet deterministas con semilla `20260419`) y tutor IA conectado vía `agy`.
-   - **§5 (`c1-python` — Python para datos):** Define el módulo de Nivel 1 (`core`, 110 min, 5 lecciones) con prerrequisitos `c0-herramientas` y `c1-sql-base`, proyecto `resumen_ventas.py` validado con `pytest`, y temas de Polars 2.0, pandas 3.0 (Copy-on-Write y tipo `str` PyArrow), I/O tipado (CSV, NDJSON, Parquet `zstd`), expresiones vectorizadas, limpieza de texto/fechas/husos horarios y empaquetado CLI con `argparse`.
-   - **§9.2 y §9.4:** Establece las reglas de copy en español neutro (sin términos prohibidos ni muletillas de IA, media de frase $\le 22$ palabras en `sections[].body`, definiciones de glosario de 20–25 palabras con ejemplo ejecutable y contraejemplo `"Se confunde con: ..."`) y la rúbrica de 6 dimensiones (0–3 puntos por dimensión, mínimo 15/18 y ninguna dimensión en 0).
-   - **Apéndices A, B, D.2 y D.3:** Fijan las restricciones de seguridad y aislamiento por worktree, el esquema de las 13 tablas de Mercado Brisa y la plantilla y lista de chequeo obligatorias para el reporte.
+   - Define en §5 el módulo `c1-python` ("Python para datos", Nivel 1, `core`, 110 min, 5 lecciones, prerrequisitos `c0-herramientas` y `c1-sql-base`, proyecto `resumen_ventas.py` probado con `pytest`), en §9.2 el método de escritura de 7 pasos con media de frase $\le 22$ palabras y glosario $\le 25$ palabras, en §9.4 la rúbrica de 8 criterios (escala 0–4, sobre 32 puntos) y en Apéndice D.2/D.3 la plantilla y checklist del reporte.
 2. `docs/curriculo/estado-herramientas.md`:
-   - Documenta **Python 3.13/3.14**, **Polars 2.0** (`LazyFrame`, motor `streaming` por defecto, `.unpivot()` en reemplazo de `.melt()`), **pandas 3.0** (Copy-on-Write obligatorio, eliminación de `SettingWithCopyWarning`, `ChainedAssignmentError`, tipo `str` respaldado por PyArrow por defecto y expresiones `pd.col()`), **Apache Arrow / Parquet** con compresión `zstd`, **Marimo** y **uv**.
+   - Fija las versiones vigentes en 2026 para el stack Python: **Python 3.13/3.14**, **Polars 2.0** (`LazyFrame`, motor `streaming` por defecto y `.unpivot()` en lugar del eliminado `.melt()`), **pandas 3.0** (Copy-on-Write obligatorio, eliminación de `SettingWithCopyWarning`, `ChainedAssignmentError`, tipo `str` respaldado por PyArrow por defecto y expresiones `pd.col()`), **Apache Arrow / Parquet** con `zstd`, **Marimo** y **uv**.
 3. `docs/curriculo/fuentes.md`:
-   - Registra las fuentes primarias autorizadas para el bloque de procesamiento columnar local: documentación oficial de Polars (`https://docs.pola.rs/`), pandas 3.0 (`https://pandas.pydata.org/docs/`), Apache Arrow (`https://arrow.apache.org/docs/`), Apache Parquet (`https://parquet.apache.org/docs/`), Python `argparse`/`zoneinfo` y `pytest`.
+   - Establece el catálogo de fuentes primarias autorizadas (`https://docs.pola.rs/`, `https://pandas.pydata.org/docs/`, `https://arrow.apache.org/docs/`, `https://parquet.apache.org/docs/`, `https://docs.python.org/3/library/`, `https://docs.pytest.org/` y `https://docs.marimo.io/`), prohibiendo blogs de terceros o contenido sin respaldo documental primario.
 4. `docs/curriculo/brechas.md`:
-   - Identifica el módulo `c1-python` (5 lecciones) dentro de las 66 lecciones nuevas que no tenían lección heredada en `learningPath2026.js` (`legacyId: null`) y que requieren creación íntegra en Fase 3 · Ola A.
+   - Registra que las 5 lecciones de `c1-python` (`c1-python-01` a `c1-python-05`) carecen de `legacyId` en `learningPath2026.js` y forman parte de las 66 lecciones nuevas que se escriben desde cero en la Fase 3.
 5. `docs/curriculo/cambios-catalogo.md`:
-   - Confirma que `c1-python` pertenece al Nivel 1 del tronco común (`core`) y sirve de prerrequisito directo para `de2-ingesta`, `de2-formatos`, `da2-exploracion` y `bi2-modelado`.
+   - Documenta que `c1-python` se ubica en Nivel 1 (`core`) tras `c0-herramientas` y `c1-sql-base`, y actúa como prerrequisito directo para `de2-ingesta`, `de2-formatos`, `da2-exploracion` y `bi2-modelado`.
 6. `docs/curriculo/perfil-core.md`:
-   - Define el perfil de egreso del tronco común (Niveles 0, 1 y 2): todo profesional de datos debe dominar manipulación tabular reproducible en Python con Polars 2.0 / pandas 3.0, lectura/escritura tipada de Parquet y validación del grano antes de especializarse en DE, DA o BI.
+   - Especifica que al completar el tronco común (`core`), el estudiante debe transformar tablas en Python sin mutaciones accidentales, declarar esquemas explícitos al ingerir CSV/JSON, persistir en Parquet comprimido y probar funciones puras con `pytest`.
 7. `package.json`:
-   - Incluye `@duckdb/node-api` (`^1.2.1-alpha.17`), `@duckdb/duckdb-wasm` (`^1.29.0`), `zod` (`^3.24.2`), `playwright-core` (`^1.58.2`) y scripts `dev`, `build`, `test` y `check:content`.
+   - Incluye `@duckdb/node-api` (`^1.2.1-alpha.17`) para ejecutar consultas analíticas desde Node, `@duckdb/duckdb-wasm` (`^1.29.0`) para el navegador, `zod` (`^3.24.2`) para validación de esquemas y `playwright-core` (`^1.58.2`) para verificación en navegador real.
 8. `vite.config.js`:
-   - Registra `granoAiPlugin()` desde `./server/ai/routes.js`, servidor por defecto en `127.0.0.1` y separación de chunks manuales (`vendor`, `curriculum-stages`).
+   - Monta el plugin `granoAiPlugin()` desde `./server/ai/routes.js` en el servidor Vite y separa en `manualChunks` los paquetes `vendor` y `curriculum-stages` excluyendo `@duckdb` y `@codemirror`.
 9. `src/main.jsx`:
-   - Punto de entrada React que importa `./styles/tokens.css`, `./styles/base.css`, `./styles/layout.css`, `./styles/components.css`, `./styles/views.css`, `./styles/utilities.css` y monta `<App />`.
+   - Importa en orden estricto las hojas de estilo `./styles/tokens.css`, `./styles/base.css`, `./styles/layout.css`, `./styles/components.css`, `./styles/views.css` y `./styles/utilities.css` antes de renderizar `<App />`.
 10. `src/App.jsx`:
-    - Orquesta las vistas principales (`HomeView`, `RoadmapView`, `LessonPlayer`, `PracticeView`, `SpacedRepetitionView`, `CapstoneProjectsView`, `GlossaryAndGraphView`, `LearningAnalyticsView`, `SettingsView`) junto con `TutorPanel`, `DiagnosticModal` y `CommandPaletteModal`.
+    - Conecta `useAppController()` con `AppShell`, `LessonPlayer` y `TutorPanel`, pasando `currentLesson`, `activeStepLabel`, `quizAnswers`, `completedLabIds` y `onSolveLab`.
 11. `src/styles/tokens.css`:
-    - Declara las variables CSS de la paleta Editorial Analítica Cálida (`--bg-0: #FAF7F2`, `--ink-0: #181614`, `--accent: #B84A27` en claro y `--bg-0: #111110`, `--ink-0: #F3EFE8`, `--accent: #E06B47` en `[data-theme="dark"]`).
+    - Define los tokens de color de la estética Editorial Analítica Cálida (`--bg-0: #FAF7F2`, `--ink-0: #181614`, `--accent: #B84A27` en modo claro y `--bg-0: #111110`, `--ink-0: #F3EFE8`, `--accent: #E06B47` en `[data-theme="dark"]`).
 12. `src/data/catalog/modules.js`:
-    - Define `c1-python` en las líneas 317–336 con `level: 1`, `track: 'core'`, `minutes: 110`, `prerequisites: ['c0-herramientas', 'c1-sql-base']` y las 5 entradas de lecciones `c1-python-01` a `c1-python-05` con sus títulos exactos.
-13. `public/datasets/README.md` y `public/datasets/schema.json`:
-    - Documentan las 13 tablas Parquet de Mercado Brisa (`154 845` filas totales, `2.14 MB` con compresión `ZSTD`) y sus anomalías pedagógicas deliberadas: `SKU-TEST-NEG` (`list_price_usd = -9.99`, `is_active = false`) en `products`, códigos postales con cero inicial en México (`06102`), códigos alfanuméricos en Argentina (`C1051`), `218` nulos y `129` códigos truncados de 2 caracteres en `customers`, y `event_ts_raw` con 5 husos horarios (`+01:00`, `-03:00`, `-05:00`, `-06:00`, `Z`) en `events`.
-14. `src/data/schema/lesson.js` y `src/data/schema/glossary.js`:
-    - `LessonSchema` valida con Zod que toda lección tenga `hook` (35–100 palabras), `objectives` (3–4), `sections` (3–5, cada `heading <= 70` caracteres y `body` de 80–280 palabras), `workedExample` ($\ge 2$ pasos con `expectedOutput`), `checks` (3–5, al menos 2 tipos distintos y `explanation` de 20–60 palabras), `practice` (`fill-blanks` para Python con `starterCode`, `expected`, `hints`, `solution`, `solutionExplanation`, `blanks`), `roleNotes` (`de`, `da`, `bi`, 30–90 palabras cada una), `summary` (3–5 puntos de $\le 22$ palabras), `flashcards` (3–5), `glossaryTerms`, `sources` ($\ge 2$ URLs `https://`), `aiNotes` (20–80 palabras) y conteo total de 950–1500 palabras (Nivel 1). `GlossaryTermSchema` valida términos en `kebab-case` con definiciones de 20–60 palabras.
-15. `scripts/check-content.mjs`, `scripts/check-copy.mjs` y `scripts/sync-lessons-index.mjs`:
-    - `check-content.mjs` valida `LessonSchema`, unicidad de IDs y referencias a glosario (incluyendo `docs/curriculo/investigacion/*-glossary.json`). `check-copy.mjs` audita términos prohibidos, emojis, `"2026"` fuera de `sources/accessed`, límite de negritas y longitud media de frase ($\le 22$ palabras/frase en `sections[].body`). `sync-lessons-index.mjs` reconstruye `src/data/lessons/index.js` con el índice v2 y los alias cortos `<moduleId>-<01..99>`.
-16. `src/views/LessonPlayer.jsx`, `src/components/AuthenticCodeLab.jsx`, `src/views/lesson/normalizeLessonV2.js`, `src/views/lesson/LessonCheckCard.jsx` y `src/components/LessonVisualizers.jsx`:
-    - `AuthenticCodeLab.jsx` renderiza las prácticas `fill-blanks` dividiendo `starterCode` por `/(\{\{blank_\d+\}\})/g` en botones `[data-testid="blank-slot-blank_1"]` y chips de opciones `[data-testid="token-option-<opt>"]`, y verifica la solución con `[data-testid="verify-blanks-btn"]`. `LessonVisualizers.jsx` incluye los simuladores interactivos `duckdb-polars-sim` y `row-vs-columnar-storage`.
-17. `src/data/glossary.js`, `src/data/lessons/de2-formatos/de2-formatos-02-arrow-lance-vortex.js`, `src/data/lessons/de2-formatos/de2-formatos-03-duckdb-polars-marimo.js` y `src/data/lessons/c1-sql-joins/c1-sql-joins-02-grano-fanout.js`:
-    - Revisados como referencia del tono técnico directo en español, estructura de lecciones v2 y coherencia con los módulos adyacentes (`c1-sql-joins` y `de2-formatos`).
+    - Declara el objeto del módulo `c1-python` (líneas 317–336) con los 5 IDs cortos `c1-python-01` .. `c1-python-05` y sus títulos canónicos.
+13. `public/datasets/README.md`:
+    - Detalla las anomalías sembradas con semilla `20260419` en Mercado Brisa: el producto inactivo `SKU-TEST-NEG` con `list_price_usd = -9.99` en `products.parquet`, los códigos postales con cero inicial en México y alfanuméricos en Argentina dentro de `customers.parquet`, y la columna `event_ts_raw` con 5 desplazamientos horarios mezclados en `events.parquet`.
+14. `public/datasets/schema.json`:
+    - Especifica los nombres exactos de columnas, tipos DuckDB/Parquet y conteos de filas de las 13 tablas (`customers`: 2 400, `products`: 180, `stores`: 18, `orders`: 18 000, `order_items`: 42 000, `payments`: 19 500, `refunds`: 1 450, `events`: 65 000).
+15. `src/data/schema/lesson.js`:
+    - Define `LessonSchema` con Zod exigiendo entre 950 y 1 500 palabras totales para Nivel 1 (`WORD_LIMITS_BY_LEVEL[1]`), `hook` de 35–100 palabras, `sections[].heading` $\le 70$ caracteres, `sections[].body` de 80–280 palabras, `checks[].explanation` de 20–60 palabras, `roleNotes` (`de`, `da`, `bi`) de 30–90 palabras, `summary` de 3–5 puntos de $\le 22$ palabras y `aiNotes` de 20–80 palabras.
+16. `src/data/schema/glossary.js`:
+    - Define `GlossaryTermSchema` y `GlossaryListSchema` exigiendo `id` en `kebab-case`, `track` en `['core', 'de', 'da', 'bi']`, `definition` de 20 a 60 palabras y `relatedLessons` con al menos 1 lección.
+17. `scripts/check-content.mjs`:
+    - Escanea recursivamente `src/data/lessons/**/*.js`, valida cada lección contra `LessonSchema` y carga automáticamente `docs/curriculo/investigacion/*-glossary.json` (líneas 103–119) para validar `lesson.glossaryTerms` sin requerir editar `src/data/glossary.js`.
+18. `scripts/check-copy.mjs`:
+    - Audita la ausencia de términos prohibidos, emojis, menciones a `"2026"` fuera de `sources/accessed`, exceso de negritas ($>3$ por párrafo) y verifica que la longitud media de frase en `sections[].body` sea $\le 22$ palabras/frase.
+19. `scripts/sync-lessons-index.mjs`:
+    - Genera `src/data/lessons/index.js` exportando `LESSONS_V2`, `LESSONS` y `LESSONS_BY_ID`, registrando automáticamente tanto el `id` largo v2 (`c1-python-01-polars-pandas-cow`) como el alias corto del catálogo (`c1-python-01`).
+20. `src/views/LessonPlayer.jsx`:
+    - Renderiza las secciones de lectura con `id="sec-<secId>"`, las comprobaciones en `#sec-comprobaciones` y la práctica en `#sec-practica`, bloqueando el botón de completar lección hasta haber leído hasta `#sec-resumen`, respondido todos los `checks` y enviado la práctica.
+21. `src/components/AuthenticCodeLab.jsx`:
+    - Implementa el modo `fill-blanks` dividiendo `starterCode` mediante la expresión regular `/(\{\{blank_\d+\}\})/g` en botones `[data-testid="blank-slot-blank_1"]` y chips `[data-testid="token-option-<opt>"]`, comprobando `blanks.every((b) => selectedValues[b.id] === b.correct)` al pulsar `[data-testid="verify-blanks-btn"]`.
+22. `src/views/lesson/normalizeLessonV2.js`:
+    - Normaliza cualquier objeto de lección v2 o legacy fusionándolo con los metadatos de `MODULES_BY_ID` y `TRACKS`, y construyendo los ítems del temario lateral con `buildLessonSyllabusItems`.
+23. `src/views/lesson/LessonCheckCard.jsx`:
+    - Muestra cada comprobación (`mcq` o `predict-output`), exige seleccionar una opción antes de verificar, presenta el `feedback` específico de la opción elegida junto con `check.explanation` y ofrece el botón `Reintentar` si la respuesta fue incorrecta.
+24. `src/components/LessonVisualizers.jsx`:
+    - Registra el diccionario de simuladores interactivos en línea, incluyendo `duckdb-polars-sim` (usado en `c1-python-01`) y `row-vs-columnar-storage` (usado en `c1-python-02`).
+25. `src/data/glossary.js`:
+    - Exporta `GLOSSARY_TERMS` y `GLOSSARY_CONCEPTS_2026` validados por `GlossaryListSchema`, mostrando la estructura exacta de `id`, `term`, `englishTerm`, `track`, `definition`, `formula`, `relatedLessons`, `relatedTerms` y `sources`.
+26. `src/data/lessons/de2-formatos/de2-formatos-02-arrow-lance-vortex.js`:
+    - Sirvió como referencia de cómo presentar la disposición física de búferes contiguos de Apache Arrow (`validity bitmap`, `offsets`, `values`) para conectar Nivel 1 (`c1-python-01`) con Nivel 2 (`de2-formatos-02`).
+27. `src/data/lessons/de2-formatos/de2-formatos-03-duckdb-polars-marimo.js`:
+    - Sirvió como referencia del uso de `pl.scan_parquet()`, `Predicate Pushdown` y cuadernos reactivos Marimo (`.py`) para alinear la progresión hacia `c1-python-05`.
+28. `src/data/lessons/c1-sql-joins/c1-sql-joins-02-grano-fanout.js`:
+    - Sirvió como referencia del caso de fan-out entre `orders`, `order_items` y `refunds` en SQL para diseñar su contraparte exacta en Python con pre-agregación y `.join(..., validate="1:1")` en `c1-python-03`.
 
 ---
 
 ## Pasos
 
 ### Paso 1 — Investigación y fuentes primarias (`docs/curriculo/investigacion/c1-python.md`)
-Se creó `docs/curriculo/investigacion/c1-python.md` documentando **3 a 4 fuentes primarias verificadas (`https://`, fecha de acceso `2026-10-29`) por cada una de las 5 lecciones** (17 referencias primarias en total across Polars 2.0 User Guide & API Reference, pandas 3.0 User Guide, Apache Arrow Columnar Format, Apache Parquet File Format, Python 3.13 Standard Library `zoneinfo` y `argparse`, IANA Time Zone Database, `pytest` y Marimo), junto con las cifras exactas extraídas de los archivos Parquet de Mercado Brisa.
+Se creó `docs/curriculo/investigacion/c1-python.md` documentando **3 a 4 fuentes primarias verificadas (`https://`, fecha de acceso `2026-10-29`) por cada una de las 5 lecciones** (17 referencias primarias en total: Polars 2.0 User Guide & API Reference, pandas 3.0 User Guide, Apache Arrow Columnar Format, Apache Parquet File Format, Python 3.13 Standard Library `zoneinfo` y `argparse`, IANA Time Zone Database, `pytest` y Marimo), junto con las cifras exactas extraídas de los archivos Parquet de Mercado Brisa.
 
 ### Paso 2 — Mapa de conceptos y progresión del módulo
 Se diseñó la secuencia conceptual sin solapamientos a lo largo de las 5 lecciones:
@@ -62,12 +81,15 @@ Se diseñó la secuencia conceptual sin solapamientos a lo largo de las 5 leccio
 5. **`c1-python-05-cuaderno-a-script-cli`:** Extracción de funciones puras de transformación tabular tipadas (`LazyFrame -> DataFrame`), parametrización multiplataforma con `argparse` y `pathlib.Path`, validaciones bloqueantes con `exit code != 0` antes de `write_parquet`, y pruebas unitarias deterministas con `pytest` y `polars.testing.assert_frame_equal`.
 
 ### Paso 3 — Escritura de las 5 lecciones en `src/data/lessons/c1-python/`
-Se escribieron las 5 lecciones completas cumpliendo el esquema `LessonSchema` (Nivel 1: entre `982` y `1 089` palabras por lección) y las reglas de estilo de §9.2:
-- `src/data/lessons/c1-python/c1-python-01-polars-pandas-cow.js` (`1 089` palabras, 4 secciones, simulador `duckdb-polars-sim`, `workedExample` de 2 pasos, 4 `checks`, práctica `fill-blanks`, `roleNotes` DE/DA/BI, 4 `summary`, 4 `flashcards`, 4 `sources`).
-- `src/data/lessons/c1-python/c1-python-02-io-csv-json-parquet.js` (`1 081` palabras, 4 secciones, simulador `row-vs-columnar-storage`, `workedExample` de 2 pasos, 4 `checks`, práctica `fill-blanks`, `roleNotes` DE/DA/BI, 4 `summary`, 4 `flashcards`, 3 `sources`).
-- `src/data/lessons/c1-python/c1-python-03-expresiones-vectorizadas.js` (`982` palabras, 4 secciones, `workedExample` de 2 pasos contrastando el fan-out de `18 003 141.53 USD` contra el total real de `6 269 462.42 USD`, 4 `checks`, práctica `fill-blanks`, `roleNotes` DE/DA/BI, 4 `summary`, 4 `flashcards`, 3 `sources`).
-- `src/data/lessons/c1-python/c1-python-04-limpieza-texto-fechas-tz.js` (`1 042` palabras, 4 secciones, `workedExample` de 2 pasos sobre los `2 400` clientes y `65 000` eventos de Mercado Brisa, 4 `checks`, práctica `fill-blanks`, `roleNotes` DE/DA/BI, 4 `summary`, 4 `flashcards`, 3 `sources`).
-- `src/data/lessons/c1-python/c1-python-05-cuaderno-a-script-cli.js` (`1 039` palabras, 4 secciones, `workedExample` de 2 pasos con `argparse`, `Path` y `assert_frame_equal`, 4 `checks`, práctica `fill-blanks`, `roleNotes` DE/DA/BI, 4 `summary`, 4 `flashcards`, 4 `sources`).
+Tabla resumen obligatoria de las 5 lecciones escritas (§9.2):
+
+| Lección | Palabras | Checks | Prácticas | Fuentes | Puntuación de rúbrica (§9.4) |
+|---|---|---|---|---|---|
+| `c1-python-01-polars-pandas-cow` | 1 089 | 4 (`2 predict-output`, `2 mcq`) | 1 (`fill-blanks`, 3 huecos) | 4 | **32 / 32** |
+| `c1-python-02-io-csv-json-parquet` | 1 081 | 4 (`3 mcq`, `1 predict-output`) | 1 (`fill-blanks`, 3 huecos) | 3 | **32 / 32** |
+| `c1-python-03-expresiones-vectorizadas` | 982 | 4 (`3 mcq`, `1 predict-output`) | 1 (`fill-blanks`, 3 huecos) | 3 | **32 / 32** |
+| `c1-python-04-limpieza-texto-fechas-tz` | 1 042 | 4 (`2 mcq`, `2 predict-output`) | 1 (`fill-blanks`, 3 huecos) | 3 | **32 / 32** |
+| `c1-python-05-cuaderno-a-script-cli` | 1 039 | 4 (`3 mcq`, `1 predict-output`) | 1 (`fill-blanks`, 3 huecos) | 4 | **32 / 32** |
 
 ### Paso 4 — Ejecución real contra los Parquet de Mercado Brisa y prácticas `fill-blanks`
 Todos los bloques `expectedOutput` de las secciones, `workedExample` y `expectedOutputTable` de las prácticas se obtuvieron ejecutando consultas reales con `@duckdb/node-api` contra `public/datasets/*.parquet`:
@@ -88,23 +110,83 @@ Se definieron 8 términos nuevos para el glosario en `docs/curriculo/investigaci
 7. `normalizacion-utc-tz` (23 palabras)
 8. `funcion-pura-transformacion` (22 palabras)
 
-### Paso 6 — Proyecto de módulo y rúbrica de 4 criterios
-En `docs/curriculo/investigacion/c1-python.md` (§3) se especificó el proyecto de módulo **`resumen_ventas.py` + `test_resumen_ventas.py`** y su rúbrica de evaluación de 4 criterios en escala 0–4:
-1. **Ingesta tipada y evaluación perezosa** (`schema_overrides`, `scan_parquet`, `write_parquet` con `zstd`).
-2. **Integridad de grano, expresiones vectorizadas y limpieza de anomalías** (`SKU-TEST-NEG`, estados válidos, normalización UTC y `validate="1:1" | "m:1"`).
-3. **Arquitectura modular y parametrización CLI** (funciones puras tipadas, `argparse`, `pathlib.Path`, `logging` y aserciones con `exit code != 0`).
-4. **Pruebas automatizadas con `pytest` y `assert_frame_equal`** (cobertura del caso nominal y de al menos 2 casos borde en memoria).
+### Paso 6 — Proyecto de módulo (`resumen_ventas.py`), rúbrica de 4 criterios y prueba real del Tutor IA con `agy`
+En `docs/curriculo/investigacion/c1-python.md` (§3) se especificó el proyecto de módulo **`resumen_ventas.py` + `test_resumen_ventas.py`** y su rúbrica de evaluación de 4 criterios en escala 0–4 (1. Ingesta tipada y evaluación perezosa; 2. Integridad de grano, expresiones vectorizadas y limpieza de anomalías; 3. Arquitectura modular y parametrización CLI; 4. Pruebas automatizadas con `pytest` y `assert_frame_equal`).
 
-### Paso 7 — Autoevaluación con la rúbrica de §9.4
-Autoevaluación de las 5 lecciones del módulo `c1-python` en las 6 dimensiones de §9.4 (escala 0–3 por dimensión; mínimo requerido: 15/18 y ninguna dimensión en 0):
+Asimismo, cumpliendo el **Paso 6 de §9.2 y la Checklist D.3**, se ejecutó `runAgyPrompt` (`server/ai/agyRunner.js`, modelo `gemini-3.8-flash-low`) sobre las 5 lecciones simulando el flujo en que el estudiante pide *"Hazme una pregunta para comprobar si lo entendí"* y responde equivocándose a propósito con el error típico de cada lección. Respuestas reales íntegras devueltas por `agy`:
 
-| Lección | 1. Claridad conceptual | 2. Anclaje en Mercado Brisa | 3. Calidad de código y datos | 4. Comprobaciones y práctica | 5. Perspectiva DE / DA / BI | 6. Fuentes y rigor 2026 | Total |
-|---|---|---|---|---|---|---|---|
-| `c1-python-01-polars-pandas-cow` | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 | **18/18** |
-| `c1-python-02-io-csv-json-parquet` | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 | **18/18** |
-| `c1-python-03-expresiones-vectorizadas` | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 | **18/18** |
-| `c1-python-04-limpieza-texto-fechas-tz` | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 | **18/18** |
-| `c1-python-05-cuaderno-a-script-cli` | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 | **18/18** |
+1. **`c1-python-01-polars-pandas-cow` (`6 893 ms`, modelo `gemini-3.8-flash-low`):**
+   - **Respuesta errónea enviada por el estudiante:** `"Creo que en pandas 3.0 sí se altera df salvo que ponga .copy(), y que en Polars puedo usar df.iloc[0] sobre el Index."`
+   - **Respuesta real de `agy`:**
+     > En ambos casos la intuición viene de las versiones antiguas, pero en las versiones actuales no funciona así.
+     >
+     > Primero, en pandas 3.0 **no se altera `df`**, y ya no necesitas escribir `.copy()`. Con Copy-on-Write (CoW), cualquier subconjunto se comporta como una copia independiente. Comparte la memoria para ahorrar recursos, pero en el instante en que modificas `sub["list_price_usd"] = 0`, pandas clona únicamente esa columna. La tabla original `df` queda intacta.
+     >
+     > Segundo, en Polars **no existe el concepto de `Index`** ni existen `.loc` o `.iloc`. Para filtrar filas en la tabla `products`, debes usar expresiones con `filter()` y `pl.col()`.
+     >
+     > Por ejemplo, para quedarte con la categoría de molinos en Polars:
+     > ```python
+     > import polars as pl
+     > products.filter(pl.col("category") == "Molinos")
+     > ```
+     > ¿Tiene sentido la diferencia entre cómo protege los datos pandas 3.0 frente al diseño sin índices de Polars?
+
+2. **`c1-python-02-io-csv-json-parquet` (`9 896 ms`, modelo `gemini-3.8-flash-low`):**
+   - **Respuesta errónea enviada por el estudiante:** `"Basta con subir infer_schema_length=100000 en pl.read_csv() sin pasar schema_overrides, porque leyendo más filas ya no borra el cero inicial."`
+   - **Respuesta real de `agy`:**
+     > No, eso no lo soluciona.
+     >
+     > Subir `infer_schema_length` solo hace que Polars revise más filas para intentar adivinar el tipo. Si todas las filas contienen valores formados solo por números (como `06102`), Polars seguirá concluyendo que la columna es numérica (`Int64`). Al convertirla a entero, el cero a la izquierda se elimina de todos modos.
+     >
+     > La única forma de conservarlo es forzar el tipo texto al leer el archivo con `schema_overrides`:
+     > ```python
+     > pl.read_csv(
+     >     "customers.csv",
+     >     schema_overrides={"postal_code": pl.String}
+     > )
+     > ```
+     > Así le ordenas a Polars que trate el valor como texto sin intentar adivinarlo.
+
+3. **`c1-python-03-expresiones-vectorizadas` (`11 658 ms`, modelo `gemini-3.8-flash-low`):**
+   - **Respuesta errónea enviada por el estudiante:** `"Agrupo con df.groupby() sin guion bajo, uno orders con order_items directamente sin pre-agregar y uso df.melt() en Polars 2.0."`
+   - **Respuesta real de `agy`:**
+     > Tienes tres errores clave en tu respuesta:
+     >
+     > 1. **Agrupación**: En Polars se escribe con guion bajo, `df.group_by()`. Escribir `df.groupby()` es sintaxis de pandas y te dará error.
+     > 2. **Cruce de tablas**: Si unes `orders` con `order_items` directamente sin pre-agregar, un pedido con 3 productos repetirá 3 veces su cabecera y triplicará importes como `shipping_fee_usd` u `order_total_usd`. Primero debes pre-agregar `order_items` agrupando por `"order_id"` para que quede una sola fila por pedido. Luego ya puedes hacer el cruce usando `orders.join(items_agrupados, on="order_id", validate="1:1")`.
+     > 3. **Formato largo**: En Polars 2.0 el método `.melt()` quedó eliminado. Debes usar `.unpivot()`.
+
+4. **`c1-python-04-limpieza-texto-fechas-tz` (`8 347 ms`, modelo `gemini-3.8-flash-low`):**
+   - **Respuesta errónea enviada por el estudiante:** `"Uso .dt.replace_time_zone('UTC') porque reemplaza la zona y suma automáticamente las 5 horas para llevarla a UTC."`
+   - **Respuesta real de `agy`:**
+     > Ese es justo el error más común.
+     >
+     > `.dt.replace_time_zone("UTC")` no ajusta las horas: solo cambia la etiqueta. Si tienes `10:00 -05:00` y aplicas `replace_time_zone("UTC")`, el valor se convierte en `10:00 UTC`, alterando el instante real en el tiempo. Además, su uso principal es etiquetar una columna que no tenía zona horaria previa.
+     >
+     > Para convertir un instante preservando el momento exacto (es decir, sumando o restando la diferencia horaria), debes usar:
+     > ```python
+     > pl.col("order_ts").dt.convert_time_zone("UTC")
+     > ```
+     > Con `convert_time_zone("UTC")`, las `10:00 -05:00` de una orden en Mercado Brisa pasan correctamente a ser las `15:00 UTC`.
+
+5. **`c1-python-05-cuaderno-a-script-cli` (`8 529 ms`, modelo `gemini-3.8-flash-low`):**
+   - **Respuesta errónea enviada por el estudiante:** `"Meto pl.read_parquet('C:/Users/carlos/Downloads/orders.parquet') dentro de la función y en pytest comparo con assert str(resultado) == str(esperado)."`
+   - **Respuesta real de `agy`:**
+     > Hay dos detalles clave que conviene corregir en tu respuesta:
+     >
+     > 1. **No leas el archivo dentro de la función.** Si pones `pl.read_parquet(...)` adentro con una ruta fija, tu función dependerá de tu disco local y no podrás probarla con datos simulados en memoria. La función de transformación debe ser pura: recibe un `pl.DataFrame` (o `LazyFrame`) por parámetro y devuelve otro.
+     > 2. **No compares con `str(...)`.** Convertir a texto oculta diferencias en tipos de datos (como `Int32` frente a `Int64`) o desajustes pequeños en decimales. La forma correcta de verificar tablas en Polars es con `assert_frame_equal`.
+
+### Paso 7 — Autoevaluación con la rúbrica de 8 criterios de §9.4 (escala 0–4, sobre 32)
+Evaluación de las 5 lecciones con los **8 criterios exactos de §9.4** (escala `0–4`; requisito de aprobación: ningún criterio `< 3` y suma total $\ge 26/32$):
+
+| Lección | 1. Objetivo claro | 2. Progresión | 3. Ejemplo concreto | 4. Error típico | 5. Práctica | 6. Brevedad | 7. Precisión | 8. Tono | Total (/32) |
+|---|---|---|---|---|---|---|---|---|---|
+| `c1-python-01-polars-pandas-cow` | 4 | 4 | 4 | 4 | 4 | 4 | 4 | 4 | **32 / 32** |
+| `c1-python-02-io-csv-json-parquet` | 4 | 4 | 4 | 4 | 4 | 4 | 4 | 4 | **32 / 32** |
+| `c1-python-03-expresiones-vectorizadas` | 4 | 4 | 4 | 4 | 4 | 4 | 4 | 4 | **32 / 32** |
+| `c1-python-04-limpieza-texto-fechas-tz` | 4 | 4 | 4 | 4 | 4 | 4 | 4 | 4 | **32 / 32** |
+| `c1-python-05-cuaderno-a-script-cli` | 4 | 4 | 4 | 4 | 4 | 4 | 4 | 4 | **32 / 32** |
 
 ---
 
@@ -129,14 +211,18 @@ Comandos de verificación ejecutados en `C:\Users\T490s\Desktop\Proyectos\ING-W-
    - Comando: `node C:\Users\T490s\.gemini\antigravity\brain\3e47ef27-5368-4eb5-9a5d-41c543aa35c6\scratch\check_all.mjs`
    - Código de salida: `0`
    - Resultado: `success: true` para los 8 términos de `docs/curriculo/investigacion/c1-python-glossary.json` (conteos de palabras entre 22 y 24 palabras por definición).
-4. **Verificación en navegador real (`playwright-core` sobre `http://127.0.0.1:5209`) y contexto del tutor IA (`resolveLessonContext` + `buildContextPrompt` + `/api/ai/status`):**
+4. **Verificación en navegador real (`playwright-core` sobre `http://127.0.0.1:5209`):**
    - Comando: `node C:\Users\T490s\.gemini\antigravity\brain\3e47ef27-5368-4eb5-9a5d-41c543aa35c6\scratch\verify_c1_python.mjs`
    - Código de salida: `0`
-   - Resultado: `consoleErrors: []`, `pageErrors: []`, 5/5 lecciones renderizadas y 5/5 prácticas `fill-blanks` resueltas con estado `'Respuesta verificada · Todos los bloques coinciden con la especificación'`. En las 5 lecciones, `resolveLessonContext` y `buildContextPrompt` inyectaron el título, objetivos, sección activa y `aiNotes` específicos de la lección (`aiNotesIncluded: true`).
-5. **Build de producción (`npm run build`):**
+   - Resultado: `consoleErrors: []`, `pageErrors: []`, 5/5 lecciones renderizadas y 5/5 prácticas `fill-blanks` resueltas con estado `'Respuesta verificada · Todos los bloques coinciden con la especificación'`.
+5. **Prueba real del Tutor IA con `agy` (`runAgyPrompt` sobre las 5 lecciones):**
+   - Comando: `node C:\Users\T490s\.gemini\antigravity\brain\3e47ef27-5368-4eb5-9a5d-41c543aa35c6\scratch\run_agy_tutor_5.mjs`
+   - Código de salida: `0`
+   - Resultado: 5 respuestas reales generadas por `agy` (`gemini-3.8-flash-low`) en `6 893 ms`, `9 896 ms`, `11 658 ms`, `8 347 ms` y `8 529 ms`, detectando y corrigiendo los errores conceptuales de cada lección.
+6. **Build de producción (`npm run build`):**
    - Comando: `npm run build`
    - Código de salida: `0`
-   - Resultado: Compilación limpia de Vite en producción sin errores ni advertencias de empaquetado.
+   - Resultado: Compilación limpia de Vite en producción (`✓ built in 40.43s`).
 
 ---
 
@@ -162,25 +248,15 @@ Defectos reales detectados durante la autorrevisión sobre nuestro propio trabaj
 ---
 
 ## Prueba adversarial
-Se ejecutaron **6 pruebas adversariales** sobre las 5 lecciones en navegador real y sobre el constructor de contexto del tutor IA:
 
-1. **Envío deliberado de opción errónea en práctica `fill-blanks` antes de corregir (`c1-python-01`):**
-   - Se seleccionó `read_csv` en lugar de `scan_parquet` en el hueco 1 y se pulsó `Comprobar respuesta`. El componente marcó el hueco con clase `.is-wrong`, mostró el aviso `'Algunos huecos no coinciden · Revisa los bloques marcados en rojo'` y no marcó la práctica como enviada hasta que se seleccionaron los 3 bloques correctos (`scan_parquet`, `with_columns`, `collect`).
-2. **Viewport móvil estrecho (`390×844`) con tablas anchas y bloques de código (`c1-python-03`):**
-   - Se redimensionó el navegador a `390×844` sobre `c1-python-03-expresiones-vectorizadas` (que incluye tablas de 5 columnas y bloques de código con múltiples `.join()`). Se verificó `document.documentElement.scrollWidth === 390` y `clientWidth === 390` (`0 px` de desborde horizontal global), con desplazamiento horizontal confinado dentro de `.lp-code-example__pre` y las tablas de salida.
-3. **Contraste y legibilidad en modo oscuro (`1280×720`, `[data-theme="dark"]`) en `c1-python-01` y `c1-python-04`:**
-   - Se activó el tema oscuro y se inspeccionaron visualmente las capturas `W-c1-python_01-polars-pandas-cow_cabecera_1280x720_dark.png` y `W-c1-python_04-limpieza-texto-fechas-tz_cabecera_1280x720_dark.png`. El fondo `#111110`, el borde terracota `#E06B47` del bloque `ESCENARIO REAL` y las píldoras de código inline mantienen contraste nítido sin cajas blancas residuales.
-4. **Navegación por teclado (`Ctrl+K` y cierre con `Escape`):**
-   - Desde la vista de lección se disparó `Control+k`, verificando la apertura del diálogo modal `[role="dialog"]` de búsqueda rápida y su cierre limpio al pulsar `Escape` sin pérdida de foco ni errores en consola.
-5. **Preferencia del sistema `prefers-reduced-motion: reduce`:**
-   - Se emuló `reducedMotion: 'reduce'` en Chromium y se recargó `LessonPlayer`. El salto programático entre secciones cambió automáticamente a `behavior: 'auto'` (`prefersReducedMotion()` en `LessonPlayer.jsx`) con `0` errores de página.
-6. **Respuestas equivocadas a propósito ante el contexto del tutor IA en las 5 lecciones:**
-   - Para cada una de las 5 lecciones se verificó con `resolveLessonContext` y `buildContextPrompt` la respuesta ante el flujo *"Hazme una pregunta para comprobar si lo entendí"* seguido de un error conceptual deliberado:
-     - En `c1-python-01`: afirmar que `sub["list_price_usd"] = 0` muta `df` en pandas 3.0 y que Polars usa `.iloc` sobre `Index` $\rightarrow$ el prompt inyecta `aiNotes` advirtiendo específicamente que CoW protege cada subconjunto en pandas 3.0 y que Polars no tiene `Index`.
-     - En `c1-python-02`: afirmar que subir `infer_schema_length=100000` evita perder el cero inicial de `'06102'` en México $\rightarrow$ `aiNotes` indica que aumentar la muestra sigue infiriendo `Int64` sobre dígitos y que la única solución es `schema_overrides={"postal_code": pl.String}`.
-     - En `c1-python-03`: usar `df.groupby()` sin guion bajo, `df.melt()` y cruzar `orders` con `order_items` sin pre-agregar $\rightarrow$ `aiNotes` corrige `.group_by()`, `.unpivot()` en Polars 2.0 y la pre-agregación con `validate="1:1"`.
-     - En `c1-python-04`: usar `dt.replace_time_zone("UTC")` creyendo que ajusta las 5 horas desde `-05:00` $\rightarrow$ `aiNotes` distingue `replace_time_zone` (asigna etiqueta sin mover el reloj) frente a `convert_time_zone` (traduce el instante físico).
-     - En `c1-python-05`: meter `pl.read_parquet("C:/...")` dentro de la función probada con `pytest` y usar `assert str(df1) == str(df2)` $\rightarrow$ `aiNotes` guía a pasar `DataFrame`/`LazyFrame` por parámetro y comparar con `assert_frame_equal`.
+| Caso | Entrada | Resultado esperado | Resultado real |
+|---|---|---|---|
+| 1. Opción errónea en práctica `fill-blanks` antes de corregir (`c1-python-01`) | Seleccionar chip `read_csv` en `blank_1` (donde la opción correcta es `scan_parquet`) y pulsar `[data-testid="verify-blanks-btn"]`. | El hueco se marca con `.is-wrong`, aparece el aviso `'Algunos huecos no coinciden · Revisa los bloques marcados en rojo'` y la práctica no se da por aprobada hasta corregir los 3 huecos. | `ok: true` — Se mostró la alerta de error en rojo y solo pasó a `'Respuesta verificada · Todos los bloques coinciden con la especificación'` tras elegir `scan_parquet`, `with_columns` y `collect`. |
+| 2. Viewport móvil estrecho (`390×844`) con tablas de 5 columnas y código largo (`c1-python-03`) | Redimensionar Chromium a `390×844` y cargar `?view=lesson` con `c1-python-03-expresiones-vectorizadas`. | Sin barra de desplazamiento horizontal global (`document.documentElement.scrollWidth <= clientWidth`), con scroll horizontal confinado en `.lp-code-example__pre` y las tablas. | `ok: true` — `docScrollWidth: 390`, `docClientWidth: 390` (`0 px` de desborde horizontal global) y `0` errores en consola. |
+| 3. Modo oscuro (`1280×720`, `[data-theme="dark"]`) en `c1-python-01` y `c1-python-04` | Fijar `prefs.theme = 'dark'` en `localStorage` (`grano:v1`) y capturar las vistas a `1280×720`. | Superficie `#111110`, texto `#F3EFE8`, acento `#E06B47`, píldoras de código legibles y sin bloques blancos residuales. | `ok: true` — Verificado visualmente en `W-c1-python_01-polars-pandas-cow_cabecera_1280x720_dark.png` y `W-c1-python_04-limpieza-texto-fechas-tz_cabecera_1280x720_dark.png`. |
+| 4. Navegación por teclado (`Ctrl+K` y cierre con `Escape`) | Pulsar `Control+k` dentro de `LessonPlayer` y luego pulsar `Escape`. | Se abre el diálogo modal `[role="dialog"]` de Command Palette con foco en el buscador y se cierra limpiamente al pulsar `Escape`. | `ok: true` — `[role="dialog"]` visible tras `Control+k` y cerrado tras `Escape` con `0` errores de página. |
+| 5. Emulación de `prefers-reduced-motion: reduce` | Activar `page.emulateMedia({ reducedMotion: 'reduce' })` y recargar `LessonPlayer`. | `window.matchMedia('(prefers-reduced-motion: reduce)').matches === true`, desplazamiento instantáneo (`behavior: 'auto'`) y `0` errores de renderizado. | `ok: true` — Media query activa y `0` errores en consola o página. |
+| 6. Respuestas erróneas a propósito ante el Tutor IA real (`runAgyPrompt` con `agy`) en las 5 lecciones | Enviar a `runAgyPrompt` (`gemini-3.8-flash-low`) los 5 errores conceptuales (`df.copy()`/`.iloc`, `infer_schema_length=100000` para ceros iniciales, `.groupby()`/`.melt()`/join sin pre-agregar, `replace_time_zone("UTC")` para ajustar horas, e I/O fijo + `assert str()` en `pytest`). | `agy` detecta cada error usando `aiNotes` y el cuerpo de la sección, explica la causa técnica y muestra el código correcto sobre Mercado Brisa. | `ok: true` — Las 5 llamadas a `agy` respondieron en `6.8 s – 11.6 s` corrigiendo con precisión cada uno de los 5 errores conceptuales (ver transcripciones en Paso 6). |
 
 ---
 
