@@ -10,17 +10,32 @@
 
 ## Inicio
 
-### 1. Archivos leídos antes de escribir código
+### 1. Archivos leídos antes de escribir código (un archivo por línea con 1 dato concreto aprendido)
 
-1. `PLAN_GEMINI_4_ARGON.md` (§1, §2, §5 tabla de `c1-modelo`, §9.2 protocolo de 7 pasos, §9.4 rúbrica de calidad, Apéndices A, B, D.2 y D.3).
-2. `src/data/catalog/modules.js` (definición canónica de `c1-modelo`, líneas 297–316).
-3. `public/datasets/README.md` y `public/datasets/schema.json` (13 tablas de Mercado Brisa generadas con semilla `19870315` y sus anomalías sembradas).
-4. `src/data/schema/lesson.js` (`LessonSchema` v2) y `src/data/schema/glossary.js` (`GlossaryTermSchema`).
-5. `scripts/check-content.mjs`, `scripts/check-copy.mjs`, `scripts/sync-lessons-index.mjs` y `scripts/generate-dataset.mjs`.
-6. `package.json`, `vite.config.js`, `src/main.jsx`, `src/App.jsx`, `src/styles/tokens.css`, `src/data/glossary.js`.
-7. `src/views/LessonPlayer.jsx`, `src/views/PracticeView.jsx`, `src/components/AuthenticCodeLab.jsx`, `src/lab/SqlLab.jsx`, `src/lab/sqlGrader.js`, `src/lab/duckdb.js`.
-8. `server/ai/routes.js`, `server/ai/contextBuilder.js`, `src/components/TutorPanel.jsx`.
-9. `docs/curriculo/fuentes.md`, `docs/curriculo/perfil-core.md` y la lección de referencia `src/data/lessons/c1-sql-joins/c1-sql-joins-02-grano-fanout.js`.
+1. `PLAN_GEMINI_4_ARGON.md`: define en §5 (`c1-modelo`), §9.2, §9.4 y Apéndices A/B/D las 5 lecciones de Nivel 1 (`[20, 25, 20, 20, 20]` min = `105` min), exigiendo entre `380` y `750` palabras en `sections[].body` para Nivel 1 y media `<= 22` palabras por frase.
+2. `src/data/catalog/modules.js`: registra `c1-modelo` en las líneas `297–316` con `prerequisites: ['c1-sql-joins']`, `lessons` `c1-modelo-01` a `c1-modelo-05` y proyecto final de auditoría de integridad y calidad sobre el esquema de Mercado Brisa.
+3. `public/datasets/README.md`: documenta el generador determinista de Mercado Brisa (semilla `19870315`) y las anomalías deliberadas: `450` webhooks duplicados en `payments` (`19 200` filas para `18 000` pedidos, con `750` reintentos legítimos `attempt_number = 2`), `1 200` eventos duplicados y `6 715` eventos anónimos (`customer_id IS NULL`) en `events`, `218` códigos postales nulos y `129` truncados a 2 caracteres en `customers`, y `product_id = 180` (`SKU-TEST-NEG`, `-9.99` USD) en `products`.
+4. `public/datasets/schema.json`: especifica las columnas, tipos físicos y conteos exactos de las 13 tablas (`customers`: `2 400`, `customer_changes`: `4 100`, `products`: `180`, `orders`: `18 000`, `order_items`: `42 000`, `payments`: `19 200`, `refunds`: `1 620`, `events`: `65 000`, `marketing_spend`: `730`, `stores`: `14`, `calendar`: `1 095`).
+5. `src/data/schema/lesson.js`: impone en `LessonSchema` (línea `86`) `title: z.string().min(8).max(60)`, `hook` entre `40` y `90` palabras terminado en `?`, `checks` `>= 3` de al menos 2 tipos con `explanation` entre `20` y `60` palabras, `roleNotes.{de,da,bi}` entre `25` y `70` palabras, y `sources` `>= 3` con URL `https://`.
+6. `src/data/schema/glossary.js`: exige en `GlossaryTermSchema` que `id` sea slug en minúsculas (`^[a-z0-9]+(-[a-z0-9]+)*$`), `definition` tenga entre `20` y `60` palabras y `sources` incluya al menos una fuente verificada.
+7. `scripts/check-content.mjs`: carga dinámicamente todos los archivos `docs/curriculo/investigacion/*-glossary.json` (líneas `103–119`) para validar `lesson.glossaryTerms` sin requerir editar `src/data/glossary.js` durante la Ola A.
+8. `scripts/check-copy.mjs`: rechaza los términos prohibidos del Apéndice B.2 (como `desbloquear`, `dominar`, `esencial`, `a continuación`), prohíbe más de 3 negritas (`**...**`) en un mismo bloque separado por `\n\n` y reporta cualquier lección cuya media supere `22` palabras/frase en `sections[].body`.
+9. `scripts/sync-lessons-index.mjs`: escanea `src/data/lessons/**/*.js` y genera `src/data/lessons/index.js` exportando `LESSONS_V2`, `LESSONS_BY_ID` y el adaptador `adaptLessonForLegacyPlayer`.
+10. `scripts/generate-dataset.mjs`: revela en su lógica de generación que `product_id = 180` (`SKU-TEST-NEG`, `is_active = false`) tiene `0` líneas en `order_items.parquet`, mientras que otros `9` productos inactivos (`is_active = false`, `list_price_usd > 0`) acumulan `2 106` líneas históricas en `order_items.parquet`.
+11. `package.json`: declara `@duckdb/node-api` (`^2.0.0-r.1`), `@duckdb/duckdb-wasm`, `zod` (`^4.6.7`) y `playwright-core` (`^1.64.1`), además de los scripts `check:content`, `check:copy` y `build`.
+12. `vite.config.js`: registra el plugin `granoAiPlugin()` desde `./server/ai/routes.js` y configura el servidor local en `127.0.0.1` permitiendo dividir fragmentos de DuckDB y CodeMirror en `build`.
+13. `src/main.jsx`: inicializa la aplicación React en `#root` e importa el sistema de estilos globales encabezado por `src/styles/tokens.css`.
+14. `src/App.jsx`: conecta `useAppController()` con `LessonPlayer` (`?view=lesson`), `PracticeView` (`?view=practice`, que recibe `initialLessonId={activeLessonId}`) y `TutorPanel`.
+15. `src/styles/tokens.css`: define los tokens visuales de tema claro y oscuro (`--bg`, `--surface`, `--ink`, `--brand`, `--ok`, `--err`) y las familias tipográficas `Newsreader`, `IBM Plex Sans` e `IBM Plex Mono`.
+16. `src/views/LessonPlayer.jsx`: renderiza los 7 bloques canónicos de la lección (`contexto`, `desarrollo`, `ejemplo-guiado`, `areas`, `comprobaciones`, `practica`, `resumen`) con el contador de comprobaciones en `#sec-comprobaciones`.
+17. `src/views/PracticeView.jsx`: monta el laboratorio interactivo `SqlLab` (`[data-testid="sql-lab"]`) y el explorador de las 13 tablas de Mercado Brisa (`[data-testid="schema-explorer"]`) sobre la lección activa.
+18. `src/lab/SqlLab.jsx`: ejecuta las consultas en `DuckDB-Wasm` (`[data-testid="sql-run-btn"]`), califica contra `practice.expected` (`[data-testid="sql-grade-btn"]`) y muestra el banner `[data-testid="sql-grade-box"]` con clases `is-pass` / `is-fail` y tablas de diferencias.
+19. `src/lab/sqlGrader.js`: implementa `compareQueryResults(actualResult, expectedResult)` comparando nombres de columnas insensibles a mayúsculas, conteo de filas y valores numéricos con tolerancia `1e-2`.
+20. `server/ai/agyRunner.js`: implementa `runAgyPrompt({ prompt, model })` invocando el binario real `agy.exe` en un directorio temporal aislado (`os.tmpdir()`) sin shell (`shell: false`).
+21. `server/ai/contextBuilder.js`: construye con `buildContextPrompt` el prompt completo del Tutor IA inyectando título, sección activa, objetivos, contenido de la lección y resumen del esquema de Mercado Brisa.
+22. `docs/curriculo/fuentes.md`: establece el catálogo de fuentes primarias recomendadas para el currículo (Codd 1970, Kent 1983, PostgreSQL 17, DuckDB, dbt Core y SQLMesh).
+23. `docs/curriculo/perfil-core.md`: define el perfil de egreso del tronco común (Nivel 1), exigiendo dominio de grano, integridad referencial y validación de calidad de datos antes de construir métricas.
+24. `src/data/lessons/c1-sql-joins/c1-sql-joins-02-grano-fanout.js`: muestra la estructura de referencia de una lección v2 de Nivel 1 con `workedExample` de 2 pasos sobre `orders` y `order_items` y práctica SQL verificable.
 
 ### 2. Ambigüedades detectadas y cómo se resolvieron
 
@@ -30,13 +45,13 @@
      - Lección 04: `'Auditoría de calidad: duplicados, nulos y valores fuera de rango'` (64 caracteres) -> ajustado a `'Auditoría SQL: duplicados, nulos y valores fuera de rango'` (57 caracteres).
    - Con este ajuste, las 5 lecciones pasan `check-content.mjs` con 0 errores. Se documenta en `## Peticiones al orquestador` para sincronizar ambos títulos en `src/data/catalog/modules.js` durante la Fase 4.
 2. **Comportamiento real de `product_id = 180` (`SKU-TEST-NEG`) e inactivos en `public/datasets/products.parquet` y `order_items.parquet`:**
-   - Al consultar los archivos Parquet reales con `@duckdb/node-api`, se verificó que `product_id = 180` (`sku = 'SKU-TEST-NEG'`, `list_price_usd = -9.99`, `unit_cost_usd = 0.0`, `is_active = false`) tiene exactamente `0` líneas en `order_items.parquet` (porque en `scripts/generate-dataset.mjs` la rama `idx < 15 && status === 'cancelled'` nunca se activa dado que `idx < 15` fuerza `status = 'completed'`), mientras que otros `9` productos desactivados (`is_active = false`, `list_price_usd > 0`, `product_id IN (19, 38, 57, 76, 95, 114, 133, 152, 171)`) suman `2 106` líneas históricas en `order_items.parquet` por `344 098.48 USD`. Todas las explicaciones, consultas y `expectedOutput` reflejan los conteos reales de los Parquet.
+   - Al consultar los archivos Parquet reales con `@duckdb/node-api`, se verificó que `product_id = 180` (`sku = 'SKU-TEST-NEG'`, `list_price_usd = -9.99`, `unit_cost_usd = 0.0`, `is_active = false`) tiene exactamente `0` líneas en `order_items.parquet`, mientras que otros `9` productos desactivados (`is_active = false`, `list_price_usd > 0`, `product_id IN (19, 38, 57, 76, 95, 114, 133, 152, 171)`) suman `2 106` líneas históricas en `order_items.parquet` por `344 098.48 USD`. Todas las explicaciones, consultas y `expectedOutput` reflejan los conteos reales de los Parquet.
 
 ---
 
 ## Pasos
 
-### Paso 1 — Investigación de fuentes primarias
+### Paso 1 — Investigación de fuentes primarias (`docs/curriculo/investigacion/c1-modelo.md`)
 
 - Se redactó la sección `§1` de `docs/curriculo/investigacion/c1-modelo.md` con **17 fuentes primarias verificadas** (papers fundacionales de Edgar F. Codd 1970/1971 y William Kent 1983, documentación oficial de PostgreSQL 17, DuckDB Stable, dbt Core y SQLMesh).
 - Se verificó programáticamente con `fetch` que las 17 URLs responden `HTTP 200 OK` (sustituyendo el DOI de ACM que devolvía `403` por el PDF académico abierto de UPenn CIS 550 `https://www.seas.upenn.edu/~zives/03f/cis550/codd.pdf`). Cada una de las 5 lecciones cuenta con 3 a 4 fuentes primarias en su campo `sources[]`.
@@ -60,7 +75,7 @@ Se crearon las 5 lecciones en `src/data/lessons/c1-modelo/`:
 - Todas las filas devueltas por DuckDB fueron volcadas literalmente en `expectedOutput` y `expectedOutputTable`.
 - Se verificó con `compareQueryResults` (`src/lab/sqlGrader.js`) que en las 5 lecciones el `starterCode` falla la calificación (`passed: false`) y `solution` aprueba (`passed: true`).
 
-### Paso 5 — Términos de glosario nuevos
+### Paso 5 — Términos de glosario nuevos (`docs/curriculo/investigacion/c1-modelo-glossary.json`)
 
 - Se creó `docs/curriculo/investigacion/c1-modelo-glossary.json` con **8 términos nuevos** vinculados a las lecciones de `c1-modelo`:
   1. `primary-key`
@@ -73,19 +88,36 @@ Se crearon las 5 lecciones en `src/data/lessons/c1-modelo/`:
   8. `regla-validacion-bloqueante`
 - Todos los términos pasaron `validateGlossary(data)` (`src/data/schema/glossary.js`) con 0 errores.
 
-### Paso 6 — Proyecto del módulo
+### Paso 6 — Proyecto del módulo y prueba real del Tutor IA con `agy` (`runAgyPrompt`)
 
-- Se redactó en `§6` de `docs/curriculo/investigacion/c1-modelo.md` la propuesta completa del proyecto de módulo `c1-modelo-project` (*Suite de auditoría de integridad y calidad sobre el esquema completo de Mercado Brisa*), con enunciado, batería de 8 consultas SQL verificadas contra los Parquet reales (`fallos` reales antes y después del saneamiento WAP) y rúbrica de 4 criterios verificables.
+- Se redactó en `§6` de `docs/curriculo/investigacion/c1-modelo.md` la propuesta completa del proyecto de módulo `c1-modelo-project` (*Suite de auditoría de integridad y calidad sobre el esquema completo de Mercado Brisa*), con enunciado, batería de 8 consultas SQL verificadas contra los Parquet reales (`fallos` reales antes y después del saneamiento WAP) y rúbrica de 4 criterios verificables (escala 0–4).
+- Se probó el Tutor IA real ejecutando `buildContextPrompt` (`server/ai/contextBuilder.js`) + `runAgyPrompt` (`server/ai/agyRunner.js`, modelo `gemini-3.8-flash-low`) sobre las 5 lecciones de `c1-modelo`: en el Turno 1 se pidió *"Hazme una pregunta corta para comprobar si entendí la lección"* y en el Turno 2 se respondió mal a propósito con el error típico de la lección. Las respuestas literales de `agy` se documentan en `## Test` (§6).
 
-### Paso 7 — Verificación automática, visual y rúbrica §9.4
+### Paso 7 — Tabla resumen obligatoria (§9.2) y autoevaluación con la rúbrica de 8 criterios (§9.4)
 
-| Lección | 1. Esquema (`check-content`) | 2. Copy (`check-copy`) | 3. Código ejecutable (DuckDB) | 4. Práctica verificable (`starter` falla / `solution` pasa) | 5. Comprobaciones (`checks` >= 3, >= 2 tipos) | 6. Fuentes (`>= 2` HTTP 200) | 7. Contexto IA (`aiContext` verificado) | 8. Render en navegador (`1280×720`, 0 errores) |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| `c1-modelo-01-claves-primarias-foraneas` | PASS | PASS | PASS | PASS | PASS (`mcq`, `predict-output`, `fill-code`) | PASS (4 fuentes) | PASS | PASS |
-| `c1-modelo-02-normalizacion-1fn-3fn` | PASS | PASS | PASS | PASS | PASS (`mcq`, `mcq`, `order`) | PASS (3 fuentes) | PASS | PASS |
-| `c1-modelo-03-integridad-huerfanos` | PASS | PASS | PASS | PASS | PASS (`predict-output`, `mcq`, `fill-code`) | PASS (3 fuentes) | PASS | PASS |
-| `c1-modelo-04-auditoria-calidad` | PASS | PASS | PASS | PASS | PASS (`mcq`, `predict-output`, `fill-code`) | PASS (3 fuentes) | PASS | PASS |
-| `c1-modelo-05-validacion-bloqueante` | PASS | PASS | PASS | PASS | PASS (`mcq`, `mcq`, `order`) | PASS (4 fuentes) | PASS | PASS |
+#### 7.1 Tabla resumen obligatoria del módulo (`§9.2`)
+
+| Lección (`id`) | Palabras | Checks | Prácticas | Fuentes | Puntuación de rúbrica (§9.4) |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| `c1-modelo-01-claves-primarias-foraneas` | `1 137` (`500` en `sections.body`, `18.5` pal/frase) | `3` (`mcq`, `predict-output`, `fill-code`) | `1` (`sql` sobre `products`, `customers`, `customer_changes`, `orders`, `payments`) | `4` (4 primarias HTTP 200) | **32 / 32** (`4/4` en los 8 criterios) |
+| `c1-modelo-02-normalizacion-1fn-3fn` | `1 171` (`545` en `sections.body`, `18.8` pal/frase) | `3` (`mcq`, `mcq`, `order`) | `1` (`sql` sobre `customers` y `orders`) | `3` (3 primarias HTTP 200) | **32 / 32** (`4/4` en los 8 criterios) |
+| `c1-modelo-03-integridad-huerfanos` | `1 223` (`564` en `sections.body`, `20.1` pal/frase) | `3` (`predict-output`, `mcq`, `fill-code`) | `1` (`sql` con `ANTI JOIN` sobre `order_items` y `products`) | `3` (3 primarias HTTP 200) | **32 / 32** (`4/4` en los 8 criterios) |
+| `c1-modelo-04-auditoria-calidad` | `1 141` (`518` en `sections.body`, `21.6` pal/frase) | `3` (`mcq`, `predict-output`, `fill-code`) | `1` (`sql` con `FILTER` y `UNION ALL` sobre `payments`, `events`, `customers`, `products`) | `3` (3 primarias HTTP 200) | **32 / 32** (`4/4` en los 8 criterios) |
+| `c1-modelo-05-validacion-bloqueante` | `1 083` (`501` en `sections.body`, `18.6` pal/frase) | `3` (`mcq`, `mcq`, `order`) | `1` (`sql` de compuerta WAP sobre `payments_silver`, `products_silver`, `order_items`, `orders`) | `4` (4 primarias HTTP 200) | **32 / 32** (`4/4` en los 8 criterios) |
+| **Total / Promedio** | **`5 755` (`1 151` media)** | **`15` checks** | **`5` prácticas SQL verificables** | **`17` fuentes HTTP 200** | **32.0 / 32** |
+
+#### 7.2 Matriz de autoevaluación de las 8 dimensiones de la rúbrica `§9.4` (escala 0–4; mínimo exigido: 3)
+
+| Dimensión `§9.4` | L01 Claves PK/FK | L02 1FN–3FN | L03 Huérfanos | L04 Auditoría SQL | L05 Compuerta WAP | Evidencia verificable |
+| :--- | :---: | :---: | :---: | :---: | :---: | :--- |
+| **1. Objetivo claro** | 4 | 4 | 4 | 4 | 4 | Cada lección declara 3 objetivos con verbos medibles (`Distinguir`, `Verificar`, `Aplicar`, `Escribir`, `Perfilar`, `Implementar`) alineados con los 3 `checks` y la práctica SQL. |
+| **2. Progresión** | 4 | 4 | 4 | 4 | 4 | Secuencia sin saltos desde `c1-sql-joins-05`: identidad de fila y claves (L01) → dependencias funcionales 1FN–3FN (L02) → integridad referencial y `ANTI JOIN` (L03) → perfilado de duplicados/nulos/rango (L04) → compuerta bloqueante WAP (L05). |
+| **3. Ejemplo concreto** | 4 | 4 | 4 | 4 | 4 | Las 20 consultas SQL operan sobre las tablas reales de Mercado Brisa (`customer_changes`, `stores`, `orders`, `order_items`, `products`, `payments`, `events`, `customers`) con resultados exactos de DuckDB. |
+| **4. Error típico** | 4 | 4 | 4 | 4 | 4 | Cada `workedExample` contrasta el error real (usar `customer_id` como PK en historial, repetir atributos de tienda en `orders`, usar `NOT IN` con `NULL` o `INNER JOIN` con inactivos, deduplicar `payments` por `order_id`, publicar sin auditar en Silver) frente a su solución. |
+| **5. Práctica** | 4 | 4 | 4 | 4 | 4 | En las 5 prácticas SQL, `starterCode` falla la calificación (`is-fail`) y `solution` aprueba (`is-pass`) tanto en Node (`compareQueryResults`) como en `DuckDB-Wasm` en el navegador. |
+| **6. Brevedad** | 4 | 4 | 4 | 4 | 4 | `sections[].body` entre `500` y `564` palabras (dentro del rango `[380, 750]` de Nivel 1) y longitud media de frase entre `18.5` y `21.6` palabras/frase (`<= 22.0`). |
+| **7. Precisión** | 4 | 4 | 4 | 4 | 4 | 17 fuentes primarias verificadas con `HTTP 200` (Codd 1970/1971, Kent 1983, PostgreSQL 17, DuckDB Stable, dbt Core y SQLMesh) y conteos idénticos a los archivos Parquet. |
+| **8. Tono** | 4 | 4 | 4 | 4 | 4 | `0` hallazgos en `check-copy.mjs`: español directo en segunda persona (`tú`), sin jerga vacía, sin emojis, sin `"2026"` en prosa y máximo 1–2 negritas por párrafo. |
 
 ---
 
@@ -117,7 +149,7 @@ Archivos escaneados: 5
 0 hallazgos de términos prohibidos, emojis, "2026" o exceso de negritas.
 Total de hallazgos: 0
 ```
-*(Nota: ninguna de las 5 lecciones de `c1-modelo` supera el umbral de 22 palabras/frase de media en `sections[].body`).*
+*(Ninguna de las 5 lecciones de `c1-modelo` supera el umbral de 22 palabras/frase de media en `sections[].body`).*
 
 ### 3. Validación de esquema de glosario (`validateGlossary`)
 
@@ -183,6 +215,18 @@ dist/assets/index-Cuw7xNLT.js                1,149.95 kB │ gzip: 338.69 kB
 ✓ built in 1m 43s
 ```
 
+### 6. Prueba real del Tutor IA con `agy` (`runAgyPrompt` · `gemini-3.8-flash-low`) en las 5 lecciones
+
+Se ejecutó `run-real-agy-tutor.mjs` invocando `buildContextPrompt` (`server/ai/contextBuilder.js`) + `runAgyPrompt` (`server/ai/agyRunner.js`) en las 5 lecciones: en el Turno 1 se pidió *"Hazme una pregunta corta para comprobar si entendí la lección"* y en el Turno 2 se envió una respuesta errónea a propósito:
+
+| Lección (`id`) | Latencia Turno 1 / Turno 2 | Pregunta formulada por `agy` (Turno 1) | Respuesta errónea enviada a propósito (Turno 2) | Respuesta real de `agy` corrigiendo el error (extracto literal) |
+| :--- | :---: | :--- | :--- | :--- |
+| `c1-modelo-01-claves-primarias-foraneas` | `10 828 ms` / `21 693 ms` | *"En la tabla `orders` de Mercado Brisa tienes las columnas `order_id` y `customer_id`. Si un cliente puede hacer varias compras a lo largo del tiempo, ¿cuál de esas dos columnas puede actuar como clave primaria (`PRIMARY KEY`) de la tabla y qué dos condiciones obligatorias debe cumplir para serlo?"* | *"Creo que `customer_id` es la clave primaria perfecta de la tabla `customer_changes` porque nunca tiene valores `NULL`, y que en `orders` la columna `customer_id` no puede repetirse."* | *"No exactamente, hay dos puntos importantes que debes corregir: Primero, en la tabla `orders`, un cliente puede hacer varias compras. Por lo tanto, `customer_id` sí se repite (una fila por cada pedido que haga). La clave primaria de `orders` es `order_id`... Segundo, para ser clave primaria no basta con no tener valores `NULL`. Debe cumplir dos condiciones al mismo tiempo: 1. Obligatoriedad (`NOT NULL`)... 2. Unicidad (`UNIQUE`)... En `customer_changes` se guarda el historial de cambios de los clientes. Si un cliente cambia de ciudad dos veces, tendrá más de una fila con el mismo `customer_id`, por lo que allí tampoco es único."* |
+| `c1-modelo-02-normalizacion-1fn-3fn` | `16 373 ms` / `10 785 ms` | *"Imagina que en Mercado Brisa guardamos los pedidos y los datos de los clientes en una única tabla llamada `orders_con_clientes`. Si un cliente cancela su única compra y borramos esa fila de la tabla, ¿qué tipo de anomalía ocurre y qué problema nos causa?"* | *"Entendí que guardar `unit_price_usd` dentro de `order_items` viola la Tercera Forma Normal (3FN) porque el precio ya existe en `products.list_price_usd` y deberíamos borrarlo de `order_items`."* | *"Es una confusión muy común, pero no viola la 3FN. En `products`, el precio representa el valor actual de catálogo. Ese valor cambia con el tiempo por promociones, inflación o decisiones comerciales. En cambio, `item_price_usd` en `order_items` representa un hecho histórico: el precio exacto al que se vendió ese producto en ese instante concreto. Si borraras ese campo de `order_items` y consultaras el precio haciendo una unión con `products`, las ventas del pasado cambiarían cada vez que actualices el catálogo. Perderías la precisión contable de lo que el cliente pagó realmente."* |
+| `c1-modelo-03-integridad-huerfanos` | `7 214 ms` / `6 456 ms` | *"Imagina que en Mercado Brisa llega un pago a la tabla `payments` con `order_id = 450`, pero en la tabla `orders` todavía no existe ninguna fila con ese identificador. 1. ¿Cómo se llama técnicamente esa fila de `payments`? 2. ¿Por qué ocurre este desfase en un almacén de datos si en la base operativa no se permitiría?"* | *"Para encontrar clientes sin eventos ejecuté `WHERE customer_id NOT IN (SELECT customer_id FROM events)` y como devolvió 0 filas significa que ningún cliente carece de eventos."* | *"Cuidado, esa conclusión puede ser falsa debido a una trampa clásica de SQL con los valores nulos. Si en la tabla `events` hay al menos una fila con `customer_id IS NULL` (por ejemplo, eventos de usuarios anónimos que aún no inician sesión), la subconsulta devuelve ese `NULL`. Cuando el motor evalúa `customer_id NOT IN (..., NULL)` la comparación se transforma internamente en `customer_id <> ... AND customer_id <> NULL`. En SQL, cualquier comparación directa con `NULL` no da ni verdadero ni falso, sino `UNKNOWN`... Por eso la consulta devuelve 0 filas, aunque existan muchos clientes sin ningún evento."* |
+| `c1-modelo-04-auditoria-calidad` | `6 936 ms` / `6 997 ms` | *"Ambos intentos comparten el mismo `order_id`. Si quieres comprobar que no existan duplicados accidentales causados por un reenvío de red o webhook, ¿por qué columna debes agrupar para contar repeticiones: por `order_id` o por `idempotency_key`?"* | *"Para limpiar los pagos duplicados en `payments` basta con agrupar por `order_id` y quedarnos con una sola fila por pedido, y `COUNT(postal_code)` en `customers` ya descarta los códigos postales truncados de 2 caracteres."* | *"Ojo con ambas conclusiones, porque esconden dos errores comunes de auditoría. Primero, en `payments`, agrupar por `order_id` y dejar una sola fila borraría reintentos legítimos de negocio (por ejemplo, un pago rechazado y otro aprobado para la misma orden). Para detectar duplicados técnicos causados por reenvíos de red o webhooks, debes agrupar por `idempotency_key`... Segundo, `COUNT(postal_code)` no descarta códigos postales truncados de 2 caracteres. Lo único que hace `COUNT(columna)` es ignorar los valores `NULL`; cualquier texto no nulo, incluso de 2 caracteres, lo cuenta como válido."* |
+| `c1-modelo-05-validacion-bloqueante` | `6 223 ms` / `6 903 ms` | *"Quieres validar en la tabla `order_items` que ninguna fila tenga una cantidad (`quantity`) menor o igual a cero ni nula. Bajo el contrato de aserción de dbt o SQLMesh, ¿cuál de estas dos consultas deberías usar como prueba de calidad: `WHERE quantity > 0` o `WHERE quantity IS NULL OR quantity <= 0`?"* | *"En una prueba bloqueante de dbt para validar precios positivos debo escribir `SELECT * FROM products WHERE list_price_usd > 0` para que devuelva los 179 productos válidos y apruebe."* | *"No, es justo al revés. Ese es el malentendido más común en este nivel. En dbt y SQLMesh, la prueba busca las filas culpables (los registros que rompen la regla), no los casos correctos: Si la consulta devuelve 0 filas, la prueba aprueba (`PASS`). Si devuelve 1 o más filas, la prueba falla (`FAIL` / `BLOCKED`). Si escribes `WHERE unit_price_usd > 0`, la consulta devolverá los 179 productos válidos. Al recibir 179 filas, dbt asumirá que hay 179 errores y bloqueará la publicación de tu tabla."* |
+
 ---
 
 ## Revisión propia
@@ -212,37 +256,35 @@ Durante la construcción y auditoría del módulo se detectaron y corrigieron **
 
 ## Prueba adversarial
 
-Se ejecutaron **6 pruebas adversariales** sobre el contenido, el motor SQL en navegador y la interfaz:
-
-1. **Verificación de fallo obligatorio de `starterCode` en DuckDB-Wasm y Node DuckDB:**
-   - Se ejecutó `Comprobar resultado` (`[data-testid="sql-grade-btn"]`) con el `starterCode` sin modificar en las 5 lecciones tanto en Node (`compareQueryResults`) como en el navegador real (`DuckDB-Wasm`). En las 5 lecciones devolvió `is-fail` (`El resultado aún no coincide con la referencia`) con tabla de diferencias (`missingRows` / `extraRows`).
-2. **Trampa de lógica trivalente `NOT IN` con valores `NULL` en `events.customer_id` (`c1-modelo-03`):**
-   - Se verificó sobre `events.parquet` (que contiene `6 715` eventos anónimos con `customer_id IS NULL`) que `SELECT COUNT(*) FROM customers WHERE customer_id NOT IN (SELECT customer_id FROM events)` devuelve `0` filas en lugar del conteo real, mientras que `ANTI JOIN` y `NOT EXISTS` operan sin verse afectados por los `NULL`.
-3. **Distinción entre producto negativo sin ventas (`product_id = 180`) y productos inactivos con ventas históricas (`c1-modelo-03` y `c1-modelo-04`):**
-   - Se comprobó que un `INNER JOIN` contra `products WHERE is_active = TRUE` descarta silenciosamente `2 106` líneas de `order_items` (`344 098.48 USD`) pertenecientes a 9 productos inactivos con ventas históricas, mientras que `SKU-TEST-NEG` (`product_id = 180`, `-9.99 USD`) tiene `0` líneas en `order_items` y debe aislarse mediante auditoría de dominio sobre `products`.
-4. **Distinción entre reintentos legítimos de pago (`attempt_number = 2`) y duplicados de webhook (`c1-modelo-04` y `c1-modelo-05`):**
-   - Se demostró que agrupar `payments` por `order_id` destruye `750` reintentos legítimos de clientes cuyo primer intento falló (`status = 'failed'`), mientras que agrupar por `idempotency_key` aísla con exactitud las `450` copias técnicas de webhook (`405` `captured` por `168 674.63 USD`, `27` `failed` y `18` `pending`).
-5. **Pruebas de desbordamiento horizontal en viewports extremos (`375×667`, `768×1024`, `1920×1080`):**
-   - Se redimensionó Playwright a `375×667` (móvil), `768×1024` (tablet) y `1920×1080` (escritorio ancho), midiendo `document.documentElement.scrollWidth > document.documentElement.clientWidth`. Resultado: `false` (0 px de overflow horizontal) y `0` errores de consola o página en todos los tamaños.
-6. **Prueba de detección de errores conceptuales en el Tutor IA (`buildContextPrompt`):**
-   - Se probó la construcción del prompt del tutor en las 5 lecciones simulando la petición *"Hazme una pregunta para comprobar si lo entendí"* seguida de una respuesta deliberadamente errónea de cada lección (usar `customer_id` como PK en `customer_changes`, creer que `unit_price_usd` en `order_items` viola 3FN, usar `NOT IN` con nulos, deduplicar `payments` por `order_id` y devolver 179 filas en una prueba de aserción de cero filas), verificando que el prompt inyecta el título, sección, objetivos y cuerpo de la lección activa (`3 375`–`3 695` caracteres).
+| Caso | Entrada | Resultado esperado | Resultado real |
+| :--- | :--- | :--- | :--- |
+| **1. Calificación de `starterCode` sin modificar en las 5 lecciones** | Pulsar `Comprobar resultado` (`[data-testid="sql-grade-btn"]`) con el `starterCode` inicial en `c1-modelo-01`..`05` tanto en Node (`compareQueryResults`) como en `DuckDB-Wasm`. | Las 5 prácticas deben rechazar el `starterCode` (`passed: false`, banner `.is-fail`) y mostrar las filas faltantes/sobrantes en `[data-testid="sql-grade-box"]`. | En las 5 lecciones devolvió `passed: false` (`El resultado aún no coincide con la referencia`) con tabla de diferencias (`W-c1-modelo_c1-modelo-04-auditoria-calidad_starter-fail_1280x720_light.png`). |
+| **2. Trampa de lógica trivalente `NOT IN` con `NULL` en `events`** | Ejecutar `SELECT COUNT(*) FROM customers WHERE customer_id NOT IN (SELECT customer_id FROM events)` sobre `events.parquet` (`6 715` filas con `customer_id IS NULL`). | `NOT IN` evalúa a `UNKNOWN` y devuelve `0` filas; `ANTI JOIN` y `NOT EXISTS` aíslan los clientes sin eventos sin verse afectados por los `NULL`. | `NOT IN` devolvió `0` filas en DuckDB; `ANTI JOIN` y `NOT EXISTS` operaron correctamente sin perder filas por culpa de los `6 715` nulos. |
+| **3. Cruce contra catálogo activo (`is_active = TRUE`) frente a SKU negativo (`SKU-TEST-NEG`)** | Ejecutar `INNER JOIN products WHERE is_active = TRUE` desde `order_items` frente a `ANTI JOIN` y filtro de rango `WHERE list_price_usd <= 0` en `products`. | El `INNER JOIN` descarta silenciosamente las ventas de los 9 productos inactivos (`2 106` líneas = `344 098.48 USD`), mientras que el filtro de dominio aísla `product_id = 180` (`SKU-TEST-NEG`, `-9.99 USD`, `0` líneas en `order_items`). | Verificado en DuckDB: `2 106` líneas huérfanas de catálogo activo (`344 098.48 USD`) detectadas con `ANTI JOIN` en L03, y `SKU-TEST-NEG` (`-9.99 USD`) aislado en L04 y L05. |
+| **4. Deduplicación errónea por `order_id` frente a `idempotency_key` en `payments`** | Agrupar `payments` (`19 200` filas para `18 000` pedidos) por `order_id` en vez de por `idempotency_key`. | Agrupar por `order_id` destruye los `750` segundos intentos legítimos (`attempt_number = 2`); agrupar por `idempotency_key` aísla exactamente las `450` copias de webhook (`405` `captured` = `168 674.63 USD`, `27` `failed`, `18` `pending`). | Verificado en DuckDB y en el `workedExample` de L04 y L05: `19 200 - 18 750 = 450` duplicados técnicos de red. |
+| **5. Viewports extremos (`375×667`, `390×844`, `768×1024`, `1920×1080`) y tema oscuro** | Redimensionar Playwright a móvil (`375×667` y `390×844`), tablet (`768×1024`) y escritorio (`1280×720` y `1920×1080`) en temas `light` y `dark`. | `document.documentElement.scrollWidth <= document.documentElement.clientWidth` (`overflow: false`), `0` errores de consola y `0` errores de página. | `horizontal overflow: false` en todos los viewports, `Console errors: 0`, `Page errors: 0` (`W-c1-modelo_c1-modelo-01-claves-primarias-foraneas_cabecera_390x844_light.png` y `*_dark.png`). |
+| **6. Respuestas falsas enviadas a propósito al Tutor IA real (`agy`) en las 5 lecciones** | Invocar `runAgyPrompt` (`server/ai/agyRunner.js`) en las 5 lecciones enviando afirmaciones falsas diseñadas para inducir complacencia del modelo. | El Tutor IA debe refutar las 5 afirmaciones falsas explicando la causa técnica sobre las tablas de Mercado Brisa. | En las 5 lecciones `agy` (`gemini-3.8-flash-low`) refutó el error del alumno con ejemplos SQL sobre Mercado Brisa (ver tabla en `## Test` §6). |
 
 ---
 
 ## Capturas antes / después
 
-Las 10 capturas verificadas con `read_file` se encuentran en `C:\Users\T490s\Desktop\Proyectos\ING\docs\reportes\capturas\W-c1-modelo\` (fuera del commit de git según las reglas del proyecto):
+Se generaron en Playwright e inspeccionaron visualmente con `read_file` **14 capturas PNG reales** almacenadas en disco en `C:\Users\T490s\Desktop\Proyectos\ING\docs\reportes\capturas\W-c1-modelo\` (no incluidas en el commit de git para respetar la lista estricta de archivos en propiedad):
 
-1. `docs/reportes/capturas/W-c1-modelo/W-c1-modelo_c1-modelo-01-claves-primarias-foraneas_cabecera_1280x720_light.png`
-2. `docs/reportes/capturas/W-c1-modelo/W-c1-modelo_c1-modelo-01-claves-primarias-foraneas_practica_1280x720_light.png`
-3. `docs/reportes/capturas/W-c1-modelo/W-c1-modelo_c1-modelo-02-normalizacion-1fn-3fn_cabecera_1280x720_light.png`
-4. `docs/reportes/capturas/W-c1-modelo/W-c1-modelo_c1-modelo-02-normalizacion-1fn-3fn_practica_1280x720_light.png`
-5. `docs/reportes/capturas/W-c1-modelo/W-c1-modelo_c1-modelo-03-integridad-huerfanos_cabecera_1280x720_light.png`
-6. `docs/reportes/capturas/W-c1-modelo/W-c1-modelo_c1-modelo-03-integridad-huerfanos_practica_1280x720_light.png`
-7. `docs/reportes/capturas/W-c1-modelo/W-c1-modelo_c1-modelo-04-auditoria-calidad_cabecera_1280x720_light.png`
-8. `docs/reportes/capturas/W-c1-modelo/W-c1-modelo_c1-modelo-04-auditoria-calidad_practica_1280x720_light.png`
-9. `docs/reportes/capturas/W-c1-modelo/W-c1-modelo_c1-modelo-05-validacion-bloqueante_cabecera_1280x720_light.png`
-10. `docs/reportes/capturas/W-c1-modelo/W-c1-modelo_c1-modelo-05-validacion-bloqueante_practica_1280x720_light.png`
+1. `docs/reportes/capturas/W-c1-modelo/W-c1-modelo_c1-modelo-01-claves-primarias-foraneas_cabecera_1280x720_light.png` (125 676 bytes)
+2. `docs/reportes/capturas/W-c1-modelo/W-c1-modelo_c1-modelo-01-claves-primarias-foraneas_practica_1280x720_light.png` (91 788 bytes)
+3. `docs/reportes/capturas/W-c1-modelo/W-c1-modelo_c1-modelo-01-claves-primarias-foraneas_cabecera_1280x720_dark.png` (126 737 bytes)
+4. `docs/reportes/capturas/W-c1-modelo/W-c1-modelo_c1-modelo-01-claves-primarias-foraneas_cabecera_390x844_light.png` (62 428 bytes)
+5. `docs/reportes/capturas/W-c1-modelo/W-c1-modelo_c1-modelo-02-normalizacion-1fn-3fn_cabecera_1280x720_light.png` (128 450 bytes)
+6. `docs/reportes/capturas/W-c1-modelo/W-c1-modelo_c1-modelo-02-normalizacion-1fn-3fn_practica_1280x720_light.png` (119 966 bytes)
+7. `docs/reportes/capturas/W-c1-modelo/W-c1-modelo_c1-modelo-03-integridad-huerfanos_cabecera_1280x720_light.png` (128 555 bytes)
+8. `docs/reportes/capturas/W-c1-modelo/W-c1-modelo_c1-modelo-03-integridad-huerfanos_practica_1280x720_light.png` (120 585 bytes)
+9. `docs/reportes/capturas/W-c1-modelo/W-c1-modelo_c1-modelo-04-auditoria-calidad_cabecera_1280x720_light.png` (133 340 bytes)
+10. `docs/reportes/capturas/W-c1-modelo/W-c1-modelo_c1-modelo-04-auditoria-calidad_starter-fail_1280x720_light.png` (102 125 bytes)
+11. `docs/reportes/capturas/W-c1-modelo/W-c1-modelo_c1-modelo-04-auditoria-calidad_practica_1280x720_light.png` (88 471 bytes)
+12. `docs/reportes/capturas/W-c1-modelo/W-c1-modelo_c1-modelo-05-validacion-bloqueante_cabecera_1280x720_light.png` (126 247 bytes)
+13. `docs/reportes/capturas/W-c1-modelo/W-c1-modelo_c1-modelo-05-validacion-bloqueante_practica_1280x720_light.png` (73 523 bytes)
+14. `docs/reportes/capturas/W-c1-modelo/W-c1-modelo_c1-modelo-05-validacion-bloqueante_practica_1280x720_dark.png` (74 084 bytes)
 
 ---
 
@@ -257,4 +299,4 @@ Las 10 capturas verificadas con `read_file` se encuentran en `C:\Users\T490s\Des
 
 ## Pendiente
 
-Ninguno. Las 5 lecciones de `c1-modelo`, el documento de investigación, el archivo JSON de glosario y este reporte están completos y verificados con 0 errores.
+Ninguno. Las 5 lecciones de `c1-modelo`, el documento de investigación, el archivo JSON de glosario, las 14 capturas reales y este reporte están completos y verificados con 0 errores.
