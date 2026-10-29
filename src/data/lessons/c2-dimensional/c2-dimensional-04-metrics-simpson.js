@@ -1,350 +1,579 @@
-// Lección migrada al esquema v2 mediante scripts/migrate-legacy.mjs
-const lesson = {
-  "id": "c2-dimensional-04-metrics-simpson",
-  "moduleId": "c2-dimensional",
-  "tracks": [
-    "core"
+export const lesson = {
+  id: 'c2-dimensional-04-metrics-simpson',
+  legacyId: 'l6-metrics-simpson',
+  legacyOrder: 6,
+  moduleId: 'c2-dimensional',
+  tracks: ['core', 'de', 'da', 'bi'],
+  level: 2,
+  order: 4,
+  title: 'Aditividad de métricas y paradoja de Simpson',
+  subtitle:
+    'Hechos aditivos, semiaditivos y no aditivos, árboles de KPIs y descomposición de Kitagawa-Oaxaca',
+  minutes: 30,
+  prerequisites: ['c2-dimensional-03-scd2-history'],
+  contentVersion: 2,
+  hook: 'El equipo de crecimiento de Mercado Brisa calculó el costo por adquisición (`CPA`) promediando el ratio diario `AVG(spend_usd / attributed_conversions)` en `marketing_spend` y reportó `$14.37` para `referral` cuando el costo real ponderado era `$13.59`. En paralelo, el ticket medio global en `desktop` (`$453.26`) superó en `$62.19` al de `mobile` (`$391.07`), pero parte de esa brecha provenía de que las cafeterías B2B compran más en escritorio. ¿Cómo evitar errores de agregación en métricas no aditivas y separar cambios de tasa de efectos de mezcla?',
+  objectives: [
+    'Clasificar hechos en aditivos, semiaditivos y no aditivos determinando su regla algebraica de agregación en SQL.',
+    'Diseñar árboles de KPIs con métricas de guarda (Guardrails) y calcular razones ponderadas mediante `SUM(numerador) / NULLIF(SUM(denominador), 0)`.',
+    'Diagnosticar la paradoja de Simpson y aplicar la descomposición de Kitagawa-Oaxaca para separar el efecto tasa del efecto composición.',
   ],
-  "level": 2,
-  "order": 4,
-  "title": "Métricas no aditivas y paradoja de Simpson",
-  "minutes": 30,
-  "prerequisites": [
-    "c2-dimensional-03-scd2-history"
-  ],
-  "contentVersion": 1,
-  "hook": "En Mercado Brisa (empresa ficticia), la dirección revisa el tablero mensual y observa que la tasa de conversión total cayó del 6.57 % en septiembre al 6.00 % en octubre (-57 puntos básicos). Sin embargo, al desglosar por plataforma, la conversión en Web subió del 8.00 % al 8.50 % y en App Móvil también subió del 3.00 % al 3.50 %. ¿Hay un error en el pipeline de datos o cómo puede bajar el total cuando todos los canales mejoran?",
-  "objectives": [
-    "Distinguir métricas aditivas, semi-aditivas (saldos de inventario) y no aditivas (ratios y usuarios únicos).",
-    "Explicar la paradoja de Simpson separando el efecto tasa intrínseca del efecto mezcla (mix shift).",
-    "Aplicar la descomposición de Kitagawa-Oaxaca en SQL para cuantificar cuántos puntos básicos aporta cada efecto."
-  ],
-  "sections": [
+  sections: [
     {
-      "id": "clasificacion-de-metricas-aditivas-semiaditivas-",
-      "heading": "Clasificación de métricas: aditivas, semiaditivas y no aditivas",
-      "body": "El primer error en el diseño de cubos y dashboards es creer que todas las columnas numéricas se pueden sumar o promediar libremente. En modelado analítico existen tres clases estrictas de medidas:\n- **Métricas Aditivas** (ej. `ingresos_brutos_usd`, `unidades_vendidas`, `comision_pasarela`): se pueden sumar con `SUM()` a través de **cualquier dimensión** (tiempo, geografía, producto, canal).\n- **Métricas Semi-Aditivas** (ej. `saldo_en_cuenta_usd`, `inventario_almacen`, `headcount_empleados`): representan fotografías de balance (*Point-in-Time Snapshots*). Se pueden sumar entre distintas sucursales o clientes en una fecha dada, pero **jamás se suman a lo largo del tiempo** (si tenías $1,000 el lunes, $1,000 el martes y $1,000 el miércoles, tu saldo no es $3,000). A lo largo del tiempo se toma el valor al cierre del periodo (`LAST_VALUE`) o el promedio diario.\n- **Métricas No Aditivas** (ej. `tasa_conversion_pct`, `ticket_promedio_aov`, `margen_porcentual`, `usuarios_activos_unicos`): **nunca se suman ni se promedian directamente con `AVG()`**. Un ratio siempre debe recalcularse desde la suma de sus componentes aditivos (`SUM(numerador) / NULLIF(SUM(denominador), 0)`), y un conteo único (`COUNT DISTINCT`) requiere re-evaluar los IDs crudos o fusionar estructuras probabilísticas aditivas como **HyperLogLog / Theta Sketches**.",
-      "interactive": {
-        "component": "simpsons-paradox-explorer",
-        "caption": "Simulador interactivo: Métricas no aditivas y paradoja de Simpson"
-      }
-    },
-    {
-      "id": "arboles-de-indicadores-metrica-guia-palancas-y-g",
-      "heading": "Árboles de indicadores: métrica guía, palancas y guardias",
-      "body": "Un dashboard con 40 métricas inconexas no sirve para dirigir una empresa. Un **Árbol de KPIs** descompone la creación de valor en una identidad matemática causal:\n`MRR Neto = Usuarios Activos × Tasa de Conversión a Pago × Ticket Promedio (ARPU) - Churn USD`\nCada nodo del árbol cumple uno de tres roles:\n1) **North Star Metric (Métrica Estrella Polar)**: captura el valor duradero entregado al cliente y al negocio (ej. *Ingresos Recurrentes Netos* o *Pedidos Entregados a Tiempo*).\n2) **Input Metrics (Palancas Accionables)**: variables específicas que un equipo de producto puede mover directamente (ej. *% de usuarios que completan el onboarding en <3 min*, *latencia del checkout*).\n3) **Guardrail Metrics (Métricas Guardia o Contrapeso)**: límites de seguridad que impiden optimizar una palanca destruyendo otra parte del negocio (ej. si el equipo de crecimiento sube la conversión un 10% con descuentos agresivos, pero el **Guardrail de Margen Neto** o **Retención a 30 días** cae un 15%, la iniciativa se frena).",
-      "example": {
-        "language": "sql",
-        "code": "-- CORRECTO: Recalcular ratios con SUM(numerador)/SUM(denominador) y separar Efecto Tasa vs Efecto Mix\nWITH weights AS (\n  SELECT\n    channel,\n    sessions_sep, orders_sep,\n    1.0 * orders_sep / sessions_sep AS rate_sep,\n    1.0 * sessions_sep / SUM(sessions_sep) OVER () AS w_sep,\n    sessions_oct, orders_oct,\n    1.0 * orders_oct / sessions_oct AS rate_oct,\n    1.0 * sessions_oct / SUM(sessions_oct) OVER () AS w_oct\n  FROM gold.channel_funnel_comparison\n)\nSELECT\n  ROUND(100.0 * SUM(orders_sep) / SUM(sessions_sep), 2) AS conv_sep_pct,\n  ROUND(100.0 * SUM(orders_oct) / SUM(sessions_oct), 2) AS conv_oct_observada_pct,\n  ROUND(100.0 * SUM(w_sep * rate_oct), 2) AS conv_oct_mix_constante_pct,\n  ROUND(100.0 * SUM(0.5 * (w_sep + w_oct) * (rate_oct - rate_sep)), 2) AS efecto_tasa_puro_pct,\n  ROUND(100.0 * SUM(0.5 * (rate_sep + rate_oct) * (w_oct - w_sep)), 2) AS efecto_cambio_mix_pct\nFROM weights;",
-        "expectedOutput": [
+      id: 'sec-aditividad-arboles-kpi',
+      heading: 'Hechos aditivos, semiaditivos, no aditivos y árboles de KPIs',
+      body: 'No todas las columnas numéricas de una tabla de hechos admiten `SUM()` a través de cualquier dimensión. Ralph Kimball clasifica las medidas en tres categorías algebraicas. Los **hechos aditivos** —como `spend_usd`, `clicks`, `total_usd` o `qty`— se suman libremente a través de todas las dimensiones.\n\nLos **hechos semiaditivos** —como saldos bancarios o niveles de inventario— se suman entre tiendas o productos en una fecha fija, pero nunca a través del tiempo. Sumar el saldo de enero, febrero y marzo triplica artificialmente el capital. Los **hechos no aditivos** incluyen todas las razones, porcentajes (`CTR`, `CVR`, `CPA`, `AOV`) y conteos distintos (`COUNT(DISTINCT customer_id)`).\n\nPromediar un ratio diario (`AVG(spend_usd / attributed_conversions)`) asigna el mismo peso a un día con `2` conversiones que a un día con `500`. Eso infla el `CPA` de `referral` de `$13.59` a `$14.37`. Tampoco podemos sumar los clientes únicos de `desktop` (`1,284`), `mobile` (`1,312`) y `pos_tienda` (`656`). Esa suma da `3,252`, superando los `2,292` clientes reales. En un **árbol de KPIs**, toda métrica principal se descompone en medidas aditivas base y se protege con **métricas de guarda** (*guardrails*).',
+      example: {
+        language: 'sql',
+        code: `SELECT
+  channel,
+  COUNT(*) AS rows_count,
+  ROUND(SUM(spend_usd), 2) AS total_spend_usd,
+  SUM(attributed_conversions) AS total_conversions,
+  ROUND(AVG(spend_usd / NULLIF(attributed_conversions, 0)), 2) AS wrong_avg_of_cpa,
+  ROUND(SUM(spend_usd) / NULLIF(SUM(attributed_conversions), 0), 2) AS true_weighted_cpa
+FROM marketing_spend
+GROUP BY channel
+ORDER BY true_weighted_cpa ASC;`,
+        expectedOutput: [
           {
-            "conv_sep_pct": "6.57%",
-            "conv_oct_observada_pct": "6.00% (-0.57% global)",
-            "conv_oct_mix_constante_pct": "7.07% (Subió a mix constante.)",
-            "efecto_tasa_puro_pct": "+0.50% (Mejora real de Web y App)",
-            "efecto_cambio_mix_pct": "-1.07% (Impacto del nuevo tráfico móvil)"
-          }
-        ]
-      }
-    },
-    {
-      "id": "paradoja-de-simpson-cuando-los-segmentos-suben-p",
-      "heading": "Paradoja de Simpson: cuando los segmentos suben pero el agregado cae",
-      "body": "Volvamos al misterio del lunes por la mañana: ¿cómo pueden mejorar Web (`8.0% -> 8.5%`) y App Móvil (`3.0% -> 3.5%`) al mismo tiempo que el total cae (`6.57% -> 6.00%`)? La respuesta es la **Paradoja de Simpson**, causada por un cambio drástico en el **Mix (pesos de volumen)** de una variable de confusión:\n- En **Septiembre**, tenías 2,500 sesiones en Web (71.4% del tráfico total, convirtiendo al 8.0% = 200 pedidos) y 1,000 sesiones en App Móvil (28.6% del tráfico, convirtiendo al 3.0% = 30 pedidos). Total Septiembre: `230 / 3,500 = 6.57%`.\n- En **Octubre**, Marketing lanzó una campaña masiva en TikTok que atrajo una avalancha de usuarios a la **App Móvil**: Web tuvo 3,000 sesiones (50% del tráfico, convirtiendo mejor al 8.5% = 255 pedidos) y App Móvil subió a 3,000 sesiones (50% del tráfico, convirtiendo mejor al 3.5% = 105 pedidos). Total Octubre: `360 / 6,000 = 6.00%`.\nComo el canal con menor conversión natural (App Móvil) pasó de representar el 28.6% al 50.0% de la mezcla total, tiró hacia abajo el promedio ponderado global a pesar de que ambos equipos hicieron un trabajo excelente."
-    },
-    {
-      "id": "descomposicion-kitagawa-oaxaca-efecto-tasa-vs-co",
-      "heading": "Descomposición Kitagawa-Oaxaca: efecto tasa vs composición",
-      "body": "Para que la dirección no castigue por error a los equipos de producto ni tome decisiones ciegas, el analista y el especialista en BI aplican la **Descomposición de Kitagawa** (o reportan la **Métrica a Mix Constante**):\n- **Efecto Tasa Puro (Rendimiento intrínseco)**: mantiene fijos los pesos de tráfico del periodo base ($w_{\\text{sep}}$) y evalúa las nuevas tasas de octubre: $\\sum w_{i,\\text{sep}} \\cdot (r_{i,\\text{oct}} - r_{i,\\text{sep}}) = +0.50\\%$ (+50 bps de mejora real del producto).\n- **Efecto Cambio de Mix (Composición de tráfico)**: mide cuánto cambió la métrica global exclusivamente por el desplazamiento de pesos entre canales: $-1.07\\%$ (-107 bps por el influjo de tráfico móvil).\n- **Cambio Global Observado**: $+0.50\\% \\text{ (Efecto Tasa)} - 1.07\\% \\text{ (Efecto Mix)} = -0.57\\%$ (`6.57% -> 6.00%`)."
-    }
-  ],
-  "workedExample": {
-    "title": "Ejemplo guiado: Métricas no aditivas y paradoja de Simpson",
-    "description": "Compara el error clásico de promediar porcentajes con `AVG()` frente a la consulta analítica que calcula la conversión real ponderada, la conversión a mix constante y la descomposición Efecto Tasa vs. Efecto Mix:",
-    "audit": "",
-    "steps": [
-      {
-        "label": "Error grave: promediar porcentajes con AVG() o sumar usuarios diarios",
-        "explanation": "Compara el error clásico de promediar porcentajes con `AVG()` frente a la consulta analítica que calcula la conversión real ponderada, la conversión a mix constante y la descomposición Efecto Tasa vs. Efecto Mix:",
-        "code": "-- ERROR DOBLE MUY COMÚN EN REPORTES MAL DISEÑADOS:\n-- 1) Hacer AVG(conversion_rate_pct) trata igual un canal con 100 visitas que uno con 1 millón\n-- 2) Hacer SUM(daily_unique_users) suma al mismo usuario 30 veces si entró todos los días del mes\nSELECT\n  month,\n  ROUND(AVG(channel_conversion_pct), 2) AS conversion_falsa_no_ponderada,\n  SUM(daily_active_users) AS mau_inflado_incorrecto\nFROM gold.channel_monthly_rollup\nGROUP BY month;",
-        "expectedOutput": [
-          {
-            "month": "2026-09",
-            "conversion_falsa_no_ponderada": "5.50% (Falso: ignora que Web tenía el 71.4% del tráfico; real = 6.57%)",
-            "mau_inflado_incorrecto": "420,000 (Falso: suma DAU de 30 días en vez de usuarios únicos mensuales)"
+            channel: 'referral',
+            rows_count: 146,
+            total_spend_usd: 22306.35,
+            total_conversions: 1641,
+            wrong_avg_of_cpa: 14.37,
+            true_weighted_cpa: 13.59,
           },
           {
-            "month": "2026-10",
-            "conversion_falsa_no_ponderada": "6.00% (Coincidencia casual solo porque el mix fue 50/50)",
-            "mau_inflado_incorrecto": "510,000 (Inutilizable para calcular retención o ARPU)"
-          }
-        ]
-      },
-      {
-        "label": "Solución avanzada: descomposición de Kitagawa a mix constante",
-        "explanation": "Compara ahora la consulta corregida y verifica cómo las filas y totales coinciden con la auditoría.",
-        "code": "-- CORRECTO: Recalcular ratios con SUM(numerador)/SUM(denominador) y separar Efecto Tasa vs Efecto Mix\nWITH weights AS (\n  SELECT\n    channel,\n    sessions_sep, orders_sep,\n    1.0 * orders_sep / sessions_sep AS rate_sep,\n    1.0 * sessions_sep / SUM(sessions_sep) OVER () AS w_sep,\n    sessions_oct, orders_oct,\n    1.0 * orders_oct / sessions_oct AS rate_oct,\n    1.0 * sessions_oct / SUM(sessions_oct) OVER () AS w_oct\n  FROM gold.channel_funnel_comparison\n)\nSELECT\n  ROUND(100.0 * SUM(orders_sep) / SUM(sessions_sep), 2) AS conv_sep_pct,\n  ROUND(100.0 * SUM(orders_oct) / SUM(sessions_oct), 2) AS conv_oct_observada_pct,\n  ROUND(100.0 * SUM(w_sep * rate_oct), 2) AS conv_oct_mix_constante_pct,\n  ROUND(100.0 * SUM(0.5 * (w_sep + w_oct) * (rate_oct - rate_sep)), 2) AS efecto_tasa_puro_pct,\n  ROUND(100.0 * SUM(0.5 * (rate_sep + rate_oct) * (w_oct - w_sep)), 2) AS efecto_cambio_mix_pct\nFROM weights;",
-        "expectedOutput": [
+            channel: 'organic_search',
+            rows_count: 146,
+            total_spend_usd: 26703.45,
+            total_conversions: 1925,
+            wrong_avg_of_cpa: 14.71,
+            true_weighted_cpa: 13.87,
+          },
           {
-            "conv_sep_pct": "6.57%",
-            "conv_oct_observada_pct": "6.00% (-0.57% global)",
-            "conv_oct_mix_constante_pct": "7.07% (Subió a mix constante.)",
-            "efecto_tasa_puro_pct": "+0.50% (Mejora real de Web y App)",
-            "efecto_cambio_mix_pct": "-1.07% (Impacto del nuevo tráfico móvil)"
-          }
-        ]
-      }
-    ]
-  },
-  "checks": [
+            channel: 'email_campaign',
+            rows_count: 146,
+            total_spend_usd: 14102.07,
+            total_conversions: 1013,
+            wrong_avg_of_cpa: 14.69,
+            true_weighted_cpa: 13.92,
+          },
+          {
+            channel: 'paid_social',
+            rows_count: 146,
+            total_spend_usd: 63080.29,
+            total_conversions: 4530,
+            wrong_avg_of_cpa: 14.42,
+            true_weighted_cpa: 13.93,
+          },
+          {
+            channel: 'display_video',
+            rows_count: 146,
+            total_spend_usd: 46759.04,
+            total_conversions: 3355,
+            wrong_avg_of_cpa: 14.7,
+            true_weighted_cpa: 13.94,
+          },
+        ],
+      },
+    },
     {
-      "id": "c1",
-      "type": "mcq",
-      "prompt": "Tienes una tabla `fact_daily_inventory` con el stock al cierre de cada día por almacén (`date`, `warehouse_id`, `ending_units`) y otra columna con las ventas del día (`sold_units`). Para mostrar en el reporte trimestral el inventario y las ventas totales de la empresa, ¿cómo debes agregar ambas métricas?",
-      "options": [
+      id: 'sec-paradoja-simpson-kitagawa',
+      heading: 'Paradoja de Simpson y descomposición de Kitagawa-Oaxaca',
+      body: 'Incluso cuando calculamos una razón como `SUM(numerador) / SUM(denominador)`, el resultado global puede distorsionarse al agregar subgrupos. La **paradoja de Simpson** ocurre cuando una tendencia presente en varios estratos desaparece o se invierte al consolidar los datos. La causa es omitir una **variable de confusión** como el segmento de cliente o la región.\n\nEsto sucede porque la media global de un canal es una suma ponderada por su **mezcla de volumen** (*mix*). Si un canal concentra más tráfico en un segmento económico, su ticket medio global caerá. Ese efecto ocurre aunque el canal venda más caro dentro de cada segmento individual.\n\nPara separar el desempeño intrínseco del cambio en los pesos de volumen, aplicamos la **descomposición de Kitagawa-Oaxaca**. Dados dos grupos $A$ y $B$ estratificados por subgrupos $i$ con tasas $r_i$ y pesos $w_i$, la diferencia global $\\Delta R = R_A - R_B$ se divide en dos sumandos exactos. El **efecto tasa** es $\\sum (r_{A,i} - r_{B,i}) \\frac{w_{A,i} + w_{B,i}}{2}$ y el **efecto mezcla** es $\\sum (w_{A,i} - w_{B,i}) \\frac{r_{A,i} + r_{B,i}}{2}$.',
+      interactive: {
+        component: 'simpsons-paradox-explorer',
+        caption:
+          'Ajusta la mezcla de tráfico entre segmentos y observa en tiempo real cómo se invierte la tasa agregada global y cómo se reparte la diferencia entre efecto tasa y efecto composición.',
+      },
+      example: {
+        language: 'sql',
+        code: `WITH by_device AS (
+  SELECT
+    device_type,
+    COUNT(DISTINCT customer_id) AS unique_customers,
+    COUNT(order_id) AS completed_orders,
+    ROUND(SUM(total_usd), 2) AS revenue_usd
+  FROM orders
+  WHERE status = 'completed'
+  GROUP BY device_type
+)
+SELECT
+  device_type,
+  unique_customers,
+  (SELECT SUM(unique_customers) FROM by_device) AS sum_of_device_distincts,
+  (SELECT COUNT(DISTINCT customer_id) FROM orders WHERE status = 'completed') AS true_global_distinct_customers
+FROM by_device
+ORDER BY completed_orders DESC;`,
+        expectedOutput: [
+          {
+            device_type: 'desktop',
+            unique_customers: 1284,
+            sum_of_device_distincts: 3252,
+            true_global_distinct_customers: 2292,
+          },
+          {
+            device_type: 'mobile',
+            unique_customers: 1312,
+            sum_of_device_distincts: 3252,
+            true_global_distinct_customers: 2292,
+          },
+          {
+            device_type: 'pos_tienda',
+            unique_customers: 656,
+            sum_of_device_distincts: 3252,
+            true_global_distinct_customers: 2292,
+          },
+        ],
+      },
+    },
+  ],
+  workedExample: {
+    title: 'Descomposición de Kitagawa-Oaxaca del ticket medio (AOV) entre Desktop y Mobile',
+    description:
+      'En las órdenes completadas de Mercado Brisa, el ticket medio (`AOV`) en `desktop` es `$453.26` frente a `$391.07` en `mobile` (una brecha global de `+$62.19`). Descompondremos esta diferencia por segmento de cliente (`customers.segment`: `cafeteria_b2b`, `pro_barista`, `retail`) para separar cuánto se debe a un mayor gasto real por pedido (`+$54.81`) y cuánto al peso del segmento B2B (`+$7.38`).',
+    steps: [
+      {
+        label: 'Paso 1: Calcular el ticket medio global por dispositivo',
+        explanation:
+          'Calculamos el ticket medio global ponderado (`SUM(total_usd) / COUNT(order_id)`) para `desktop` y `mobile` sobre órdenes completadas.',
+        code: `SELECT
+  o.device_type,
+  COUNT(o.order_id) AS completed_orders,
+  ROUND(SUM(o.total_usd), 2) AS total_revenue_usd,
+  ROUND(SUM(o.total_usd) / COUNT(o.order_id), 2) AS aov_usd
+FROM orders o
+WHERE o.status = 'completed'
+  AND o.device_type IN ('desktop', 'mobile')
+GROUP BY o.device_type
+ORDER BY o.device_type ASC;`,
+        expectedOutput: [
+          {
+            device_type: 'desktop',
+            completed_orders: 6327,
+            total_revenue_usd: 2867799,
+            aov_usd: 453.26,
+          },
+          {
+            device_type: 'mobile',
+            completed_orders: 5624,
+            total_revenue_usd: 2199394.23,
+            aov_usd: 391.07,
+          },
+        ],
+      },
+      {
+        label: 'Paso 2: Estratificar por segmento de cliente',
+        explanation:
+          'Estratificamos las órdenes y el ticket medio de ambos dispositivos cruzando con la dimensión `customers` por `segment`.',
+        code: `SELECT
+  c.segment,
+  COUNT(o.order_id) FILTER (WHERE o.device_type = 'desktop') AS desk_orders,
+  COUNT(o.order_id) FILTER (WHERE o.device_type = 'mobile') AS mob_orders,
+  ROUND(AVG(o.total_usd) FILTER (WHERE o.device_type = 'desktop'), 2) AS desk_aov_usd,
+  ROUND(AVG(o.total_usd) FILTER (WHERE o.device_type = 'mobile'), 2) AS mob_aov_usd
+FROM orders o
+INNER JOIN customers c ON o.customer_id = c.customer_id
+WHERE o.status = 'completed'
+  AND o.device_type IN ('desktop', 'mobile')
+GROUP BY c.segment
+ORDER BY c.segment ASC;`,
+        expectedOutput: [
+          {
+            segment: 'cafeteria_b2b',
+            desk_orders: 1328,
+            mob_orders: 859,
+            desk_aov_usd: 558.37,
+            mob_aov_usd: 488.03,
+          },
+          {
+            segment: 'pro_barista',
+            desk_orders: 2502,
+            mob_orders: 2494,
+            desk_aov_usd: 409.72,
+            mob_aov_usd: 373.13,
+          },
+          {
+            segment: 'retail',
+            desk_orders: 2497,
+            mob_orders: 2271,
+            desk_aov_usd: 440.99,
+            mob_aov_usd: 374.1,
+          },
+        ],
+      },
+      {
+        label: 'Paso 3: Separar efecto tasa y efecto mezcla (Kitagawa)',
+        explanation:
+          'Calculamos los pesos de mezcla (`w_desk`, `w_mob`) con funciones de ventana y descomponemos la brecha en `rate_effect_usd` (`+$54.81` total) y `mix_effect_usd` (`+$7.38` total) por segmento.',
+        code: `WITH strat AS (
+  SELECT
+    c.segment,
+    COUNT(o.order_id) FILTER (WHERE o.device_type = 'desktop') AS n_desk,
+    COUNT(o.order_id) FILTER (WHERE o.device_type = 'mobile') AS n_mob,
+    AVG(o.total_usd) FILTER (WHERE o.device_type = 'desktop') AS aov_desk,
+    AVG(o.total_usd) FILTER (WHERE o.device_type = 'mobile') AS aov_mob
+  FROM orders o
+  INNER JOIN customers c ON o.customer_id = c.customer_id
+  WHERE o.status = 'completed'
+    AND o.device_type IN ('desktop', 'mobile')
+  GROUP BY c.segment
+),
+weights AS (
+  SELECT
+    segment,
+    n_desk * 1.0 / SUM(n_desk) OVER () AS w_desk,
+    n_mob * 1.0 / SUM(n_mob) OVER () AS w_mob,
+    aov_desk,
+    aov_mob
+  FROM strat
+)
+SELECT
+  segment,
+  ROUND(w_desk * 100, 2) AS mix_desk_pct,
+  ROUND(w_mob * 100, 2) AS mix_mob_pct,
+  ROUND((aov_desk - aov_mob) * ((w_desk + w_mob) / 2.0), 4) AS rate_effect_usd,
+  ROUND((w_desk - w_mob) * ((aov_desk + aov_mob) / 2.0), 4) AS mix_effect_usd
+FROM weights
+ORDER BY segment ASC;`,
+        expectedOutput: [
+          {
+            segment: 'cafeteria_b2b',
+            mix_desk_pct: 20.99,
+            mix_mob_pct: 15.27,
+            rate_effect_usd: 12.7545,
+            mix_effect_usd: 29.9039,
+          },
+          {
+            segment: 'pro_barista',
+            mix_desk_pct: 39.54,
+            mix_mob_pct: 44.35,
+            rate_effect_usd: 15.3492,
+            mix_effect_usd: -18.7918,
+          },
+          {
+            segment: 'retail',
+            mix_desk_pct: 39.47,
+            mix_mob_pct: 40.38,
+            rate_effect_usd: 26.7028,
+            mix_effect_usd: -3.728,
+          },
+        ],
+      },
+    ],
+  },
+  checks: [
+    {
+      type: 'mcq',
+      id: 'chk-l6-q1',
+      prompt:
+        '¿Por qué el conteo de clientes únicos (`COUNT(DISTINCT customer_id)`) se clasifica como una métrica no aditiva al agrupar por mes o por categoría de producto?',
+      options: [
         {
-          "id": "a",
-          "text": "`sold_units` es aditiva (se suma con `SUM` a través de almacenes y de los 90 días), mientras que `ending_units` es semi-aditiva (se suma con `SUM` entre almacenes en una fecha dada, pero NO se suma a través de los 90 días; se toma el cierre del último día del trimestre o el promedio diario).",
-          "correct": true,
-          "feedback": "Exacto. El inventario y el saldo bancario son métricas semi-aditivas: se suman entre entidades (almacenes/cuentas) en un mismo instante, pero nunca se suman a lo largo del eje temporal."
+          id: 'a',
+          text: 'Porque la función COUNT(DISTINCT) devuelve valores de punto flotante que pierden precisión al sumarse.',
+          correct: false,
+          feedback:
+            'Incorrecto. `COUNT(DISTINCT)` devuelve un entero exacto; el problema es la intersección de conjuntos entre grupos.',
         },
         {
-          "id": "b",
-          "text": "Ambas se suman con `SUM(sold_units)` y `SUM(ending_units)` agrupando por trimestre.",
-          "correct": false,
-          "feedback": "Si tienes 1,000 camisas en el almacén durante los 90 días del trimestre, hacer `SUM(ending_units)` reportaría que tienes 90,000 camisas en stock."
+          id: 'b',
+          text: 'Porque un mismo cliente puede comprar en varios meses o categorías, por lo que sumar los conteos parciales cuenta múltiples veces a los clientes recurrentes.',
+          correct: true,
+          feedback:
+            'Correcto. La cardinalidad de la unión de conjuntos no es igual a la suma de sus cardinalidades salvo que los conjuntos sean mutuamente excluyentes.',
         },
         {
-          "id": "c",
-          "text": "Ninguna de las dos se puede sumar entre almacenes.",
-          "correct": false,
-          "feedback": "En un mismo día de corte (por ejemplo, el 31 de octubre), sí puedes y debes sumar el stock del Almacén Norte + Almacén Sur para conocer el inventario total de la compañía en esa fecha."
-        }
+          id: 'c',
+          text: 'Porque DuckDB prohíbe ejecutar SUM sobre una subconsulta que contenga COUNT(DISTINCT).',
+          correct: false,
+          feedback:
+            'Incorrecto. SQL permite escribir la suma sintácticamente, pero el número resultante carece de validez estadística.',
+        },
       ],
-      "explanation": "Exacto. El inventario y el saldo bancario son métricas semi-aditivas: se suman entre entidades (almacenes/cuentas) en un mismo instante, pero nunca se suman a lo largo del eje temporal."
+      explanation:
+        'Por teoría de conjuntos, $|A \\cup B| = |A| + |B| - |A \\cap B|$. Sumar `COUNT(DISTINCT customer_id)` de varios meses o dispositivos omite restar la intersección de clientes compartidos.',
     },
     {
-      "id": "c2",
-      "type": "mcq",
-      "prompt": "Tienes una tabla diaria con `date`, `store_id`, `orders` y `revenue`. Quieres obtener el ticket promedio (`AOV`) del trimestre completo en SQL. ¿Cuál es la expresión correcta?",
-      "options": [
+      type: 'mcq',
+      id: 'chk-l6-q2',
+      prompt:
+        'En un análisis Kitagawa-Oaxaca entre dos periodos, el efecto tasa total es `-1.5` puntos porcentuales y el efecto mezcla es `+2.3` puntos porcentuales (cambio global `+0.8` puntos). ¿Qué diagnóstico debes entregar a negocio?',
+      options: [
         {
-          "id": "a",
-          "text": "SUM(revenue) / NULLIF(SUM(orders), 0)",
-          "correct": true,
-          "feedback": "Correcto: los ratios se agregan sumando el numerador atómico y dividiendo entre la suma del denominador atómico."
+          id: 'a',
+          text: 'El rendimiento operativo mejoró en todos los segmentos y no requiere intervención.',
+          correct: false,
+          feedback:
+            'Incorrecto. El efecto tasa negativo (`-1.5` pts) demuestra que la conversión intrínseca empeoró dentro de los segmentos.',
         },
         {
-          "id": "b",
-          "text": "AVG(revenue / orders)",
-          "correct": false,
-          "feedback": "Incorrecto: promediar los promedios diarios asigna el mismo peso a días con pocas ventas que a días pico."
+          id: 'b',
+          text: 'La métrica global subió `+0.8` puntos solo porque el volumen se desplazó hacia segmentos de mayor conversión base (`+2.3` pts), ocultando una caída real de `-1.5` puntos en las tasas internas.',
+          correct: true,
+          feedback:
+            'Correcto. El efecto composición positivo enmascara el deterioro operativo real capturado por el efecto tasa negativo.',
         },
         {
-          "id": "c",
-          "text": "SUM(revenue / orders)",
-          "correct": false,
-          "feedback": "Incorrecto: sumar tickets promedios diarios multiplica el resultado por el número de días del trimestre."
-        }
+          id: 'c',
+          text: 'Hubo un error de redondeo en SQL porque ambos efectos deben tener siempre el mismo signo.',
+          correct: false,
+          feedback:
+            'Incorrecto. Precisamente la paradoja de Simpson ocurre cuando el efecto mezcla y el efecto tasa tienen signos opuestos y prevalece el peso de la mezcla.',
+        },
       ],
-      "explanation": "Las métricas de razón (AOV, tasa de conversión, margen porcentual) son no aditivas: siempre debes almacenar y sumar sus componentes base antes de dividir."
+      explanation:
+        'Cuando el efecto mezcla positivo supera en magnitud a un efecto tasa negativo, el indicador global aparenta mejorar aunque los subgrupos estén empeorando individualmente.',
     },
     {
-      "id": "c3",
-      "type": "mcq",
-      "prompt": "En Mercado Brisa, el lunes entraron 10 000 usuarios únicos y el martes entraron 12 000 usuarios únicos. ¿Cuántos usuarios únicos entraron en el acumulado de ambos días?",
-      "options": [
+      type: 'predict-output',
+      id: 'chk-l6-q3',
+      prompt:
+        'Una campaña tuvo el lunes `100` clics y `10` conversiones (`CVR = 10%`), y el martes `900` clics y `18` conversiones (`CVR = 2%`). ¿Qué devuelven respectivamente `AVG(conversions * 100.0 / clicks)` y `SUM(conversions) * 100.0 / SUM(clicks)`?',
+      options: [
         {
-          "id": "a",
-          "text": "Un número entre 12 000 y 22 000; hay que ejecutar COUNT(DISTINCT user_id) o combinar sketches HyperLogLog sobre el rango completo.",
-          "correct": true,
-          "feedback": "Correcto: los usuarios que visitaron ambos días se contarían dos veces si sumaras 10 000 + 12 000."
+          id: 'a',
+          text: '6.0% (promedio simple no ponderado) y 2.8% (tasa de conversión real ponderada: 28 / 1000).',
+          correct: true,
+          feedback:
+            'Correcto. `(10% + 2%) / 2 = 6.0%`, mientras que el total real de conversiones (`10 + 18 = 28`) dividido entre el total de clics (`100 + 900 = 1000`) es `2.8%`.',
         },
         {
-          "id": "b",
-          "text": "Exactamente 22 000 usuarios únicos (la suma de lunes y martes).",
-          "correct": false,
-          "feedback": "Incorrecto: COUNT(DISTINCT) no es aditivo; sumar conteos diarios duplica a todos los clientes recurrentes."
+          id: 'b',
+          text: '2.8% en ambas expresiones porque la división es distributiva respecto al promedio.',
+          correct: false,
+          feedback:
+            'Incorrecto. La media de razones no es igual a la razón de las sumas cuando los denominadores (`100` vs `900`) difieren.',
         },
         {
-          "id": "c",
-          "text": "11 000 usuarios únicos (el promedio de ambos días).",
-          "correct": false,
-          "feedback": "Incorrecto: el promedio de usuarios diarios (DAU promedio) no equivale al alcance acumulado de usuarios únicos del periodo."
-        }
+          id: 'c',
+          text: '12.0% y 6.0%.',
+          correct: false,
+          feedback:
+            'Incorrecto. `AVG` promedia `10%` y `2%` dando `6.0%`, y el cociente de sumas calcula `28 / 1000 = 2.8%`.',
+        },
       ],
-      "explanation": "La cardinalidad de conjuntos (COUNT DISTINCT) no es aditiva porque la unión de conjuntos con intersección no vacía es menor que la suma de sus tamaños individuales."
-    }
+      explanation:
+        'Promediar `10%` y `2%` ignora que el martes concentró el `90%` del tráfico (`900` de `1,000` clics). Solo `SUM(conversions) * 100.0 / SUM(clicks)` pondera cada día por su volumen real (`2.8%`).',
+    },
   ],
-  "practice": {
-    "type": "sql",
-    "title": "Métricas de razón aditivas por canal en marketing_spend",
-    "language": "sql",
-    "prompt": "Calcula sobre `marketing_spend` por cada `channel` las métricas de razón desde sus componentes aditivos base: `total_spend_usd`, `ctr_pct` (`100 * SUM(clicks) / SUM(impressions)`), `cvr_pct` (`100 * SUM(attributed_conversions) / SUM(clicks)`) y `cpa_usd` (`SUM(spend_usd) / SUM(attributed_conversions)`), ordenado por `cpa_usd ASC`.",
-    "starterCode": "SELECT\n  channel,\n  ROUND(SUM(spend_usd), 2) AS total_spend_usd,\n  ROUND(100.0 * SUM(clicks) / NULLIF(SUM(impressions), 0), 2) AS ctr_pct,\n  -- TODO: Calcula cvr_pct como 100.0 * SUM(attributed_conversions) / NULLIF(SUM(clicks), 0) redondeado a 2 decimales\n  0.0 AS cvr_pct,\n  -- TODO: Calcula cpa_usd como SUM(spend_usd) / NULLIF(SUM(attributed_conversions), 0) redondeado a 2 decimales\n  0.0 AS cpa_usd\nFROM marketing_spend\nGROUP BY channel\nORDER BY cpa_usd ASC;",
-    "expected": "SELECT\n  channel,\n  ROUND(SUM(spend_usd), 2) AS total_spend_usd,\n  ROUND(100.0 * SUM(clicks) / NULLIF(SUM(impressions), 0), 2) AS ctr_pct,\n  ROUND(100.0 * SUM(attributed_conversions) / NULLIF(SUM(clicks), 0), 2) AS cvr_pct,\n  ROUND(SUM(spend_usd) / NULLIF(SUM(attributed_conversions), 0), 2) AS cpa_usd\nFROM marketing_spend\nGROUP BY channel\nORDER BY cpa_usd ASC;",
-    "orderMatters": true,
-    "hints": [
-      "Nunca uses `AVG(attributed_conversions / clicks)`: suma primero numerador y denominador por separado.",
-      "Para `cvr_pct`, escribe `ROUND(100.0 * SUM(attributed_conversions) / NULLIF(SUM(clicks), 0), 2) AS cvr_pct`.",
-      "Para `cpa_usd`, escribe `ROUND(SUM(spend_usd) / NULLIF(SUM(attributed_conversions), 0), 2) AS cpa_usd`."
+  practice: {
+    type: 'sql',
+    title: 'Agregación ponderada de razones no aditivas (CTR, CVR y CPA) por canal',
+    prompt:
+      'Calcula por cada `channel` en `marketing_spend`: 1) `total_spend_usd` (`ROUND(SUM(spend_usd), 2)`), 2) `ctr_pct` (`ROUND(100.0 * SUM(clicks) / NULLIF(SUM(impressions), 0), 2)`), 3) `cvr_pct` (`ROUND(100.0 * SUM(attributed_conversions) / NULLIF(SUM(clicks), 0), 2)`), y 4) `cpa_usd` (`ROUND(SUM(spend_usd) / NULLIF(SUM(attributed_conversions), 0), 2)`). Ordena por `cpa_usd ASC`.',
+    starterCode: `-- Reemplaza los promedios de ratios (AVG) por razones de sumas aditivas (SUM / NULLIF(SUM, 0))
+SELECT
+  channel,
+  ROUND(SUM(spend_usd), 2) AS total_spend_usd,
+  ROUND(100.0 * AVG(clicks * 1.0 / NULLIF(impressions, 0)), 2) AS ctr_pct,
+  ROUND(100.0 * AVG(attributed_conversions * 1.0 / NULLIF(clicks, 0)), 2) AS cvr_pct,
+  ROUND(AVG(spend_usd * 1.0 / NULLIF(attributed_conversions, 0)), 2) AS cpa_usd
+FROM marketing_spend
+GROUP BY channel
+ORDER BY cpa_usd ASC;`,
+    solution: `SELECT
+  channel,
+  ROUND(SUM(spend_usd), 2) AS total_spend_usd,
+  ROUND(100.0 * SUM(clicks) / NULLIF(SUM(impressions), 0), 2) AS ctr_pct,
+  ROUND(100.0 * SUM(attributed_conversions) / NULLIF(SUM(clicks), 0), 2) AS cvr_pct,
+  ROUND(SUM(spend_usd) / NULLIF(SUM(attributed_conversions), 0), 2) AS cpa_usd
+FROM marketing_spend
+GROUP BY channel
+ORDER BY cpa_usd ASC;`,
+    solutionExplanation:
+      'Al sumar primero los numeradores (`clicks`, `attributed_conversions`, `spend_usd`) y dividirlos entre la suma de sus denominadores con `NULLIF`, obtenemos las tasas ponderadas reales por volumen de cada canal.',
+    expectedOutputTable: [
+      {
+        channel: 'referral',
+        total_spend_usd: 22306.35,
+        ctr_pct: 2.52,
+        cvr_pct: 5.76,
+        cpa_usd: 13.59,
+      },
+      {
+        channel: 'organic_search',
+        total_spend_usd: 26703.45,
+        ctr_pct: 2.45,
+        cvr_pct: 5.7,
+        cpa_usd: 13.87,
+      },
+      {
+        channel: 'email_campaign',
+        total_spend_usd: 14102.07,
+        ctr_pct: 2.45,
+        cvr_pct: 5.74,
+        cpa_usd: 13.92,
+      },
+      {
+        channel: 'paid_social',
+        total_spend_usd: 63080.29,
+        ctr_pct: 2.49,
+        cvr_pct: 5.67,
+        cpa_usd: 13.93,
+      },
+      {
+        channel: 'display_video',
+        total_spend_usd: 46759.04,
+        ctr_pct: 2.53,
+        cvr_pct: 5.71,
+        cpa_usd: 13.94,
+      },
     ],
-    "solution": "SELECT\n  channel,\n  ROUND(SUM(spend_usd), 2) AS total_spend_usd,\n  ROUND(100.0 * SUM(clicks) / NULLIF(SUM(impressions), 0), 2) AS ctr_pct,\n  ROUND(100.0 * SUM(attributed_conversions) / NULLIF(SUM(clicks), 0), 2) AS cvr_pct,\n  ROUND(SUM(spend_usd) / NULLIF(SUM(attributed_conversions), 0), 2) AS cpa_usd\nFROM marketing_spend\nGROUP BY channel\nORDER BY cpa_usd ASC;",
-    "solutionExplanation": "Calcula todas las tasas y razones (`ctr_pct`, `cvr_pct`, `cpa_usd`) agregando primero los numeradores y denominadores aditivos con `SUM(...)` y protegiendo la división mediante `NULLIF(..., 0)`."
+    hints: [
+      '`CTR`, `CVR` y `CPA` son métricas no aditivas: nunca uses `AVG(a / b)` sobre filas diarias.',
+      'Suma primero el numerador y el denominador: por ejemplo, `ROUND(100.0 * SUM(clicks) / NULLIF(SUM(impressions), 0), 2) AS ctr_pct`.',
+      'Aplica el mismo patrón para `cvr_pct` (`SUM(attributed_conversions)` sobre `SUM(clicks)`) y `cpa_usd` (`SUM(spend_usd)` sobre `SUM(attributed_conversions)`).',
+    ],
+    orderMatters: true,
   },
-  "roleNotes": {
-    "de": "En todas las tablas agregadas (Rollups / Cubos Gold), almacena **siempre el numerador y el denominador aditivos por separado** (`orders_count`, `sessions_count`, `gross_revenue_usd`) además de sketches HyperLogLog para usuarios únicos. Garantiza que las dimensiones de segmentación clave (`channel`, `device_type`, `country`, `customer_tier`) tengan un 0% de valores `NULL` para que las descomposiciones de mix cuadren al 100%.",
-    "da": "Automatiza el análisis de atribución de varianza mediante la **Descomposición de Kitagawa**, entregando al comité ejecutivo cuántos puntos base (bps) provienen de mejoras reales de tasa y cuántos provienen de cambios en la mezcla de adquisición. Audita que ningún experimento A/B ni reporte mensual sufra sesgos de composición ocultos por país, plataforma o cohorte.",
-    "bi": "Declara las métricas no aditivas como `type: ratio` en la Capa Semántica (MetricFlow / Cube) bloqueando cualquier intento de hacer `AVG(conversion_rate)`. Muestra en el dashboard ejecutivo la **Conversión Normalizada a Mix Constante** junto a la Conversión Observada y añade un indicador automático de *\"Alerta de Cambio de Mix\"* cuando ambos signos divergen."
+  pipelineChallenge: {
+    title: 'Métricas No Aditivas y Estratificación por Región en Marketing',
+    ValidatorKey: 'l6_metrics_simpson',
+    datasets: ['marketing_spend'],
+    steps: [
+      {
+        id: 'step-1',
+        text: 'Identificar las medidas aditivas base en marketing_spend (spend_usd, impressions, clicks, attributed_conversions).',
+        title: '1. Identificar medidas aditivas base en marketing_spend',
+        goal: 'Reconoce qué columnas pueden sumarse directamente (spend_usd, impressions, clicks, attributed_conversions).',
+        hint: 'Las 4 medidas base son aditivas; las tasas derivadas (`ctr_pct`, `cvr_pct`, `cpa_usd`) son no aditivas y deben calcularse como razón de sumas.',
+      },
+      {
+        id: 'step-2',
+        text: 'Reemplazar los promedios de razones (AVG) por cocientes ponderados SUM(numerador) / NULLIF(SUM(denominador), 0).',
+        title: '2. Evitar el promedio de promedios (AVG de ratios)',
+        goal: 'Calcula CTR, CVR y CPA usando SUM(numerador) / NULLIF(SUM(denominador), 0).',
+        hint: 'Si calculas `AVG(spend_usd / attributed_conversions)`, los días con pocas conversiones distorsionan el CPA.',
+      },
+      {
+        id: 'step-3',
+        text: 'Estratificar por canal y región para auditar el desempeño por segmento y descartar sesgos de composición.',
+        title: '3. Estratificar por canal y región para auditar composición',
+        goal: 'Agrupa por channel y region para inspeccionar el desempeño sin sesgo de agregación.',
+        hint: 'Al desglosar por `channel, region` y ordenar por `channel ASC, cpa_usd ASC`, obtienes las métricas ponderadas exactas de cada segmento regional.',
+      },
+    ],
+    prompt:
+      'Construye la consulta sobre `marketing_spend` agrupada por `channel` y `region`. Devuelve: `channel`, `region`, `total_spend_usd` (`ROUND(SUM(spend_usd), 2)`), `ctr_pct` (`ROUND(100.0 * SUM(clicks) / NULLIF(SUM(impressions), 0), 2)`), `cvr_pct` (`ROUND(100.0 * SUM(attributed_conversions) / NULLIF(SUM(clicks), 0), 2)`), y `cpa_usd` (`ROUND(SUM(spend_usd) / NULLIF(SUM(attributed_conversions), 0), 2)`). Ordena por `channel ASC, cpa_usd ASC`.',
+    starterCode: `-- Corrige el cálculo de métricas no aditivas agrupando por channel y region
+SELECT
+  channel,
+  region,
+  ROUND(SUM(spend_usd), 2) AS total_spend_usd,
+  -- Reemplaza AVG por razón de sumas (SUM / NULLIF(SUM, 0))
+  ROUND(100.0 * AVG(clicks * 1.0 / impressions), 2) AS ctr_pct,
+  ROUND(100.0 * AVG(attributed_conversions * 1.0 / clicks), 2) AS cvr_pct,
+  ROUND(AVG(spend_usd / attributed_conversions), 2) AS cpa_usd
+FROM marketing_spend
+GROUP BY channel, region
+ORDER BY channel ASC, cpa_usd ASC;`,
+    solution: `SELECT
+  channel,
+  region,
+  ROUND(SUM(spend_usd), 2) AS total_spend_usd,
+  ROUND(100.0 * SUM(clicks) / NULLIF(SUM(impressions), 0), 2) AS ctr_pct,
+  ROUND(100.0 * SUM(attributed_conversions) / NULLIF(SUM(clicks), 0), 2) AS cvr_pct,
+  ROUND(SUM(spend_usd) / NULLIF(SUM(attributed_conversions), 0), 2) AS cpa_usd
+FROM marketing_spend
+GROUP BY channel, region
+ORDER BY channel ASC, cpa_usd ASC;`,
+    expectedOutputTable: {
+      columns: ['channel', 'region', 'total_spend_usd', 'ctr_pct', 'cvr_pct', 'cpa_usd'],
+      rows: [
+        ['display_video', 'Cono Sur', 46759.04, 2.53, 5.71, 13.94],
+        ['email_campaign', 'Cono Sur', 14102.07, 2.45, 5.74, 13.92],
+        ['organic_search', 'Andina', 26703.45, 2.45, 5.7, 13.87],
+        ['paid_social', 'Norteamérica', 63080.29, 2.49, 5.67, 13.93],
+        ['referral', 'Iberia', 22306.35, 2.52, 5.76, 13.59],
+      ],
+    },
+    orderMatters: true,
+    hints: [
+      'Usa `ROUND(100.0 * SUM(clicks) / NULLIF(SUM(impressions), 0), 2)` para `ctr_pct`.',
+      'Usa `ROUND(100.0 * SUM(attributed_conversions) / NULLIF(SUM(clicks), 0), 2)` para `cvr_pct`.',
+      'Usa `ROUND(SUM(spend_usd) / NULLIF(SUM(attributed_conversions), 0), 2)` para `cpa_usd`.',
+    ],
   },
-  "summary": [
-    "Un ratio global nunca es el promedio de los ratios; suma numeradores y divide entre la suma de denominadores.",
-    "Los conteos de usuarios únicos (COUNT DISTINCT) no son aditivos entre días ni entre canales.",
-    "La paradoja de Simpson ocurre cuando cambia el peso relativo de segmentos con distinta tasa base.",
-    "La descomposición de Kitagawa-Oaxaca separa el cambio real de rendimiento del cambio de mezcla."
-  ],
-  "flashcards": [
-    {
-      "id": "fc-c2-simp-01",
-      "front": "¿Por qué es un error calcular la conversión mensual como AVG(daily_conversion_rate)?",
-      "back": "Porque pondera igual un martes de 500 visitas que un sábado de 50 000 visitas; debe calcularse como SUM(orders) / SUM(sessions)."
-    },
-    {
-      "id": "fc-c2-simp-02",
-      "front": "¿Cómo se explica que la conversión suba en Web y suba en App pero baje en el total de la empresa?",
-      "back": "Por un cambio de mezcla (mix shift): creció mucho el peso de tráfico en el canal con menor conversión base (App), arrastrando la media ponderada."
-    },
-    {
-      "id": "fc-c2-simp-03",
-      "front": "¿Por qué una métrica de inventario (stock_on_hand) se clasifica como semi-aditiva?",
-      "back": "Se puede sumar entre productos y almacenes en una fecha fija, pero no se puede sumar a lo largo del tiempo (se promedia o se toma el cierre)."
-    }
-  ],
-  "glossaryTerms": [
-    "c09-kpi-trees-guardrails",
-    "c10-simpsons-paradox",
-    "c11-additivity-hll"
-  ],
-  "sources": [
-    {
-      "title": "Stanford Encyclopedia of Philosophy — Simpson’s Paradox",
-      "url": "https://plato.stanford.edu/entries/paradox-simpson/",
-      "publisher": "Stanford University",
-      "accessed": "2026-10-29",
-      "supports": "Fundamento matemático de la inversión de asociaciones al agregar subpoblaciones con pesos cambiantes."
-    },
-    {
-      "title": "Kimball Group — Additive, Semi-Additive, and Non-Additive Facts",
-      "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/additive-semi-additive-non-additive-facts/",
-      "publisher": "Kimball Group",
-      "accessed": "2026-10-29",
-      "supports": "Clasificación de medidas según las dimensiones sobre las que pueden sumarse válidamente."
-    },
-    {
-      "title": "DuckDB Documentation — Approximate Aggregate Functions (approx_count_distinct / HyperLogLog)",
-      "url": "https://duckdb.org/docs/sql/functions/aggregates.html",
-      "publisher": "DuckDB Foundation",
-      "accessed": "2026-10-29",
-      "supports": "Estimación de cardinalidades no aditivas a gran escala mediante sketches HyperLogLog."
-    }
-  ],
-  "aiNotes": "El error más habitual es promediar porcentajes o sumar usuarios únicos diarios para obtener usuarios mensuales. Pide siempre a la persona que escriba primero el numerador y el denominador por separado y que compruebe si los pesos por segmento cambiaron entre dos periodos.",
-  "needsReview": true,
-  "legacyId": "l6-metrics-simpson",
-  "legacyOrder": 6,
-  "stageId": "stage-2",
-  "subtitle": "Cómo descomponer indicadores de negocio y evitar conclusiones opuestas al agregar segmentos.",
-  "goal": "Analizar y descomponer métricas de negocio mediante Árboles de KPIs (North Star, Input Metrics y Guardrails), diseñar agregaciones seguras para métricas semi-aditivas y no aditivas, y diagnosticar matemáticamente la Paradoja de Simpson separando el Efecto Tasa del Efecto Mix.",
-  "pipelineChallenge": {
-    "title": "Sistema de métricas ante paradoja de Simpson",
-    "scenario": "Diseña el flujo de extremo a extremo entre DE, DA y BI para que ningún cambio de mix ni agregación de ratios induzca a error al Comité Ejecutivo:",
-    "description": "Ordena las 4 capas de ingeniería y análisis necesarias para construir un sistema de KPIs blindado contra errores de aditividad y sesgos de composición:",
-    "prompt": "Ordena los pasos para construir un sistema de métricas empresariales inmune a la Paradoja de Simpson:",
-    "steps": [
-      {
-        "id": "step-1",
-        "order": 1,
-        "label": "1. Almacenar medidas atómicas aditivas y sketches en rollups (DE)",
-        "title": "Rollup con componentes atómicos aditivos",
-        "role": "DE",
-        "layer": "Silver → Gold",
-        "detail": "Materializar las tablas agregadas guardando explícitamente numeradores (`orders_count`, `net_revenue_usd`), denominadores (`sessions_count`) y sketches HyperLogLog, prohibiendo guardar solo porcentajes pre-divididos.",
-        "description": "Materializar las tablas agregadas guardando explícitamente numeradores (`orders_count`, `net_revenue_usd`), denominadores (`sessions_count`) y sketches HyperLogLog, prohibiendo guardar solo porcentajes pre-divididos."
-      },
-      {
-        "id": "step-2",
-        "order": 2,
-        "label": "2. Declarar árbol de indicadores, razones y controles en capa semántica (BI)",
-        "title": "Definición semántica de razones y controles",
-        "role": "BI",
-        "layer": "Semantic Layer",
-        "detail": "Definir en MetricFlow/Cube las métricas no aditivas como `SUM(numerador) / SUM(denominador)` y vincular cada métrica de crecimiento con su métrica Guardia (ej. Conversión ↔ Tasa de Reembolso).",
-        "description": "Definir en MetricFlow/Cube las métricas no aditivas como `SUM(numerador) / SUM(denominador)` y vincular cada métrica de crecimiento con su métrica Guardia (ej. Conversión ↔ Tasa de Reembolso)."
-      },
-      {
-        "id": "step-3",
-        "order": 3,
-        "label": "3. Ejecutar descomposición de Kitagawa entre efecto tasa y mix (DA)",
-        "title": "Descomposición de efecto tasa y mix",
-        "role": "DA",
-        "layer": "Analytics Engine",
-        "detail": "Cruzar los pesos del periodo base ($w_{t-1}$) con las tasas actuales ($r_t$) por canal, país y dispositivo para aislar cuántos puntos base se deben al producto y cuántos al cambio de mix.",
-        "description": "Cruzar los pesos del periodo base ($w_{t-1}$) con las tasas actuales ($r_t$) por canal, país y dispositivo para aislar cuántos puntos base se deben al producto y cuántos al cambio de mix."
-      },
-      {
-        "id": "step-4",
-        "order": 4,
-        "label": "4. Exponer alerta de paradoja de Simpson en el tablero ejecutivo (BI)",
-        "title": "Visualización observada frente a mix constante",
-        "role": "BI",
-        "layer": "Executive BI",
-        "detail": "Mostrar en la tarjeta de KPI tanto la tasa global observada como la tasa normalizada a mix constante, destacando automáticamente cuando el efecto mix invierte el signo de la tendencia.",
-        "description": "Mostrar en la tarjeta de KPI tanto la tasa global observada como la tasa normalizada a mix constante, destacando automáticamente cuando el efecto mix invierte el signo de la tendencia."
-      }
-    ],
-    "correctOrder": [
-      "step-1",
-      "step-2",
-      "step-3",
-      "step-4"
-    ],
-    "options": [
-      {
-        "id": "simp-pipe-ok",
-        "text": "1) Guardar numeradores/denominadores atómicos en Gold → 2) Declarar ratios y Guardrails en Capa Semántica → 3) Descomponer Efecto Tasa vs. Mix (Kitagawa) → 4) Mostrar métrica Observada + Mix Constante en BI",
-        "correct": true,
-        "feedback": "Flujo de clase mundial. Así DE provee los bloques aditivos exactos, BI gobierna las fórmulas y DA descompone la causalidad real para la toma de decisiones."
-      },
-      {
-        "id": "simp-pipe-bad1",
-        "text": "1) Guardar solo la columna `conversion_pct` en la tabla Gold borrando `sessions` y `orders` → 2) Hacer `AVG(conversion_pct)` en el dashboard",
-        "correct": false,
-        "feedback": "Si borras el numerador y el denominador al crear el rollup, jamás podrás volver a agregar el ratio correctamente a otro nivel."
-      },
-      {
-        "id": "simp-pipe-bad2",
-        "text": "1) Ocultar el canal de App Móvil del reporte para que el promedio global no baje",
-        "correct": false,
-        "feedback": "Ocultar datos reales es una mala práctica ética y analítica; la solución técnica es mostrar la realidad completa descomponiendo el efecto mix."
-      }
-    ],
-    "explanation": "El Comité Ejecutivo comprende en segundos que ambos equipos de producto mejoraron +50 bps y que la caída del promedio global (-57 bps) se debe al nuevo mix de adquisición móvil.",
-    "expectedOutcome": "El Comité Ejecutivo comprende en 10 segundos que ambos equipos de producto mejoraron +50 bps y que la caída del promedio global (-57 bps) se debe al nuevo mix de adquisición móvil."
+  roleNotes: {
+    de: 'Como Ingeniero de Datos, almacenarás en las tablas de hechos únicamente los componentes atómicos aditivos (numeradores y denominadores) o bocetos HLL, evitando materializar columnas de porcentaje que los usuarios puedan promediar por error.',
+    da: 'Como Analista de Datos, ante cualquier variación abrupta en una tasa global (conversión, AOV o retención), aplicarás la descomposición de Kitagawa-Oaxaca para separar el efecto tasa intrínseco del efecto cambio de mezcla.',
+    bi: 'Como especialista en BI, declararás las métricas de razón en la capa semántica (`SUM(num) / NULLIF(SUM(den), 0)`) y acompañarás cada KPI de crecimiento con métricas de guarda de rentabilidad y reembolsos.',
   },
-  "relatedLessons": [
+  summary: [
+    'Los hechos se clasifican en aditivos (sumables en toda dimensión), semiaditivos (no sumables en el tiempo) y no aditivos (ratios y conteos distintos).',
+    'Promediar razones precalculadas (`AVG(num / den)`) introduce sesgo porque ignora el peso de volumen de cada fila.',
+    'Toda razón o porcentaje analítico debe evaluarse como `SUM(numerador) / NULLIF(SUM(denominador), 0)` al nivel del `GROUP BY`.',
+    'La paradoja de Simpson ocurre cuando un cambio en la mezcla de pesos invierte o distorsiona la tendencia global respecto a los estratos.',
+    'La descomposición de Kitagawa-Oaxaca divide exactamente la variación global entre efecto tasa (desempeño interno) y efecto composición (mezcla).',
+  ],
+  glossaryTerms: [
+    'c09-kpi-trees-guardrails',
+    'c10-simpsons-paradox',
+    'c11-additivity-hll',
+    'descomposicion-kitagawa',
+  ],
+  flashcards: [
     {
-      "id": "l4-star-schema-obt",
-      "reason": "Las dimensiones conformadas de tu Star Schema son los ejes sobre los cuales auditas los cambios de mix."
+      id: 'fc-c2-dim-04-01',
+      front: '¿Cuál es la diferencia entre un hecho aditivo, semiaditivo y no aditivo?',
+      back: 'Aditivo se suma en todas las dimensiones (`total_usd`); semiaditivo se suma entre entidades pero no en el tiempo (saldos); no aditivo no puede sumarse en ninguna dimensión (`CPA`, `COUNT DISTINCT`).',
     },
     {
-      "id": "l5-scd2-history",
-      "reason": "Usa dimensiones SCD Tipo 2 para que los cambios históricos de segmento no distorsionen tus tasas por cohorte."
+      id: 'fc-c2-dim-04-02',
+      front: '¿Por qué es un error calcular `AVG(spend_usd / attributed_conversions)` para obtener el CPA de un canal?',
+      back: 'Porque otorga el mismo peso a días con volumen mínimo que a días de alto tráfico; la fórmula correcta es `SUM(spend_usd) / NULLIF(SUM(attributed_conversions), 0)`.',
     },
     {
-      "id": "l1-joins-fanout",
-      "reason": "Combina la protección contra Fan-Out con el cálculo correcto de ratios (`SUM/SUM`) para lograr métricas blindadas."
-    }
-  ]
+      id: 'fc-c2-dim-04-03',
+      front: '¿Qué es la paradoja de Simpson en analítica de negocios?',
+      back: 'Es el fenómeno estadístico en el que una tendencia presente en cada segmento individual se invierte o desaparece al agregar los datos por efecto de una variable de confusión.',
+    },
+    {
+      id: 'fc-c2-dim-04-04',
+      front: '¿Qué dos componentes separa la descomposición de Kitagawa-Oaxaca?',
+      back: 'Separa la diferencia global entre dos tasas o promedios en el efecto tasa (cambio de rendimiento dentro de cada estrato) y el efecto mezcla (cambio en la proporción de volumen entre estratos).',
+    },
+  ],
+  sources: [
+    {
+      title: 'Additive, Semi-Additive, and Non-Additive Facts',
+      url: 'https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/additive-semi-additive-non-additive-fact/',
+      publisher: 'Kimball Group',
+      accessed: '2026-10-29',
+      supports:
+        'Clasificación canónica de hechos según su aditividad y reglas de agregación de razones y saldos.',
+    },
+    {
+      title: "Simpson's Paradox — Stanford Encyclopedia of Philosophy",
+      url: 'https://plato.stanford.edu/entries/paradox-simpson/',
+      publisher: 'Stanford University',
+      accessed: '2026-10-29',
+      supports:
+        'Formulación matemática y causal de la paradoja de Simpson y el rol de los pesos de estratificación.',
+    },
+    {
+      title: 'DuckDB SQL — Aggregate Functions and FILTER Clause',
+      url: 'https://duckdb.org/docs/stable/sql/functions/aggregates.html',
+      publisher: 'DuckDB Foundation',
+      accessed: '2026-10-29',
+      supports:
+        'Uso de funciones de agregación condicional (`FILTER`) y conteos distintos en consultas analíticas.',
+    },
+    {
+      title: 'dbt Semantic Layer — Ratio and Derived Metrics',
+      url: 'https://docs.getdbt.com/docs/build/metrics-overview',
+      publisher: 'dbt Labs',
+      accessed: '2026-10-29',
+      supports:
+        'Definición declarativa de métricas de razón mediante agregación independiente de numerador y denominador.',
+    },
+  ],
+  aiNotes:
+    'Si el estudiante usa `AVG()` sobre divisiones fila a fila en `marketing_spend`, muéstrale cómo `referral` pasa de un CPA erróneo de `$14.37` al CPA real ponderado de `$13.59` al usar `SUM(spend_usd) / NULLIF(SUM(attributed_conversions), 0)`. En el ejemplo guiado sobre `orders` y `customers`, destaca cómo la brecha de `+$62.19` en ticket medio entre `desktop` (`$453.26`) y `mobile` (`$391.07`) se divide exactamente en `+$54.81` de efecto tasa y `+$7.38` de efecto mezcla.',
+  needsReview: false,
 };
 
 export default lesson;
