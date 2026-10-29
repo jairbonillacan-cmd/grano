@@ -1,0 +1,330 @@
+[
+  {
+    "id": "bi-data-loader",
+    "term": "Cargador de datos en compilación",
+    "englishTerm": "Build-Time Data Loader",
+    "track": "bi",
+    "definition": "Script o consulta declarativa ejecutada durante el empaquetado de un sitio de BI como código para extraer, preagregar y materializar instantáneas en formato Parquet o Arrow. Permite que el navegador consulte datos locales con DuckDB-Wasm en milisegundos sin saturar el almacén de datos con peticiones repetitivas por cada lector.",
+    "formula": "Loader (Build-Time SQL) -> Instantánea Parquet (CDN) -> Consulta reactiva en DuckDB-Wasm",
+    "relatedLessons": [
+      "bi4-operacion-01-bi-como-codigo-evidence-observable-rill",
+      "bi3-dashboards-01-bi-tufte-code"
+    ],
+    "relatedTerms": [
+      "c16-duckdb-wasm-bi",
+      "c26-bi-as-code",
+      "c12-parquet-columnar"
+    ],
+    "sources": [
+      {
+        "title": "Observable Framework — Static site generator for data apps",
+        "url": "https://github.com/observablehq/framework",
+        "publisher": "Observable",
+        "supports": "Arquitectura de data loaders en tiempo de compilación y generación de instantáneas estáticas tipadas.",
+        "type": "docs",
+        "accessed": "2026-10-29"
+      },
+      {
+        "title": "Evidence Documentation — SQL Queries in Markdown",
+        "url": "https://docs.evidence.dev/core-concepts/queries/",
+        "publisher": "Evidence",
+        "supports": "Extracción SQL declarativa y ejecución en el cliente sobre DuckDB-Wasm.",
+        "type": "docs",
+        "accessed": "2026-10-29"
+      }
+    ]
+  },
+  {
+    "id": "pbip-project",
+    "term": "Proyecto Power BI (PBIP)",
+    "englishTerm": "Power BI Desktop Project (PBIP)",
+    "track": "bi",
+    "definition": "Formato de desarrollo en texto plano que reemplaza el archivo binario opaco .pbix por un árbol de directorios separado en modelo semántico (.SemanticModel) y definición visual (.Report). Permite versionar artefactos en Git, comparar cambios línea por línea en Pull Requests y automatizar despliegues sin herramientas manuales.",
+    "formula": "Artefacto.pbip -> Artefacto.SemanticModel/definition/ + Artefacto.Report/definition/",
+    "relatedLessons": [
+      "bi4-operacion-02-pbip-tmdl-versionado-git",
+      "bi4-operacion-03-cicd-pruebas-promocion-entornos"
+    ],
+    "relatedTerms": [
+      "tmdl-language",
+      "pbir-format",
+      "c26-bi-as-code"
+    ],
+    "sources": [
+      {
+        "title": "Power BI Desktop projects (PBIP)",
+        "url": "https://learn.microsoft.com/en-us/power-bi/developer/projects/projects-overview",
+        "publisher": "Microsoft Learn",
+        "supports": "Separación de artefactos Power BI en carpetas .SemanticModel y .Report en texto plano.",
+        "type": "docs",
+        "accessed": "2026-10-29"
+      },
+      {
+        "title": "Power BI Desktop projects Git integration",
+        "url": "https://learn.microsoft.com/en-us/power-bi/developer/projects/projects-git",
+        "publisher": "Microsoft Learn",
+        "supports": "Control de versiones en Git, trabajo en ramas y exclusiones de caché en proyectos PBIP.",
+        "type": "docs",
+        "accessed": "2026-10-29"
+      }
+    ]
+  },
+  {
+    "id": "tmdl-language",
+    "term": "Lenguaje de definición de modelos tabulares (TMDL)",
+    "englishTerm": "Tabular Model Definition Language (TMDL)",
+    "track": "bi",
+    "definition": "Sintaxis declarativa legible por humanos y basada en sangría que describe el modelo de objetos tabulares (TOM) en proyectos Power BI y Analysis Services. Sustituye el archivo JSON monolítico model.bim por archivos modulares para cada tabla, relación, rol y expresión, reduciendo conflictos de fusión en equipos colaborativos.",
+    "formula": "definition/ -> model.tmdl + relationships.tmdl + tables/{tabla}.tmdl",
+    "relatedLessons": [
+      "bi4-operacion-02-pbip-tmdl-versionado-git",
+      "bi4-operacion-03-cicd-pruebas-promocion-entornos",
+      "bi4-operacion-05-genbi-auditable-sinonimos-mcp"
+    ],
+    "relatedTerms": [
+      "pbip-project",
+      "c21-semantic-layer",
+      "bpa-static-analysis"
+    ],
+    "sources": [
+      {
+        "title": "Tabular Model Definition Language (TMDL) overview",
+        "url": "https://learn.microsoft.com/en-us/analysis-services/tmdl/tmdl-overview",
+        "publisher": "Microsoft Learn",
+        "supports": "Sintaxis declarativa con sangría y estructura modular por tabla del modelo tabular.",
+        "type": "docs",
+        "accessed": "2026-10-29"
+      }
+    ]
+  },
+  {
+    "id": "pbir-format",
+    "term": "Formato de definición de reporte PBIR",
+    "englishTerm": "Power BI Enhanced Report Format (PBIR)",
+    "track": "bi",
+    "definition": "Representación estructurada en carpetas y archivos JSON de la capa visual de un reporte dentro de un proyecto PBIP. Organiza páginas, objetos visuales, filtros, marcadores y temas en ficheros independientes para facilitar la auditoría de referencias a medidas del modelo semántico y la validación estática en pipelines.",
+    "formula": "Artefacto.Report/definition/ -> report.json + pages/{page_id}/visuals/{visual_id}/visual.json",
+    "relatedLessons": [
+      "bi4-operacion-02-pbip-tmdl-versionado-git",
+      "bi4-operacion-03-cicd-pruebas-promocion-entornos"
+    ],
+    "relatedTerms": [
+      "pbip-project",
+      "tmdl-language"
+    ],
+    "sources": [
+      {
+        "title": "Power BI Desktop projects (PBIP)",
+        "url": "https://learn.microsoft.com/en-us/power-bi/developer/projects/projects-overview",
+        "publisher": "Microsoft Learn",
+        "supports": "Organización de la carpeta .Report/definition en ficheros JSON modulares.",
+        "type": "docs",
+        "accessed": "2026-10-29"
+      }
+    ]
+  },
+  {
+    "id": "bpa-static-analysis",
+    "term": "Analizador de buenas prácticas (BPA)",
+    "englishTerm": "Best Practice Analyzer (BPA)",
+    "track": "bi",
+    "definition": "Motor de inspección estática de metadatos que evalúa reglas declarativas sobre un modelo semántico tabular antes de compilarlo o desplegarlo. Detecta automáticamente defectos estructurales en integración continua, como columnas numéricas o claves foráneas con suma implícita activa, medidas sin cadena de formato o relaciones bidireccionales innecesarias.",
+    "formula": "Reglas BPA (JSON) + Modelo TMDL -> Severidad (Error / Warning) -> Código de salida CI",
+    "relatedLessons": [
+      "bi4-operacion-03-cicd-pruebas-promocion-entornos",
+      "bi4-operacion-02-pbip-tmdl-versionado-git"
+    ],
+    "relatedTerms": [
+      "tmdl-language",
+      "pbip-project",
+      "semantic-reconciliation-test"
+    ],
+    "sources": [
+      {
+        "title": "Best Practice Analyzer Documentation",
+        "url": "https://docs.tabulareditor.com/te2/Best-Practice-Analyzer.html",
+        "publisher": "Tabular Editor",
+        "supports": "Definición y evaluación de reglas estáticas sobre metadatos del modelo tabular.",
+        "type": "docs",
+        "accessed": "2026-10-29"
+      },
+      {
+        "title": "Power BI Desktop projects Azure DevOps build pipelines",
+        "url": "https://learn.microsoft.com/en-us/power-bi/developer/projects/projects-azdo",
+        "publisher": "Microsoft Learn",
+        "supports": "Ejecución automatizada de reglas BPA desde línea de comandos en pipelines CI.",
+        "type": "docs",
+        "accessed": "2026-10-29"
+      }
+    ]
+  },
+  {
+    "id": "deployment-pipeline-bi",
+    "term": "Pipeline de promoción de entornos BI",
+    "englishTerm": "BI Deployment Pipeline",
+    "track": "bi",
+    "definition": "Flujo automatizado que promueve modelos semánticos y reportes validados a través de espacios de trabajo aislados de desarrollo, pruebas y producción. Aplica reglas de despliegue parametrizadas para reasignar orígenes de datos y cadenas de conexión en cada etapa sin alterar manualmente el código fuente versionado en Git.",
+    "formula": "Dev (Rama PR) -> Test (Reglas de conexión + Pruebas de cuadre) -> Prod (Publicación gobernada)",
+    "relatedLessons": [
+      "bi4-operacion-03-cicd-pruebas-promocion-entornos"
+    ],
+    "relatedTerms": [
+      "pbip-project",
+      "bpa-static-analysis",
+      "semantic-reconciliation-test"
+    ],
+    "sources": [
+      {
+        "title": "Introduction to deployment pipelines in Microsoft Fabric",
+        "url": "https://learn.microsoft.com/en-us/fabric/cicd/deployment-pipelines/intro-to-deployment-pipelines",
+        "publisher": "Microsoft Learn",
+        "supports": "Etapas de promoción entre entornos y aplicación de reglas de despliegue parametrizadas.",
+        "type": "docs",
+        "accessed": "2026-10-29"
+      },
+      {
+        "title": "CI/CD best practices in Microsoft Fabric",
+        "url": "https://learn.microsoft.com/en-us/fabric/cicd/best-practices-cicd",
+        "publisher": "Microsoft Learn",
+        "supports": "Aislamiento de espacios de trabajo y validación automatizada previa a producción.",
+        "type": "docs",
+        "accessed": "2026-10-29"
+      }
+    ]
+  },
+  {
+    "id": "semantic-reconciliation-test",
+    "term": "Prueba de reconciliación semántica",
+    "englishTerm": "Semantic Reconciliation Test",
+    "track": "bi",
+    "definition": "Aserción automatizada ejecutada en integración continua que contrasta el resultado numérico de una métrica de la capa semántica frente a una consulta SQL de referencia sobre tablas base preagregadas al mismo grano. Bloquea el despliegue cuando la deriva absoluta supera una tolerancia estricta de redondeo.",
+    "formula": "|Métrica_Capa_Semántica - SQL_Referencia_Grano_Base| < 0.01",
+    "relatedLessons": [
+      "bi4-operacion-03-cicd-pruebas-promocion-entornos",
+      "bi4-operacion-01-bi-como-codigo-evidence-observable-rill"
+    ],
+    "relatedTerms": [
+      "c01-grain-fanout",
+      "c19-data-contracts-odcs",
+      "bpa-static-analysis"
+    ],
+    "sources": [
+      {
+        "title": "CI/CD best practices in Microsoft Fabric",
+        "url": "https://learn.microsoft.com/en-us/fabric/cicd/best-practices-cicd",
+        "publisher": "Microsoft Learn",
+        "supports": "Verificación automatizada de calidad y exactitud de consultas antes de promover artefactos.",
+        "type": "docs",
+        "accessed": "2026-10-29"
+      }
+    ]
+  },
+  {
+    "id": "report-sprawl",
+    "term": "Proliferación descontrolada de tableros",
+    "englishTerm": "Report Sprawl",
+    "track": "bi",
+    "definition": "Acumulación progresiva de reportes duplicados, huérfanos o abandonados en los espacios de trabajo de una organización. Incrementa el consumo innecesario de cómputo por refrescos programados sin lectores activos y erosiona la confianza ejecutiva al exponer múltiples versiones contradictorias de una misma métrica de negocio.",
+    "formula": "Tasa de artefactos zombi = Tableros con 0 lectores únicos en 60 días / Total de tableros con refresco activo",
+    "relatedLessons": [
+      "bi4-operacion-04-telemetria-adopcion-retiro-tableros"
+    ],
+    "relatedTerms": [
+      "dashboard-quarantine",
+      "c21-semantic-layer"
+    ],
+    "sources": [
+      {
+        "title": "Fabric adoption roadmap: Content ownership and management",
+        "url": "https://learn.microsoft.com/en-us/power-bi/guidance/fabric-adoption-roadmap-content-ownership-and-management",
+        "publisher": "Microsoft Learn",
+        "supports": "Gestión de propiedad de contenido y mitigación de la proliferación de artefactos analíticos.",
+        "type": "docs",
+        "accessed": "2026-10-29"
+      },
+      {
+        "title": "Monitor usage metrics in workspaces",
+        "url": "https://learn.microsoft.com/en-us/power-bi/collaborate-share/service-modern-usage-metrics",
+        "publisher": "Microsoft Learn",
+        "supports": "Medición de vistas y espectadores únicos por reporte.",
+        "type": "docs",
+        "accessed": "2026-10-29"
+      }
+    ]
+  },
+  {
+    "id": "dashboard-quarantine",
+    "term": "Cuarentena de tableros",
+    "englishTerm": "Dashboard Quarantine",
+    "track": "bi",
+    "definition": "Fase intermedia del protocolo de retiro de artefactos analíticos en la que un tablero sin adopción reciente se oculta del catálogo activo y se pausa su refresco programado durante un periodo de gracia, conservando su código en Git para restaurarlo de inmediato si un proceso legítimo lo reclama.",
+    "formula": "Detección (Inactividad > umbral) -> Aviso de deprecación -> Cuarentena (30 días sin refresco) -> Retiro",
+    "relatedLessons": [
+      "bi4-operacion-04-telemetria-adopcion-retiro-tableros"
+    ],
+    "relatedTerms": [
+      "report-sprawl",
+      "pbip-project"
+    ],
+    "sources": [
+      {
+        "title": "Fabric adoption roadmap: Governance",
+        "url": "https://learn.microsoft.com/en-us/power-bi/guidance/fabric-adoption-roadmap-governance",
+        "publisher": "Microsoft Learn",
+        "supports": "Políticas de ciclo de vida, auditoría de obsolescencia y retiro controlado de contenido.",
+        "type": "docs",
+        "accessed": "2026-10-29"
+      },
+      {
+        "title": "Track user activities in Microsoft Fabric",
+        "url": "https://learn.microsoft.com/en-us/fabric/admin/track-user-activities",
+        "publisher": "Microsoft Learn",
+        "supports": "Extracción del registro de eventos de actividad para auditar inactividad prolongada.",
+        "type": "docs",
+        "accessed": "2026-10-29"
+      }
+    ]
+  },
+  {
+    "id": "semantic-synonym-disambiguation",
+    "term": "Desambiguación de sinónimos semánticos",
+    "englishTerm": "Semantic Synonym Disambiguation",
+    "track": "bi",
+    "definition": "Práctica de gobierno en capas semánticas y servidores MCP que asigna cada término coloquial de negocio a una única medida certificada, ocultando columnas físicas homónimas. Evita que un asistente GenBI confunda ingresos netos de órdenes completadas con facturación bruta o sumas de pedidos cancelados.",
+    "formula": "Término de usuario ('ingresos netos') -> Mapa unívoco de sinónimos -> metric_id certificado + Cita verificable",
+    "relatedLessons": [
+      "bi4-operacion-05-genbi-auditable-sinonimos-mcp"
+    ],
+    "relatedTerms": [
+      "c28-mcp-semantic-rag-evals",
+      "c21-semantic-layer",
+      "tmdl-language"
+    ],
+    "sources": [
+      {
+        "title": "Update your data model to work well with Copilot",
+        "url": "https://learn.microsoft.com/en-us/power-bi/create-reports/copilot-evaluate-data",
+        "publisher": "Microsoft Learn",
+        "supports": "Configuración de descripciones, sinónimos y ocultamiento de columnas para asistentes de IA.",
+        "type": "docs",
+        "accessed": "2026-10-29"
+      },
+      {
+        "title": "Best practices to optimize Q&A in Power BI",
+        "url": "https://learn.microsoft.com/en-us/power-bi/natural-language/q-and-a-best-practices",
+        "publisher": "Microsoft Learn",
+        "supports": "Prevención de colisiones léxicas en sinónimos de negocio.",
+        "type": "docs",
+        "accessed": "2026-10-29"
+      },
+      {
+        "title": "Model Context Protocol (MCP) — Specification 2025-03-26",
+        "url": "https://modelcontextprotocol.io/specification/2025-03-26",
+        "publisher": "Model Context Protocol",
+        "supports": "Exposición estandarizada de recursos y herramientas semánticas hacia modelos de lenguaje.",
+        "type": "spec",
+        "accessed": "2026-10-29"
+      }
+    ]
+  }
+]
