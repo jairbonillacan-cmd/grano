@@ -1,0 +1,198 @@
+[
+  {
+    "id": "registro-decision-arquitectura-adr",
+    "term": "Registro de Decisión de Arquitectura (ADR)",
+    "englishTerm": "Architectural Decision Record (ADR)",
+    "track": "core",
+    "definition": "Documento técnico breve versionado en el repositorio que registra una elección de diseño significativa junto con su contexto, las alternativas evaluadas, la decisión adoptada y sus consecuencias operativas. No se confunde con un manual de usuario, pues captura por qué se descartaron otras opciones bajo las restricciones vigentes.",
+    "formula": "Contexto + Alternativas (A vs. B) + Decisión + Consecuencias (Trade-offs)",
+    "relatedLessons": [
+      "x4-carrera-01-portafolio-publico-de-da-bi",
+      "x4-carrera-03-explicar-proyecto-2-minutos"
+    ],
+    "relatedTerms": [
+      "compensacion-tecnica-tradeoff",
+      "reproducibilidad-computacional"
+    ],
+    "sources": [
+      {
+        "title": "Documenting Architecture Decisions",
+        "url": "https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions",
+        "publisher": "Cognitect (Michael Nygard)",
+        "accessed": "2026-10-29",
+        "supports": "Formato canónico de ADR con título, estado, contexto, decisión y consecuencias para documentar decisiones de arquitectura."
+      }
+    ]
+  },
+  {
+    "id": "reproducibilidad-computacional",
+    "term": "Reproducibilidad computacional en portafolios",
+    "englishTerm": "Computational Reproducibility",
+    "track": "core",
+    "definition": "Propiedad de un proyecto analítico o de ingeniería por la cual un revisor externo puede clonar el repositorio y obtener exactamente las mismas tablas, métricas y gráficos ejecutando un comando automatizado sobre los datos fuente. Exige fijar versiones de paquetes, semillas deterministas y rutas relativas sin pasos manuales ocultos.",
+    "formula": "Datos crudos (SHA-256 fijo) + Código versionado + Entorno fijado = Salida idéntica",
+    "relatedLessons": [
+      "x4-carrera-01-portafolio-publico-de-da-bi"
+    ],
+    "relatedTerms": [
+      "registro-decision-arquitectura-adr",
+      "prueba-reconciliacion-datos"
+    ],
+    "sources": [
+      {
+        "title": "Ten Simple Rules for Reproducible Computational Research",
+        "url": "https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1003285",
+        "publisher": "PLOS Computational Biology",
+        "accessed": "2026-10-29",
+        "supports": "Reglas de trazabilidad completa desde datos crudos hasta resultados publicados mediante scripts automatizados y control de versiones."
+      }
+    ]
+  },
+  {
+    "id": "prueba-reconciliacion-datos",
+    "term": "Prueba SQL de reconciliación financiera y de grano",
+    "englishTerm": "SQL Grain and Financial Reconciliation Test",
+    "track": "core",
+    "definition": "Consulta de validación automatizada que comprueba que una transformación o cruce entre tablas conserva el conteo esperado de entidades y la suma exacta de importes monetarios. En un portafolio público evita publicar métricas infladas por multiplicación de filas al unir cabeceras de pedidos con líneas o reembolsos.",
+    "formula": "SELECT COUNT(*) - COUNT(DISTINCT order_id) AS filas_duplicadas_por_fanout FROM tabla_transformada;",
+    "relatedLessons": [
+      "x4-carrera-01-portafolio-publico-de-da-bi",
+      "x4-carrera-02-entrevista-tecnica-sql-caso-arquitectura"
+    ],
+    "relatedTerms": [
+      "reproducibilidad-computacional",
+      "protocolo-sql-en-vivo"
+    ],
+    "sources": [
+      {
+        "title": "Add data tests to your DAG",
+        "url": "https://docs.getdbt.com/docs/build/data-tests",
+        "publisher": "dbt Labs Documentation",
+        "accessed": "2026-10-29",
+        "supports": "Verificación declarativa y singular de unicidad, integridad referencial y cuadre de totales en modelos analíticos."
+      }
+    ]
+  },
+  {
+    "id": "protocolo-sql-en-vivo",
+    "term": "Protocolo de 5 pasos para SQL en vivo",
+    "englishTerm": "5-Step Live SQL Interview Protocol",
+    "track": "core",
+    "definition": "Método estructurado para resolver ejercicios de SQL en entrevista técnica: primero declarar el grano de entrada y de salida; segundo identificar llaves de cruce y cardinalidad; tercero enumerar filtros de dominio y casos borde; cuarto modularizar en CTEs legibles; y quinto verificar el conteo de filas y empates.",
+    "formula": "1. Grano -> 2. Cardinalidad JOIN -> 3. Filtros/Bordes -> 4. CTEs -> 5. Verificación",
+    "relatedLessons": [
+      "x4-carrera-02-entrevista-tecnica-sql-caso-arquitectura"
+    ],
+    "relatedTerms": [
+      "desempate-determinista-ventana",
+      "prueba-reconciliacion-datos"
+    ],
+    "sources": [
+      {
+        "title": "Declaring the Grain",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/grain/",
+        "publisher": "Kimball Group",
+        "accessed": "2026-10-29",
+        "supports": "Declaración obligatoria del grano antes de combinar tablas de hechos y dimensiones para prevenir errores de agregación."
+      }
+    ]
+  },
+  {
+    "id": "desempate-determinista-ventana",
+    "term": "Desempate determinista en funciones de ventana",
+    "englishTerm": "Deterministic Window Tie-Breaking",
+    "track": "core",
+    "definition": "Inclusión de una clave única como último criterio del `ORDER BY` dentro de una función de ventana (`ROW_NUMBER()`, `RANK()`, `DENSE_RANK()`) para garantizar que dos ejecuciones sobre los mismos datos devuelvan siempre la misma fila ganadora. Se combina con `QUALIFY` en DuckDB para filtrar rankings sin subconsultas adicionales.",
+    "formula": "QUALIFY ROW_NUMBER() OVER (PARTITION BY idempotency_key ORDER BY payment_ts ASC, payment_id ASC) = 1",
+    "relatedLessons": [
+      "x4-carrera-02-entrevista-tecnica-sql-caso-arquitectura"
+    ],
+    "relatedTerms": [
+      "protocolo-sql-en-vivo",
+      "reproducibilidad-computacional"
+    ],
+    "sources": [
+      {
+        "title": "DuckDB SQL Query Syntax — QUALIFY Clause",
+        "url": "https://duckdb.org/docs/stable/sql/query_syntax/qualify.html",
+        "publisher": "DuckDB Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Filtrado directo del resultado de funciones de ventana evaluadas por partición y orden determinista."
+      }
+    ]
+  },
+  {
+    "id": "principio-piramide-minto",
+    "term": "Principio de la Pirámide de Minto (Comunicación Answer-First)",
+    "englishTerm": "Minto Pyramid Principle (Answer-First Communication)",
+    "track": "core",
+    "definition": "Estructura de comunicación ejecutiva formulada por Barbara Minto que exige abrir una presentación o documento con la conclusión cuantificada y la recomendación de acción en los primeros veinte segundos, respaldándola después con argumentos agrupados lógicamente y cerrando con la evidencia técnica detallada si el interlocutor profundiza.",
+    "formula": "1. Conclusión cuantificada (0:00-0:20) -> 2. Causas y compensaciones -> 3. Evidencia SQL",
+    "relatedLessons": [
+      "x4-carrera-03-explicar-proyecto-2-minutos"
+    ],
+    "relatedTerms": [
+      "matriz-impacto-antes-despues",
+      "compensacion-tecnica-tradeoff"
+    ],
+    "sources": [
+      {
+        "title": "The Minto Pyramid Principle: Logic in Writing, Thinking, & Problem Solving",
+        "url": "https://barbaraminto.com/",
+        "publisher": "Minto International",
+        "accessed": "2026-10-29",
+        "supports": "Presentación jerárquica encabezada por la tesis principal y sustentada en grupos de argumentos mutuamente excluyentes."
+      }
+    ]
+  },
+  {
+    "id": "compensacion-tecnica-tradeoff",
+    "term": "Compensación técnica de ingeniería (Trade-off)",
+    "englishTerm": "Engineering Trade-off",
+    "track": "core",
+    "definition": "Elección consciente entre dos o más diseños válidos donde ganar en una dimensión (como simplicidad operativa, menor costo de cómputo o exactitud histórica) implica ceder de forma controlada en otra (como mayor latencia o almacenamiento adicional). Explicar qué se sacrificó y por qué distingue a un perfil profesional.",
+    "formula": "Beneficio ganado (p. ej. exactitud As-Was SCD2) vs. Costo aceptado (cruce por rango temporal)",
+    "relatedLessons": [
+      "x4-carrera-01-portafolio-publico-de-da-bi",
+      "x4-carrera-02-entrevista-tecnica-sql-caso-arquitectura",
+      "x4-carrera-03-explicar-proyecto-2-minutos"
+    ],
+    "relatedTerms": [
+      "registro-decision-arquitectura-adr",
+      "principio-piramide-minto"
+    ],
+    "sources": [
+      {
+        "title": "Software Architecture Guide",
+        "url": "https://martinfowler.com/architecture/",
+        "publisher": "Martin Fowler (martinfowler.com)",
+        "accessed": "2026-10-29",
+        "supports": "Evaluación de decisiones arquitectónicas en función de sus compensaciones bajo restricciones reales del sistema."
+      }
+    ]
+  },
+  {
+    "id": "matriz-impacto-antes-despues",
+    "term": "Matriz de impacto antes y después",
+    "englishTerm": "Before-and-After Impact Scorecard",
+    "track": "core",
+    "definition": "Tabla comparativa producida por una consulta reproducible que contrasta lado a lado la métrica defectuosa o previa al proyecto frente a la métrica corregida o posterior, cuantificando la diferencia absoluta y porcentual. Permite defender en dos minutos el valor económico o de calidad aportado por una intervención técnica.",
+    "formula": "sesgo_corregido_usd = metrica_antes_usd - metrica_despues_usd",
+    "relatedLessons": [
+      "x4-carrera-03-explicar-proyecto-2-minutos"
+    ],
+    "relatedTerms": [
+      "principio-piramide-minto",
+      "prueba-reconciliacion-datos"
+    ],
+    "sources": [
+      {
+        "title": "The STAR Method for Behavioral Interviews",
+        "url": "https://capd.mit.edu/resources/the-star-method-for-behavioral-interviews/",
+        "publisher": "MIT Career Advising & Professional Development",
+        "accessed": "2026-10-29",
+        "supports": "Cuantificación verificable del resultado obtenido tras la acción técnica frente a la línea base inicial."
+      }
+    ]
+  }
+]
