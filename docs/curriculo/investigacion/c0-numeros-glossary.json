@@ -1,0 +1,248 @@
+[
+  {
+    "id": "media-aritmetica",
+    "term": "Media aritmética",
+    "englishTerm": "Arithmetic Mean — AVG(x)",
+    "track": "core",
+    "definition": "Suma de todos los valores numéricos dividida entre el número de observaciones no nulas. En Mercado Brisa, el pedido medio es 426.10 USD. Se confunde con la mediana cuando existen valores extremos que arrastran el promedio hacia la cola alta.",
+    "formula": "AVG(total_usd) = SUM(total_usd) / COUNT(total_usd)",
+    "relatedLessons": [
+      "c0-numeros-01-media-mediana-moda",
+      "c0-numeros-03-asimetria-sesgo"
+    ],
+    "relatedTerms": [
+      "mediana",
+      "asimetria-distribucion"
+    ],
+    "sources": [
+      {
+        "title": "NIST/SEMATECH e-Handbook of Statistical Methods — Section 1.3.5.1: Measures of Location",
+        "url": "https://www.itl.nist.gov/div898/handbook/eda/section3/eda351.htm",
+        "publisher": "National Institute of Standards and Technology",
+        "accessed": "2026-10-29",
+        "supports": "Definición matemática de la media aritmética y sensibilidad ante valores atípicos."
+      }
+    ]
+  },
+  {
+    "id": "mediana",
+    "term": "Mediana (p50)",
+    "englishTerm": "Median — MEDIAN(x) / QUANTILE_CONT(x, 0.50)",
+    "track": "core",
+    "definition": "Valor central que divide una columna ordenada en dos mitades con el mismo número de filas. En Mercado Brisa, la mediana de pedido es 350.16 USD. Se confunde con la media aritmética o con la moda en distribuciones asimétricas.",
+    "formula": "MEDIAN(total_usd) = QUANTILE_CONT(total_usd, 0.50)",
+    "relatedLessons": [
+      "c0-numeros-01-media-mediana-moda",
+      "c0-numeros-02-dispersion-iqr-percentiles"
+    ],
+    "relatedTerms": [
+      "media-aritmetica",
+      "percentil",
+      "rango-intercuartilico"
+    ],
+    "sources": [
+      {
+        "title": "NIST/SEMATECH e-Handbook of Statistical Methods — Section 1.3.5.1: Measures of Location",
+        "url": "https://www.itl.nist.gov/div898/handbook/eda/section3/eda351.htm",
+        "publisher": "National Institute of Standards and Technology",
+        "accessed": "2026-10-29",
+        "supports": "Definición de la mediana como estimador de centro con punto de ruptura del 50 %."
+      }
+    ]
+  },
+  {
+    "id": "rango-intercuartilico",
+    "term": "Rango intercuartílico (IQR)",
+    "englishTerm": "Interquartile Range — Q3 - Q1",
+    "track": "core",
+    "definition": "Distancia entre el percentil 75 (Q3) y el percentil 25 (Q1), que abarca el 50 % central de los datos. En pedidos de Mercado Brisa vale 454.65 USD (621.35 menos 166.71). Se confunde con el rango total (máximo menos mínimo).",
+    "formula": "QUANTILE_CONT(x, 0.75) - QUANTILE_CONT(x, 0.25)",
+    "relatedLessons": [
+      "c0-numeros-02-dispersion-iqr-percentiles",
+      "c0-numeros-03-asimetria-sesgo"
+    ],
+    "relatedTerms": [
+      "percentil",
+      "mediana"
+    ],
+    "sources": [
+      {
+        "title": "NIST/SEMATECH e-Handbook of Statistical Methods — Section 1.3.3.7: Box Plot",
+        "url": "https://www.itl.nist.gov/div898/handbook/eda/section3/eda337.htm",
+        "publisher": "National Institute of Standards and Technology",
+        "accessed": "2026-10-29",
+        "supports": "Definición del rango intercuartílico y cercas de Tukey para detectar valores atípicos."
+      }
+    ]
+  },
+  {
+    "id": "percentil",
+    "term": "Percentil (p50, p90, p99)",
+    "englishTerm": "Percentile / Quantile — QUANTILE_CONT(x, p)",
+    "track": "core",
+    "definition": "Cota por debajo de la cual se sitúa un porcentaje dado de observaciones ordenadas. Un p90 de 876.17 USD en pedidos indica que el 90 % cuesta eso o menos. Se confunde con el porcentaje del ingreso total acumulado.",
+    "formula": "QUANTILE_CONT(total_usd, 0.90)",
+    "relatedLessons": [
+      "c0-numeros-02-dispersion-iqr-percentiles",
+      "c0-numeros-03-asimetria-sesgo"
+    ],
+    "relatedTerms": [
+      "mediana",
+      "rango-intercuartilico"
+    ],
+    "sources": [
+      {
+        "title": "DuckDB Documentation — Statistical Aggregate Functions (quantile_cont)",
+        "url": "https://duckdb.org/docs/sql/functions/aggregates",
+        "publisher": "DuckDB Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Cálculo de cuantiles continuos interpolados en SQL sobre columnas numéricas."
+      }
+    ]
+  },
+  {
+    "id": "asimetria-distribucion",
+    "term": "Asimetría de una distribución",
+    "englishTerm": "Skewness — SKEWNESS(x)",
+    "track": "core",
+    "definition": "Falta de simetría de una variable respecto a su centro. Es positiva cuando la cola derecha se alarga y empuja la media por encima de la mediana, como en reembolsos (SKEWNESS = 1.63). Se confunde con el sesgo de muestreo.",
+    "formula": "SKEWNESS(refund_amount_usd)",
+    "relatedLessons": [
+      "c0-numeros-03-asimetria-sesgo",
+      "c0-numeros-01-media-mediana-moda"
+    ],
+    "relatedTerms": [
+      "sesgo-estadistico",
+      "media-aritmetica",
+      "mediana"
+    ],
+    "sources": [
+      {
+        "title": "NIST/SEMATECH e-Handbook of Statistical Methods — Section 1.3.5.11: Measures of Skewness and Kurtosis",
+        "url": "https://www.itl.nist.gov/div898/handbook/eda/section3/eda35b.htm",
+        "publisher": "National Institute of Standards and Technology",
+        "accessed": "2026-10-29",
+        "supports": "Definición del coeficiente de asimetría de Fisher-Pearson e interpretación de colas."
+      }
+    ]
+  },
+  {
+    "id": "sesgo-estadistico",
+    "term": "Sesgo estadístico",
+    "englishTerm": "Statistical Bias / Selection Bias",
+    "track": "core",
+    "definition": "Error sistemático en la captura, muestreo o estimación que aleja el resultado del valor real de la población, como encuestar solo a clientes activos. En español suele traducirse desde skewness, por lo que se confunde con la asimetría geométrica.",
+    "formula": "Sesgo = E[estimador] - parametro_real",
+    "relatedLessons": [
+      "c0-numeros-03-asimetria-sesgo",
+      "c0-numeros-05-correlacion-causalidad"
+    ],
+    "relatedTerms": [
+      "asimetria-distribucion",
+      "variable-confusion"
+    ],
+    "sources": [
+      {
+        "title": "Causal Inference: What If — Part I: Selection Bias and Confounding",
+        "url": "https://miguelhernan.org/whatifbook",
+        "publisher": "Harvard T.H. Chan School of Public Health / CRC Press",
+        "accessed": "2026-10-29",
+        "supports": "Diferencia entre sesgo sistemático de selección o medición y variabilidad aleatoria."
+      }
+    ]
+  },
+  {
+    "id": "punto-porcentual",
+    "term": "Punto porcentual (pp)",
+    "englishTerm": "Percentage Point (pp)",
+    "track": "core",
+    "definition": "Diferencia aritmética directa entre dos porcentajes. Pasar de una tasa de fallo del 7.73 % al 11.60 % supone un aumento de 3.87 puntos porcentuales (pp). Se confunde con la variación relativa porcentual, que en ese mismo caso es +50.1 %.",
+    "formula": "diferencia_pp = tasa_final_pct - tasa_inicial_pct",
+    "relatedLessons": [
+      "c0-numeros-04-proporciones-tasas-bps"
+    ],
+    "relatedTerms": [
+      "punto-base"
+    ],
+    "sources": [
+      {
+        "title": "Eurostat Statistics Explained — Percentage Change and Percentage Points",
+        "url": "https://ec.europa.eu/eurostat/statistics-explained/index.php?title=Beginners:Statistical_concept_-_Percentage_change_and_percentage_points",
+        "publisher": "European Commission / Eurostat",
+        "accessed": "2026-10-29",
+        "supports": "Distinción entre diferencia aritmética en puntos porcentuales y tasa de variación relativa."
+      }
+    ]
+  },
+  {
+    "id": "punto-base",
+    "term": "Punto base (bps)",
+    "englishTerm": "Basis Point (bps — 1/100 of 1%)",
+    "track": "core",
+    "definition": "Centésima parte de un punto porcentual: 1 punto porcentual equivale a 100 puntos base (0.01 % = 1 bps). Una tasa de reembolso del 8.00 % se expresa como 800 bps. Se confunde con el porcentaje relativo de cambio.",
+    "formula": "bps = porcentaje * 100 = proporcion * 10000",
+    "relatedLessons": [
+      "c0-numeros-04-proporciones-tasas-bps"
+    ],
+    "relatedTerms": [
+      "punto-porcentual"
+    ],
+    "sources": [
+      {
+        "title": "Eurostat Statistics Explained — Percentage Change and Percentage Points",
+        "url": "https://ec.europa.eu/eurostat/statistics-explained/index.php?title=Beginners:Statistical_concept_-_Percentage_change_and_percentage_points",
+        "publisher": "European Commission / Eurostat",
+        "accessed": "2026-10-29",
+        "supports": "Conversión exacta entre proporciones decimales, puntos porcentuales y puntos base."
+      }
+    ]
+  },
+  {
+    "id": "correlacion-pearson",
+    "term": "Coeficiente de correlación de Pearson (r)",
+    "englishTerm": "Pearson Correlation Coefficient — CORR(y, x)",
+    "track": "core",
+    "definition": "Medida adimensional entre -1 y +1 que cuantifica la fuerza y dirección de la asociación lineal entre dos variables numéricas. En marketing_spend, CORR(spend_usd, attributed_conversions) dentro de paid_social es 0.585. Se confunde con pendiente o con relación causal directa.",
+    "formula": "CORR(y, x) = COVAR_POP(y, x) / (STDDEV_POP(y) * STDDEV_POP(x))",
+    "relatedLessons": [
+      "c0-numeros-05-correlacion-causalidad"
+    ],
+    "relatedTerms": [
+      "variable-confusion"
+    ],
+    "sources": [
+      {
+        "title": "DuckDB Documentation — Statistical Aggregate Functions (corr)",
+        "url": "https://duckdb.org/docs/sql/functions/aggregates",
+        "publisher": "DuckDB Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Cálculo del coeficiente de correlación lineal de Pearson sobre pares no nulos en SQL."
+      }
+    ]
+  },
+  {
+    "id": "variable-confusion",
+    "term": "Variable de confusión (confusor)",
+    "englishTerm": "Confounding Variable / Confounder",
+    "track": "core",
+    "definition": "Tercera variable que influye tanto en la variable explicativa como en el resultado, creando una correlación espuria o distorsionada. En marketing_spend, el canal (channel) fija tanto el presupuesto base como el volumen de conversiones. Se confunde con una variable mediadora.",
+    "formula": "Estratificar con GROUP BY variable_confusora",
+    "relatedLessons": [
+      "c0-numeros-05-correlacion-causalidad"
+    ],
+    "relatedTerms": [
+      "correlacion-pearson",
+      "sesgo-estadistico",
+      "c10-simpsons-paradox"
+    ],
+    "sources": [
+      {
+        "title": "Causal Inference: What If — Part I: Confounding and Causal Diagrams",
+        "url": "https://miguelhernan.org/whatifbook",
+        "publisher": "Harvard T.H. Chan School of Public Health / CRC Press",
+        "accessed": "2026-10-29",
+        "supports": "Definición de confusor como causa común y control mediante estratificación o ajuste."
+      }
+    ]
+  }
+]
