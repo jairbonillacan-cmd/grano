@@ -1,0 +1,243 @@
+[
+  {
+    "id": "c0-tipo-dato",
+    "term": "Tipo de dato",
+    "englishTerm": "Data Type (INTEGER, DECIMAL, VARCHAR, DATE, BOOLEAN)",
+    "track": "core",
+    "definition": "Contrato que define qué valores puede almacenar una columna, cuántos bytes ocupa en memoria y qué operaciones admite. Impide errores como sumar textos o aceptar fechas inexistentes. Se confunde a menudo con el formato visual de una celda en una hoja de cálculo, que solo cambia la apariencia sin restringir el valor real.",
+    "formula": "SELECT CAST('2024-05-18' AS DATE) AS fecha_tipada, CAST('39.76' AS DECIMAL(10, 2)) AS precio_exacto;",
+    "relatedLessons": [
+      "c0-datos-01-tipos-dato"
+    ],
+    "relatedTerms": [
+      "c0-decimal-exacto",
+      "c0-valor-null"
+    ],
+    "sources": [
+      {
+        "title": "PostgreSQL 17 Documentation — Chapter 8: Data Types",
+        "url": "https://www.postgresql.org/docs/current/datatype.html",
+        "publisher": "PostgreSQL Global Development Group",
+        "accessed": "2026-10-29",
+        "supports": "Clasificación y propiedades de tipos numéricos, de texto, temporales y booleanos."
+      }
+    ]
+  },
+  {
+    "id": "c0-decimal-exacto",
+    "term": "Decimal exacto frente a coma flotante",
+    "englishTerm": "DECIMAL / NUMERIC vs. DOUBLE (IEEE 754)",
+    "track": "core",
+    "definition": "Los tipos DECIMAL(p,s) o NUMERIC guardan cifras en base 10 sin error de redondeo, por lo que son obligatorios para dinero y contabilidad. En cambio, DOUBLE o FLOAT usan fracciones binarias IEEE 754 donde 0.1 + 0.2 produce 0.30000000000000004. Se confunden porque ambos muestran decimales en pantalla, pero difieren al sumar miles de filas.",
+    "formula": "SELECT ROUND(SUM(CAST(list_price_usd AS DECIMAL(10, 2))), 2) FROM products WHERE is_active = true;",
+    "relatedLessons": [
+      "c0-datos-01-tipos-dato"
+    ],
+    "relatedTerms": [
+      "c0-tipo-dato"
+    ],
+    "sources": [
+      {
+        "title": "IEEE Standard for Floating-Point Arithmetic (IEEE 754-2019)",
+        "url": "https://ieeexplore.ieee.org/document/8766229",
+        "publisher": "IEEE Computer Society",
+        "accessed": "2026-10-29",
+        "supports": "Representación binaria de coma flotante y origen del error de redondeo en fracciones decimales."
+      }
+    ]
+  },
+  {
+    "id": "c0-valor-null",
+    "term": "Valor NULL",
+    "englishTerm": "NULL Marker (Missing or Inapplicable Value)",
+    "track": "core",
+    "definition": "Marcador especial del modelo relacional que indica que un dato es desconocido, aún no ha ocurrido o no aplica a esa fila. No es el número cero (0) ni una cadena vacía (''). Se confunde con cero al calcular promedios: AVG ignora las filas con NULL, mientras que un cero reduce artificialmente el resultado.",
+    "formula": "SELECT COUNT(*) AS total, COUNT(postal_code) AS presentes, COUNT(*) - COUNT(postal_code) AS nulos FROM customers;",
+    "relatedLessons": [
+      "c0-datos-02-null-vacio"
+    ],
+    "relatedTerms": [
+      "c0-logica-trivalente",
+      "c0-tipo-dato"
+    ],
+    "sources": [
+      {
+        "title": "DuckDB Documentation — Null Values",
+        "url": "https://duckdb.org/docs/sql/data_types/nulls.html",
+        "publisher": "DuckDB Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Comportamiento de NULL en expresiones aritméticas, comparaciones y funciones de agregación."
+      }
+    ]
+  },
+  {
+    "id": "c0-logica-trivalente",
+    "term": "Lógica de tres valores (3VL)",
+    "englishTerm": "Three-Valued Logic (TRUE, FALSE, UNKNOWN)",
+    "track": "core",
+    "definition": "Sistema lógico de SQL donde toda comparación puede evaluar a verdadero (TRUE), falso (FALSE) o desconocido (UNKNOWN). Cualquier igualdad o desigualdad directa contra NULL (como postal_code = NULL) devuelve UNKNOWN y la cláusula WHERE descarta la fila. Por eso los nulos se evalúan siempre con IS NULL, IS NOT NULL o COALESCE.",
+    "formula": "SELECT customer_id, COALESCE(postal_code, 'SIN_CP') AS cp_limpio FROM customers WHERE postal_code IS NULL;",
+    "relatedLessons": [
+      "c0-datos-02-null-vacio"
+    ],
+    "relatedTerms": [
+      "c0-valor-null"
+    ],
+    "sources": [
+      {
+        "title": "PostgreSQL 17 Documentation — Section 9.2: Comparison Functions and Operators",
+        "url": "https://www.postgresql.org/docs/current/functions-comparison.html",
+        "publisher": "PostgreSQL Global Development Group",
+        "accessed": "2026-10-29",
+        "supports": "Evaluación trivalente de predicados con NULL y uso de IS NULL y COALESCE."
+      }
+    ]
+  },
+  {
+    "id": "c0-formato-csv",
+    "term": "Archivo CSV (valores separados por delimitador)",
+    "englishTerm": "Comma-Separated Values (RFC 4180)",
+    "track": "core",
+    "definition": "Formato de texto plano que almacena datos tabulares fila por fila separando las columnas con comas o puntos y comas. Es legible por humanos y universal, pero no guarda el tipo de dato de cada columna ni comprime valores repetidos. Se confunde a menudo con un libro nativo de Excel (.xlsx).",
+    "formula": "SELECT * FROM read_csv('customers.csv', header = true, encoding = 'UTF-8');",
+    "relatedLessons": [
+      "c0-datos-03-formatos-archivo",
+      "c0-datos-04-utf8-separadores"
+    ],
+    "relatedTerms": [
+      "c0-formato-json",
+      "c12-parquet-columnar",
+      "c0-codificacion-utf8"
+    ],
+    "sources": [
+      {
+        "title": "RFC 4180 — Common Format and MIME Type for Comma-Separated Values (CSV) Files",
+        "url": "https://datatracker.ietf.org/doc/html/rfc4180",
+        "publisher": "IETF",
+        "accessed": "2026-10-29",
+        "supports": "Especificación del formato CSV en texto plano, delimitadores y escape de comillas."
+      }
+    ]
+  },
+  {
+    "id": "c0-formato-json",
+    "term": "Formato JSON",
+    "englishTerm": "JavaScript Object Notation (RFC 8259)",
+    "track": "core",
+    "definition": "Formato de texto que representa datos como pares clave-valor y listas que pueden anidarse a varios niveles. Es el estándar para respuestas de APIs web y eventos de navegación, pero resulta ineficiente para agregaciones masivas porque repite el nombre de cada atributo en todos los registros. Se complementa extrayendo sus campos hacia Parquet.",
+    "formula": "SELECT event_id, json_extract_string(payload_json, '$.campaign') AS campana FROM events LIMIT 5;",
+    "relatedLessons": [
+      "c0-datos-03-formatos-archivo"
+    ],
+    "relatedTerms": [
+      "c0-formato-csv",
+      "c12-parquet-columnar"
+    ],
+    "sources": [
+      {
+        "title": "RFC 8259 — The JavaScript Object Notation (JSON) Data Interchange Format",
+        "url": "https://datatracker.ietf.org/doc/html/rfc8259",
+        "publisher": "IETF",
+        "accessed": "2026-10-29",
+        "supports": "Gramática, tipos primitivos y anidamiento de objetos y arreglos en JSON."
+      }
+    ]
+  },
+  {
+    "id": "c0-codificacion-utf8",
+    "term": "Codificación UTF-8",
+    "englishTerm": "UTF-8 Variable-Width Character Encoding (RFC 3629)",
+    "track": "core",
+    "definition": "Estándar universal que traduce cada carácter Unicode a una secuencia de 1 a 4 bytes. Las letras inglesas y dígitos ASCII ocupan 1 byte, mientras que las vocales con tilde y la letra ñ en español ocupan 2 bytes. Se distingue al comparar el número de caracteres (LENGTH) con el número de bytes (STRLEN).",
+    "formula": "SELECT city, LENGTH(city) AS caracteres, STRLEN(city) AS bytes_utf8 FROM stores WHERE STRLEN(city) > LENGTH(city);",
+    "relatedLessons": [
+      "c0-datos-04-utf8-separadores"
+    ],
+    "relatedTerms": [
+      "c0-mojibake",
+      "c0-formato-csv"
+    ],
+    "sources": [
+      {
+        "title": "RFC 3629 — UTF-8, a transformation format of ISO 10646",
+        "url": "https://datatracker.ietf.org/doc/html/rfc3629",
+        "publisher": "IETF",
+        "accessed": "2026-10-29",
+        "supports": "Codificación multibyte de puntos de código Unicode en secuencias de 1 a 4 octetos."
+      }
+    ]
+  },
+  {
+    "id": "c0-mojibake",
+    "term": "Caracteres rotos (Mojibake)",
+    "englishTerm": "Mojibake (Character Encoding Mismatch)",
+    "track": "core",
+    "definition": "Distorsión del texto que aparece cuando un archivo guardado en una codificación (como UTF-8) se abre asumiendo otra distinta (como Windows-1252 o Latin-1). Como la letra é ocupa dos bytes en UTF-8 (0xC3 y 0xA9), un lector de un byte por carácter muestra Ã© en lugar de é. No es un fallo de fuente tipográfica.",
+    "formula": "-- Ejemplo: 'MÃ©xico' ocurre al leer los 2 bytes UTF-8 de 'é' (C3 A9) como Latin-1.",
+    "relatedLessons": [
+      "c0-datos-04-utf8-separadores"
+    ],
+    "relatedTerms": [
+      "c0-codificacion-utf8",
+      "c0-formato-csv"
+    ],
+    "sources": [
+      {
+        "title": "The Unicode Standard, Core Specification — Chapter 2: General Structure",
+        "url": "https://www.unicode.org/versions/latest/",
+        "publisher": "Unicode Consortium",
+        "accessed": "2026-10-29",
+        "supports": "Esquemas de codificación Unicode e interoperabilidad frente a tablas de código heredadas de 8 bits."
+      }
+    ]
+  },
+  {
+    "id": "c0-clave-primaria",
+    "term": "Clave primaria y clave foránea",
+    "englishTerm": "Primary Key (PK) & Foreign Key (FK)",
+    "track": "core",
+    "definition": "La clave primaria es la columna o combinación de columnas cuyo valor identifica de forma única cada fila de una tabla y no admite nulos (como order_id en orders). La clave foránea es una columna que guarda el valor de la clave primaria de otra tabla (como customer_id en orders) para conectar ambas entidades.",
+    "formula": "SELECT COUNT(*) AS filas, COUNT(DISTINCT order_id) AS claves_unicas FROM orders;",
+    "relatedLessons": [
+      "c0-datos-05-tablas-grano"
+    ],
+    "relatedTerms": [
+      "c0-grano-tabla",
+      "c01-grain-fanout"
+    ],
+    "sources": [
+      {
+        "title": "PostgreSQL 17 Documentation — Section 5.4: Constraints (Primary Keys and Foreign Keys)",
+        "url": "https://www.postgresql.org/docs/current/ddl-constraints.html",
+        "publisher": "PostgreSQL Global Development Group",
+        "accessed": "2026-10-29",
+        "supports": "Unicidad y ausencia de nulos en claves primarias y vínculo referencial en claves foráneas."
+      }
+    ]
+  },
+  {
+    "id": "c0-grano-tabla",
+    "term": "Grano de una tabla",
+    "englishTerm": "Table Grain (Granularity Declaration)",
+    "track": "core",
+    "definition": "Respuesta exacta a la pregunta: ¿qué hecho o entidad del mundo real representa una sola fila de esta tabla? En orders una fila es un pedido completo; en order_items una fila es un producto dentro de un pedido. Confundir el grano lleva a sumar o contar unidades equivocadas al cruzar tablas.",
+    "formula": "-- Grano de orders: 1 fila = 1 pedido (order_id). Grano de order_items: 1 fila = 1 línea (order_item_id).",
+    "relatedLessons": [
+      "c0-datos-05-tablas-grano",
+      "c1-sql-joins-02-grano-fanout"
+    ],
+    "relatedTerms": [
+      "c0-clave-primaria",
+      "c01-grain-fanout"
+    ],
+    "sources": [
+      {
+        "title": "Kimball Group — Dimensional Modeling Techniques: Declare the Grain",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/grain/",
+        "publisher": "Kimball Group",
+        "accessed": "2026-10-29",
+        "supports": "Declaración atómica del grano antes de definir dimensiones, medidas o consultas."
+      }
+    ]
+  }
+]
