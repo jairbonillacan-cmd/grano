@@ -174,70 +174,20 @@ const lesson = {
     }
   ],
   "practice": {
-    "type": "fill-blanks",
-    "title": "Atribución temporal al último clic con ASOF",
+    "type": "sql",
+    "title": "Atribución temporal al último evento con ASOF JOIN",
     "language": "sql",
-    "prompt": "Completa el pipeline modular con CTEs para atribuir cada pedido (`orders`) al último clic publicitario (`ad_clicks`) del mismo `user_id` que haya ocurrido antes o en el mismo instante de la compra (`order_ts >= click_ts`).",
-    "starterCode": "{{b1}} orders_clean AS (\n  SELECT\n    order_id,\n    user_id,\n    order_ts,\n    order_total_usd\n  FROM raw_orders\n  WHERE order_ts >= TIMESTAMP '2026-10-01 00:00:00'\n),\nclicks_clean AS (\n  SELECT\n    user_id,\n    click_ts,\n    campaign_code\n  FROM raw_ad_clicks\n  WHERE click_ts >= TIMESTAMP '2026-09-24 00:00:00'\n)\nSELECT\n  o.order_id,\n  o.user_id,\n  o.order_ts,\n  c.click_ts AS attributed_click_ts,\n  COALESCE(c.campaign_code, 'ORGANIC_DIRECT') AS attributed_campaign,\n  o.order_total_usd\nFROM orders_clean o\nLEFT {{b2}} clicks_clean c\n  ON o.user_id = c.user_id\n  AND {{b3}};",
-    "expected": "{{b1}} orders_clean AS (\n  SELECT\n    order_id,\n    user_id,\n    order_ts,\n    order_total_usd\n  FROM raw_orders\n  WHERE order_ts >= TIMESTAMP '2026-10-01 00:00:00'\n),\nclicks_clean AS (\n  SELECT\n    user_id,\n    click_ts,\n    campaign_code\n  FROM raw_ad_clicks\n  WHERE click_ts >= TIMESTAMP '2026-09-24 00:00:00'\n)\nSELECT\n  o.order_id,\n  o.user_id,\n  o.order_ts,\n  c.click_ts AS attributed_click_ts,\n  COALESCE(c.campaign_code, 'ORGANIC_DIRECT') AS attributed_campaign,\n  o.order_total_usd\nFROM orders_clean o\nLEFT {{b2}} clicks_clean c\n  ON o.user_id = c.user_id\n  AND {{b3}};",
+    "prompt": "Completa el pipeline modular con CTEs sobre Mercado Brisa para atribuir cada pedido (`order_id BETWEEN 10001 AND 10010`) al último evento (`events`) del mismo `customer_id` ocurrido antes o en el mismo instante de la compra (`o.order_ts >= e.event_ts`).",
+    "starterCode": "WITH orders_clean AS (\n  SELECT\n    order_id,\n    customer_id,\n    order_ts,\n    total_usd\n  FROM orders\n  WHERE order_id BETWEEN 10001 AND 10010\n),\nevents_clean AS (\n  SELECT\n    customer_id,\n    event_ts,\n    event_type,\n    campaign_id\n  FROM events\n  WHERE customer_id IS NOT NULL\n)\nSELECT\n  o.order_id,\n  o.customer_id,\n  e.event_type AS last_touch_type,\n  COALESCE(e.campaign_id, 'ORGANIC_DIRECT') AS attributed_campaign,\n  o.total_usd\nFROM orders_clean o\n-- TODO: Cambia LEFT JOIN por ASOF LEFT JOIN y usa la desigualdad o.order_ts >= e.event_ts\nLEFT JOIN events_clean e\n  ON o.customer_id = e.customer_id\n  AND o.order_ts = e.event_ts\nORDER BY o.order_id;",
+    "expected": "WITH orders_clean AS (\n  SELECT\n    order_id,\n    customer_id,\n    order_ts,\n    total_usd\n  FROM orders\n  WHERE order_id BETWEEN 10001 AND 10010\n),\nevents_clean AS (\n  SELECT\n    customer_id,\n    event_ts,\n    event_type,\n    campaign_id\n  FROM events\n  WHERE customer_id IS NOT NULL\n)\nSELECT\n  o.order_id,\n  o.customer_id,\n  e.event_type AS last_touch_type,\n  COALESCE(e.campaign_id, 'ORGANIC_DIRECT') AS attributed_campaign,\n  o.total_usd\nFROM orders_clean o\nASOF LEFT JOIN events_clean e\n  ON o.customer_id = e.customer_id\n  AND o.order_ts >= e.event_ts\nORDER BY o.order_id;",
     "orderMatters": true,
     "hints": [
-      "Palabra clave para iniciar CTEs: Toda arquitectura modular de Common Table Expressions comienza con esta palabra clave.",
-      "Operador de join temporal exacto: Une cada fila izquierda con la fila derecha más reciente que cumpla la desigualdad temporal.",
-      "Condición temporal Point-in-Time: El clic (`c.click_ts`) debe haber ocurrido antes o en el mismo instante que el pedido (`o.order_ts`)."
+      "Usa `ASOF LEFT JOIN events_clean e` para emparejar cada pedido únicamente con el evento previo más cercano.",
+      "La condición temporal debe ser `AND o.order_ts >= e.event_ts` (el evento ocurrió antes o en el mismo instante que el pedido).",
+      "Conserva `ORDER BY o.order_id` al final."
     ],
-    "solution": "{{b1}} orders_clean AS (\n  SELECT\n    order_id,\n    user_id,\n    order_ts,\n    order_total_usd\n  FROM raw_orders\n  WHERE order_ts >= TIMESTAMP '2026-10-01 00:00:00'\n),\nclicks_clean AS (\n  SELECT\n    user_id,\n    click_ts,\n    campaign_code\n  FROM raw_ad_clicks\n  WHERE click_ts >= TIMESTAMP '2026-09-24 00:00:00'\n)\nSELECT\n  o.order_id,\n  o.user_id,\n  o.order_ts,\n  c.click_ts AS attributed_click_ts,\n  COALESCE(c.campaign_code, 'ORGANIC_DIRECT') AS attributed_campaign,\n  o.order_total_usd\nFROM orders_clean o\nLEFT {{b2}} clicks_clean c\n  ON o.user_id = c.user_id\n  AND {{b3}};",
-    "solutionExplanation": "Estructura la consulta en CTEs modulares (`WITH orders_clean AS (...), clicks_clean AS (...)`). Utiliza `LEFT ASOF JOIN` para conservar también los pedidos orgánicos que no tuvieron clic previo. Define la desigualdad temporal correcta (`o.order_ts >= c.click_ts`) impidiendo atribuir clics ocurridos después de la compra.",
-    "blanks": [
-      {
-        "id": "b1",
-        "placeholder": "Palabra clave para iniciar CTEs",
-        "acceptedAnswers": [
-          "WITH"
-        ],
-        "hint": "Toda arquitectura modular de Common Table Expressions comienza con esta palabra clave."
-      },
-      {
-        "id": "b2",
-        "placeholder": "Operador de join temporal exacto",
-        "acceptedAnswers": [
-          "ASOF JOIN"
-        ],
-        "hint": "Une cada fila izquierda con la fila derecha más reciente que cumpla la desigualdad temporal."
-      },
-      {
-        "id": "b3",
-        "placeholder": "Condición temporal Point-in-Time",
-        "acceptedAnswers": [
-          "o.order_ts >= c.click_ts",
-          "c.click_ts <= o.order_ts"
-        ],
-        "hint": "El clic (`c.click_ts`) debe haber ocurrido antes o en el mismo instante que el pedido (`o.order_ts`)."
-      }
-    ],
-    "expectedOutputTable": [
-      {
-        "order_id": "ORD-501",
-        "user_id": "U-101",
-        "order_ts": "2026-10-28 14:20:00",
-        "attributed_click_ts": "2026-10-28 13:55:10",
-        "attributed_campaign": "CAMP_SEARCH_Q4",
-        "order_total_usd": "$180.00"
-      },
-      {
-        "order_id": "ORD-502",
-        "user_id": "U-309",
-        "order_ts": "2026-10-28 15:10:00",
-        "attributed_click_ts": "NULL",
-        "attributed_campaign": "ORGANIC_DIRECT",
-        "order_total_usd": "$95.00"
-      }
-    ],
-    "rubricCriteria": [
-      "Estructura la consulta en CTEs modulares (`WITH orders_clean AS (...), clicks_clean AS (...)`).",
-      "Utiliza `LEFT ASOF JOIN` para conservar también los pedidos orgánicos que no tuvieron clic previo.",
-      "Define la desigualdad temporal correcta (`o.order_ts >= c.click_ts`) impidiendo atribuir clics ocurridos después de la compra."
-    ]
+    "solution": "WITH orders_clean AS (\n  SELECT\n    order_id,\n    customer_id,\n    order_ts,\n    total_usd\n  FROM orders\n  WHERE order_id BETWEEN 10001 AND 10010\n),\nevents_clean AS (\n  SELECT\n    customer_id,\n    event_ts,\n    event_type,\n    campaign_id\n  FROM events\n  WHERE customer_id IS NOT NULL\n)\nSELECT\n  o.order_id,\n  o.customer_id,\n  e.event_type AS last_touch_type,\n  COALESCE(e.campaign_id, 'ORGANIC_DIRECT') AS attributed_campaign,\n  o.total_usd\nFROM orders_clean o\nASOF LEFT JOIN events_clean e\n  ON o.customer_id = e.customer_id\n  AND o.order_ts >= e.event_ts\nORDER BY o.order_id;",
+    "solutionExplanation": "Aísla los pedidos y eventos válidos en CTEs y aplica `ASOF LEFT JOIN` con `o.customer_id = e.customer_id AND o.order_ts >= e.event_ts`, garantizando cardinalidad máxima de una fila por pedido."
   },
   "roleNotes": {
     "de": "Normaliza rigurosamente todas las marcas de tiempo a `TIMESTAMP WITH TIME ZONE` (UTC) en la ingesta antes de permitir cualquier `ASOF JOIN`. Ordena físicamente las tablas de series temporales por `(partition_key, event_ts)` en Parquet/Iceberg para que el `ASOF JOIN` se ejecute como un Merge Sort en tiempo lineal `O(N + M)`. Factoriza pipelines complejos en CTEs modulares con nombres semánticos claros en dbt y SQLMesh.",

@@ -177,59 +177,20 @@ const lesson = {
     }
   ],
   "practice": {
-    "type": "fill-blanks",
-    "title": "Métricas de razón y mix constante",
+    "type": "sql",
+    "title": "Métricas de razón aditivas por canal en marketing_spend",
     "language": "sql",
-    "prompt": "Completa la consulta SQL para calcular correctamente el Ticket Promedio Global (`aov_global_usd`), la Conversión Global Observada (`conv_observada_pct`) desde sus medidas aditivas base, y la Conversión Normalizada usando el peso de sesiones del periodo base (`weight_base`).",
-    "starterCode": "SELECT\n  -- 1. Ticket Promedio (AOV) Global real (Métrica No Aditiva: Ingresos / Pedidos)\n  ROUND({{b1}} / NULLIF(SUM(orders_count), 0), 2) AS aov_global_usd,\n  -- 2. Conversión Global Observada (%: Pedidos Totales / Sesiones Totales)\n  ROUND(100.0 * SUM(orders_count) / NULLIF({{b2}}, 0), 2) AS conv_observada_pct,\n  -- 3. Conversión a Mix Constante (%: Suma ponderada por el peso base de cada canal)\n  ROUND(100.0 * SUM({{b3}}), 2) AS conv_mix_constante_pct\nFROM gold.channel_performance;",
-    "expected": "SELECT\n  -- 1. Ticket Promedio (AOV) Global real (Métrica No Aditiva: Ingresos / Pedidos)\n  ROUND({{b1}} / NULLIF(SUM(orders_count), 0), 2) AS aov_global_usd,\n  -- 2. Conversión Global Observada (%: Pedidos Totales / Sesiones Totales)\n  ROUND(100.0 * SUM(orders_count) / NULLIF({{b2}}, 0), 2) AS conv_observada_pct,\n  -- 3. Conversión a Mix Constante (%: Suma ponderada por el peso base de cada canal)\n  ROUND(100.0 * SUM({{b3}}), 2) AS conv_mix_constante_pct\nFROM gold.channel_performance;",
+    "prompt": "Calcula sobre `marketing_spend` por cada `channel` las métricas de razón desde sus componentes aditivos base: `total_spend_usd`, `ctr_pct` (`100 * SUM(clicks) / SUM(impressions)`), `cvr_pct` (`100 * SUM(attributed_conversions) / SUM(clicks)`) y `cpa_usd` (`SUM(spend_usd) / SUM(attributed_conversions)`), ordenado por `cpa_usd ASC`.",
+    "starterCode": "SELECT\n  channel,\n  ROUND(SUM(spend_usd), 2) AS total_spend_usd,\n  ROUND(100.0 * SUM(clicks) / NULLIF(SUM(impressions), 0), 2) AS ctr_pct,\n  -- TODO: Calcula cvr_pct como 100.0 * SUM(attributed_conversions) / NULLIF(SUM(clicks), 0) redondeado a 2 decimales\n  0.0 AS cvr_pct,\n  -- TODO: Calcula cpa_usd como SUM(spend_usd) / NULLIF(SUM(attributed_conversions), 0) redondeado a 2 decimales\n  0.0 AS cpa_usd\nFROM marketing_spend\nGROUP BY channel\nORDER BY cpa_usd ASC;",
+    "expected": "SELECT\n  channel,\n  ROUND(SUM(spend_usd), 2) AS total_spend_usd,\n  ROUND(100.0 * SUM(clicks) / NULLIF(SUM(impressions), 0), 2) AS ctr_pct,\n  ROUND(100.0 * SUM(attributed_conversions) / NULLIF(SUM(clicks), 0), 2) AS cvr_pct,\n  ROUND(SUM(spend_usd) / NULLIF(SUM(attributed_conversions), 0), 2) AS cpa_usd\nFROM marketing_spend\nGROUP BY channel\nORDER BY cpa_usd ASC;",
     "orderMatters": true,
     "hints": [
-      "Numerador aditivo de ingresos: Suma la columna aditiva `gross_revenue_usd` antes de dividir por `SUM(orders_count)`.",
-      "Denominador aditivo de sesiones: Divide el total de pedidos entre la suma total de sesiones (`SUM(sessions_count)`).",
-      "Tasa ponderada por peso base: Multiplica la tasa del canal (`conversion_rate`) por su peso en el periodo base (`weight_base`)."
+      "Nunca uses `AVG(attributed_conversions / clicks)`: suma primero numerador y denominador por separado.",
+      "Para `cvr_pct`, escribe `ROUND(100.0 * SUM(attributed_conversions) / NULLIF(SUM(clicks), 0), 2) AS cvr_pct`.",
+      "Para `cpa_usd`, escribe `ROUND(SUM(spend_usd) / NULLIF(SUM(attributed_conversions), 0), 2) AS cpa_usd`."
     ],
-    "solution": "SELECT\n  -- 1. Ticket Promedio (AOV) Global real (Métrica No Aditiva: Ingresos / Pedidos)\n  ROUND({{b1}} / NULLIF(SUM(orders_count), 0), 2) AS aov_global_usd,\n  -- 2. Conversión Global Observada (%: Pedidos Totales / Sesiones Totales)\n  ROUND(100.0 * SUM(orders_count) / NULLIF({{b2}}, 0), 2) AS conv_observada_pct,\n  -- 3. Conversión a Mix Constante (%: Suma ponderada por el peso base de cada canal)\n  ROUND(100.0 * SUM({{b3}}), 2) AS conv_mix_constante_pct\nFROM gold.channel_performance;",
-    "solutionExplanation": "Recalcula todos los ratios no aditivos mediante `SUM(numerador) / NULLIF(SUM(denominador), 0)` sin usar `AVG()` sobre porcentajes. Protege las divisiones con `NULLIF(..., 0)` para prevenir errores de división por cero. Calcula la métrica normalizada a mix constante ponderando las tasas actuales por los pesos del periodo base (`weight_base`).",
-    "blanks": [
-      {
-        "id": "b1",
-        "placeholder": "Numerador aditivo de ingresos",
-        "acceptedAnswers": [
-          "SUM(gross_revenue_usd)"
-        ],
-        "hint": "Suma la columna aditiva `gross_revenue_usd` antes de dividir por `SUM(orders_count)`."
-      },
-      {
-        "id": "b2",
-        "placeholder": "Denominador aditivo de sesiones",
-        "acceptedAnswers": [
-          "SUM(sessions_count)"
-        ],
-        "hint": "Divide el total de pedidos entre la suma total de sesiones (`SUM(sessions_count)`)."
-      },
-      {
-        "id": "b3",
-        "placeholder": "Tasa ponderada por peso base",
-        "acceptedAnswers": [
-          "conversion_rate * weight_base",
-          "weight_base * conversion_rate"
-        ],
-        "hint": "Multiplica la tasa del canal (`conversion_rate`) por su peso en el periodo base (`weight_base`)."
-      }
-    ],
-    "expectedOutputTable": [
-      {
-        "aov_global_usd": "$58.40",
-        "conv_observada_pct": "6.00%",
-        "conv_mix_constante_pct": "7.07%"
-      }
-    ],
-    "rubricCriteria": [
-      "Recalcula todos los ratios no aditivos mediante `SUM(numerador) / NULLIF(SUM(denominador), 0)` sin usar `AVG()` sobre porcentajes.",
-      "Protege las divisiones con `NULLIF(..., 0)` para prevenir errores de división por cero.",
-      "Calcula la métrica normalizada a mix constante ponderando las tasas actuales por los pesos del periodo base (`weight_base`)."
-    ]
+    "solution": "SELECT\n  channel,\n  ROUND(SUM(spend_usd), 2) AS total_spend_usd,\n  ROUND(100.0 * SUM(clicks) / NULLIF(SUM(impressions), 0), 2) AS ctr_pct,\n  ROUND(100.0 * SUM(attributed_conversions) / NULLIF(SUM(clicks), 0), 2) AS cvr_pct,\n  ROUND(SUM(spend_usd) / NULLIF(SUM(attributed_conversions), 0), 2) AS cpa_usd\nFROM marketing_spend\nGROUP BY channel\nORDER BY cpa_usd ASC;",
+    "solutionExplanation": "Calcula todas las tasas y razones (`ctr_pct`, `cvr_pct`, `cpa_usd`) agregando primero los numeradores y denominadores aditivos con `SUM(...)` y protegiendo la división mediante `NULLIF(..., 0)`."
   },
   "roleNotes": {
     "de": "En todas las tablas agregadas (Rollups / Cubos Gold), almacena **siempre el numerador y el denominador aditivos por separado** (`orders_count`, `sessions_count`, `gross_revenue_usd`) además de sketches HyperLogLog para usuarios únicos. Garantiza que las dimensiones de segmentación clave (`channel`, `device_type`, `country`, `customer_tier`) tengan un 0% de valores `NULL` para que las descomposiciones de mix cuadren al 100%.",

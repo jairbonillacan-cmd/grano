@@ -168,68 +168,20 @@ const lesson = {
     }
   ],
   "practice": {
-    "type": "fill-blanks",
-    "title": "Evaluación perezosa en Polars sin agotar RAM",
+    "type": "sql",
+    "title": "SQL analítico expresivo en DuckDB con FILTER y cuantiles",
     "language": "sql",
-    "prompt": "Completa el código para construir un plan perezoso (`LazyFrame`) sobre un dataset masivo en Parquet, aplicar el filtro de estado activo y materializar el resumen en modo `streaming` para que pueda ejecutarse en un contenedor ligero.",
-    "starterCode": "import polars as pl\n\n# 1. Iniciar escaneo perezoso (Lazy) sin cargar el archivo completo en RAM\nplan_optimo = (\n    pl.{{b1}}(\"s3://lakehouse/silver/subscriptions_2026.parquet\")\n    .filter(pl.col(\"status\") == \"ACTIVE\")\n    .group_by(\"plan_tier\")\n    .agg([\n        pl.len().alias(\"active_subs\"),\n        pl.col(\"mrr_usd\").{{b2}}().alias(\"total_mrr_usd\")\n    ])\n)\n\n# 2. Ejecutar el plan optimizado en modo streaming (Out-of-Core)\ndf_resultado = plan_optimo.{{b3}}(engine=\"streaming\")",
-    "expected": "import polars as pl\n\n# 1. Iniciar escaneo perezoso (Lazy) sin cargar el archivo completo en RAM\nplan_optimo = (\n    pl.{{b1}}(\"s3://lakehouse/silver/subscriptions_2026.parquet\")\n    .filter(pl.col(\"status\") == \"ACTIVE\")\n    .group_by(\"plan_tier\")\n    .agg([\n        pl.len().alias(\"active_subs\"),\n        pl.col(\"mrr_usd\").{{b2}}().alias(\"total_mrr_usd\")\n    ])\n)\n\n# 2. Ejecutar el plan optimizado en modo streaming (Out-of-Core)\ndf_resultado = plan_optimo.{{b3}}(engine=\"streaming\")",
+    "prompt": "Utiliza extensiones analíticas nativas de DuckDB sobre `orders` (`status = 'completed'`) unido con `customers` para calcular por `segment`: `completed_orders`, `median_ticket_usd` (`ROUND(MEDIAN(o.total_usd), 2)`), `high_value_orders` (`COUNT(*) FILTER (WHERE o.total_usd >= 120)`) y `revenue_usd`, ordenado por `revenue_usd DESC`.",
+    "starterCode": "SELECT\n  c.segment,\n  COUNT(*) AS completed_orders,\n  ROUND(MEDIAN(o.total_usd), 2) AS median_ticket_usd,\n  -- TODO: Cuenta solo los pedidos con o.total_usd >= 120 usando COUNT(*) FILTER (WHERE o.total_usd >= 120)\n  0 AS high_value_orders,\n  ROUND(SUM(o.total_usd), 2) AS revenue_usd\nFROM orders o\nJOIN customers c ON o.customer_id = c.customer_id\nWHERE o.status = 'completed'\nGROUP BY ALL\nORDER BY revenue_usd DESC;",
+    "expected": "SELECT\n  c.segment,\n  COUNT(*) AS completed_orders,\n  ROUND(MEDIAN(o.total_usd), 2) AS median_ticket_usd,\n  COUNT(*) FILTER (WHERE o.total_usd >= 120) AS high_value_orders,\n  ROUND(SUM(o.total_usd), 2) AS revenue_usd\nFROM orders o\nJOIN customers c ON o.customer_id = c.customer_id\nWHERE o.status = 'completed'\nGROUP BY ALL\nORDER BY revenue_usd DESC;",
     "orderMatters": true,
     "hints": [
-      "Función de lectura perezosa en Polars: A diferencia de `read_parquet` (Eager), `scan_parquet` crea un `LazyFrame` que optimiza toda la consulta antes de tocar el disco.",
-      "Agregación de suma en Polars: Usa el método `.sum()` sobre la expresión `pl.col(\"mrr_usd\")` para sumar el ingreso recurrente mensual.",
-      "Método para materializar el LazyFrame: En Polars Lazy, el grafo de consulta se compila y ejecuta al invocar `.collect(engine=\"streaming\")`."
+      "En DuckDB puedes filtrar una agregación puntual con `COUNT(*) FILTER (WHERE o.total_usd >= 120) AS high_value_orders`.",
+      "La cláusula `GROUP BY ALL` deduce automáticamente todas las columnas de agrupación no agregadas (`c.segment`).",
+      "Conserva `ORDER BY revenue_usd DESC`."
     ],
-    "solution": "import polars as pl\n\n# 1. Iniciar escaneo perezoso (Lazy) sin cargar el archivo completo en RAM\nplan_optimo = (\n    pl.{{b1}}(\"s3://lakehouse/silver/subscriptions_2026.parquet\")\n    .filter(pl.col(\"status\") == \"ACTIVE\")\n    .group_by(\"plan_tier\")\n    .agg([\n        pl.len().alias(\"active_subs\"),\n        pl.col(\"mrr_usd\").{{b2}}().alias(\"total_mrr_usd\")\n    ])\n)\n\n# 2. Ejecutar el plan optimizado en modo streaming (Out-of-Core)\ndf_resultado = plan_optimo.{{b3}}(engine=\"streaming\")",
-    "solutionExplanation": "Inicia el pipeline con `pl.scan_parquet()` para habilitar el optimizador de consultas (Predicate y Projection Pushdown). Expresa las agregaciones con métodos nativos vectorizados de Polars (`.sum()`, `pl.len()`). Materializa el `LazyFrame` con `.collect(engine=\"streaming\")` para acotar el uso de memoria RAM.",
-    "blanks": [
-      {
-        "id": "b1",
-        "placeholder": "Función de lectura perezosa en Polars",
-        "acceptedAnswers": [
-          "scan_parquet"
-        ],
-        "hint": "A diferencia de `read_parquet` (Eager), `scan_parquet` crea un `LazyFrame` que optimiza toda la consulta antes de tocar el disco."
-      },
-      {
-        "id": "b2",
-        "placeholder": "Agregación de suma en Polars",
-        "acceptedAnswers": [
-          "sum"
-        ],
-        "hint": "Usa el método `.sum()` sobre la expresión `pl.col(\"mrr_usd\")` para sumar el ingreso recurrente mensual."
-      },
-      {
-        "id": "b3",
-        "placeholder": "Método para materializar el LazyFrame",
-        "acceptedAnswers": [
-          "collect"
-        ],
-        "hint": "En Polars Lazy, el grafo de consulta se compila y ejecuta al invocar `.collect(engine=\"streaming\")`."
-      }
-    ],
-    "expectedOutputTable": [
-      {
-        "plan_tier": "Enterprise",
-        "active_subs": 1420,
-        "total_mrr_usd": "$708,580.00"
-      },
-      {
-        "plan_tier": "Growth",
-        "active_subs": 8650,
-        "total_mrr_usd": "$856,350.00"
-      },
-      {
-        "plan_tier": "Starter",
-        "active_subs": 24100,
-        "total_mrr_usd": "$698,900.00"
-      }
-    ],
-    "rubricCriteria": [
-      "Inicia el pipeline con `pl.scan_parquet()` para habilitar el optimizador de consultas (Predicate y Projection Pushdown).",
-      "Expresa las agregaciones con métodos nativos vectorizados de Polars (`.sum()`, `pl.len()`).",
-      "Materializa el `LazyFrame` con `.collect(engine=\"streaming\")` para acotar el uso de memoria RAM."
-    ]
+    "solution": "SELECT\n  c.segment,\n  COUNT(*) AS completed_orders,\n  ROUND(MEDIAN(o.total_usd), 2) AS median_ticket_usd,\n  COUNT(*) FILTER (WHERE o.total_usd >= 120) AS high_value_orders,\n  ROUND(SUM(o.total_usd), 2) AS revenue_usd\nFROM orders o\nJOIN customers c ON o.customer_id = c.customer_id\nWHERE o.status = 'completed'\nGROUP BY ALL\nORDER BY revenue_usd DESC;",
+    "solutionExplanation": "Aprovecha las capacidades analíticas de DuckDB (`MEDIAN`, `FILTER (WHERE ...)` y `GROUP BY ALL`) para calcular estadísticos robustos y conteos condicionales en una sola pasada vectorizada."
   },
   "roleNotes": {
     "de": "Ejecuta transformaciones Silver/Gold ligeras y medianas (<500 GB) en contenedores serverless usando DuckDB o Polars Lazy, eliminando costos ociosos de clústeres JVM. Integra scripts de Marimo (`.py`) directamente en el CI/CD y en el orquestador (Dagster / Airflow) sin tener que reescribir el código de los analistas. Configura límites explícitos de memoria y directorio temporal (`SET memory_limit = '12GB'`, `SET temp_directory = '/nvme/tmp'`) para garantizar ejecuciones Out-of-Core seguras.",
