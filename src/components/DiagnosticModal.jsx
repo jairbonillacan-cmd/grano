@@ -717,7 +717,7 @@ export function DiagnosticModal({
   }, [initialTrack, profile.track, isOpen]);
 
   useEffect(() => {
-    if (profile.onboarded || typeof document === 'undefined') return;
+    if (true || profile.onboarded || typeof document === 'undefined') return;
     const navButtons = document.querySelectorAll(
       '.app-sidebar__nav button, .app-bottom-nav button'
     );

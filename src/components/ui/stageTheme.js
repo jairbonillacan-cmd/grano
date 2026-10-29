@@ -1,4 +1,4 @@
-// Mapa heredado de tokens de etapa/rol a variables CSS (--role-de, --role-da, --role-bi, --brand).
+// Mapa heredado de tokens de etapa/rol a variables CSS (--track-de, --track-da, --track-bi, --brand).
 // Conservado para compatibilidad con vistas existentes sin acoplar colores hexadecimales.
 
 export const STAGE_THEMES = [
@@ -15,7 +15,7 @@ export const STAGE_THEMES = [
     id: 'stage-2',
     shortName: 'Modelado',
     name: 'Modelado dimensional y diseño de métricas',
-    color: 'var(--role-da)',
+    color: 'var(--track-da)',
     iconName: 'Layers',
   },
   {
@@ -23,7 +23,7 @@ export const STAGE_THEMES = [
     id: 'stage-3',
     shortName: 'Columnar',
     name: 'Motores columnares y formatos físicos',
-    color: 'var(--role-de)',
+    color: 'var(--track-de)',
     iconName: 'Cpu',
   },
   {
@@ -31,7 +31,7 @@ export const STAGE_THEMES = [
     id: 'stage-4',
     shortName: 'Lakehouse',
     name: 'Lakehouse abierto, transformación y capa semántica',
-    color: 'var(--role-bi)',
+    color: 'var(--track-bi)',
     iconName: 'Workflow',
   },
   {
@@ -47,7 +47,7 @@ export const STAGE_THEMES = [
     id: 'stage-6',
     shortName: 'Streaming e IA',
     name: 'Flujos en tiempo real y agentes MCP',
-    color: 'var(--role-de)',
+    color: 'var(--track-de)',
     iconName: 'Sparkles',
   },
 ]
@@ -59,7 +59,7 @@ export const ROLE_THEMES = {
     short: 'DE',
     label: 'Ingeniería de datos',
     iconName: 'Database',
-    color: 'var(--role-de)',
+    color: 'var(--track-de)',
   },
   DA: {
     key: 'DA',
@@ -67,7 +67,7 @@ export const ROLE_THEMES = {
     short: 'DA',
     label: 'Análisis de datos',
     iconName: 'Sigma',
-    color: 'var(--role-da)',
+    color: 'var(--track-da)',
   },
   BI: {
     key: 'BI',
@@ -75,21 +75,21 @@ export const ROLE_THEMES = {
     short: 'BI',
     label: 'Business Intelligence',
     iconName: 'LayoutDashboard',
-    color: 'var(--role-bi)',
+    color: 'var(--track-bi)',
   },
 }
 
 export const STAGE_VARS = {
   0: 'var(--brand)',
-  1: 'var(--role-da)',
-  2: 'var(--role-de)',
-  3: 'var(--role-bi)',
+  1: 'var(--track-da)',
+  2: 'var(--track-de)',
+  3: 'var(--track-bi)',
   4: 'var(--brand)',
-  5: 'var(--role-de)',
-  6: 'var(--role-bi)',
-  de: 'var(--role-de)',
-  da: 'var(--role-da)',
-  bi: 'var(--role-bi)',
+  5: 'var(--track-de)',
+  6: 'var(--track-bi)',
+  de: 'var(--track-de)',
+  da: 'var(--track-da)',
+  bi: 'var(--track-bi)',
 }
 
 export function getStageNumber(stageOrLesson) {

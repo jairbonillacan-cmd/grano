@@ -5,10 +5,11 @@
 @import './styles/components.css';
 @import './styles/animations.css';
 @import './styles/views/shell.css';
+@import './styles/views/onboarding.css';
 @import './styles/views/home.css';
 @import './styles/views/roadmap.css';
-@import './styles/views/track-path.css';
 @import './styles/views/lesson.css';
+@import './styles/views/lab.css';
 @import './styles/views/simulators.css';
 @import './styles/views/secondary.css';
 @import './styles/views/tutor.css';

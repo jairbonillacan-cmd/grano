@@ -1,12 +1,12 @@
-/* Grano — tokens de diseño (§4 de PLAN_GEMINI_4_ARGON.md).
+/* Grano — tokens canónicos de diseño (§4 de PLAN_GEMINI_4_ARGON.md y DESIGN.md).
    Un solo acento de marca (--brand), tinta neutra para la interfaz y tres colores de área
-   usados solo como marcadores pequeños. Los nombres antiguos se agrupan al final bajo
-   "ALIAS TEMPORALES — eliminar en T7". */
+   usados únicamente como marcadores pequeños (--track-de, --track-da, --track-bi). */
 
 :root,
 [data-theme="light"] {
   /* Tipografía (§4.2) */
   --font-display: 'Newsreader Variable', Georgia, serif;
+  --font-serif: 'Newsreader Variable', Georgia, serif;
   --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 
@@ -22,11 +22,20 @@
 
   --lh-reading: 1.6;
   --lh-ui: 1.4;
+  --lh-tight: 1.2;
+  --lh-snug: 1.3;
+  --lh-body: 1.55;
+  --lh-code: 1.5;
+
+  --ls-tight: -0.02em;
+  --ls-snug: -0.01em;
+  --ls-caps: 0.06em;
 
   /* Color — Modo claro (§4.1) */
   --bg: #FAFAF9;
   --surface: #FFFFFF;
   --sunken: #F4F4F2;
+  --elevated: #FFFFFF;
   --line: #E7E5E1;
   --line-strong: #D6D3CD;
   --line-control: #928C85;
@@ -36,19 +45,28 @@
   --brand: #C2410C;
   --brand-soft: #FDF1EA;
   --brand-deep: #9A3412;
+  --brand-ink: #9A3412;
   --track-de: #2952CC;
+  --track-de-soft: color-mix(in oklab, var(--track-de) 8%, var(--surface));
   --track-da: #167A52;
+  --track-da-soft: color-mix(in oklab, var(--track-da) 8%, var(--surface));
   --track-bi: #7A3FC2;
+  --track-bi-soft: color-mix(in oklab, var(--track-bi) 8%, var(--surface));
   --ok: #167A52;
+  --ok-soft: #E8F3EE;
   --bad: #C2352B;
+  --bad-soft: #FBECEA;
   --warn: #A15C00;
+  --warn-soft: #FBF1E2;
   --code-bg: #1C1B19;
+  --code-ink: #EDECE9;
   --focus: #C2410C;
+  --focus-ring: 0 0 0 2px var(--focus);
 
   /* Espaciado en múltiplos de 4 px expresados en rem (§4.3) */
   --sp-1: 0.25rem;     /* 4 px */
   --sp-2: 0.5rem;      /* 8 px */
-  --sp-3: 0.75rem;     /* 12 px */
+  --sp-3: 0.75rem;      /* 12 px */
   --sp-4: 1rem;        /* 16 px */
   --sp-5: 1.25rem;     /* 20 px */
   --sp-6: 1.5rem;      /* 24 px */
@@ -67,10 +85,12 @@
   --ease-out: cubic-bezier(.2, .8, .2, 1);
   --ease-in: cubic-bezier(.4, 0, 1, 1);
   --ease-move: cubic-bezier(.65, 0, .35, 1);
+  --ease: var(--ease-out);
   --dur-1: 120ms;
   --dur-2: 180ms;
   --dur-3: 260ms;
   --dur-4: 420ms;
+  --dur-fast: 120ms;
 
   /* Escala y dimensiones base de densidad (§4.5) */
   --ui-scale: 1;
@@ -86,6 +106,7 @@
     --bg: #121211;
     --surface: #1A1A18;
     --sunken: #222220;
+    --elevated: #222220;
     --line: #2E2D2A;
     --line-strong: #3D3B37;
     --line-control: #6B675F;
@@ -95,14 +116,23 @@
     --brand: #F07A3E;
     --brand-soft: #2D1D14;
     --brand-deep: #F5A47A;
+    --brand-ink: #F5A47A;
     --track-de: #7C9BF5;
+    --track-de-soft: color-mix(in oklab, var(--track-de) 12%, var(--surface));
     --track-da: #5BC79A;
+    --track-da-soft: color-mix(in oklab, var(--track-da) 12%, var(--surface));
     --track-bi: #B58CF0;
+    --track-bi-soft: color-mix(in oklab, var(--track-bi) 12%, var(--surface));
     --ok: #5BC79A;
+    --ok-soft: #16261F;
     --bad: #F07A70;
+    --bad-soft: #2E1A18;
     --warn: #E0A345;
+    --warn-soft: #2B2112;
     --code-bg: #1C1B19;
+    --code-ink: #EDECE9;
     --focus: #F07A3E;
+    --focus-ring: 0 0 0 2px var(--focus);
 
     --shadow-pop: 0 8px 24px rgb(0 0 0 / .45), 0 1px 2px rgb(0 0 0 / .3);
   }
@@ -113,6 +143,7 @@
   --bg: #121211;
   --surface: #1A1A18;
   --sunken: #222220;
+  --elevated: #222220;
   --line: #2E2D2A;
   --line-strong: #3D3B37;
   --line-control: #6B675F;
@@ -122,14 +153,23 @@
   --brand: #F07A3E;
   --brand-soft: #2D1D14;
   --brand-deep: #F5A47A;
+  --brand-ink: #F5A47A;
   --track-de: #7C9BF5;
+  --track-de-soft: color-mix(in oklab, var(--track-de) 12%, var(--surface));
   --track-da: #5BC79A;
+  --track-da-soft: color-mix(in oklab, var(--track-da) 12%, var(--surface));
   --track-bi: #B58CF0;
+  --track-bi-soft: color-mix(in oklab, var(--track-bi) 12%, var(--surface));
   --ok: #5BC79A;
+  --ok-soft: #16261F;
   --bad: #F07A70;
+  --bad-soft: #2E1A18;
   --warn: #E0A345;
+  --warn-soft: #2B2112;
   --code-bg: #1C1B19;
+  --code-ink: #EDECE9;
   --focus: #F07A3E;
+  --focus-ring: 0 0 0 2px var(--focus);
 
   --shadow-pop: 0 8px 24px rgb(0 0 0 / .45), 0 1px 2px rgb(0 0 0 / .3);
 }
@@ -170,8 +210,7 @@
   }
 }
 
-/* Escala de la interfaz (§4.5): define --ui-scale y mantiene --zoom sobre <html>
-   para compatibilidad con las vistas actuales hasta que T7 decida en Fase 2. */
+/* Escala de la interfaz (§4.5): define --ui-scale y --zoom sobre <html> */
 html {
   --ui-scale: 1;
   --zoom: 1;
@@ -208,111 +247,4 @@ html[data-scale="1.25"] {
     --ui-scale: 0.9;
     --zoom: 0.9;
   }
-}
-
-/* ALIAS TEMPORALES — eliminar en T7 */
-:root,
-[data-theme="light"] {
-  --fs-xs: 0.75rem;
-  --fs-sm: 0.875rem;
-  --fs-md: 1rem;
-  --fs-lg: 1.125rem;
-  --fs-xl: 1.375rem;
-  --fs-2xl: 1.75rem;
-  --fs-3xl: 2.25rem;
-
-  --surface-2: var(--sunken);
-  --border: var(--line);
-  --text: var(--ink);
-  --text-2: var(--ink-2);
-  --primary: var(--ink);
-  --primary-deep: var(--ink);
-  --primary-soft: #EFEEEA;
-  --success: #167A52;
-  --success-soft: #E8F3EE;
-  --danger: #C2352B;
-  --danger-soft: #FBECEA;
-  --warning: #A15C00;
-  --warning-soft: #FBF1E2;
-
-  --stage: var(--brand);
-  --stage-soft: var(--brand-soft);
-  --stage-deep: var(--brand-deep);
-  --stage-contrast: #FFFFFF;
-
-  --role-de: var(--track-de);
-  --role-de-deep: #1F3F9E;
-  --role-de-soft: color-mix(in oklab, var(--track-de) 8%, var(--surface));
-  --role-da: var(--track-da);
-  --role-da-deep: #0F5A3C;
-  --role-da-soft: color-mix(in oklab, var(--track-da) 8%, var(--surface));
-  --role-bi: var(--track-bi);
-  --role-bi-deep: #5B2C94;
-  --role-bi-soft: color-mix(in oklab, var(--track-bi) 8%, var(--surface));
-
-  --r-sm: 4px;
-  --r-md: 6px;
-  --r-lg: 10px;
-  --r-xl: 10px;
-  --r-pill: 999px;
-
-  --shadow-1: none;
-  --shadow-2: 0 1px 2px rgb(0 0 0 / .06);
-}
-
-[data-stage] {
-  --stage: var(--brand);
-  --stage-soft: var(--brand-soft);
-  --stage-deep: var(--brand-deep);
-  --stage-contrast: #FFFFFF;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --primary-soft: #2A2926;
-    --success: #5BC79A;
-    --success-soft: #16261F;
-    --danger: #F07A70;
-    --danger-soft: #2E1A18;
-    --warning: #E0A345;
-    --warning-soft: #2B2112;
-    --stage-contrast: #121211;
-
-    --role-de-deep: #A9BDF8;
-    --role-da-deep: #8ED9B8;
-    --role-bi-deep: #CDB0F5;
-    --role-de-soft: color-mix(in oklab, var(--track-de) 12%, var(--surface));
-    --role-da-soft: color-mix(in oklab, var(--track-da) 12%, var(--surface));
-    --role-bi-soft: color-mix(in oklab, var(--track-bi) 12%, var(--surface));
-
-    --shadow-2: 0 1px 2px rgb(0 0 0 / .3);
-  }
-
-  :root:not([data-theme="light"]) [data-stage] {
-    --stage-contrast: #121211;
-  }
-}
-
-[data-theme="dark"] {
-  --primary-soft: #2A2926;
-  --success: #5BC79A;
-  --success-soft: #16261F;
-  --danger: #F07A70;
-  --danger-soft: #2E1A18;
-  --warning: #E0A345;
-  --warning-soft: #2B2112;
-  --stage-contrast: #121211;
-
-  --role-de-deep: #A9BDF8;
-  --role-da-deep: #8ED9B8;
-  --role-bi-deep: #CDB0F5;
-  --role-de-soft: color-mix(in oklab, var(--track-de) 12%, var(--surface));
-  --role-da-soft: color-mix(in oklab, var(--track-da) 12%, var(--surface));
-  --role-bi-soft: color-mix(in oklab, var(--track-bi) 12%, var(--surface));
-
-  --shadow-2: 0 1px 2px rgb(0 0 0 / .3);
-}
-
-[data-theme="dark"] [data-stage] {
-  --stage-contrast: #121211;
 }

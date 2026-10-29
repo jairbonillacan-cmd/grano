@@ -1,7 +1,7 @@
 // Captura las vistas principales en varias resoluciones, temas, densidades y escalas.
 // Uso: node scripts/shots.mjs [--out docs/reportes/capturas/T7] [--url http://127.0.0.1:5174]
 //      [--sizes 1920x1080,1440x900,1280x800,1280x720,390x844] [--themes light,dark]
-//      [--views home,roadmap,lesson,simulator,tutor,practice,review,projects,glossary,progress,settings]
+//      [--views onboarding,home,roadmap,lesson,simulator,tutor,practice,review,projects,glossary,progress,settings]
 //      [--density auto|comfortable|compact] [--scale 1|0.9|1.1|1.25] [--prefix T7_]
 // Requiere el dev server encendido y Edge o Chrome instalados (playwright-core no trae navegador).
 import { chromium } from 'playwright-core';
@@ -26,6 +26,7 @@ const SIZES = (args.sizes || '1280x720,1440x900,390x844').split(',').map((s) => 
 });
 const THEMES = (args.themes || 'light,dark').split(',');
 const ALL_VIEWS = [
+  'onboarding',
   'home',
   'roadmap',
   'lesson',
@@ -101,19 +102,31 @@ async function clickByName(page, name) {
 }
 
 async function openView(page, view) {
-  await page.goto(BASE, { waitUntil: 'networkidle' });
-  if (view === 'home') return true;
+  if (view === 'onboarding') {
+    await page.goto(`${BASE}/?view=onboarding`, { waitUntil: 'networkidle' });
+    return true;
+  }
   if (view === 'ui') {
     await page.goto(`${BASE}/?ui=1`, { waitUntil: 'networkidle' });
     return true;
   }
+  await page.goto(BASE, { waitUntil: 'networkidle' });
+  if (view === 'home') return true;
   if (NAV_LABELS[view]) return clickByName(page, NAV_LABELS[view]);
   if (view === 'lesson' || view === 'simulator' || view === 'tutor') {
-    const cont = page.getByText('Continuar', { exact: true }).first();
-    if (!(await cont.isVisible().catch(() => false))) return false;
-    await cont.click();
+    const startBtn = page
+      .getByRole('button', { name: /^(Continuar|Empezar lección)/i })
+      .first();
+    if (!(await startBtn.isVisible().catch(() => false))) return false;
+    await startBtn.click();
     await page.waitForTimeout(400);
     if (view === 'simulator') {
+      const simFrame = page.locator('.lp-simulator-frame').first();
+      if (await simFrame.count()) {
+        await simFrame.scrollIntoViewIfNeeded();
+        await page.waitForTimeout(250);
+        return true;
+      }
       return clickByName(page, 'Paso 2: Simulador');
     }
     if (view === 'tutor') {
@@ -152,7 +165,7 @@ for (const size of SIZES) {
           const parsed = raw ? JSON.parse(raw) : null;
           const nextState = parsed && typeof parsed === 'object' ? parsed : {
             version: 1,
-            profile: { track: null, startLevel: 0, onboarded: false, createdAt: new Date().toISOString() },
+            profile: { track: 'de', startLevel: 1, onboarded: true, createdAt: new Date().toISOString() },
             prefs: {
               theme: t,
               density: density || 'auto',

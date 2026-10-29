@@ -499,7 +499,7 @@ export function SqlLab({
                   <tr>
                     <td
                       colSpan={Math.max(1, queryResult.columns.length)}
-                      style={{ textAlign: 'center', padding: 'var(--s-4)', color: 'var(--ink-3)' }}
+                      style={{ textAlign: 'center', padding: 'var(--sp-4)', color: 'var(--ink-3)' }}
                     >
                       La consulta se ejecutó sin errores pero devolvió 0 filas.
                     </td>

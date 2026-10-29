@@ -56,7 +56,29 @@ export function useAppController() {
   const review = useReview();
   const tutorState = useTutorState();
 
-  const [viewMode, setViewModeState] = useState('home');
+  const [viewMode, setViewModeState] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const requested = new URLSearchParams(window.location.search).get('view');
+      if (
+        requested &&
+        [
+          'home',
+          'roadmap',
+          'lesson',
+          'practice',
+          'review',
+          'capstones',
+          'glossary',
+          'analytics',
+          'settings',
+          'onboarding',
+        ].includes(requested)
+      ) {
+        return requested;
+      }
+    }
+    return 'home';
+  });
   const [activeLessonId, setActiveLessonId] = useState(() => {
     const lessonKeys = Object.keys(progress.lessons || {});
     for (let i = lessonKeys.length - 1; i >= 0; i -= 1) {

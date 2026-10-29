@@ -427,36 +427,7 @@ export function AppShell({
       } else if (isDiagnosticModalElement(child)) {
         modals.push(child);
       } else {
-        const props = child.props || {};
-        const firstLessonId = props.lessons?.[0]?.id || 'l1-joins-fanout';
-        if (
-          'nextRecommendedLesson' in props &&
-          'leitnerState' in props &&
-          (!Array.isArray(props.completedIds) || props.completedIds.length === 0) &&
-          (!props.lessonSteps || Object.keys(props.lessonSteps).length === 0)
-        ) {
-          views.push(
-            React.cloneElement(child, {
-              lessonSteps: { [firstLessonId]: 0 },
-              leitnerState: {
-                ...(props.leitnerState || {}),
-                startedLessonIds: [firstLessonId],
-              },
-            })
-          );
-        } else if (
-          'leitnerStats' in props &&
-          'quizScores' in props &&
-          (!Array.isArray(props.completedIds) || props.completedIds.length === 0)
-        ) {
-          views.push(
-            React.cloneElement(child, {
-              completedIds: [firstLessonId],
-            })
-          );
-        } else {
-          views.push(child);
-        }
+        views.push(child);
       }
     }
 
