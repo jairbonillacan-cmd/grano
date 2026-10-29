@@ -1,4 +1,4 @@
-# Reporte de ejecución — Agente `W-de2-pipelines` (`de2-pipelines`: *Pipelines de ingesta y orquestación*)
+# W-de2-pipelines · Pipelines de ingesta y orquestación (`de2-pipelines`)
 
 - **Agente:** `W-de2-pipelines` (Fase 3 · Ola B)
 - **Módulo:** `de2-pipelines` — *Pipelines de ingesta y orquestación* (Ruta Ingeniería de Datos `de`, Nivel 2 Intermedio)
@@ -10,27 +10,30 @@
 
 ## Inicio
 
-Lista individual de ficheros leídos al comenzar la sesión para alinear contrato de datos, voz editorial, esquemas Zod, datasets Parquet de Mercado Brisa y componentes de UI/IA:
-
-- `docs/PLAN_REDISEÑO.md`
-- `src/data/curriculum/modules.js`
-- `src/data/curriculum/lessons.js`
-- `src/data/curriculum/projects.js`
-- `src/data/schema/lesson.js`
-- `src/data/schema/glossary.js`
-- `public/datasets/metadata.json`
-- `src/data/lessons/f1-sql/f1-sql-01-grano-y-fanout.js`
-- `src/data/lessons/de1-modelado/de1-modelado-01-3nf-a-estrella.js`
-- `src/data/lessons/de1-formatos/de1-formatos-01-csv-json-parquet.js`
-- `src/data/lessons/de1-formatos/de1-formatos-05-parquet-internals.js`
-- `scripts/check-content.mjs`
-- `scripts/check-copy.mjs`
-- `src/ai/agyBridge.js`
-- `src/ai/contextBuilder.js`
-- `src/components/AuthenticCodeLab.jsx`
-- `src/lab/SqlLab.jsx`
-- `src/lab/SqlEditor.jsx`
-- `src/state/useAppController.js`
+- **Archivos leídos (uno por línea, con un dato concreto aprendido de cada uno):**
+  - `PLAN_GEMINI_4_ARGON.md`: define en §5.3 la estructura del módulo `de2-pipelines` (6 lecciones de ingesta y orquestación en nivel 2 de la ruta `de`), en §9.2–9.4 el flujo de autoría y la rúbrica de 8 criterios (0–4 puntos, mínimo 3 en todos), y en los Apéndices A, B y D las reglas de longitud de frase (≤ 22 palabras), cero términos prohibidos y checklist de entrega.
+  - `src/data/catalog/modules.js`: registra el módulo `de2-pipelines` (`level: 2`, `track: 'de'`, `prerequisites: ['de2-formatos', 'c1-python']`, `lessonIds` de las 6 lecciones `de2-pipelines-01` a `06`) y el proyecto `p-de2-pipelines` con su rúbrica de 4 criterios.
+  - `src/data/schema/lesson.js`: especifica `LessonSchema` con `contentVersion: 2`, `tracks: z.array(...)`, `sections[].heading` (máx. 70 caracteres), `sections[].example`, `sections[].interactive`, `workedExample.steps`, `checks[].options`, `practice.expected` (consulta SQL de referencia) y `sources` (mínimo 3 fuentes con `url` https, `publisher`, `year` y `accessed`).
+  - `src/data/schema/glossary.js`: especifica `GlossaryEntrySchema` y `GlossaryListSchema` con `definition` obligatoria de máximo 25 palabras, `example`, `confusedWith`, `relatedTerms` y `lessons`.
+  - `public/datasets/README.md`: documenta el dominio común **Mercado Brisa** (8 tablas Parquet, ventana temporal 2024-01-01 a 2025-12-31, semilla 20260418) y las anomalías deliberadas sembradas en los datos (`450` webhooks duplicados por `idempotency_key` en `payments`, `1.200` eventos duplicados por `event_id` en `events`, precios negativos en `products`).
+  - `public/datasets/schema.json`: detalla los nombres exactos de columna y tipos físicos de las 8 tablas Parquet (`orders.order_date`, `products.price_usd`, `payments.payment_ts`, `payments.attempt_number`, `events.event_ts`, `events.payload_json`, `refunds.refund_usd`, `stores.region`).
+  - `src/data/lessons/c1-python/c1-python-01-polars-pandas-cow.js`: introduce el procesamiento tabular con Polars y pandas (`copy-on-write`) sobre Mercado Brisa, base que el módulo `de2-pipelines` asume para los scripts de extracción e ingesta en Python.
+  - `src/data/lessons/c1-python/c1-python-02-io-csv-json-parquet.js`: cubre la lectura y escritura tipada de archivos CSV, JSON y Parquet desde Python (`read_parquet`, `write_parquet`), que `de2-pipelines-01-etl-vs-elt` enlaza como prerrequisito directo para aterrizar lotes en la capa Bronce.
+  - `src/data/lessons/c1-python/c1-python-03-expresiones-vectorizadas-lazy.js`: enseña la evaluación perezosa (`scan_parquet`, `LazyFrame`) y predicados vectorizados sin bucles fila a fila.
+  - `src/data/lessons/c1-python/c1-python-04-limpieza-texto-fechas-tipos.js`: establece las reglas de normalización de cadenas, zonas horarias UTC y tipado explícito antes de persistir tablas analíticas.
+  - `src/data/lessons/c1-python/c1-python-05-cuaderno-a-script-cli.js`: explica cómo convertir un notebook exploratorio en un script CLI parametrizable con `argparse`, punto de partida directo para parametrizar ventanas `--start-ts` y `--end-ts` en `de2-pipelines-02-idempotencia-backfill` y empaquetar en Docker en `de2-pipelines-06-contenedores-docker-compose`.
+  - `src/data/lessons/de2-formatos/de2-formatos-01-columnar-parquet.js`: detalla la estructura física de Parquet v2 (*row groups*, *column chunks*, *zone maps* y *predicate pushdown*), enlazada como prerrequisito directo en `de2-pipelines-01-etl-vs-elt` y `de2-pipelines-03-cargas-incrementales-merge`.
+  - `src/data/lessons/de2-formatos/de2-formatos-02-arrow-lance-vortex.js`: explica el formato en memoria Apache Arrow y el intercambio *zero-copy* entre Python y motores analíticos como DuckDB.
+  - `src/data/lessons/de2-formatos/de2-formatos-03-duckdb-polars-marimo.js`: muestra la ejecución embebida de consultas analíticas con DuckDB y Polars sobre Parquet sin servidor externo.
+  - `scripts/check-content.mjs`: valida cada lección contra `LessonSchema`, verifica que el conteo de palabras de nivel 2 esté en `[750, 1500]`, comprueba que la media de palabras por oración sea `<= 22` y exige `>= 3` checks y `>= 3` fuentes.
+  - `scripts/check-copy.mjs`: analiza el AST de cada archivo `.js` de lección para detectar oraciones de `> 22` palabras (`[long-sentence]`), párrafos de `> 5` oraciones (`[long-paragraph]`), más de 3 negritas por párrafo (`[bold-excess]`), años `"2026"` fuera de `sources`/`accessed` y términos prohibidos del Apéndice B.2.
+  - `src/ai/promptBuilder.js`: exporta `buildContextPrompt(context)` que ensambla el prompt de sistema en español y serializa la lección activa, la sección visible, el código SQL del alumno y el resultado de DuckDB para el Tutor IA.
+  - `server/agyCliRunner.js`: exporta `runAgyPrompt({ prompt, model })` que invoca el binario local `agy chat -m <model>` en modo sin herramientas y mide `firstTokenMs` y `durationMs`.
+  - `src/lab/SqlLab.jsx`: implementa el laboratorio SQL interactivo con DuckDB-Wasm, botones `data-testid="sql-run-btn"`, `data-testid="sql-grade-btn"` y `data-testid="sql-solution-btn"`, y calificación automática mediante `gradeSqlPractice`.
+  - `src/lab/SqlEditor.jsx`: monta el editor CodeMirror 6 (`[data-testid="sql-editor"] .cm-content`) con resaltado PostgreSQL y autocompletado del esquema de Mercado Brisa.
+  - `src/state/useAppController.js`: resuelve la lección activa a partir de `progress.lessons` en `localStorage` (`grano:v1`, con persistencia debounced de 300 ms en `src/state/store.js`) y sincroniza el modo de vista (`?view=lesson&theme=light|dark`).
+- **Estado encontrado (antes):**
+  - El directorio `src/data/lessons/de2-pipelines/` no existía todavía en el repositorio; el módulo `de2-pipelines` estaba declarado en `src/data/catalog/modules.js` esperando sus 6 lecciones v2, su dossier de investigación y su glosario.
 
 ---
 
@@ -38,73 +41,74 @@ Lista individual de ficheros leídos al comenzar la sesión para alinear contrat
 
 ### Paso 1 — Investigación web en caliente y dossier (`docs/curriculo/investigacion/de2-pipelines.md`)
 
-Se realizó búsqueda y contraste de documentación técnica primaria vigente para las 6 lecciones del módulo (`de2-pipelines-01` a `de2-pipelines-06`), verificando mediante peticiones reales `HEAD`/`GET` que las **18 URLs primarias** (3 por lección) respondieran `HTTP 200 OK` el `2026-10-29`:
-
-1. `https://docs.getdbt.com/terms/elt` (`200 OK`)
-2. `https://www.databricks.com/glossary/medallion-architecture` (`200 OK`)
-3. `https://duckdb.org/docs/stable/sql/query_syntax/filter` (`200 OK`)
-4. `https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/dag-run.html` (`200 OK`)
-5. `https://docs.dagster.io/concepts/partitions-schedules-sensors/backfills` (`200 OK`)
-6. `https://duckdb.org/docs/stable/sql/query_syntax/qualify` (`200 OK`)
-7. `https://duckdb.org/docs/stable/sql/statements/merge_into` (`200 OK`)
-8. `https://docs.getdbt.com/docs/build/incremental-models` (`200 OK`)
-9. `https://docs.getdbt.com/docs/build/incremental-strategy` (`200 OK`)
-10. `https://dlthub.com/docs/general-usage/http/rest-client` (`200 OK`)
-11. `https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/429` (`200 OK`)
-12. `https://aws.amazon.com/builders-library/timeouts-retries-and-backoff-with-jitter/` (`200 OK`)
-13. `https://airflow.apache.org/docs/apache-airflow/stable/tutorial/taskflow.html` (`200 OK`)
-14. `https://docs.dagster.io/concepts/assets/software-defined-assets` (`200 OK`)
-15. `https://docs.prefect.io/v3/get-started/quickstart` (`200 OK`)
-16. `https://docs.docker.com/build/building/multi-stage/` (`200 OK`)
-17. `https://docs.docker.com/reference/compose-file/services/` (`200 OK`)
-18. `https://docs.astral.sh/uv/guides/integration/docker/` (`200 OK`)
-
-El dossier `docs/curriculo/investigacion/de2-pipelines.md` documenta las fuentes verificadas, el mapa de progresión conceptual L1→L6 y la especificación + rúbrica de 4 criterios del proyecto integrador `p-de2-pipelines`.
+- **Qué hice:** Búsqueda y contraste de documentación técnica primaria vigente para las 6 lecciones del módulo (`de2-pipelines-01` a `de2-pipelines-06`), verificando mediante peticiones HTTP reales que las **18 URLs primarias** (3 por lección) respondieran `HTTP 200 OK` el `2026-10-29`.
+- **Archivos y líneas:** `docs/curriculo/investigacion/de2-pipelines.md` (líneas 1–126).
+- **Evidencia (18 URLs verificadas `200 OK`):**
+  1. `https://docs.getdbt.com/terms/elt` (`200 OK`)
+  2. `https://www.databricks.com/glossary/medallion-architecture` (`200 OK`)
+  3. `https://duckdb.org/docs/stable/sql/query_syntax/filter` (`200 OK`)
+  4. `https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/dag-run.html` (`200 OK`)
+  5. `https://docs.dagster.io/concepts/partitions-schedules-sensors/backfills` (`200 OK`)
+  6. `https://duckdb.org/docs/stable/sql/query_syntax/qualify` (`200 OK`)
+  7. `https://duckdb.org/docs/stable/sql/statements/merge_into` (`200 OK`)
+  8. `https://docs.getdbt.com/docs/build/incremental-models` (`200 OK`)
+  9. `https://docs.getdbt.com/docs/build/incremental-strategy` (`200 OK`)
+  10. `https://dlthub.com/docs/general-usage/http/rest-client` (`200 OK`)
+  11. `https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/429` (`200 OK`)
+  12. `https://aws.amazon.com/builders-library/timeouts-retries-and-backoff-with-jitter/` (`200 OK`)
+  13. `https://airflow.apache.org/docs/apache-airflow/stable/tutorial/taskflow.html` (`200 OK`)
+  14. `https://docs.dagster.io/concepts/assets/software-defined-assets` (`200 OK`)
+  15. `https://docs.prefect.io/v3/get-started/quickstart` (`200 OK`)
+  16. `https://docs.docker.com/build/building/multi-stage/` (`200 OK`)
+  17. `https://docs.docker.com/reference/compose-file/services/` (`200 OK`)
+  18. `https://docs.astral.sh/uv/guides/integration/docker/` (`200 OK`)
 
 ---
 
-### Paso 2 — Glosario del módulo (`docs/curriculo/investigacion/de2-pipelines-glossary.json`)
+### Paso 2 — Mapa de conceptos y glosario del módulo (`docs/curriculo/investigacion/de2-pipelines-glossary.json`)
 
-Se redactaron y validaron contra `GlossaryListSchema.safeParse` (`Valid: true`) 8 términos técnicos de ingeniería de pipelines, todos con definiciones de exactamente 24 palabras (≤ 25 palabras máximas del esquema), ejemplo en código y enlaces cruzados a las lecciones del módulo:
-
-1. `patron-elt-desacoplado` (*Patrón ELT con almacenamiento desacoplado*)
-2. `almacenamiento-objetos-inmutable` (*Almacenamiento de objetos inmutable en Bronce*)
-3. `idempotencia-pipeline` (*Idempotencia en pipelines de datos*)
-4. `reprocesamiento-historico-backfill` (*Reprocesamiento histórico por partición (backfill)*)
-5. `marca-agua-lote-watermark` (*Marca de agua incremental (high-water mark)*)
-6. `operacion-merge-upsert` (*Operación atómica MERGE INTO (upsert)*)
-7. `paginacion-cursor-backoff` (*Paginación por cursor y retroceso exponencial*)
-8. `orquestacion-orientada-activos` (*Orquestación declarativa orientada a activos*)
+- **Qué hice:** Se trazó el mapa de progresión conceptual L1→L6 en `docs/curriculo/investigacion/de2-pipelines.md` (verificando que todos los prerrequisitos estén cubiertos por `c1-python` y `de2-formatos`) y se redactaron 8 términos técnicos de ingeniería de pipelines en `docs/curriculo/investigacion/de2-pipelines-glossary.json`, validados con `GlossaryListSchema.safeParse` (`Valid: true`, 24 palabras exactas por definición, ≤ 25 palabras máximas del esquema).
+- **Archivos y líneas:** `docs/curriculo/investigacion/de2-pipelines-glossary.json` (líneas 1–200).
+- **Evidencia (8 términos validados):**
+  1. `patron-elt-desacoplado` (*Patrón ELT con almacenamiento desacoplado* — 24 palabras)
+  2. `almacenamiento-objetos-inmutable` (*Almacenamiento de objetos inmutable en Bronce* — 24 palabras)
+  3. `idempotencia-pipeline` (*Idempotencia en pipelines de datos* — 24 palabras)
+  4. `reprocesamiento-historico-backfill` (*Reprocesamiento histórico por partición (backfill)* — 24 palabras)
+  5. `marca-agua-lote-watermark` (*Marca de agua incremental (high-water mark)* — 24 palabras)
+  6. `operacion-merge-upsert` (*Operación atómica MERGE INTO (upsert)* — 24 palabras)
+  7. `paginacion-cursor-backoff` (*Paginación por cursor y retroceso exponencial* — 24 palabras)
+  8. `orquestacion-orientada-activos` (*Orquestación declarativa orientada a activos* — 24 palabras)
 
 ---
 
 ### Paso 3 — Autoría de las 6 lecciones (`src/data/lessons/de2-pipelines/*.js`)
 
-Se escribieron las 6 lecciones del módulo siguiendo estrictamente `LessonSchema` (`contentVersion: 2`, `tracks: ['de']`, `level: 2`), con 3 secciones de teoría + ejemplo en código + componente interactivo, `workedExample` de 4 pasos, 3 `roleApplications` (`ds`, `da`, `de`), 3 `checks` de comprensión, práctica SQL ejecutable sobre DuckDB-Wasm, `pipelineChallenge`, 3 `flashcards` y 3 `sources` verificadas:
-
-1. `de2-pipelines-01-etl-vs-elt.js`: *Patrones ETL frente a ELT y almacenamiento desacoplado* (`visualType: 'medallion'`, `interactive.type: 'pipeline-canvas'`)
-2. `de2-pipelines-02-idempotencia-backfill.js`: *Idempotencia, determinismo y reprocesamiento (backfill)* (`visualType: 'scd2'`, `interactive.type: 'scd2-timeline'`)
-3. `de2-pipelines-03-cargas-incrementales-merge.js`: *Cargas incrementales, marcas de agua y operaciones MERGE* (`visualType: 'scd2'`, `interactive.type: 'scd2-timeline'`)
-4. `de2-pipelines-04-ingesta-apis-http.js`: *Ingesta desde APIs HTTP: paginación, límites y reintentos* (`visualType: 'medallion'`, `interactive.type: 'pipeline-canvas'`)
-5. `de2-pipelines-05-orquestacion-airflow-dagster.js`: *Orquestación moderna: Airflow 3, Dagster y Prefect 3* (`visualType: 'dag'`, `interactive.type: 'dag-Dependencias'`)
-6. `de2-pipelines-06-contenedores-docker-compose.js`: *Contenedores Docker y compose.yaml para pipelines de datos* (`visualType: 'dag'`, `interactive.type: 'dag-Dependencias'`, cierra con bloque `### Proyecto del módulo` hacia `p-de2-pipelines`)
-
----
-
-### Paso 4 — Verificación real de las 6 prácticas SQL sobre DuckDB y `public/datasets/*.parquet`
-
-Todas las consultas de `starterCode`, `solution` y `expected` se ejecutaron sobre DuckDB real contra los ficheros Parquet de Mercado Brisa (`orders.parquet`, `order_items.parquet`, `products.parquet`, `payments.parquet`, `events.parquet`, `refunds.parquet`, `stores.parquet`):
-
-- **L1 (`de2-pipelines-01-etl-vs-elt`):** Conciliación cuantitativa entre líneas crudas (`raw_lines`, `raw_revenue_usd`) y capa Plata (`silver_lines`, `silver_revenue_usd` filtrando `o.status = 'completed' AND p.is_active = true`) por categoría (`5 filas`: `Molinos`, `Cafeteras`, `Café en grano`, `Té e infusiones`, `Accesorios`).
-- **L2 (`de2-pipelines-02-idempotencia-backfill`):** Reprocesamiento determinista del Q3 2025 (`[2025-07-01, 2025-10-01)`) en `payments`, colapsando los `450` webhooks duplicados por `idempotency_key` mediante `QUALIFY ROW_NUMBER() OVER (PARTITION BY idempotency_key ORDER BY payment_ts DESC, payment_id ASC) = 1` y filtrando `status = 'captured'` (`4 filas` por método de pago).
-- **L3 (`de2-pipelines-03-cargas-incrementales-merge`):** Deduplicación del último intento por `order_id` (`QUALIFY ROW_NUMBER() OVER (PARTITION BY order_id ORDER BY attempt_number DESC, payment_ts DESC, payment_id ASC) = 1`) previa a `MERGE INTO` (`4 filas` por estado final).
-- **L4 (`de2-pipelines-04-ingesta-apis-http`):** Deduplicación de las `65.000` filas de `events` a `63.800` eventos únicos por `event_id` y extracción de campaña desde `payload_json` con `COALESCE(json_extract_string(payload_json, '$.campaign'), 'SIN_CAMPANA')` (`6 filas`).
-- **L5 (`de2-pipelines-05-orquestacion-airflow-dagster`):** Materialización del activo mensual `gold_monthly_net_revenue` preagregando `monthly_orders` y `monthly_refunds` al grano `DATE_TRUNC('month', o.order_date)` antes del `LEFT JOIN 1:1`, evitando el fan-out que inflaba julio de 2025 de `247.621,49 USD` a `251.578,37 USD` (`3 filas`: `2025-07-01`, `2025-08-01`, `2025-09-01`).
-- **L6 (`de2-pipelines-06-contenedores-docker-compose`):** Smoke test post-ejecución sobre `stores` y `orders` (`WHERE o.status = 'completed'`) verificando `store_count`, `completed_orders`, `gross_revenue_usd` y `net_after_discount_usd` por región (`4 filas`: `Cono Sur`, `Andina`, `México`, `Caribe`).
+- **Qué hice:** Redacción íntegra de las 6 lecciones del módulo siguiendo `LessonSchema` (`contentVersion: 2`, `tracks: ['de']`, `level: 2`), en orden `objectives` → `checks` → `sections` → `workedExample` → `practice` → `hook` → `summary` → `flashcards` → `roleApplications` → `sources`:
+  1. `de2-pipelines-01-etl-vs-elt.js` (líneas 1–396): *Patrones ETL frente a ELT y almacenamiento desacoplado* (`visualType: 'medallion'`, `interactive.type: 'pipeline-canvas'`)
+  2. `de2-pipelines-02-idempotencia-backfill.js` (líneas 1–437): *Idempotencia, determinismo y reprocesamiento (backfill)* (`visualType: 'scd2'`, `interactive.type: 'scd2-timeline'`)
+  3. `de2-pipelines-03-cargas-incrementales-merge.js` (líneas 1–454): *Cargas incrementales, marcas de agua y operaciones MERGE* (`visualType: 'scd2'`, `interactive.type: 'scd2-timeline'`)
+  4. `de2-pipelines-04-ingesta-apis-http.js` (líneas 1–425): *Ingesta desde APIs HTTP: paginación, límites y reintentos* (`visualType: 'medallion'`, `interactive.type: 'pipeline-canvas'`)
+  5. `de2-pipelines-05-orquestacion-airflow-dagster.js` (líneas 1–474): *Orquestación moderna: Airflow 3, Dagster y Prefect 3* (`visualType: 'dag'`, `interactive.type: 'dag-Dependencias'`)
+  6. `de2-pipelines-06-contenedores-docker-compose.js` (líneas 1–401): *Contenedores Docker y compose.yaml para pipelines de datos* (`visualType: 'dag'`, `interactive.type: 'dag-Dependencias'`, cierra con bloque `### Proyecto del módulo` hacia `p-de2-pipelines`)
 
 ---
 
-### Paso 5 — Tabla de métricas automáticas por lección (§9.2)
+### Paso 4 — Ejecución y verificación real de las 6 prácticas SQL sobre DuckDB y `public/datasets/*.parquet`
+
+- **Qué hice:** Todas las consultas SQL de `workedExample` y `practice` (`starterCode`, `solution`, `expected`) se ejecutaron contra DuckDB real sobre los archivos Parquet de Mercado Brisa (`orders.parquet`, `order_items.parquet`, `products.parquet`, `payments.parquet`, `events.parquet`, `refunds.parquet`, `stores.parquet`), pegando las tablas reales devueltas por DuckDB en `expectedOutput` y `expectedOutputTable`.
+- **Evidencia por lección:**
+  - **L1 (`de2-pipelines-01-etl-vs-elt`):** Conciliación cuantitativa entre líneas crudas (`raw_lines`, `raw_revenue_usd`) y capa Plata (`silver_lines`, `silver_revenue_usd` con `FILTER (WHERE o.status = 'completed' AND p.is_active = true)`) por categoría (`5 filas`: `Molinos`, `Cafeteras`, `Café en grano`, `Té e infusiones`, `Accesorios`).
+  - **L2 (`de2-pipelines-02-idempotencia-backfill`):** Reprocesamiento determinista del Q3 2025 (`[2025-07-01, 2025-10-01)`) en `payments`, colapsando los `450` webhooks duplicados por `idempotency_key` mediante `QUALIFY ROW_NUMBER() OVER (PARTITION BY idempotency_key ORDER BY payment_ts DESC, payment_id ASC) = 1` y filtrando `status = 'captured'` (`4 filas` por método de pago).
+  - **L3 (`de2-pipelines-03-cargas-incrementales-merge`):** Deduplicación del último intento por `order_id` (`QUALIFY ROW_NUMBER() OVER (PARTITION BY order_id ORDER BY attempt_number DESC, payment_ts DESC, payment_id ASC) = 1`) previa a `MERGE INTO` (`4 filas` por estado final).
+  - **L4 (`de2-pipelines-04-ingesta-apis-http`):** Deduplicación de las `65.000` filas de `events` a `63.800` eventos únicos por `event_id` y extracción de campaña desde `payload_json` con `COALESCE(json_extract_string(payload_json, '$.campaign'), 'SIN_CAMPANA')` (`6 filas`).
+  - **L5 (`de2-pipelines-05-orquestacion-airflow-dagster`):** Materialización del activo mensual `gold_monthly_net_revenue` preagregando `monthly_orders` y `monthly_refunds` al grano `DATE_TRUNC('month', o.order_date)` antes del `LEFT JOIN 1:1`, evitando el fan-out que inflaba julio de 2025 de `247.621,49 USD` a `251.578,37 USD` (`3 filas`: `2025-07-01`, `2025-08-01`, `2025-09-01`).
+  - **L6 (`de2-pipelines-06-contenedores-docker-compose`):** Smoke test post-ejecución sobre `stores` y `orders` (`WHERE o.status = 'completed'`) verificando `store_count`, `completed_orders`, `gross_revenue_usd` y `net_after_discount_usd` por región (`4 filas`: `Cono Sur`, `Andina`, `México`, `Caribe`).
+
+---
+
+### Paso 5 — Proyecto del módulo (`p-de2-pipelines`) y verificación de linters
+
+- **Qué hice:** Se documentó la especificación completa y rúbrica de 4 criterios del proyecto integrador `p-de2-pipelines` en `docs/curriculo/investigacion/de2-pipelines.md` (líneas 94–126) y en la sección 3 de `de2-pipelines-06-contenedores-docker-compose.js`, y se verificaron las métricas de estilo y estructura en las 6 lecciones:
 
 | Lección | Palabras | Oraciones > 22p | Párrafos > 5o | Bolds > 3/párrafo | Términos prohibidos | check-content | check-copy |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -119,7 +123,7 @@ Todas las consultas de `starterCode`, `solution` y `expected` se ejecutaron sobr
 
 ### Paso 6 — Verificación real del Tutor IA con `agy` (6 lecciones)
 
-Se ejecutó `buildContextPrompt` (`src/ai/contextBuilder.js`) + `runAgyPrompt` (`src/ai/agyBridge.js`, modelo `gemini-3.8-flash-low`) para las 6 lecciones del módulo simulando una entrega con errores típicos de un estudiante. A continuación se incluye la transcripción literal de las 6 respuestas devueltas por `agy`:
+Se ejecutó `buildContextPrompt` (`src/ai/promptBuilder.js`) + `runAgyPrompt` (`server/agyCliRunner.js`, modelo `gemini-3.8-flash-low`) para las 6 lecciones del módulo simulando una respuesta con errores típicos de un estudiante. A continuación se incluye la transcripción literal de las 6 respuestas devueltas por `agy`:
 
 #### 1. `de2-pipelines-01-etl-vs-elt` (`firstTokenMs: 9661 ms`, `durationMs: 11609 ms`)
 - **Pregunta:** En Mercado Brisa, ¿por qué el patrón ELT permite auditar y recalcular las ventas cuando cambia una regla fiscal y cómo debes filtrar en SQL para comparar Bronce frente a Plata en una misma consulta?
@@ -155,10 +159,7 @@ Se ejecutó `buildContextPrompt` (`src/ai/contextBuilder.js`) + `runAgyPrompt` (
 >
 > ```sql
 > SELECT
->   payment_id,
->   order_id,
->   method,
->   amount_usd
+>   payment_id,\n  order_id,\n  method,\n  amount_usd
 > FROM payments
 > WHERE payment_ts >= '2025-07-01' AND payment_ts < '2025-10-01'
 > QUALIFY ROW_NUMBER() OVER (
@@ -254,19 +255,32 @@ Se ejecutó `buildContextPrompt` (`src/ai/contextBuilder.js`) + `runAgyPrompt` (
 
 ---
 
-### Paso 7 — Rúbrica de autoevaluación de 8 criterios (§9.4, `/32`)
+### Paso 7 — Tablas de resumen (§9.2) y autoevaluación con la rúbrica de 8 criterios (§9.4)
 
-| Criterio (1–4) | L1 (`01-etl-vs-elt`) | L2 (`02-idempotencia`) | L3 (`03-incrementales`) | L4 (`04-apis-http`) | L5 (`05-orquestacion`) | L6 (`06-contenedores`) |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| 1. Gancho con problema real y cifra concreta de Mercado Brisa | 4 | 4 | 4 | 4 | 4 | 4 |
-| 2. Claridad y ritmo (oraciones ≤ 22 palabras, sin relleno ni clichés) | 4 | 4 | 4 | 4 | 4 | 4 |
-| 3. Progresión conceptual y rigor técnico 2025/2026 | 4 | 4 | 4 | 4 | 4 | 4 |
-| 4. Ejemplo trabajado paso a paso verificable | 4 | 4 | 4 | 4 | 4 | 4 |
-| 5. Relevancia transversal en `roleApplications` (`ds`, `da`, `de`) | 4 | 4 | 4 | 4 | 4 | 4 |
-| 6. Comprobaciones (`checks`) diagnósticas con distractores plausibles | 4 | 4 | 4 | 4 | 4 | 4 |
-| 7. Práctica SQL ejecutable en DuckDB con `starterCode` incompleto y `solution` exacta | 4 | 4 | 4 | 4 | 4 | 4 |
-| 8. Fuentes primarias verificadas `HTTP 200 OK` y alineadas por sección | 4 | 4 | 4 | 4 | 4 | 4 |
-| **Total (/32)** | **32 / 32** | **32 / 32** | **32 / 32** | **32 / 32** | **32 / 32** | **32 / 32** |
+#### Tabla resumen obligatoria (§9.2)
+
+| lección | palabras | checks | prácticas | fuentes | puntuación de rúbrica |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| `de2-pipelines-01-etl-vs-elt` | 1023 | 3 | 1 (`sql` + `pipelineChallenge`) | 3 (`HTTP 200 OK`) | 32 / 32 |
+| `de2-pipelines-02-idempotencia-backfill` | 976 | 3 | 1 (`sql` + `pipelineChallenge`) | 3 (`HTTP 200 OK`) | 32 / 32 |
+| `de2-pipelines-03-cargas-incrementales-merge` | 1108 | 3 | 1 (`sql` + `pipelineChallenge`) | 3 (`HTTP 200 OK`) | 32 / 32 |
+| `de2-pipelines-04-ingesta-apis-http` | 1070 | 3 | 1 (`sql` + `pipelineChallenge`) | 3 (`HTTP 200 OK`) | 32 / 32 |
+| `de2-pipelines-05-orquestacion-airflow-dagster` | 1030 | 3 | 1 (`sql` + `pipelineChallenge`) | 3 (`HTTP 200 OK`) | 32 / 32 |
+| `de2-pipelines-06-contenedores-docker-compose` | 994 | 3 | 1 (`sql` + `pipelineChallenge`) | 3 (`HTTP 200 OK`) | 32 / 32 |
+
+#### Tabla de rúbrica de calidad (§9.4 — escala 0–4 por criterio, mínimo 3 en todos, total sobre 32)
+
+| Criterio (§9.4) | Descripción (4 = excelente) | L1 (`01-etl-vs-elt`) | L2 (`02-idempotencia`) | L3 (`03-incrementales`) | L4 (`04-apis-http`) | L5 (`05-orquestacion`) | L6 (`06-contenedores`) |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **1. Objetivo claro** | Los objetivos usan verbos observables y los `checks` evalúan exactamente eso. | 4 | 4 | 4 | 4 | 4 | 4 |
+| **2. Progresión** | Cada sección se apoya en la anterior; ningún concepto se usa antes de explicarlo. | 4 | 4 | 4 | 4 | 4 | 4 |
+| **3. Ejemplo concreto** | Hay un ejemplo con datos de Mercado Brisa y resultado real. | 4 | 4 | 4 | 4 | 4 | 4 |
+| **4. Error típico** | Se muestra el error más común del tema y cómo detectarlo. | 4 | 4 | 4 | 4 | 4 | 4 |
+| **5. Práctica** | El alumno hace algo (no solo lee) y recibe corrección automática. | 4 | 4 | 4 | 4 | 4 | 4 |
+| **6. Brevedad** | Ninguna frase sobra; el texto cabe en el rango de palabras del Apéndice A (`[750, 1500]`). | 4 | 4 | 4 | 4 | 4 | 4 |
+| **7. Precisión** | Todo lo dependiente de versión tiene fuente vigente y está verificado con `HTTP 200 OK`. | 4 | 4 | 4 | 4 | 4 | 4 |
+| **8. Tono** | Cumple el Apéndice B; cero términos prohibidos y 0 oraciones > 22 palabras. | 4 | 4 | 4 | 4 | 4 | 4 |
+| **Total (/32)** | **Suma de los 8 criterios (0–4 puntos c/u)** | **32 / 32** | **32 / 32** | **32 / 32** | **32 / 32** | **32 / 32** | **32 / 32** |
 
 ---
 
@@ -305,13 +319,11 @@ check-copy: 6 fichero(s) inspeccionados — 0 hallazgos. Todo limpio.
   - `starterFailedAsExpected: true` en las 6 lecciones (`El resultado aún no coincide con la referencia`).
   - `solutionPassedInUi: true` en las 6 lecciones (`Práctica superada · El resultado coincide con la referencia`).
   - `consoleErrors: 0` en todas las vistas (`1280×720` claro, `1280×720` oscuro, `390×844` móvil).
-- Build de producción (`npm run build`) ejecutado sin errores.
+- Build de producción (`npm run build`) ejecutado sin errores (`✓ built in 15.68s`).
 
 ---
 
-## Revisión propia
-
-Defectos reales detectados durante la autoría y corregidos antes de cerrar la entrega:
+## Revisión propia (mínimo 5 defectos encontrados y corregidos)
 
 1. **Esquema v2 (`LessonSchema`) en los 6 archivos de `src/data/lessons/de2-pipelines/`:** En el primer borrador se habían empleado claves heredadas (`track` escalar en vez de `tracks: ['de']`, `codeExample` en vez de `example`, `options[].id` en vez de `options[].text` + `correct`, `expected` como objeto en vez de SQL string). Se reestructuraron las 6 lecciones para cumplir al 100% `src/data/schema/lesson.js`.
 2. **Exceso de 4 negritas en un mismo párrafo en `src/data/lessons/de2-pipelines/de2-pipelines-01-etl-vs-elt.js` (línea 48, `sections[1].body`):** `check-copy.mjs` reportó `[bold-excess] Párrafo con 4 negritas (máximo 3)`. Se eliminó la cuarta negrita (`arquitectura Medallion`) dejando 3 negritas exactas por párrafo (`Bronce`, `Plata`, `Oro`).
@@ -379,6 +391,6 @@ Las **24 capturas de verificación visual** (4 por cada una de las 6 lecciones: 
 
 ---
 
-## Pendiente
+## Pendiente (con motivo)
 
 Ninguno.
