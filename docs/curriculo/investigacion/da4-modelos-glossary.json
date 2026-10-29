@@ -1,0 +1,331 @@
+[
+  {
+    "id": "minimos-cuadrados-ordinarios",
+    "term": "Mínimos cuadrados ordinarios (OLS)",
+    "english": "Ordinary Least Squares (OLS)",
+    "track": "da",
+    "definition": "Método de estimación lineal que calcula el intercepto y las pendientes minimizando la suma de los residuos elevados al cuadrado entre el valor observado y la predicción. Permite cuantificar el cambio esperado en la respuesta cuando un predictor aumenta una unidad manteniendo constantes las demás covariables del modelo.",
+    "formula": "\\hat{\\beta} = (X^T X)^{-1} X^T y",
+    "example": "En Mercado Brisa, REGR_SLOPE(clicks, spend_usd) estima cuántos clics adicionales aporta cada dólar invertido por canal.",
+    "relatedLessons": [
+      "da4-modelos-01-regresion-lineal-multiple"
+    ],
+    "relatedTerms": [
+      "factor-inflacion-varianza",
+      "homocedasticidad-residuos",
+      "correlacion-pearson"
+    ],
+    "sources": [
+      {
+        "title": "statsmodels — Ordinary Least Squares (OLS)",
+        "url": "https://www.statsmodels.org/stable/regression.html",
+        "publisher": "statsmodels Developers",
+        "accessed": "2025-10-15",
+        "supports": "Formulación matricial y propiedades del estimador de mínimos cuadrados ordinarios."
+      },
+      {
+        "title": "DuckDB — Aggregate Functions (REGR_SLOPE, REGR_INTERCEPT, REGR_R2)",
+        "url": "https://duckdb.org/docs/stable/sql/functions/aggregates.html",
+        "publisher": "DuckDB Foundation",
+        "accessed": "2025-10-15",
+        "supports": "Cálculo de pendientes e interceptos de mínimos cuadrados en SQL."
+      }
+    ]
+  },
+  {
+    "id": "factor-inflacion-varianza",
+    "term": "Factor de inflación de la varianza (VIF)",
+    "english": "Variance Inflation Factor (VIF)",
+    "track": "da",
+    "definition": "Diagnóstico numérico que mide cuánto se multiplica la varianza del coeficiente estimado de un predictor debido a su correlación lineal con el resto de las variables explicativas. Valores superiores a cinco indican colinealidad severa que vuelve inestables las pendientes individuales y ensancha sus errores estándar.",
+    "formula": "\\text{VIF}_j = \\frac{1}{1 - R_j^2}",
+    "example": "En marketing_spend, la alta correlación entre spend_usd e impressions eleva el VIF por encima de 3 en búsqueda orgánica.",
+    "relatedLessons": [
+      "da4-modelos-01-regresion-lineal-multiple"
+    ],
+    "relatedTerms": [
+      "minimos-cuadrados-ordinarios",
+      "correlacion-pearson",
+      "variable-confusion"
+    ],
+    "sources": [
+      {
+        "title": "statsmodels — variance_inflation_factor",
+        "url": "https://www.statsmodels.org/stable/generated/statsmodels.stats.outliers_influence.variance_inflation_factor.html",
+        "publisher": "statsmodels Developers",
+        "accessed": "2025-10-15",
+        "supports": "Definición e implementación del factor de inflación de la varianza para diagnóstico de colinealidad."
+      },
+      {
+        "title": "James et al. — An Introduction to Statistical Learning (ISLP)",
+        "url": "https://www.statlearning.com/",
+        "publisher": "Springer",
+        "accessed": "2025-10-15",
+        "supports": "Umbrales prácticos de interpretación del VIF en regresión lineal múltiple."
+      }
+    ]
+  },
+  {
+    "id": "homocedasticidad-residuos",
+    "term": "Homocedasticidad de residuos",
+    "english": "Homoscedasticity of Residuals",
+    "track": "da",
+    "definition": "Supuesto del modelo lineal según el cual la varianza del error entre el valor observado y el predicho permanece constante a lo largo de todos los niveles del predictor. Cuando la dispersión crece con el tamaño de la predicción, aparece heterocedasticidad y los intervalos de confianza ordinarios pierden validez.",
+    "formula": "\\text{Var}(e_i \\mid X_i) = \\sigma^2",
+    "example": "Al comparar el error cuadrático medio de clics por tramo de gasto en paid_social, verificamos si la dispersión residual se dispara en días de presupuesto alto.",
+    "relatedLessons": [
+      "da4-modelos-01-regresion-lineal-multiple"
+    ],
+    "relatedTerms": [
+      "minimos-cuadrados-ordinarios",
+      "error-estandar"
+    ],
+    "sources": [
+      {
+        "title": "statsmodels — Regression Diagnostics and Specification Tests",
+        "url": "https://www.statsmodels.org/stable/regression.html",
+        "publisher": "statsmodels Developers",
+        "accessed": "2025-10-15",
+        "supports": "Supuesto de varianza constante de los errores y pruebas diagnósticas de heterocedasticidad."
+      }
+    ]
+  },
+  {
+    "id": "razon-de-momios",
+    "term": "Razón de momios (odds ratio)",
+    "english": "Odds Ratio (OR)",
+    "track": "da",
+    "definition": "Cociente entre los momios de ocurrencia de un evento binario en un grupo expuesto y los momios del mismo evento en el grupo base de referencia. En regresión logística, equivale a exponenciar el coeficiente estimado de la variable explicativa y expresa el cambio multiplicativo en los momios por unidad.",
+    "formula": "\\text{OR} = \\frac{p_1 / (1 - p_1)}{p_0 / (1 - p_0)} = e^{\\beta_1}",
+    "example": "En pedidos de Mercado Brisa, el canal desktop presenta una razón de momios de reembolso de 1.66 frente al canal base mobile.",
+    "relatedLessons": [
+      "da4-modelos-02-regresion-logistica-calibracion"
+    ],
+    "relatedTerms": [
+      "puntaje-brier-calibracion",
+      "umbral-decision",
+      "probabilidad-condicional"
+    ],
+    "sources": [
+      {
+        "title": "statsmodels — Regression with Discrete Dependent Variable (Logit)",
+        "url": "https://www.statsmodels.org/stable/discretemod.html",
+        "publisher": "statsmodels Developers",
+        "accessed": "2025-10-15",
+        "supports": "Relación entre coeficientes logit y razones de momios mediante exponenciación."
+      },
+      {
+        "title": "scikit-learn — Logistic Regression User Guide",
+        "url": "https://scikit-learn.org/stable/modules/linear_model.html",
+        "publisher": "scikit-learn Developers",
+        "accessed": "2025-10-15",
+        "supports": "Modelado de probabilidades binarias mediante la función logística sigmoide."
+      }
+    ]
+  },
+  {
+    "id": "puntaje-brier-calibracion",
+    "term": "Puntaje de Brier y calibración de probabilidades",
+    "english": "Brier Score and Probability Calibration",
+    "track": "da",
+    "definition": "Métrica cuadrática que evalúa la precisión y calibración de probabilidades predichas para eventos binarios promediando la diferencia al cuadrado entre la probabilidad asignada y el resultado real cero o uno. Un modelo está bien calibrado cuando, dentro de cada banda de riesgo predicho, la frecuencia empírica coincide con la probabilidad media.",
+    "formula": "\\text{BS} = \\frac{1}{N} \\sum_{i=1}^{N} (\\hat{p}_i - y_i)^2",
+    "example": "Agrupamos los pedidos en cinco quintiles de riesgo de reembolso para comprobar si una probabilidad predicha de 0.08 corresponde a un 8% real de devoluciones.",
+    "relatedLessons": [
+      "da4-modelos-02-regresion-logistica-calibracion"
+    ],
+    "relatedTerms": [
+      "razon-de-momios",
+      "umbral-decision"
+    ],
+    "sources": [
+      {
+        "title": "scikit-learn — Probability Calibration and Brier Score",
+        "url": "https://scikit-learn.org/stable/modules/calibration.html",
+        "publisher": "scikit-learn Developers",
+        "accessed": "2025-10-15",
+        "supports": "Fórmula del puntaje de Brier y evaluación de curvas de calibración por bandas."
+      }
+    ]
+  },
+  {
+    "id": "descomposicion-serie-temporal",
+    "term": "Descomposición de serie temporal",
+    "english": "Time Series Decomposition",
+    "track": "da",
+    "definition": "Procedimiento analítico que separa una secuencia cronológica de observaciones en tres componentes interpretables: tendencia-ciclo de mediano plazo, patrón estacional periódico y residuo irregular. Permite distinguir si una variación abrupta responde al calendario habitual de operación o constituye una anomalía genuina en el residuo.",
+    "formula": "Y_t = T_t + S_t + R_t",
+    "example": "En las ventas diarias de Mercado Brisa durante 2024, separamos la tendencia móvil de 7 días y el efecto por día de la semana para aislar picos promocionales en el residuo.",
+    "relatedLessons": [
+      "da4-modelos-03-series-temporales-descomposicion"
+    ],
+    "relatedTerms": [
+      "media-movil-centrada",
+      "c2-sql-date-spine",
+      "c2-sql-marco-ventana"
+    ],
+    "sources": [
+      {
+        "title": "Hyndman & Athanasopoulos — Forecasting: Principles and Practice (Ch. 3 Time Series Decomposition)",
+        "url": "https://otexts.com/fpp3/decomposition.html",
+        "publisher": "OTexts",
+        "accessed": "2025-10-15",
+        "supports": "Descomposición aditiva y multiplicativa en tendencia-ciclo, estacionalidad y residuo."
+      },
+      {
+        "title": "Hyndman & Athanasopoulos — STL Decomposition",
+        "url": "https://otexts.com/fpp3/stl.html",
+        "publisher": "OTexts",
+        "accessed": "2025-10-15",
+        "supports": "Descomposición estacional y de tendencia mediante Loess (STL)."
+      }
+    ]
+  },
+  {
+    "id": "media-movil-centrada",
+    "term": "Media móvil de tendencia",
+    "english": "Moving Average Trend Smoothing",
+    "track": "da",
+    "definition": "Promedio calculado sobre una ventana deslizante de longitud fija que suaviza fluctuaciones de corto plazo y filtra el ciclo estacional cuando la longitud coincide con el período repetitivo. En series diarias con ciclo semanal, una ventana de siete días absorbe el efecto del día de la semana y revela la tendencia.",
+    "formula": "\\hat{T}_t = \\frac{1}{2k+1} \\sum_{j=-k}^{k} Y_{t+j}",
+    "example": "Con AVG(ingresos_usd) OVER (ORDER BY calendar_date ROWS BETWEEN 3 PRECEDING AND 3 FOLLOWING) obtenemos la tendencia semanal centrada.",
+    "relatedLessons": [
+      "da4-modelos-03-series-temporales-descomposicion"
+    ],
+    "relatedTerms": [
+      "descomposicion-serie-temporal",
+      "c2-sql-marco-ventana"
+    ],
+    "sources": [
+      {
+        "title": "Hyndman & Athanasopoulos — Moving Averages in Time Series",
+        "url": "https://otexts.com/fpp3/decomposition.html",
+        "publisher": "OTexts",
+        "accessed": "2025-10-15",
+        "supports": "Suavizado de tendencia-ciclo mediante medias móviles centradas de orden m."
+      },
+      {
+        "title": "DuckDB — Window Functions and Framing",
+        "url": "https://duckdb.org/docs/stable/sql/functions/window_functions.html",
+        "publisher": "DuckDB Foundation",
+        "accessed": "2025-10-15",
+        "supports": "Definición de marcos deslizantes con ROWS BETWEEN en funciones de ventana SQL."
+      }
+    ]
+  },
+  {
+    "id": "validacion-ventana-rodante",
+    "term": "Validación por ventana rodante (backtesting)",
+    "english": "Rolling Window Backtesting / Time Series Cross-Validation",
+    "track": "da",
+    "definition": "Esquema de evaluación fuera de muestra para pronósticos donde el origen de predicción avanza cronológicamente paso a paso sin mezclar observaciones futuras en el conjunto de entrenamiento. En cada corte temporal se entrena o promedia únicamente con el pasado disponible y se mide el error sobre el horizonte siguiente.",
+    "formula": "e_{t+h \\mid t} = Y_{t+h} - \\hat{Y}_{t+h \\mid t}",
+    "example": "Para pronosticar la demanda semanal de Café en grano usamos ROWS BETWEEN 4 PRECEDING AND 1 PRECEDING sin tocar la fila actual ni semanas futuras.",
+    "relatedLessons": [
+      "da4-modelos-04-pronostico-backtesting-mae-mase"
+    ],
+    "relatedTerms": [
+      "error-absoluto-escalado-medio",
+      "descomposicion-serie-temporal",
+      "c2-sql-marco-ventana"
+    ],
+    "sources": [
+      {
+        "title": "Hyndman & Athanasopoulos — Time Series Cross-Validation",
+        "url": "https://otexts.com/fpp3/tscv.html",
+        "publisher": "OTexts",
+        "accessed": "2025-10-15",
+        "supports": "Evaluación de pronósticos mediante origen de predicción rodante sin fuga temporal."
+      },
+      {
+        "title": "scikit-learn — TimeSeriesSplit Cross-Validation",
+        "url": "https://scikit-learn.org/stable/modules/cross_validation.html",
+        "publisher": "scikit-learn Developers",
+        "accessed": "2025-10-15",
+        "supports": "Particionado secuencial de series temporales para validación fuera de muestra."
+      }
+    ]
+  },
+  {
+    "id": "error-absoluto-escalado-medio",
+    "term": "Error absoluto escalado medio (MASE)",
+    "english": "Mean Absolute Scaled Error (MASE)",
+    "track": "da",
+    "definition": "Métrica adimensional de exactitud de pronóstico definida como el cociente entre el error absoluto medio del modelo evaluado y el error absoluto medio del pronóstico ingenuo a un paso. Un valor menor que uno demuestra que el modelo añade valor real frente a repetir la última observación disponible.",
+    "formula": "\\text{MASE} = \\frac{\\text{MAE}_{\\text{modelo}}}{\\text{MAE}_{\\text{ingenuo}}}",
+    "example": "En la demanda semanal de Mercado Brisa, la media móvil de 4 semanas logra un MASE entre 0.81 y 0.86 en las cinco categorías frente al pronóstico ingenuo.",
+    "relatedLessons": [
+      "da4-modelos-04-pronostico-backtesting-mae-mase"
+    ],
+    "relatedTerms": [
+      "validacion-ventana-rodante",
+      "media-aritmetica"
+    ],
+    "sources": [
+      {
+        "title": "Hyndman & Athanasopoulos — Evaluating Point Forecast Accuracy (MAE, RMSE, MASE)",
+        "url": "https://otexts.com/fpp3/accuracy.html",
+        "publisher": "OTexts",
+        "accessed": "2025-10-15",
+        "supports": "Definición de MASE como métrica libre de escala comparada contra el método ingenuo."
+      }
+    ]
+  },
+  {
+    "id": "estandarizacion-puntaje-z",
+    "term": "Estandarización por puntaje z",
+    "english": "Z-Score Standardization",
+    "track": "da",
+    "definition": "Transformación lineal que centra cada atributo numérico restando su media muestral y lo divide por su desviación estándar para expresarlo en unidades de dispersión adimensionales. En algoritmos de agrupamiento basados en distancia euclidiana, evita que variables monetarias de gran magnitud numérica eclipsen a conteos de frecuencia.",
+    "formula": "z_i = \\frac{x_i - \\bar{x}}{s_x}",
+    "example": "Antes de segmentar clientes de Mercado Brisa, transformamos gasto_total_usd (miles de dólares) y frecuencia_pedidos (unidades) a escala z con media 0 y desviación 1.",
+    "relatedLessons": [
+      "da4-modelos-05-clustering-segmentacion-perfiles"
+    ],
+    "relatedTerms": [
+      "coeficiente-silueta",
+      "puntaje-z-modificado-mad"
+    ],
+    "sources": [
+      {
+        "title": "scikit-learn — Preprocessing Data (StandardScaler)",
+        "url": "https://scikit-learn.org/stable/modules/preprocessing.html",
+        "publisher": "scikit-learn Developers",
+        "accessed": "2025-10-15",
+        "supports": "Estandarización de características a media cero y varianza uno para algoritmos de distancia."
+      }
+    ]
+  },
+  {
+    "id": "coeficiente-silueta",
+    "term": "Coeficiente de silueta",
+    "english": "Silhouette Coefficient",
+    "track": "da",
+    "definition": "Métrica interna de calidad de agrupamiento que compara la distancia media de cada observación a los miembros de su propio grupo frente a la distancia media al grupo vecino más cercano. Oscila entre menos uno y más uno, ayudando a detectar cuándo agregar más grupos fragmenta artificialmente la muestra.",
+    "formula": "s(i) = \\frac{b(i) - a(i)}{\\max\\{a(i), b(i)\\}}",
+    "example": "Evaluamos si dividir la base de clientes en tres perfiles operativos mantiene una silueta alta y tamaños de grupo accionables para retención.",
+    "relatedLessons": [
+      "da4-modelos-05-clustering-segmentacion-perfiles"
+    ],
+    "relatedTerms": [
+      "estandarizacion-puntaje-z",
+      "c22-cohort-retention-ltv"
+    ],
+    "sources": [
+      {
+        "title": "scikit-learn — Clustering Performance Evaluation (Silhouette Coefficient)",
+        "url": "https://scikit-learn.org/stable/modules/clustering.html",
+        "publisher": "scikit-learn Developers",
+        "accessed": "2025-10-15",
+        "supports": "Fórmula e interpretación del coeficiente de silueta para elegir el número de grupos."
+      },
+      {
+        "title": "James et al. — An Introduction to Statistical Learning (Unsupervised Learning)",
+        "url": "https://www.statlearning.com/",
+        "publisher": "Springer",
+        "accessed": "2025-10-15",
+        "supports": "Validación práctica de agrupamientos k-medias y prevención de sobreajuste."
+      }
+    ]
+  }
+]
