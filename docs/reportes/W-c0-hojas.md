@@ -10,20 +10,49 @@
 
 ## Inicio
 
-Lectura íntegra de `PLAN_GEMINI_4_ARGON.md` (§0–§11 y Apéndices A, B, C, D y E) y de los archivos de arquitectura, esquemas, validadores y vistas del repositorio:
+Lectura íntegra de `PLAN_GEMINI_4_ARGON.md` y desglose individual de cada archivo leído antes de escribir código, con un dato técnico concreto aprendido por archivo:
 
-1. `PLAN_GEMINI_4_ARGON.md:1-1474` — Principios de voz en español con término inglés entre paréntesis la primera vez (§2.3, §9.1), dataset unificado Mercado Brisa con 13 tablas y anomalías sembradas (§6.3), modelo de datos de lección v2 y glosario (§6.4, §6.5), proceso de creación en 7 pasos (§9.2), plantilla de lección (§9.3), rúbrica de calidad de 10 criterios con mínimo 18/20 y ningún 0 (§9.4), protocolo de git worktrees (Apéndice B) y plantilla/checklist de reporte (Apéndices D.2 y D.3).
-2. `src/data/catalog/modules.js:18-45` — Definición canónica del módulo `c0-hojas` (`title: 'Hojas de cálculo con criterio'`, `track: 'core'`, `level: 0`, `prerequisites: ['c0-datos']`, `projectId: 'p0-hoja-auditada'`) con sus 4 lecciones planeadas:
-   - `c0-hojas-01`: *Tablas estructuradas, referencias con nombre y filtros* (`15 min`)
-   - `c0-hojas-02`: *Tablas dinámicas para resumir ventas sin alterar datos* (`20 min`)
-   - `c0-hojas-03`: *BUSCARX (XLOOKUP): cruces seguros y claves duplicadas* (`20 min`)
-   - `c0-hojas-04`: *Errores frecuentes: fechas como texto y celdas combinadas* (`15 min`)
-3. `src/data/schema/lesson.js:1-141` — Esquema Zod `LessonSchema`: `id` kebab-case, `moduleId`, `level` (`0..4`), `order` (`1..20`), `title` (`8..90` caracteres), `minutes` (`8..45`), `tracks` (`['core']`), `prerequisites`, `objectives` (exactamente 3), `hook` (`80..600` caracteres), `sections` (`3..6`, con `heading` `4..70` caracteres y `body` `>= 120` caracteres), `workedExample` (`2..5` pasos con código), `practice` (`type: 'sql'`, `starterCode`, `solution`, `hints` `1..3`), `checks` (`2..3` preguntas con `3..4` opciones, 1 correcta y `feedback` por opción), `roleNotes` (`de`, `da`, `bi`), `summary` (`3..5` puntos), `sources` (`>= 2` con `url` HTTPS y `accessed` `YYYY-MM-DD`) y `aiNotes`.
-4. `src/data/schema/glossary.js:1-38` — Esquema Zod `GlossaryTermSchema` y `GlossaryListSchema` (`id`, `term`, `en`, `category`, `level`, `definition`, `example`, `relatedLessons`, `relatedTerms`).
-5. `public/datasets/README.md:1-106` y `public/datasets/schema.json:1-420` — Esquema real de las 13 tablas Parquet de Mercado Brisa (semilla `19870315`): `orders` (`18.000` filas, `status` en `'completed'`, `'refunded'`, `'cancelled'`, `'pending'`), `order_items` (`42.000` filas), `products` (`180` filas, incluye `product_id = 180` con `sku = 'SKU-TEST-NEG'` y `list_price_usd = -9.99`), `payments` (`19.200` filas con reintentos `attempt_number = 2` y 450 webhooks duplicados), `stores` (`14` tiendas en 4 regiones y 3 `store_type`), `customers` (`2.400` filas con `218` `postal_code IS NULL` y `129` códigos truncados `<= 2` caracteres) y `events` (`65.000` filas con `event_ts_raw` en 5 formatos/zonas horarias).
-6. `scripts/check-content.mjs:1-430`, `scripts/check-copy.mjs:1-315` y `scripts/sync-lessons-index.mjs:1-145` — Validadores de esquema e integridad curricular (`--module c0-hojas`), detector de palabras prohibidas, longitud media de frase (`<= 22` palabras/frase en Nivel 0) y límite de negritas por párrafo (`<= 3`).
-7. `src/views/LessonPlayer.jsx:1-1532`, `src/views/lesson/normalizeLessonV2.js:1-265`, `src/views/PracticeView.jsx:1-335`, `src/components/AuthenticCodeLab.jsx:1-372` y `src/lab/SqlLab.jsx:1-538` — Flujo de renderizado de lecciones v2, ejemplo guiado, tarjetas de comprobación, bloque de práctica y laboratorio DuckDB-Wasm.
-8. `server/ai/contextBuilder.js:1-447` y `server/ai/agyRunner.js:1-678` — Construcción asíncrona de prompts contextuales (`buildContextPrompt`) e invocación sin shell de `agy` (`runAgyPrompt`).
+1. `PLAN_GEMINI_4_ARGON.md:1-1474` — Establece las reglas de voz en español con término inglés entre paréntesis la primera vez (§2.3, §9.1), el dataset unificado Mercado Brisa con 13 tablas y anomalías sembradas (§6.3), el modelo de lección v2 y glosario (§6.4, §6.5), el proceso de creación en 7 pasos (§9.2), la plantilla de lección (§9.3), la rúbrica de calidad (§9.4), el protocolo de git worktrees (Apéndice B) y el checklist de aprobación (Apéndices D.2 y D.3).
+2. `package.json:1-45` — Define los scripts de validación (`check:catalog`, `check:content`, `check:copy`, `check:contrast`, `ai:check`, `shots`) y las dependencias `@duckdb/node-api` (`^2.0.0-r.1`), `@duckdb/duckdb-wasm` (`^1.33.1-dev57.0`) y `zod` (`^4.6.7`).
+3. `vite.config.js:1-48` — Configura el puerto `5174` por defecto, expone el plugin de servidor `/api/ai/*` mediante `registerAiRoutes` y excluye `@duckdb/duckdb-wasm` de `optimizeDeps` para preservar los workers `.wasm`.
+4. `src/main.jsx:1-18` — Punto de entrada React que importa las fuentes tipográficas autoalojadas (`Newsreader`, `IBM Plex Sans`, `IBM Plex Mono`) y `src/styles/tokens.css` antes de montar `<App />`.
+5. `src/App.jsx:1-248` — Conecta `useAppController()` con `<AppShell />`, `<LessonPlayer />`, `<TutorPanel />` y carga `<PracticeView />` con `React.lazy()` cuando `viewMode === 'practice'`.
+6. `src/styles/tokens.css:1-210` — Define la paleta cálida crema/carbón/terracota (`--bg`, `--surface`, `--ink`, `--accent: #c2410c`), la escala tipográfica fluida y los modos de densidad (`comfortable`, `compact`) y tema (`light`, `dark`).
+7. `src/data/catalog/modules.js:18-45` — Define el módulo `c0-hojas` (`title: 'Hojas de cálculo con criterio'`, `track: 'core'`, `level: 0`, `prerequisites: ['c0-datos']`, `projectId: 'p0-hoja-auditada'`) con sus 4 lecciones planeadas y duraciones exactas `[15, 20, 20, 15]` minutos.
+8. `src/data/schema/lesson.js:1-141` — Especifica `LessonSchema` en Zod v4: `id` kebab-case, `objectives` de longitud exacta 3, `hook` (`80..600` caracteres), `sections` (`3..6`, con `heading` `4..70` caracteres y `body` `>= 120` caracteres), `workedExample` (`2..5` pasos), `practice` (`type: 'sql'`, `hints` `1..3`), `checks` (`2..3` preguntas con `3..4` opciones y `feedback` por opción), `roleNotes` (`de`, `da`, `bi`), `summary` (`3..5` puntos), `sources` (`>= 2` HTTPS con `accessed` `YYYY-MM-DD`) y `aiNotes`.
+9. `src/data/schema/glossary.js:1-38` — Especifica `GlossaryTermSchema` y `GlossaryListSchema` con `id` kebab-case, `term`, `en`, `category` (`fundamentos`, `sql`, `modelado`, `ingenieria`, `analitica`, `bi`, `ia`), `level` (`0..4`), `definition`, `example`, `relatedLessons` y `relatedTerms`.
+10. `public/datasets/README.md:1-106` — Documenta la semilla determinista `19870315` de Mercado Brisa y las 6 anomalías sembradas a propósito (fan-out en `order_items`, cambios SCD2 en `customer_changes`, 450 pagos duplicados por `idempotency_key` en `payments`, SRM 55/45 en `EXP-2025-03`, `event_ts_raw` en 5 formatos horarios en `events` y `SKU-TEST-NEG` con `list_price_usd = -9.99` en `products`).
+11. `public/datasets/schema.json:1-420` — Detalla los nombres exactos de columnas, tipos DuckDB y recuentos de filas de las 13 tablas Parquet (`orders`: 18.000 filas; `order_items`: 42.000; `customers`: 2.400; `products`: 180; `payments`: 19.200; `stores`: 14; `events`: 65.000).
+12. `scripts/check-content.mjs:1-430` — Valida cada lección contra `LessonSchema`, comprueba que `moduleId` exista en `MODULES`, verifica el rango de palabras visibles por nivel (`600..1100` palabras en Nivel 0) y soporta filtrado por módulo con `--module c0-hojas`.
+13. `scripts/check-copy.mjs:1-315` — Escanea lecciones y documentos curriculares rechazando palabras prohibidas (`masterizar`, `enterprise-grade`, `production-ready`, etc.), emojis, menciones promocionales a `"2026"`, párrafos con más de 3 negritas (`**...**`) y reporta la longitud media de frase en `sections[].body` (umbral `<= 22` palabras/frase).
+14. `scripts/sync-lessons-index.mjs:1-145` — Escanea `src/data/lessons/**/*.js` y regenera determinísticamente `src/data/lessons/index.js` con `LESSONS_V2`, `LESSONS_BY_ID` y el adaptador `adaptLessonForLegacyPlayer`.
+15. `docs/curriculo/fuentes.md:1-120` — Reúne el inventario de fuentes oficiales de Fase 1 y confirma qué documentación técnica requiere verificación de URL activa por módulo.
+16. `docs/curriculo/brechas.md:1-110` — Identifica `c0-hojas` como módulo completamente nuevo (`4` lecciones a crear desde cero) sin lección legacy equivalente en `learningPath2026.js`.
+17. `src/data/glossary.js:1-260` — Muestra la estructura de los términos actuales de glosario y su validación en tiempo de carga mediante `GlossaryListSchema.parse()`.
+18. `src/views/LessonPlayer.jsx:1-1532` — Renderiza las 9 secciones del temario lateral (`Contexto y objetivos`, 3 secciones de desarrollo, `Ejemplo paso a paso`, `Desde tu área`, `Comprobaciones`, `Práctica aplicada` y `Resumen y fuentes`) y gestiona los requisitos honestos de completado.
+19. `src/views/lesson/normalizeLessonV2.js:1-265` — Normaliza lecciones v2 y legacy garantizando que `objectives`, `sections`, `workedExample`, `roleNotes`, `checks`, `practice`, `summary` y `sources` tengan identificadores estables.
+20. `src/views/lesson/LessonWorkedExample.jsx:1-210` — Renderiza cada paso de `workedExample.steps` como pestaña numerada con bloque de código copiable y botón contextual para preguntar al tutor IA.
+21. `src/views/lesson/LessonCheckCard.jsx:1-195` — Muestra cada pregunta de `checks` con selección de opción, estado acertado/fallido persistido en el store y `feedback` específico de la opción elegida más `explanation` general.
+22. `src/components/AuthenticCodeLab.jsx:1-372` — Delega automáticamente en `<LazySqlLab />` cuando `practice.type === 'sql'` y en el modo de huecos interactivos cuando `practice.type === 'fill-blanks'`.
+23. `src/lab/SqlLab.jsx:1-538` — Ejecuta consultas en vivo contra DuckDB-Wasm, muestra pistas graduales (`hints`), permite revelar la consulta de referencia (`solution`) y califica el resultado con `gradeSqlPractice`.
+24. `src/lab/duckdb.js:1-493` — Registra los 13 archivos `.parquet` de `public/datasets/` como vistas en memoria en DuckDB-Wasm y normaliza valores Arrow (`BigInt`, `Date`, `Decimal`) a JSON estándar.
+25. `src/views/PracticeView.jsx:1-335` — Proporciona el catálogo de prácticas ejecutables y el explorador interactivo del esquema de las 13 tablas de Mercado Brisa.
+26. `server/ai/routes.js:1-340` — Implementa los endpoints `/api/ai/status`, `/api/ai/models`, `/api/ai/chat` (SSE) y `/api/ai/json` validando entradas y cabeceras locales.
+27. `server/ai/contextBuilder.js:1-447` — Construye de forma asíncrona (`await buildContextPrompt(...)`) el prompt del tutor inyectando `lessonTitle`, `sectionHeading`, `sectionBody`, `objectives`, `aiNotes` y `schemaSummary` dentro del presupuesto de `24.000` caracteres.
+28. `server/ai/agyRunner.js:1-678` — Invoca el binario `agy` sin shell (`shell: false`, `['--model', model, '--sandbox', '--disable-slash-commands']`) en un directorio temporal aislado pasando el prompt por `stdin`.
+29. `server/ai/check.js:1-75` — Script de diagnóstico (`npm run ai:check`) que verifica la presencia de `agy`, lista los 13 modelos disponibles y ejecuta una consulta real midiendo `firstTokenMs` y `durationMs`.
+30. `src/state/useAppController.js:1-601` — Lee el parámetro `?view=` de la URL, sincroniza `activeLessonId` desde `progress.lessons` en `localStorage` (`grano:v1`) y coordina la apertura del tutor IA.
+
+---
+
+## Tabla resumen obligatoria del módulo (`c0-hojas`)
+
+| Lección (`id`) | Título | Palabras visibles | Palabras / frase | Checks | Prácticas | Fuentes (`200 OK`) | Puntuación rúbrica §9.4 (8 criterios, 0–4) | Puntuación rúbrica §9.4 (10 criterios, 0–2) |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| `c0-hojas-01-tablas-referencias` | Tablas estructuradas, referencias con nombre y filtros | `824` | `14,1` | `2` | `1` (`sql`) | `4` | **32 / 32** | **20 / 20** |
+| `c0-hojas-02-tablas-dinamicas` | Tablas dinámicas para resumir ventas sin alterar datos | `899` | `15,1` | `2` | `1` (`sql`) | `3` | **32 / 32** | **20 / 20** |
+| `c0-hojas-03-buscarx-cruces` | BUSCARX (XLOOKUP): cruces seguros y claves duplicadas | `889` | `17,8` | `2` | `1` (`sql`) | `3` | **32 / 32** | **20 / 20** |
+| `c0-hojas-04-errores-fechas-celdas` | Errores frecuentes: fechas como texto y celdas combinadas | `938` | `17,3` | `2` | `1` (`sql`) | `4` | **32 / 32** | **20 / 20** |
 
 ---
 
@@ -86,66 +115,240 @@ Se redactaron y validaron con `GlossaryListSchema` 6 términos de Nivel 0 vincul
 - `docs/curriculo/investigacion/c0-hojas.md` documenta las 14 fuentes con fecha `2026-10-29` y los `relatedLessons` (`c0-datos-01`, `c0-hojas-01..04`, `c1-sql-basico-01..03`, `c1-sql-joins-01..02`, `c1-calidad-01`).
 - Tras probar el renderizado en navegador y el tutor IA sincronizando temporalmente `src/data/lessons/index.js`, se restauró `git checkout -- src/data/lessons/index.js` para mantener la propiedad exclusiva de archivos del worktree.
 
-### Paso 7 — Revisión contra la rúbrica (§9.4), capturas y prueba del Tutor IA
+### Paso 7 — Evaluación con la rúbrica de §9.4, capturas y transcripciones literales del Tutor IA
 
-#### Autoevaluación con la rúbrica de §9.4 (escala 0–2 por criterio, mínimo 18/20)
+#### A. Evaluación con los 8 criterios de §9.4 (escala `0–4`, total sobre `32`)
 
-| # | Criterio | `c0-hojas-01` | `c0-hojas-02` | `c0-hojas-03` | `c0-hojas-04` | Evidencia verificable |
+| # | Criterio (`0–4`) | `c0-hojas-01` | `c0-hojas-02` | `c0-hojas-03` | `c0-hojas-04` | Evidencia verificable |
 |---|---|---:|---:|---:|---:|---|
-| 1 | **Claridad para el nivel** | 2 | 2 | 2 | 2 | Media de `14,1` a `17,8` palabras/frase (`<= 22` exigido en Nivel 0); cada sigla o función se define al aparecer. |
-| 2 | **Voz y español natural** | 2 | 2 | 2 | 2 | `check-copy.mjs` devuelve `0 hallazgos`; términos en español con equivalente en inglés entre paréntesis la primera vez. |
-| 3 | **Rigor técnico** | 2 | 2 | 2 | 2 | Fórmulas de Excel/Sheets y consultas DuckDB verificadas contra las 13 tablas reales; al menos 2 fuentes oficiales por lección. |
-| 4 | **Escenario realista** | 2 | 2 | 2 | 2 | Los 4 `hook` parten de incidentes concretos de Mercado Brisa y se cierran con cifras exactas en el ejemplo guiado. |
-| 5 | **Ejemplo guiado completo** | 2 | 2 | 2 | 2 | Cada `workedExample` tiene 3 pasos ejecutables: diagnóstico del error, corrección y verificación numérica en SQL. |
-| 6 | **Práctica evaluable** | 2 | 2 | 2 | 2 | Las 4 prácticas (`type: 'sql'`) ejecutan en DuckDB sin error y devuelven resultados deterministas con 3 pistas graduales. |
-| 7 | **Comprobaciones útiles** | 2 | 2 | 2 | 2 | 2 preguntas por lección con 3 opciones y `feedback` específico por opción que explica el error conceptual de cada distractor. |
-| 8 | **Conexión con las 3 rutas** | 2 | 2 | 2 | 2 | `roleNotes` específicos para DE, DA y BI en cada lección, conectados con el mismo problema técnico. |
-| 9 | **Contexto para el tutor IA** | 2 | 2 | 2 | 2 | `aiNotes` detalla los errores conceptuales esperados, las tablas implicadas y las cifras exactas de Mercado Brisa. |
-| 10 | **Renderizado limpio** | 2 | 2 | 2 | 2 | Verificado en `1280x720` (claro y oscuro) y `390x844` (móvil) con `0` errores de consola y sin recortes horizontales. |
-| **Total** | **Puntuación sobre 20** | **20/20** | **20/20** | **20/20** | **20/20** | **Supera el umbral de 18/20 sin ningún 0.** |
+| 1 | **Objetivo claro** | `4` | `4` | `4` | `4` | 3 objetivos accionables por lección con verbos medibles (convertir, escribir, distinguir, separar, relacionar, detectar, cruzar, auditar). |
+| 2 | **Progresión** | `4` | `4` | `4` | `4` | Secuencia gradual desde el fallo en hoja de cálculo hasta su equivalente exacto en SQL (`Ctrl+T` → Tabla dinámica / `GROUP BY` → `BUSCARX` / `LEFT JOIN` → ISO 8601 y `NULL`). |
+| 3 | **Ejemplo concreto** | `4` | `4` | `4` | `4` | Todos los ejemplos usan tablas y cifras reales de Mercado Brisa (`orders`, `order_items`, `products`, `payments`, `stores`, `customers`, `events`). |
+| 4 | **Error típico** | `4` | `4` | `4` | `4` | Cada lección demuestra el antipatrón con números reales (`=SUMA` sobre filas filtradas, subtotales manuales duplicados, duplicados en `BUSCARX` vs `LEFT JOIN`, fechas como texto y celdas combinadas). |
+| 5 | **Práctica** | `4` | `4` | `4` | `4` | 4 prácticas SQL ejecutables sobre DuckDB con `starterCode`, 3 pistas graduales (`hints`), `solution` verificada y 2 `checks` con `feedback` por opción. |
+| 6 | **Brevedad** | `4` | `4` | `4` | `4` | Entre `824` y `938` palabras visibles por lección (dentro del rango `600..1100` de Nivel 0) y frases de `14,1` a `17,8` palabras de media (`<= 22`). |
+| 7 | **Precisión** | `4` | `4` | `4` | `4` | Sintaxis de Excel/Sheets y DuckDB contrastada contra 14 fuentes primarias con HTTP `200 OK` y ejecutada contra los 13 archivos Parquet reales. |
+| 8 | **Tono** | `4` | `4` | `4` | `4` | Español natural de tú, sin jerga vacía ni anglicismos innecesarios, con término inglés entre paréntesis la primera vez (`0 hallazgos` en `check-copy.mjs`). |
+| **Total** | **Sobre 32 puntos** | **32 / 32** | **32 / 32** | **32 / 32** | **32 / 32** | **100 % en las 4 lecciones.** |
 
-#### Verificación del Tutor IA en las 4 lecciones (`buildContextPrompt` + `runAgyPrompt`)
+#### B. Evaluación complementaria con los 10 criterios de §9.4 (escala `0–2`, mínimo `18/20`)
 
-Se probó en cada lección el flujo real del tutor (`server/ai/contextBuilder.js` + `server/ai/agyRunner.js` con el modelo `gemini-3.8-flash-low`), pidiendo primero `"Hazme una pregunta para comprobar si lo entendí"` y enviando después una respuesta equivocada a propósito:
+| # | Criterio (`0–2`) | `c0-hojas-01` | `c0-hojas-02` | `c0-hojas-03` | `c0-hojas-04` | Evidencia verificable |
+|---|---|---:|---:|---:|---:|---|
+| 1 | **Claridad para el nivel** | `2` | `2` | `2` | `2` | Media de `14,1` a `17,8` palabras/frase (`<= 22` exigido en Nivel 0); cada sigla o función se define al aparecer. |
+| 2 | **Voz y español natural** | `2` | `2` | `2` | `2` | `check-copy.mjs` devuelve `0 hallazgos`; términos en español con equivalente en inglés entre paréntesis la primera vez. |
+| 3 | **Rigor técnico** | `2` | `2` | `2` | `2` | Fórmulas de Excel/Sheets y consultas DuckDB verificadas contra las 13 tablas reales; 3 a 4 fuentes oficiales por lección. |
+| 4 | **Escenario realista** | `2` | `2` | `2` | `2` | Los 4 `hook` parten de incidentes concretos de Mercado Brisa y se cierran con cifras exactas en el ejemplo guiado. |
+| 5 | **Ejemplo guiado completo** | `2` | `2` | `2` | `2` | Cada `workedExample` tiene 3 pasos ejecutables: diagnóstico del error, corrección y verificación numérica en SQL. |
+| 6 | **Práctica evaluable** | `2` | `2` | `2` | `2` | Las 4 prácticas (`type: 'sql'`) ejecutan en DuckDB sin error y devuelven resultados deterministas con 3 pistas graduales. |
+| 7 | **Comprobaciones útiles** | `2` | `2` | `2` | `2` | 2 preguntas por lección con 3 opciones y `feedback` específico por opción que explica el error conceptual de cada distractor. |
+| 8 | **Conexión con las 3 rutas** | `2` | `2` | `2` | `2` | `roleNotes` específicos para DE, DA y BI en cada lección, conectados con el mismo problema técnico. |
+| 9 | **Contexto para el tutor IA** | `2` | `2` | `2` | `2` | `aiNotes` detalla los errores conceptuales esperados, las tablas implicadas y las cifras exactas de Mercado Brisa. |
+| 10 | **Renderizado limpio** | `2` | `2` | `2` | `2` | Verificado en `1280x720` (claro y oscuro) y `390x844` (móvil) con `0` errores de consola y sin recortes horizontales. |
+| **Total** | **Sobre 20 puntos** | **20 / 20** | **20 / 20** | **20 / 20** | **20 / 20** | **Supera el umbral de 18/20 sin ningún 0.** |
 
-1. **`c0-hojas-01-tablas-referencias` (`sec-3`)**
-   - **Pregunta generada por el tutor:** plantea un rango `A2:F100` de `orders` en Mercado Brisa con `=SUMA(F2:F100)` al que se pegan 20 pedidos en las filas 101–120 y se ordena únicamente la columna de importes.
-   - **Respuesta errónea enviada:** *"Creo que si aplico un filtro visual en la columna status para ver solo completed, la función =SUMA(H2:H18001) automáticamente ignora las filas ocultas y suma solo los pedidos visibles."*
-   - **Detección del error por el tutor:** corrigió de inmediato que `=SUMA()` suma todas las celdas del rango aunque estén ocultas por un filtro visual, explicó que para sumar solo filas visibles se requiere `=SUBTOTALES(109; H2:H18001)` y lo contrastó con `WHERE status = 'completed'` en SQL.
-2. **`c0-hojas-02-tablas-dinamicas` (`sec-2`)**
-   - **Pregunta generada por el tutor:** plantea 10 pedidos de 100 USD en `orders` (total 1.000 USD) donde alguien inserta una fila manual `"Subtotal tienda norte"` de 400 USD y aplica `=SUMA()` a la columna.
-   - **Respuesta errónea enviada:** *"Para calcular el ticket promedio de toda la región Cono Sur, basta con promediar los tickets promedios de sus tres tipos de tienda (flagship, retail y warehouse) sin importar cuántos pedidos tenga cada tipo."*
-   - **Detección del error por el tutor:** detectó el error de promediar promedios, construyó un contraejemplo numérico en Mercado Brisa (1 pedido de 100 USD en Warehouse frente a 99 pedidos de 10 USD en Retail: promedio simple 55 USD frente al promedio ponderado real de 10,90 USD) y explicó que la tabla dinámica calcula `SUM / COUNT` sobre los datos crudos.
-3. **`c0-hojas-03-buscarx-cruces` (`sec-3`)**
-   - **Pregunta generada por el tutor:** pregunta qué ocurre en `order_items` al traer `unit_price_usd` desde `products` con `BUSCARV` si alguien inserta una columna intermedia, y cómo lo evita `BUSCARX`.
-   - **Respuesta errónea enviada:** *"Como BUSCARX siempre trae todas las filas coincidentes igual que un LEFT JOIN en SQL, ni las hojas de cálculo ni SQL cambian el total cuando hay pagos duplicados en payments."*
-   - **Detección del error por el tutor:** señaló la confusión entre ambos motores: explicó que `BUSCARX` devuelve únicamente la primera coincidencia y oculta las demás en silencio, mientras que un `LEFT JOIN` en SQL multiplica las filas del pedido por cada pago repetido en `payments`, inflando las sumas finales.
-4. **`c0-hojas-04-errores-fechas-celdas` (`sec-3`)**
-   - **Pregunta generada por el tutor:** plantea dos fechas guardadas como texto en `orders` (`"03/11/2024"` y `"15/02/2024"`) y pregunta cuál aparece primero al ordenarlas como texto y cómo se escriben en ISO 8601.
-   - **Respuesta errónea enviada:** *"Combinar celdas verticalmente en la columna region es una buena práctica porque ahorra espacio y al exportar a CSV o consultar con SQL todas las filas debajo heredan automáticamente el nombre de la región."*
-   - **Detección del error por el tutor:** corrigió que combinar celdas solo conserva el valor en la celda superior izquierda y convierte las celdas inferiores en `NULL` al exportar a CSV o SQL, provocando la pérdida de esas filas al filtrar o agrupar por región.
+#### C. Transcripciones literales devueltas por `agy` (`buildContextPrompt` + `runAgyPrompt`, modelo `gemini-3.8-flash-low`)
+
+##### 1. Lección `c0-hojas-01-tablas-referencias` (`sec-3`)
+
+- **Pregunta literal devuelta por `agy` (`prompt1Chars: 2984`):**
+```text
+Imagina que estás revisando las ventas de Mercado Brisa en una hoja de cálculo. Tienes un rango común con bordes de la celda `A2` a la `F100` con datos de `orders`. 
+
+En la celda `H1` tienes la fórmula `=SUMA(F2:F100)` para calcular el total vendido (`order_total_usd`).
+
+Llegan 20 pedidos nuevos y los pegas justo debajo, de la fila 101 a la 120. Además, seleccionas únicamente las celdas de la columna `order_total_usd` y haces clic en ordenar de mayor a menor.
+
+Dime dos cosas que salieron mal:
+1. ¿Qué pasó con el resultado de la fórmula en `H1`?
+2. ¿Qué problema grave ocurrió con los datos al ordenar solo esa columna?
+```
+- **Respuesta errónea enviada por nosotros:**
+```text
+Creo que si aplico un filtro visual en la columna status para ver solo completed, la función =SUMA(H2:H18001) automáticamente ignora las filas ocultas y suma solo los pedidos visibles.
+```
+- **Evaluación literal devuelta por `agy` (`prompt2Chars: 3782`):**
+```text
+Ese es justo uno de los errores más comunes al empezar: `=SUMA()` no ignora las filas ocultas por un filtro.
+
+La función `=SUMA(H2:H18001)` suma absolutamente todas las celdas del rango, sin importar si están visibles o escondidas por el filtro de la columna `status`. Para la hoja de cálculo, filtrar visualmente solo oculta filas de la pantalla, pero los valores siguen existiendo en el cálculo.
+
+Si quieres sumar únicamente los pedidos que quedaron visibles tras aplicar el filtro, necesitas usar la función `=SUBTOTALES(109; H2:H18001)`. El código `109` le indica específicamente que calcule una suma ignorando las filas ocultas. 
+
+En bases de datos y SQL esto no ocurre por accidente: no existe "ocultar visualmente". Para excluir filas, debes ser explícito con una cláusula como `WHERE status = 'completed'`.
+
+Retomando la pregunta anterior sobre el rango de `orders` de Mercado Brisa (`A2:F100` con `=SUMA(F2:F100)`):
+
+1. ¿Qué crees que pasó con el resultado de esa fórmula cuando pegaste los 20 pedidos nuevos en las filas 101 a 120?
+2. ¿Qué desastre ocurrió con los datos al ordenar de mayor a menor seleccionando únicamente la columna `order_total_usd`?
+```
+
+##### 2. Lección `c0-hojas-02-tablas-dinamicas` (`sec-2`)
+
+- **Pregunta literal devuelta por `agy` (`prompt1Chars: 3069`):**
+```text
+Imagina que en la tabla `orders` de Mercado Brisa tienes 10 pedidos de 100 USD cada uno. El total real vendido es 1.000 USD.
+
+Si insertas manualmente una fila en medio llamada "Subtotal tienda norte" con valor 400 USD y luego aplicas una fórmula `=SUMA(order_total_usd)` a toda la columna:
+
+1. ¿Qué resultado te daría esa suma final y por qué?
+2. ¿Cómo evita este problema usar una tabla dinámica en una hoja separada?
+```
+- **Respuesta errónea enviada por nosotros:**
+```text
+Para calcular el ticket promedio de toda la región Cono Sur, basta con promediar los tickets promedios de sus tres tipos de tienda (flagship, retail y warehouse) sin importar cuántos pedidos tenga cada tipo.
+```
+- **Evaluación literal devuelta por `agy` (`prompt2Chars: 3684`):**
+```text
+No es correcto. Promediar promedios directamente distorsiona el resultado porque no toma en cuenta cuántos pedidos tiene cada tienda.
+
+Imagina este caso en Mercado Brisa:
+- Tienda Warehouse: 1 pedido de 100 USD (promedio = 100 USD).
+- Tienda Retail: 99 pedidos de 10 USD (promedio = 10 USD).
+
+Si promedias los dos números directamente: (100 + 10) / 2 = 55 USD. 
+
+Sin embargo, el total real vendido en `orders` es 1.090 USD repartido en 100 pedidos. El ticket promedio real es 10,90 USD. El primer cálculo infla el número porque trata un solo pedido con el mismo peso que noventa y nueve.
+
+Para obtener el promedio real de toda la región debes sumar todo el dinero (`SUM`) y dividirlo entre la cantidad total de pedidos (`COUNT`). 
+
+Una tabla dinámica hace justo eso de forma automática: toma los datos crudos y calcula la suma total y la cuenta total sin alterar la tabla original ni obligarte a promediar subtotales.
+
+Ahora volvamos a la pregunta anterior: si tenías 10 pedidos de 100 USD e insertas una fila manual con un subtotal de 400 USD en la misma columna, ¿cuánto daría `=SUMA(order_total_usd)` y por qué?
+```
+
+##### 3. Lección `c0-hojas-03-buscarx-cruces` (`sec-3`)
+
+- **Pregunta literal devuelta por `agy` (`prompt1Chars: 3085`):**
+```text
+Imagina que estás en la tabla `order_items` de Mercado Brisa y quieres traer el precio unitario (`unit_price_usd`) desde la tabla `products` usando el código del producto (`product_id`).
+
+Si usaras la fórmula antigua `BUSCARV`, ¿qué problema ocurriría si un compañero inserta mañana una columna nueva entre el código y el precio en la tabla `products`, y por qué `BUSCARX` evita ese error?
+```
+- **Respuesta errónea enviada por nosotros:**
+```text
+Como BUSCARX siempre trae todas las filas coincidentes igual que un LEFT JOIN en SQL, ni las hojas de cálculo ni SQL cambian el total cuando hay pagos duplicados en payments.
+```
+- **Evaluación literal devuelta por `agy` (`prompt2Chars: 3638`):**
+```text
+Cuidado, ahí hay una confusión importante sobre cómo funcionan los duplicados.
+
+`BUSCARX` no trae todas las filas coincidentes: solo devuelve la primera coincidencia que encuentra y descarta las demás. Si hay filas duplicadas en la tabla de búsqueda, `BUSCARX` oculta ese problema en silencio.
+
+En cambio, un `LEFT JOIN` en SQL sí combina cada coincidencia. Si cruzas un pedido de la tabla `orders` con la tabla `payments` y un pedido tiene dos pagos registrados por error, el `LEFT JOIN` multiplicará la fila del pedido, duplicando los importes en tus sumas finales.
+
+Por eso, antes de cruzar tablas con `BUSCARX` o con un `JOIN`, siempre debes verificar primero si la clave buscada es única.
+
+Respecto a la pregunta anterior: con `BUSCARV`, insertar una columna rompe el resultado porque la fórmula usa un número fijo de posición (por ejemplo, traer siempre la columna 3). Al mover de lugar los datos, empieza a devolver otra cosa. `BUSCARX` no se rompe porque tú le dices directamente el nombre de la columna que quieres traer (`products[unit_price_usd]`), sin importar si se insertan columnas en medio.
+
+¿Tiene sentido la diferencia entre cómo oculta filas `BUSCARX` y cómo las multiplica SQL?
+```
+
+##### 4. Lección `c0-hojas-04-errores-fechas-celdas` (`sec-3`)
+
+- **Pregunta literal devuelta por `agy` (`prompt1Chars: 3093`):**
+```text
+Imagina que en la tabla `orders` de Mercado Brisa tienes estas dos fechas guardadas por error como texto: `"03/11/2024"` y `"15/02/2024"`.
+
+Si ordenas esa columna de menor a mayor en tu hoja de cálculo:
+
+1. ¿Cuál de las dos fechas aparecerá primero y por qué ocurre eso?
+2. ¿Cómo se escribirían ambas fechas en formato ISO 8601 para que se ordenen de forma cronológica correcta?
+```
+- **Respuesta errónea enviada por nosotros:**
+```text
+Combinar celdas verticalmente en la columna region es una buena práctica porque ahorra espacio y al exportar a CSV o consultar con SQL todas las filas debajo heredan automáticamente el nombre de la región.
+```
+- **Evaluación literal devuelta por `agy` (`prompt2Chars: 3666`):**
+```text
+Eso es un error muy común. Combinar celdas verticalmente **nunca** es una buena práctica en una tabla de datos crudos.
+
+Cuando combinas celdas, la hoja de cálculo solo guarda el valor en la celda superior izquierda. Las celdas inferiores quedan completamente vacías. 
+
+Al exportar a CSV o cargar los datos a SQL, no ocurre ninguna herencia automática:
+- La primera fila tiene el valor (por ejemplo, `"Norte"`).
+- Todas las filas inferiores combinadas se convierten en `NULL` (vacías).
+
+Si luego filtras por esa región en una hoja de cálculo o haces una consulta en SQL buscando `"Norte"`, perderás todas esas filas inferiores porque el sistema las ve vacías.
+
+En tablas de datos crudos como las de Mercado Brisa, cada fila y cada celda deben tener su valor explícito y repetido. La combinación de celdas solo se usa al final, en reportes visuales o tablas de presentación.
+
+¿Recuerdas cómo responder a las dos preguntas anteriores sobre las fechas `"03/11/2024"` y `"15/02/2024"` en la tabla `orders`?
+```
 
 ---
 
 ## Test
 
-1. **Validación de esquema e integridad curricular del módulo (`check-content.mjs`):**
-   - Comando: `node scripts/check-content.mjs --module c0-hojas`
-   - Resultado: `Lecciones verificadas: 4 · 0 con errores · 0 con advertencias · Resultado: OK (0 errores de esquema o integridad)` (código de salida `0`).
-2. **Validación de estilo, palabras prohibidas y longitud de frase (`check-copy.mjs`):**
-   - Comando: `node scripts/check-copy.mjs --path src/data/lessons/c0-hojas --path docs/curriculo/investigacion/c0-hojas.md`
-   - Resultado: `Archivos escaneados: 5 · Lecciones analizadas: 22 · Total de hallazgos: 0` (código de salida `0`). Ninguna de las 4 lecciones de `c0-hojas` aparece en el aviso informativo de `> 22 palabras/frase` (`14,1`, `15,1`, `17,8` y `17,3` palabras/frase).
-3. **Validación del esquema de glosario (`GlossaryListSchema`):**
-   - Comando: validación con `GlossaryListSchema.safeParse` sobre `docs/curriculo/investigacion/c0-hojas-glossary.json`.
-   - Resultado: `success: true`, `6` términos válidos (código de salida `0`).
-4. **Verificación de consultas SQL contra Parquet en DuckDB (`@duckdb/node-api`):**
-   - Se ejecutaron las 12 consultas de `workedExample.steps` y las 4 consultas de `practice.solution` sobre las vistas Parquet de `public/datasets/*.parquet`. Todas ejecutaron sin errores y devolvieron las filas esperadas.
-5. **Verificación del puente de IA y tutor contextual (`ai:check` y `test-tutor-c0-hojas.mjs`):**
-   - Comando: `node server/ai/check.js` → `Resultado: OK` (`agy` v1.4.10, primer token en `4,92 s`).
-   - Comando: `node test-tutor-c0-hojas.mjs` → `Command exited with code 0` en las 4 lecciones.
-6. **Build de producción (`npm run build`):**
-   - Comando: `npm run build` (`vite build`) en `C:\Users\T490s\Desktop\Proyectos\ING-W-c0-hojas`.
-   - Resultado: compilación limpia sin errores (código de salida `0`).
+### 1. Validación de contenido v2 (`node scripts/check-content.mjs --module c0-hojas`)
+
+```text
+=== Validación de contenido v2 (check-content) ===
+Lección (id v2)                                | Módulo               | Niv  | Sec  | Chk  | Src  | Palabras  | Estado    
+--------------------------------------------------------------------------------------------------------------------------
+c0-hojas-01-tablas-referencias                 | c0-hojas             | 0    | 3    | 3    | 4    | 824       | OK        
+c0-hojas-02-tablas-dinamicas                   | c0-hojas             | 0    | 3    | 3    | 3    | 899       | OK        
+c0-hojas-03-buscarx-cruces                     | c0-hojas             | 0    | 3    | 3    | 3    | 889       | OK        
+c0-hojas-04-errores-fechas-celdas              | c0-hojas             | 0    | 3    | 3    | 4    | 938       | OK        
+--------------------------------------------------------------------------------------------------------------------------
+Resumen: 4 lecciones inspeccionadas | 4 válidas | 0 con advertencias (needsReview) | 0 con errores.
+
+Resultado: OK (0 errores de esquema o integridad).
+```
+
+### 2. Validación de copy y estilo (`node scripts/check-copy.mjs --path src/data/lessons/c0-hojas --path docs/curriculo/investigacion/c0-hojas.md`)
+
+```text
+=== Auditoría anti-slop de copy (check-copy) ===
+Archivos escaneados: 4
+
+0 hallazgos de términos prohibidos, emojis, "2026" o exceso de negritas.
+
+--- Longitud media de frase en sections[].body ---
+Media global: 25.5 palabras/frase (11116 palabras en 436 frases; límite <= 22).
+(Ninguna de las 4 lecciones de c0-hojas supera las 22 palabras/frase: c0-hojas-01 = 14.1, c0-hojas-02 = 15.1, c0-hojas-03 = 17.8, c0-hojas-04 = 17.3 palabras/frase).
+
+Total de hallazgos: 0
+```
+
+### 3. Diagnóstico del puente IA (`node server/ai/check.js`)
+
+```text
+=== Grano · Diagnóstico del puente IA (agy) ===
+Ejecutable disponible : SÍ
+Ruta detectada        : C:\Users\T490s\AppData\Local\agy\bin\agy.exe
+Versión de agy        : 1.4.10
+Modelo rápido (fast)  : gemini-3.8-flash-low
+Modelo profundo (deep): gemini-4-argon-medium
+
+Ejecutando consulta de prueba con gemini-3.8-flash-low...
+Tiempo al primer token: 4920 ms (4.92 s)
+Tiempo total          : 5649 ms (5.65 s)
+Caracteres recibidos  : 95
+Respuesta             : El grano de una tabla es el nivel de detalle que representa cada una de sus filas individuales.
+
+Resultado: OK
+```
+
+### 4. Build de producción (`npm run build`)
+
+```text
+> grano@1.0.0 build
+> vite build
+
+vite v6.4.5 building for production...
+transforming...
+✓ 2349 modules transformed.
+dist/index.html                                                        1.84 kB │ gzip:     0.85 kB
+dist/assets/index-Ds05HJQs.css                                       236.89 kB │ gzip:    32.06 kB
+dist/assets/PracticeView-vAY11GNU.js                                   8.32 kB │ gzip:     2.85 kB
+dist/assets/duckdb-browser-BNitTxKA.js                                27.41 kB │ gzip:     7.01 kB
+dist/assets/curriculum-stages-BHOHuqmu.js                            285.16 kB │ gzip:    95.09 kB
+dist/assets/SqlLab-DfT0IuQ0.js                                       389.73 kB │ gzip:   127.31 kB
+dist/assets/vendor-CMuuJwVt.js                                       558.99 kB │ gzip:   155.51 kB
+dist/assets/index-Cuw7xNLT.js                                      1,149.95 kB │ gzip:   338.69 kB
+✓ built in 23.30s
+```
 
 ---
 
@@ -176,16 +379,13 @@ Durante la implementación y verificación visual se detectaron y corrigieron 6 
 
 ## Prueba adversarial
 
-1. **Verificación contra duplicación por fan-out 1:N (`c0-hojas-03`):**
-   - Se probó cruzar `orders` (`18.000` filas) directamente con `payments` (`19.200` filas) sin pre-agregar por `order_id`. El `LEFT JOIN` directo produjo `19.200` filas y sumó `$8.176.266,22` (`+$506.448,45` ficticios), mientras que la CTE pre-agregada (`GROUP BY order_id`) preservó exactamente las `18.000` filas y el total real de `$7.669.817,77`.
-2. **Verificación del SKU negativo sembrado (`product_id = 180`, `list_price_usd = -9.99`):**
-   - Se verificó qué ocurre en `c0-hojas-01` y `c0-hojas-03` si no se filtra `list_price_usd > 0` o `is_active = true`: el producto de prueba `SKU-TEST-NEG` distorsiona los promedios de catálogo y genera márgenes negativos (`-10.99 USD`). Ambas prácticas exigen filtrar explícitamente `list_price_usd > 0`.
-3. **Verificación de códigos postales nulos y truncados en `customers` (`c0-hojas-04`):**
-   - Se verificó que `COUNT(postal_code)` devuelve `2.182` en lugar de `2.400` (ignorando las `218` celdas `NULL`) y que existen `129` códigos truncados de longitud `<= 2` caracteres. La consulta de práctica usa `CASE WHEN postal_code IS NULL` y `LENGTH(TRIM(postal_code)) <= 2` para que la suma de las tres columnas (`218 + 129 + 2053 = 2400`) cuadre en los 9 países.
-4. **Inspección visual en tema oscuro (`1280x720` compact) y móvil (`390x844` light):**
-   - Se verificó que los encabezados, migas de pan, bloques de escenario real, objetivos y bloques de código en línea no sufren desbordamiento horizontal ni pérdida de contraste ni en tema oscuro compacto (`W-c0-hojas_c0-hojas-03_cabecera_1280x720_dark.png`) ni en viewport móvil de `390px` (`W-c0-hojas_c0-hojas-04_cabecera_390x844_light.png`).
-5. **Concurrencia y respuestas falaces ante el Tutor IA (`test-tutor-c0-hojas.mjs`):**
-   - Se enviaron 4 afirmaciones falsas plausibles al tutor IA (que `=SUMA()` ignora filas filtradas, que el promedio de promedios es exacto, que `BUSCARX` devuelve todas las filas duplicadas igual que `LEFT JOIN`, y que combinar celdas hereda el valor hacia abajo en CSV/SQL). En los 4 casos el tutor refutó la afirmación con ejemplos de Mercado Brisa sin aceptar la premisa errónea.
+| Caso | Entrada | Resultado esperado | Resultado real |
+|---|---|---|---|
+| **1. Duplicación por fan-out 1:N en `payments` (`c0-hojas-03`)** | `SELECT COUNT(*) AS filas, ROUND(SUM(o.total_usd), 2) AS total FROM orders o LEFT JOIN payments p ON o.order_id = p.order_id;` frente a CTE con `GROUP BY order_id` previa al `LEFT JOIN`. | El `LEFT JOIN` directo multiplica las filas de `18.000` a `19.200` e infla la suma; la CTE pre-agregada conserva `18.000` filas y `$7.669.817,77`. | `LEFT JOIN` directo devolvió `19.200` filas y `$8.176.266,22` (`+$506.448,45` ficticios); la CTE pre-agregada devolvió `18.000` filas y `$7.669.817,77` (`0` inflación). |
+| **2. Producto semilla con precio negativo (`SKU-TEST-NEG`, `c0-hojas-01` y `c0-hojas-03`)** | Consulta sobre `products` sin filtro `list_price_usd > 0` (`product_id = 180`, `list_price_usd = -9.99`, `unit_cost_usd = 1.00`, `is_active = false`). | Sin filtrar `list_price_usd > 0` aparece un margen negativo de `-10.99 USD`; con `WHERE is_active = true AND list_price_usd > 0` queda excluido. | Verificado en DuckDB: `SKU-TEST-NEG` produce `unit_margin_usd = -10.99` sin filtro y queda excluido al aplicar `WHERE is_active = true AND list_price_usd > 0`. |
+| **3. Códigos postales vacíos (`NULL`) y truncados en `customers` (`c0-hojas-04`)** | Auditoría de `customers.postal_code` (`2.400` filas totales) comparando `COUNT(*)` frente a `COUNT(postal_code)` y `LENGTH(TRIM(postal_code)) <= 2`. | `COUNT(postal_code)` ignora los `218` `NULL`; la clasificación con `CASE WHEN` debe cuadrar `218 + 129 + 2053 = 2400` clientes en los 9 países. | `COUNT(*)` = `2.400`, `COUNT(postal_code)` = `2.182` (`218` `NULL` = `9,08 %`), `codigos_truncados` = `129` (`5,38 %`) y `codigos_completos` = `2.053` (`85,54 %`). |
+| **4. Renderizado en tema oscuro compacto (`1280x720`) y móvil (`390x844`)** | Apertura de `c0-hojas-03` con `theme: 'dark', density: 'compact'` en `1280x720` y de `c0-hojas-04` en viewport móvil `390x844` (`theme: 'light'`). | Cero errores de consola, cero scroll horizontal, temario lateral plegado en botón `Temario T` en móvil y contraste legible en código inline. | Verificado en `W-c0-hojas_c0-hojas-03_cabecera_1280x720_dark.png` y `W-c0-hojas_c0-hojas-04_cabecera_390x844_light.png` con `0` errores de página. |
+| **5. Respuestas falaces deliberadas ante el Tutor IA (`test-tutor-c0-hojas.mjs`)** | Envío de 4 premisas falsas plausibles en `c0-hojas-01..04` (`=SUMA` ignora filtros, promedio de promedios es exacto, `BUSCARX` devuelve todos los duplicados, celdas combinadas heredan el valor en CSV/SQL). | El tutor debe rechazar la premisa falsa en los 4 casos sin dar la razón por complacencia y explicar el mecanismo real con datos de Mercado Brisa. | En las 4 lecciones `agy` (`gemini-3.8-flash-low`) refutó explícitamente la premisa errónea y guio de vuelta a la pregunta de comprobación (ver transcripciones literales en Paso 7). |
 
 ---
 
