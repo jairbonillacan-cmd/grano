@@ -1,0 +1,303 @@
+[
+  {
+    "id": "probabilidad-condicional",
+    "term": "Probabilidad condicional",
+    "englishTerm": "Conditional Probability",
+    "track": "da",
+    "definition": "Probabilidad de que ocurra un evento A sabiendo que otro evento B ya sucedió. Restringe el espacio muestral únicamente a los casos donde B se cumple y evita confundir el riesgo dentro de un segmento con su peso sobre el total de incidentes.",
+    "formula": "P(A | B) = P(A ∩ B) / P(B), con P(B) > 0",
+    "relatedLessons": [
+      "da2-inferencia-01-probabilidad-bayes",
+      "da2-inferencia-02-distribuciones-probabilidad"
+    ],
+    "relatedTerms": [
+      "teorema-de-bayes",
+      "punto-porcentual"
+    ],
+    "sources": [
+      {
+        "title": "NIST/SEMATECH e-Handbook — Basic Probability and Conditional Rules (mpc3521)",
+        "url": "https://www.itl.nist.gov/div898/handbook/mpc/section3/mpc3521.htm",
+        "publisher": "National Institute of Standards and Technology (NIST)",
+        "accessed": "2026-10-29",
+        "supports": "Reglas axiomáticas de probabilidad condicional, conjunta y marginal."
+      }
+    ]
+  },
+  {
+    "id": "teorema-de-bayes",
+    "term": "Teorema de Bayes",
+    "englishTerm": "Bayes' Theorem",
+    "track": "da",
+    "definition": "Regla matemática que actualiza la probabilidad previa (tasa base) de una hipótesis A tras observar nueva evidencia B. Combina la verosimilitud de la señal con la frecuencia previa del evento para calcular el valor predictivo positivo real de una alerta.",
+    "formula": "P(A | B) = [P(B | A) · P(A)] / [P(B | A)·P(A) + P(B | ¬A)·P(¬A)]",
+    "relatedLessons": [
+      "da2-inferencia-01-probabilidad-bayes",
+      "da2-inferencia-06-errores-potencia-tamano-muestra"
+    ],
+    "relatedTerms": [
+      "probabilidad-condicional",
+      "potencia-estadistica"
+    ],
+    "sources": [
+      {
+        "title": "Stanford Encyclopedia of Philosophy — Bayes' Theorem",
+        "url": "https://plato.stanford.edu/entries/bayes-theorem/",
+        "publisher": "Stanford University",
+        "accessed": "2026-10-29",
+        "supports": "Formulación del teorema de Bayes, tasa base previa y actualización posterior."
+      }
+    ]
+  },
+  {
+    "id": "distribucion-poisson",
+    "term": "Distribución de Poisson",
+    "englishTerm": "Poisson Distribution",
+    "track": "da",
+    "definition": "Distribución de probabilidad discreta que modela el número de eventos independientes que ocurren en un intervalo fijo de tiempo, espacio o volumen de operaciones a una tasa media constante lambda, como devoluciones por día o caídas de pasarela por hora.",
+    "formula": "P(X = k) = (λ^k · e^(-λ)) / k!, donde E[X] = Var(X) = λ",
+    "relatedLessons": [
+      "da2-inferencia-02-distribuciones-probabilidad",
+      "da2-inferencia-03-muestreo-tlc-error-estandar"
+    ],
+    "relatedTerms": [
+      "distribucion-log-normal",
+      "probabilidad-condicional"
+    ],
+    "sources": [
+      {
+        "title": "NIST/SEMATECH e-Handbook — Poisson Distribution (eda366j)",
+        "url": "https://www.itl.nist.gov/div898/handbook/eda/section3/eda366j.htm",
+        "publisher": "National Institute of Standards and Technology (NIST)",
+        "accessed": "2026-10-29",
+        "supports": "Función de masa de probabilidad e igualdad entre media y varianza en procesos de Poisson."
+      }
+    ]
+  },
+  {
+    "id": "distribucion-log-normal",
+    "term": "Distribución log-normal",
+    "englishTerm": "Log-normal Distribution",
+    "track": "da",
+    "definition": "Distribución continua de valores estrictamente positivos cuyo logaritmo natural sigue una distribución normal. Modela variables comerciales con cola derecha pronunciada, como el ticket de compra o el gasto acumulado por cliente, evitando proyectar cotas inferiores negativas imposibles.",
+    "formula": "Y = ln(X) ~ Normal(μ_ln, σ_ln²); Mediana(X) = exp(μ_ln)",
+    "relatedLessons": [
+      "da2-inferencia-02-distribuciones-probabilidad",
+      "da2-inferencia-03-muestreo-tlc-error-estandar"
+    ],
+    "relatedTerms": [
+      "distribucion-poisson",
+      "teorema-limite-central"
+    ],
+    "sources": [
+      {
+        "title": "NIST/SEMATECH e-Handbook — Lognormal Distribution (eda3669)",
+        "url": "https://www.itl.nist.gov/div898/handbook/eda/section3/eda3669.htm",
+        "publisher": "National Institute of Standards and Technology (NIST)",
+        "accessed": "2026-10-29",
+        "supports": "Parametrización logarítmica, media geométrica y modelado de colas derechas positivas."
+      }
+    ]
+  },
+  {
+    "id": "teorema-limite-central",
+    "term": "Teorema del límite central",
+    "englishTerm": "Central Limit Theorem (CLT)",
+    "track": "da",
+    "definition": "Principio estadístico que establece que la distribución muestral del promedio de variables independientes con varianza finita converge hacia una distribución normal al crecer el tamaño de muestra, aun cuando los datos individuales originales presenten fuerte asimetría positiva.",
+    "formula": "X̄_n ~ Normal(μ, σ² / n) cuando n es suficientemente grande",
+    "relatedLessons": [
+      "da2-inferencia-03-muestreo-tlc-error-estandar",
+      "da2-inferencia-04-intervalos-confianza"
+    ],
+    "relatedTerms": [
+      "error-estandar",
+      "intervalo-de-confianza"
+    ],
+    "sources": [
+      {
+        "title": "NIST/SEMATECH e-Handbook — Central Limit Theorem (prc14)",
+        "url": "https://www.itl.nist.gov/div898/handbook/prc/section1/prc14.htm",
+        "publisher": "National Institute of Standards and Technology (NIST)",
+        "accessed": "2026-10-29",
+        "supports": "Convergencia asintótica de la media muestral hacia la distribución normal."
+      }
+    ]
+  },
+  {
+    "id": "error-estandar",
+    "term": "Error estándar",
+    "englishTerm": "Standard Error (SE)",
+    "track": "da",
+    "definition": "Desviación estándar de la distribución muestral de un estadístico como la media o la proporción. Mide cuánto fluctuaría el promedio estimado entre muestras repetidas de tamaño n y disminuye en proporción a la raíz cuadrada del tamaño muestral.",
+    "formula": "EE(X̄) = s / √n",
+    "relatedLessons": [
+      "da2-inferencia-03-muestreo-tlc-error-estandar",
+      "da2-inferencia-04-intervalos-confianza",
+      "da2-inferencia-05-pruebas-hipotesis-valor-p"
+    ],
+    "relatedTerms": [
+      "teorema-limite-central",
+      "margen-de-error"
+    ],
+    "sources": [
+      {
+        "title": "NIST/SEMATECH e-Handbook — Confidence Limits for the Mean (eda352)",
+        "url": "https://www.itl.nist.gov/div898/handbook/eda/section3/eda352.htm",
+        "publisher": "National Institute of Standards and Technology (NIST)",
+        "accessed": "2026-10-29",
+        "supports": "Definición y cálculo del error estándar de la media muestral."
+      }
+    ]
+  },
+  {
+    "id": "intervalo-de-confianza",
+    "term": "Intervalo de confianza",
+    "englishTerm": "Confidence Interval (CI)",
+    "track": "da",
+    "definition": "Rango de valores construido a partir de una muestra mediante un procedimiento que, al repetirse sobre múltiples muestras independientes, captura el verdadero parámetro poblacional desconocido en una proporción fija de ocasiones igual al nivel de confianza elegido.",
+    "formula": "IC_(1-α) = [x̄ - z_(1-α/2) · (s / √n), x̄ + z_(1-α/2) · (s / √n)]",
+    "relatedLessons": [
+      "da2-inferencia-04-intervalos-confianza",
+      "da2-inferencia-05-pruebas-hipotesis-valor-p"
+    ],
+    "relatedTerms": [
+      "margen-de-error",
+      "error-estandar"
+    ],
+    "sources": [
+      {
+        "title": "Greenland et al. (2016) — Statistical tests, P values, confidence intervals, and power",
+        "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC5187603/",
+        "publisher": "European Journal of Epidemiology (Springer / PMC)",
+        "accessed": "2026-10-29",
+        "supports": "Interpretación frecuentista rigurosa de intervalos de confianza y prevención de falacias."
+      }
+    ]
+  },
+  {
+    "id": "margen-de-error",
+    "term": "Margen de error",
+    "englishTerm": "Margin of Error (MoE)",
+    "track": "da",
+    "definition": "Semiamplitud de un intervalo de confianza simétrico alrededor de la estimación puntual. Resulta de multiplicar el valor crítico asociado al nivel de confianza deseado por el error estándar del estimador y expresa la precisión de la métrica en sus propias unidades.",
+    "formula": "ME = z_(1-α/2) · EE = 1.96 · (s / √n) para 95 % de confianza",
+    "relatedLessons": [
+      "da2-inferencia-04-intervalos-confianza",
+      "da2-inferencia-06-errores-potencia-tamano-muestra"
+    ],
+    "relatedTerms": [
+      "intervalo-de-confianza",
+      "error-estandar"
+    ],
+    "sources": [
+      {
+        "title": "NIST/SEMATECH e-Handbook — Confidence Limits for the Mean (eda352)",
+        "url": "https://www.itl.nist.gov/div898/handbook/eda/section3/eda352.htm",
+        "publisher": "National Institute of Standards and Technology (NIST)",
+        "accessed": "2026-10-29",
+        "supports": "Construcción del margen de error a partir del cuantil crítico y el error estándar."
+      }
+    ]
+  },
+  {
+    "id": "valor-p",
+    "term": "Valor p",
+    "englishTerm": "p-value",
+    "track": "da",
+    "definition": "Probabilidad, calculada bajo el supuesto de que la hipótesis nula y todos los supuestos del modelo son ciertos, de obtener un estadístico de prueba igual o más extremo que el observado. No representa la probabilidad de que la hipótesis nula sea verdadera.",
+    "formula": "p = P(|T| ≥ |t_obs| | H_0 es verdadera)",
+    "relatedLessons": [
+      "da2-inferencia-05-pruebas-hipotesis-valor-p",
+      "da2-inferencia-06-errores-potencia-tamano-muestra"
+    ],
+    "relatedTerms": [
+      "tamano-del-efecto-cohen",
+      "potencia-estadistica"
+    ],
+    "sources": [
+      {
+        "title": "Wasserstein & Lazar (2016) — The ASA Statement on p-Values",
+        "url": "https://www.amstat.org/asa/files/pdfs/P-ValueStatement.pdf",
+        "publisher": "American Statistical Association (ASA)",
+        "accessed": "2026-10-29",
+        "supports": "Definición oficial del valor p y seis principios contra malinterpretaciones."
+      }
+    ]
+  },
+  {
+    "id": "tamano-del-efecto-cohen",
+    "term": "Tamaño del efecto (d de Cohen)",
+    "englishTerm": "Effect Size (Cohen's d)",
+    "track": "da",
+    "definition": "Medida adimensional de la magnitud práctica de la diferencia entre dos grupos, expresada en unidades de desviación estándar combinada. Permite distinguir si un resultado estadísticamente significativo en muestras masivas tiene relevancia sustantiva o es apenas una fluctuación trivial.",
+    "formula": "d = (x̄_1 - x̄_2) / √[(s_1² + s_2²) / 2]",
+    "relatedLessons": [
+      "da2-inferencia-05-pruebas-hipotesis-valor-p",
+      "da2-inferencia-06-errores-potencia-tamano-muestra"
+    ],
+    "relatedTerms": [
+      "valor-p",
+      "efecto-minimo-detectable"
+    ],
+    "sources": [
+      {
+        "title": "NIST/SEMATECH e-Handbook — Two-Sample t-Test for Equal and Unequal Variances (prc31)",
+        "url": "https://www.itl.nist.gov/div898/handbook/prc/section3/prc31.htm",
+        "publisher": "National Institute of Standards and Technology (NIST)",
+        "accessed": "2026-10-29",
+        "supports": "Contraste de dos medias independientes y estandarización por desviación combinada."
+      }
+    ]
+  },
+  {
+    "id": "potencia-estadistica",
+    "term": "Potencia estadística",
+    "englishTerm": "Statistical Power",
+    "track": "da",
+    "definition": "Probabilidad de que una prueba de hipótesis rechace correctamente la hipótesis nula cuando en la población existe un efecto real de magnitud específica. Equivale al complemento de la tasa de error Tipo II y suele fijarse como mínimo en 80 por ciento.",
+    "formula": "Potencia = 1 - β = P(rechazar H_0 | H_1 es verdadera con efecto Δ)",
+    "relatedLessons": [
+      "da2-inferencia-06-errores-potencia-tamano-muestra",
+      "da2-inferencia-05-pruebas-hipotesis-valor-p"
+    ],
+    "relatedTerms": [
+      "efecto-minimo-detectable",
+      "valor-p"
+    ],
+    "sources": [
+      {
+        "title": "NIST/SEMATECH e-Handbook — Sample Sizes Required (prc22)",
+        "url": "https://www.itl.nist.gov/div898/handbook/prc/section2/prc22.htm",
+        "publisher": "National Institute of Standards and Technology (NIST)",
+        "accessed": "2026-10-29",
+        "supports": "Relación entre error Tipo I, error Tipo II, potencia estadística y tamaño de muestra."
+      }
+    ]
+  },
+  {
+    "id": "efecto-minimo-detectable",
+    "term": "Efecto mínimo detectable (MDE)",
+    "englishTerm": "Minimum Detectable Effect (MDE)",
+    "track": "da",
+    "definition": "Diferencia más pequeña entre tratamiento y control que un diseño experimental puede detectar de forma confiable dado su tamaño de muestra, varianza histórica, nivel de significancia alfa y potencia objetivo. Define el umbral de sensibilidad antes de iniciar la captura de datos.",
+    "formula": "MDE (Δ) = (z_(1-α/2) + z_(1-β)) · σ · √(2 / n)",
+    "relatedLessons": [
+      "da2-inferencia-06-errores-potencia-tamano-muestra",
+      "da2-inferencia-05-pruebas-hipotesis-valor-p"
+    ],
+    "relatedTerms": [
+      "potencia-estadistica",
+      "tamano-del-efecto-cohen"
+    ],
+    "sources": [
+      {
+        "title": "Statsmodels Documentation — TTestIndPower",
+        "url": "https://www.statsmodels.org/stable/generated/statsmodels.stats.power.TTestIndPower.html",
+        "publisher": "Statsmodels Developers",
+        "accessed": "2026-10-29",
+        "supports": "Cálculo del tamaño de muestra y del efecto mínimo detectable en pruebas t de dos muestras."
+      }
+    ]
+  }
+]
