@@ -100,6 +100,23 @@ async function main() {
 
   const seenLessonIds = new Set();
   const seenGlossaryIds = new Set(GLOSSARY_TERMS.map((g) => g.id));
+  const invDir = path.join(ROOT_DIR, 'docs', 'curriculo', 'investigacion');
+  if (fs.existsSync(invDir)) {
+    for (const f of fs.readdirSync(invDir)) {
+      if (f.endsWith('-glossary.json')) {
+        try {
+          const extra = JSON.parse(fs.readFileSync(path.join(invDir, f), 'utf8'));
+          if (Array.isArray(extra)) {
+            for (const g of extra) {
+              if (g && g.id) seenGlossaryIds.add(g.id);
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }
+    }
+  }
   const rows = [];
   const allErrors = [];
   const allWarnings = [];
