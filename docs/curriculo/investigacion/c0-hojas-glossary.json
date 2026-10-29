@@ -1,0 +1,147 @@
+[
+  {
+    "id": "c0-hojas-tabla-estructurada",
+    "term": "Tabla estructurada",
+    "englishTerm": "Structured Table (Excel Table)",
+    "track": "core",
+    "definition": "Rango rectangular de hoja de cálculo con encabezados únicos que expande sus filas automáticamente y propaga fórmulas por columna sin romper referencias.",
+    "formula": "=[@qty]*[@unit_price_usd]-[@discount_usd] -- Ejemplo: TablaPedidos en Excel. Se confunde con: un rango suelto con bordes pintados (A2:F500).",
+    "relatedLessons": [
+      "c0-hojas-01-tablas-referencias",
+      "c0-hojas-02-tablas-dinamicas"
+    ],
+    "relatedTerms": [
+      "c0-hojas-referencia-estructurada",
+      "c0-hojas-tabla-dinamica"
+    ],
+    "sources": [
+      {
+        "title": "Overview of Excel tables",
+        "url": "https://support.microsoft.com/en-us/office/overview-of-excel-tables-7ab0bb7d-3a9e-4b56-a3c9-6c94334e492c",
+        "publisher": "Microsoft Support",
+        "accessed": "2026-10-29",
+        "supports": "Comportamiento de expansión automática de filas y columnas calculadas en tablas estructuradas."
+      }
+    ]
+  },
+  {
+    "id": "c0-hojas-referencia-estructurada",
+    "term": "Referencia estructurada",
+    "englishTerm": "Structured Reference",
+    "track": "core",
+    "definition": "Notación de fórmulas que apunta a tablas y nombres de columna entre corchetes en lugar de usar coordenadas fijas de celdas como C2:C500.",
+    "formula": "=SUMA(TablaPedidos[total_usd]) -- Ejemplo: [@unit_price_usd] para la fila actual. Se confunde con: referencia absoluta por coordenadas ($C$2:$C$500).",
+    "relatedLessons": [
+      "c0-hojas-01-tablas-referencias",
+      "c0-hojas-03-buscarx-cruces"
+    ],
+    "relatedTerms": [
+      "c0-hojas-tabla-estructurada",
+      "c0-hojas-buscarx"
+    ],
+    "sources": [
+      {
+        "title": "Using structured references with Excel tables",
+        "url": "https://support.microsoft.com/en-us/office/using-structured-references-with-excel-tables-f5ed2452-2337-4f71-bed3-c8ae6d2b276e",
+        "publisher": "Microsoft Support",
+        "accessed": "2026-10-29",
+        "supports": "Sintaxis Tabla[Columna] y especificador de fila actual [@Columna] en hojas de cálculo."
+      }
+    ]
+  },
+  {
+    "id": "c0-hojas-tabla-dinamica",
+    "term": "Tabla dinámica",
+    "englishTerm": "PivotTable",
+    "track": "core",
+    "definition": "Resumen interactivo que agrupa filas, cruza categorías en columnas y calcula sumas o conteos en una hoja separada sin modificar los datos originales.",
+    "formula": "Filas = GROUP BY | Valores = SUM() / COUNT() | Filtros = WHERE -- Se confunde con: insertar filas de subtotales manuales dentro de la tabla cruda.",
+    "relatedLessons": [
+      "c0-hojas-02-tablas-dinamicas"
+    ],
+    "relatedTerms": [
+      "c0-hojas-tabla-estructurada",
+      "c01-grain-fanout"
+    ],
+    "sources": [
+      {
+        "title": "Create a PivotTable to analyze worksheet data",
+        "url": "https://support.microsoft.com/en-us/office/create-a-pivottable-to-analyze-worksheet-data-a9a84538-bfe9-40a9-a8e9-f99134456576",
+        "publisher": "Microsoft Support",
+        "accessed": "2026-10-29",
+        "supports": "Estructura de cuatro áreas (Filas, Columnas, Valores y Filtros) para resumir datos tabulares."
+      }
+    ]
+  },
+  {
+    "id": "c0-hojas-buscarx",
+    "term": "BUSCARX (XLOOKUP)",
+    "englishTerm": "XLOOKUP Function",
+    "track": "core",
+    "definition": "Función de búsqueda que localiza una clave en una columna y devuelve el valor correspondiente de otra columna usando coincidencia exacta por defecto.",
+    "formula": "=BUSCARX([@product_id]; TablaProductos[product_id]; TablaProductos[category]; \"Sin catálogo\") -- Se confunde con: BUSCARV (VLOOKUP) con número de columna fijo.",
+    "relatedLessons": [
+      "c0-hojas-03-buscarx-cruces"
+    ],
+    "relatedTerms": [
+      "c0-hojas-referencia-estructurada",
+      "c01-grain-fanout"
+    ],
+    "sources": [
+      {
+        "title": "XLOOKUP function",
+        "url": "https://support.microsoft.com/en-us/office/xlookup-function-b7fd680e-6d10-43e6-84f9-88eae8bf5929",
+        "publisher": "Microsoft Support",
+        "accessed": "2026-10-29",
+        "supports": "Argumentos de XLOOKUP, coincidencia exacta por defecto y retorno de la primera coincidencia."
+      }
+    ]
+  },
+  {
+    "id": "c0-hojas-fecha-iso",
+    "term": "Fecha en formato ISO 8601",
+    "englishTerm": "ISO 8601 Date (YYYY-MM-DD)",
+    "track": "core",
+    "definition": "Estándar internacional que escribe las fechas de mayor a menor unidad (año, mes y día) para eliminar la ambigüedad entre formatos regionales.",
+    "formula": "2025-03-04 (4 de marzo de 2025) -- Ejemplo: order_date en orders. Se confunde con: cadenas ambiguas como 04/03/2025 o 03/04/2025.",
+    "relatedLessons": [
+      "c0-hojas-04-errores-fechas-celdas"
+    ],
+    "relatedTerms": [
+      "c0-hojas-celdas-combinadas"
+    ],
+    "sources": [
+      {
+        "title": "RFC 3339: Date and Time on the Internet: Timestamps (ISO 8601 Profile)",
+        "url": "https://datatracker.ietf.org/doc/html/rfc3339",
+        "publisher": "IETF",
+        "accessed": "2026-10-29",
+        "supports": "Notación estándar YYYY-MM-DD y marcas de tiempo con sufijo de zona horaria explícito."
+      }
+    ]
+  },
+  {
+    "id": "c0-hojas-celdas-combinadas",
+    "term": "Celdas combinadas",
+    "englishTerm": "Merged Cells",
+    "track": "core",
+    "definition": "Unión visual de varias celdas contiguas que conserva únicamente el valor superior izquierdo y convierte el resto del bloque en celdas vacías.",
+    "formula": "COALESCE(postal_code, 'SIN_CODIGO') -- Ejemplo: agrupar visualmente regiones en Excel dejando filas con NULL. Se confunde con: agrupar en tabla dinámica.",
+    "relatedLessons": [
+      "c0-hojas-04-errores-fechas-celdas"
+    ],
+    "relatedTerms": [
+      "c0-hojas-fecha-iso",
+      "c0-hojas-tabla-estructurada"
+    ],
+    "sources": [
+      {
+        "title": "Merge and unmerge cells in Excel",
+        "url": "https://support.microsoft.com/en-us/office/merge-and-unmerge-cells-5cbd15d5-9375-4540-907f-c673a93fcedf",
+        "publisher": "Microsoft Support",
+        "accessed": "2026-10-29",
+        "supports": "Pérdida de valores en celdas secundarias al combinar un rango y pasos para descombinar."
+      }
+    ]
+  }
+]
