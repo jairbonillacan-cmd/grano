@@ -1,0 +1,261 @@
+[
+  {
+    "id": "metrica-canonica",
+    "term": "Métrica canónica",
+    "englishTerm": "Canonical Metric",
+    "track": "bi",
+    "definition": "Definición única, gobernada y auditable de un indicador de negocio dentro de la organización. Especifica sin ambigüedad su fórmula matemática, su grano atómico, sus filtros canónicos de inclusión y exclusión, su ventana temporal de atribución y el responsable de aprobar cambios en su contrato semántico.",
+    "formula": "Contrato = (Fórmula, Grano, Filtros Canónicos, Ventana Temporal, Responsable)",
+    "relatedLessons": [
+      "bi2-metricas-01-anatomia-metrica",
+      "bi2-metricas-02-arboles-kpis-palancas"
+    ],
+    "relatedTerms": [
+      "filtro-canonico",
+      "c01-grain-fanout",
+      "ingreso-neto"
+    ],
+    "sources": [
+      {
+        "title": "dbt Labs — Creating Metrics Overview",
+        "url": "https://docs.getdbt.com/docs/build/metrics-overview",
+        "publisher": "dbt Labs",
+        "accessed": "2026-10-29",
+        "supports": "Definición declarativa de métricas gobernadas en la capa semántica para evitar cálculos divergentes entre tableros."
+      },
+      {
+        "title": "Cube.dev — Measures Reference",
+        "url": "https://cube.dev/docs/product/data-modeling/reference/measures",
+        "publisher": "Cube Dev, Inc.",
+        "accessed": "2026-10-29",
+        "supports": "Especificación de medidas agregadas con tipo de agregación, filtros asociados y propiedad semántica."
+      }
+    ]
+  },
+  {
+    "id": "filtro-canonico",
+    "term": "Filtro canónico",
+    "englishTerm": "Canonical Filter",
+    "track": "bi",
+    "definition": "Condición lógica obligatoria incorporada en la definición semántica de una métrica para acotar qué registros del conjunto de datos pertenecen legítimamente al fenómeno medido. Evita que cada analista aplique criterios distintos sobre estados de pedido, cuentas de prueba o transacciones anuladas.",
+    "formula": "SUM(medida) FILTER (WHERE condicion_canonica)",
+    "relatedLessons": [
+      "bi2-metricas-01-anatomia-metrica",
+      "bi2-metricas-03-metricas-guardia"
+    ],
+    "relatedTerms": [
+      "metrica-canonica",
+      "c02-cte-preagg"
+    ],
+    "sources": [
+      {
+        "title": "dbt Labs — Measures and Filters in MetricFlow",
+        "url": "https://docs.getdbt.com/docs/build/measures",
+        "publisher": "dbt Labs",
+        "accessed": "2026-10-29",
+        "supports": "Inclusión de predicados WHERE obligatorios en la definición de una medida o métrica semántica."
+      },
+      {
+        "title": "DuckDB — FILTER Clause Documentation",
+        "url": "https://duckdb.org/docs/sql/query_syntax/filter.html",
+        "publisher": "DuckDB Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Sintaxis SQL estándar FILTER (WHERE ...) para aislar condiciones por función de agregación."
+      }
+    ]
+  },
+  {
+    "id": "arbol-de-kpis",
+    "term": "Árbol de KPIs",
+    "englishTerm": "KPI Tree / Driver Tree",
+    "track": "bi",
+    "definition": "Estructura jerárquica y matemática que descompone una métrica de resultado de alto nivel en sus componentes causales mediante relaciones aditivas (suma de segmentos o regiones) o multiplicativas (clientes activos por frecuencia por ticket promedio), permitiendo aislar qué palanca explica una variación.",
+    "formula": "Ingreso Neto = Clientes Activos × (Pedidos / Cliente) × (Unidades / Pedido) × (Ingreso Neto / Unidad)",
+    "relatedLessons": [
+      "bi2-metricas-02-arboles-kpis-palancas",
+      "bi2-metricas-04-north-star-goodhart"
+    ],
+    "relatedTerms": [
+      "palanca-operativa",
+      "metrica-rezagada-vs-adelantada",
+      "ingreso-neto"
+    ],
+    "sources": [
+      {
+        "title": "dbt Labs — dbt Semantic Layer",
+        "url": "https://docs.getdbt.com/docs/use-dbt-semantic-layer/dbt-sl",
+        "publisher": "dbt Labs",
+        "accessed": "2026-10-29",
+        "supports": "Composición jerárquica de métricas derivadas y de razón sobre medidas atómicas consistentes."
+      },
+      {
+        "title": "Cube.dev — Data Modeling Concepts",
+        "url": "https://cube.dev/docs/product/data-modeling/concepts",
+        "publisher": "Cube Dev, Inc.",
+        "accessed": "2026-10-29",
+        "supports": "Descomposición de medidas de negocio por dimensiones conformadas y factores operativos."
+      }
+    ]
+  },
+  {
+    "id": "palanca-operativa",
+    "term": "Palanca operativa",
+    "englishTerm": "Operational Lever / Input Driver",
+    "track": "bi",
+    "definition": "Nodo hoja o intermedio de un árbol de KPIs sobre el cual un equipo de producto, operaciones o marketing puede intervenir directamente mediante una iniciativa concreta, como aumentar las unidades por carrito o reducir los días de entrega, para mover un resultado financiero.",
+    "formula": "Δ Resultado ≈ Sensibilidad × Δ Palanca Operativa",
+    "relatedLessons": [
+      "bi2-metricas-02-arboles-kpis-palancas",
+      "bi2-metricas-04-north-star-goodhart"
+    ],
+    "relatedTerms": [
+      "arbol-de-kpis",
+      "metrica-rezagada-vs-adelantada"
+    ],
+    "sources": [
+      {
+        "title": "Amplitude — Funnel Analysis Interpretation",
+        "url": "https://amplitude.com/docs/analytics/charts/funnel-analysis/funnel-analysis-interpret",
+        "publisher": "Amplitude",
+        "accessed": "2026-10-29",
+        "supports": "Identificación de factores de conversión y frecuencia accionables por equipos de producto."
+      },
+      {
+        "title": "Kimball Group — Conformed Dimensions",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/conformed-dimension/",
+        "publisher": "Kimball Group",
+        "accessed": "2026-10-29",
+        "supports": "Desglose consistente de indicadores operativos a través de dimensiones compartidas."
+      }
+    ]
+  },
+  {
+    "id": "metrica-rezagada-vs-adelantada",
+    "term": "Métrica rezagada vs. adelantada",
+    "englishTerm": "Lagging vs. Leading Metric",
+    "track": "bi",
+    "definition": "Contraste temporal y causal entre un indicador rezagado, que confirma el resultado acumulado al cierre de un ciclo (como el margen trimestral o la retención anual), y un indicador adelantado, que mide conductas tempranas capaces de predecir y modificar ese resultado a tiempo.",
+    "formula": "Palanca Adelantada (t) → Métrica de Resultado Rezagada (t + Δt)",
+    "relatedLessons": [
+      "bi2-metricas-02-arboles-kpis-palancas",
+      "bi2-metricas-04-north-star-goodhart"
+    ],
+    "relatedTerms": [
+      "arbol-de-kpis",
+      "palanca-operativa"
+    ],
+    "sources": [
+      {
+        "title": "Kohavi, Tang & Xu — Trustworthy Online Controlled Experiments",
+        "url": "https://experimentguide.com/",
+        "publisher": "Cambridge University Press",
+        "accessed": "2026-10-29",
+        "supports": "Distinción entre métricas de resultado a largo plazo e indicadores tempranos sensibles en evaluación de iniciativas."
+      },
+      {
+        "title": "Amplitude — Funnel Analysis Interpretation",
+        "url": "https://amplitude.com/docs/analytics/charts/funnel-analysis/funnel-analysis-interpret",
+        "publisher": "Amplitude",
+        "accessed": "2026-10-29",
+        "supports": "Relación entre comportamientos tempranos del usuario y resultados de conversión y retención."
+      }
+    ]
+  },
+  {
+    "id": "umbral-de-guardia",
+    "term": "Umbral de guardia",
+    "englishTerm": "Guardrail Threshold",
+    "track": "bi",
+    "definition": "Límite numérico explícito asignado a una métrica guardia que actúa como condición de veto operativo o experimental. Si una campaña o experimento cruza este umbral en devoluciones, margen neto o desbalance muestral (SRM), el despliegue se detiene aunque la métrica primaria mejore.",
+    "formula": "Decisión = Lanzar SI (Métrica Primaria > Meta) Y (Métrica Guardia ≤ Umbral Máximo)",
+    "relatedLessons": [
+      "bi2-metricas-03-metricas-guardia",
+      "bi2-metricas-04-north-star-goodhart"
+    ],
+    "relatedTerms": [
+      "filtro-canonico",
+      "ley-de-goodhart"
+    ],
+    "sources": [
+      {
+        "title": "Kohavi, Tang & Xu — Trustworthy Online Controlled Experiments",
+        "url": "https://experimentguide.com/",
+        "publisher": "Cambridge University Press",
+        "accessed": "2026-10-29",
+        "supports": "Uso de métricas guardia organizacionales y de confiabilidad muestral (SRM) con umbrales de bloqueo."
+      },
+      {
+        "title": "dbt Labs — Measures Documentation",
+        "url": "https://docs.getdbt.com/docs/build/measures",
+        "publisher": "dbt Labs",
+        "accessed": "2026-10-29",
+        "supports": "Definición consistente de medidas de control y calidad junto con indicadores de volumen."
+      }
+    ]
+  },
+  {
+    "id": "metrica-estrella-polar",
+    "term": "Métrica Estrella Polar",
+    "englishTerm": "North Star Metric (NSM)",
+    "track": "bi",
+    "definition": "Indicador compuesto que captura el punto de encuentro entre el valor real recibido por el cliente y la sostenibilidad económica de la empresa. Alinea a producto, operaciones y crecimiento alrededor de unidades de valor completadas y sin defectos, en lugar de ingresos brutos aislados.",
+    "formula": "NSM = Pedidos Completados con Valor Entregado (status = 'completed' Y devuelto_usd = 0)",
+    "relatedLessons": [
+      "bi2-metricas-04-north-star-goodhart",
+      "bi2-metricas-02-arboles-kpis-palancas"
+    ],
+    "relatedTerms": [
+      "ley-de-goodhart",
+      "umbral-de-guardia",
+      "arbol-de-kpis"
+    ],
+    "sources": [
+      {
+        "title": "Amplitude — Product Analytics & Funnel Interpretation",
+        "url": "https://amplitude.com/docs/analytics/charts/funnel-analysis/funnel-analysis-interpret",
+        "publisher": "Amplitude",
+        "accessed": "2026-10-29",
+        "supports": "Diseño de métricas centradas en valor entregado al usuario y su desglose en métricas de entrada."
+      },
+      {
+        "title": "dbt Labs — Semantic Models Governance",
+        "url": "https://docs.getdbt.com/docs/build/semantic-models",
+        "publisher": "dbt Labs",
+        "accessed": "2026-10-29",
+        "supports": "Gobernanza de indicadores compuestos dentro del modelo semántico empresarial."
+      }
+    ]
+  },
+  {
+    "id": "ley-de-goodhart",
+    "term": "Ley de Goodhart",
+    "englishTerm": "Goodhart's Law",
+    "track": "bi",
+    "definition": "Principio formulado por el economista Charles Goodhart según el cual toda regularidad estadística o métrica tiende a colapsar cuando se utiliza como meta de control o incentivo único, pues los equipos optimizan el indicador superficial a costa del objetivo real del negocio.",
+    "formula": "Si Meta = Maximizar(Indicador Aislado) sin Guardias ⇒ Correlación(Indicador, Valor Real) → 0",
+    "relatedLessons": [
+      "bi2-metricas-04-north-star-goodhart",
+      "bi2-metricas-03-metricas-guardia"
+    ],
+    "relatedTerms": [
+      "metrica-estrella-polar",
+      "umbral-de-guardia"
+    ],
+    "sources": [
+      {
+        "title": "Goodhart's Law — Historical Formulation and Strathern's Restatement",
+        "url": "https://en.wikipedia.org/wiki/Goodhart%27s_law",
+        "publisher": "Wikipedia / Monetary History Reference",
+        "accessed": "2026-10-29",
+        "supports": "Formulación original de Charles Goodhart (1975) y síntesis de Marilyn Strathern (1997) sobre distorsión de metas."
+      },
+      {
+        "title": "Kohavi, Tang & Xu — Trustworthy Online Controlled Experiments",
+        "url": "https://experimentguide.com/",
+        "publisher": "Cambridge University Press",
+        "accessed": "2026-10-29",
+        "supports": "Prevención de incentivos perversos combinando métricas objetivo con métricas guardia."
+      }
+    ]
+  }
+]
