@@ -1,0 +1,151 @@
+[
+  {
+    "id": "bi2-dax-contexto-evaluacion",
+    "term": "Contexto de fila y contexto de filtro en DAX",
+    "englishTerm": "Row Context & Filter Context",
+    "track": "bi",
+    "definition": "Los dos entornos que determinan el valor de una fórmula DAX. El contexto de fila identifica el registro actual al iterar una tabla, pero no propaga filtros por las relaciones; se confunde con el contexto de filtro, que restringe las filas activas del modelo antes de agregar una medida.",
+    "formula": "Costo Directo USD = SUMX( order_items, order_items[qty] * RELATED( products[unit_cost_usd] ) )",
+    "relatedLessons": [
+      "bi2-dax-01-contexto-fila-filtro",
+      "bi2-dax-02-calculate-transicion-contexto"
+    ],
+    "relatedTerms": [
+      "bi2-dax-calculate-transicion",
+      "bi2-dax-funciones-iteradoras"
+    ],
+    "sources": [
+      {
+        "title": "Microsoft Learn — Context in DAX Formulas (Row Context and Filter Context)",
+        "url": "https://learn.microsoft.com/en-us/dax/dax-overview#context",
+        "publisher": "Microsoft Learn",
+        "accessed": "2026-10-29",
+        "supports": "Definición y separación semántica entre el contexto de fila y el contexto de filtro en DAX."
+      }
+    ]
+  },
+  {
+    "id": "bi2-dax-calculate-transicion",
+    "term": "Función CALCULATE y transición de contexto",
+    "englishTerm": "CALCULATE & Context Transition",
+    "track": "bi",
+    "definition": "CALCULATE evalúa una expresión dentro de un contexto de filtro modificado por sus argumentos. Cuando se invoca dentro de un contexto de fila, ejecuta la transición de contexto convirtiendo los valores de la fila actual en un filtro equivalente. Se confunde con FILTER, que es un iterador de tabla.",
+    "formula": "Ventas Desktop USD = CALCULATE( [Ventas Completadas USD], orders[device_type] = \"desktop\" )",
+    "relatedLessons": [
+      "bi2-dax-02-calculate-transicion-contexto",
+      "bi2-dax-01-contexto-fila-filtro"
+    ],
+    "relatedTerms": [
+      "bi2-dax-contexto-evaluacion",
+      "bi2-dax-modificadores-filtro"
+    ],
+    "sources": [
+      {
+        "title": "Microsoft Learn — CALCULATE Function (DAX)",
+        "url": "https://learn.microsoft.com/en-us/dax/calculate-function-dax",
+        "publisher": "Microsoft Learn",
+        "accessed": "2026-10-29",
+        "supports": "Orden de evaluación de CALCULATE, modificación de filtros y transición automática de contexto."
+      }
+    ]
+  },
+  {
+    "id": "bi2-dax-modificadores-filtro",
+    "term": "Modificadores de filtro (REMOVEFILTERS, ALL y KEEPFILTERS)",
+    "englishTerm": "Filter Modifiers (REMOVEFILTERS / ALL / KEEPFILTERS)",
+    "track": "bi",
+    "definition": "Funciones que controlan cómo CALCULATE altera el contexto de filtro existente. REMOVEFILTERS y ALL limpian los filtros de una tabla o columna para calcular denominadores globales; se confunden con KEEPFILTERS, que intersecta el nuevo predicado con el filtro externo en lugar de sobrescribirlo.",
+    "formula": "Participacion Region % = DIVIDE( [Ventas Completadas USD], CALCULATE( [Ventas Completadas USD], REMOVEFILTERS( stores[region] ) ) )",
+    "relatedLessons": [
+      "bi2-dax-02-calculate-transicion-contexto",
+      "bi2-dax-04-funciones-iteradoras"
+    ],
+    "relatedTerms": [
+      "bi2-dax-calculate-transicion",
+      "bi2-dax-funciones-iteradoras"
+    ],
+    "sources": [
+      {
+        "title": "Microsoft Learn — REMOVEFILTERS and KEEPFILTERS Functions (DAX)",
+        "url": "https://learn.microsoft.com/en-us/dax/removefilters-function-dax",
+        "publisher": "Microsoft Learn",
+        "accessed": "2026-10-29",
+        "supports": "Eliminación de filtros con REMOVEFILTERS y preservación de intersección con KEEPFILTERS."
+      }
+    ]
+  },
+  {
+    "id": "bi2-dax-inteligencia-tiempo",
+    "term": "Inteligencia de tiempo y comparativa a días equivalentes",
+    "englishTerm": "Time Intelligence (YTD, SAMEPERIODLASTYEAR & DATESINPERIOD)",
+    "track": "bi",
+    "definition": "Conjunto de patrones DAX que desplazan o acumulan ventanas de fechas sobre una dimensión calendario continua (`TOTALYTD`, `SAMEPERIODLASTYEAR`, `DATESINPERIOD`). Se confunde comparar un año en curso incompleto contra el año previo entero con la comparativa a días equivalentes, que acota ambos periodos hasta la última fecha con ventas.",
+    "formula": "Ventas YTD USD = TOTALYTD( [Ventas Completadas USD], 'calendar'[calendar_date] )",
+    "relatedLessons": [
+      "bi2-dax-03-inteligencia-tiempo"
+    ],
+    "relatedTerms": [
+      "bi2-dax-calculate-transicion",
+      "bi2-dax-variables-divide"
+    ],
+    "sources": [
+      {
+        "title": "Microsoft Learn — Time Intelligence Functions (DAX)",
+        "url": "https://learn.microsoft.com/en-us/dax/time-intelligence-functions-dax",
+        "publisher": "Microsoft Learn",
+        "accessed": "2026-10-29",
+        "supports": "Requisitos de tabla de fechas contigua y desplazamiento de intervalos con funciones de tiempo."
+      }
+    ]
+  },
+  {
+    "id": "bi2-dax-funciones-iteradoras",
+    "term": "Funciones iteradoras en DAX (SUMX, AVERAGEX y RANKX)",
+    "englishTerm": "Iterator Functions (SUMX / AVERAGEX / RANKX)",
+    "track": "bi",
+    "definition": "Funciones que recorren una tabla física o virtual fila por fila, evalúan una expresión en ese contexto de fila y luego agregan o clasifican los resultados. `AVERAGEX(VALUES('calendar'[month]), [Ventas USD])` promedia los totales mensuales; se confunde con `AVERAGE(orders[total_usd])`, que promedia pedidos individuales.",
+    "formula": "Promedio Mensual USD = AVERAGEX( VALUES( 'calendar'[month] ), [Ventas Completadas USD] )",
+    "relatedLessons": [
+      "bi2-dax-04-funciones-iteradoras",
+      "bi2-dax-06-antipatrones-rendimiento-dax"
+    ],
+    "relatedTerms": [
+      "bi2-dax-contexto-evaluacion",
+      "bi2-dax-modificadores-filtro"
+    ],
+    "sources": [
+      {
+        "title": "Microsoft Learn — SUMX, AVERAGEX and RANKX Functions (DAX)",
+        "url": "https://learn.microsoft.com/en-us/dax/averagex-function-dax",
+        "publisher": "Microsoft Learn",
+        "accessed": "2026-10-29",
+        "supports": "Evaluación fila a fila sobre tablas y granularidades virtuales con iteradores DAX."
+      }
+    ]
+  },
+  {
+    "id": "bi2-dax-variables-divide",
+    "term": "Variables inmutables (VAR / RETURN) y función DIVIDE",
+    "englishTerm": "DAX Variables (VAR / RETURN) & Safe Division (DIVIDE)",
+    "track": "bi",
+    "definition": "VAR almacena el resultado de una expresión evaluada una sola vez en el contexto donde se declara, evitando recalcular subárboles repetidos. Se confunde con una macro que reevalúa el filtro después. DIVIDE resuelve cocientes devolviendo BLANK o un valor alternativo cuando el denominador es cero.",
+    "formula": "Margen Neto % = VAR _Neto = [Ingreso Neto USD] VAR _Costo = [Costo Directo USD] RETURN DIVIDE( _Neto - _Costo, _Neto )",
+    "relatedLessons": [
+      "bi2-dax-05-variables-divide-formato",
+      "bi2-dax-06-antipatrones-rendimiento-dax"
+    ],
+    "relatedTerms": [
+      "bi2-dax-calculate-transicion",
+      "bi2-dax-inteligencia-tiempo"
+    ],
+    "sources": [
+      {
+        "title": "Microsoft Learn — Use variables to improve your DAX formulas",
+        "url": "https://learn.microsoft.com/en-us/dax/best-practices/dax-variables",
+        "publisher": "Microsoft Learn",
+        "accessed": "2026-10-29",
+        "supports": "Evaluación única de variables VAR en su contexto de definición y mejora de legibilidad."
+      }
+    ]
+  }
+]
