@@ -1,0 +1,195 @@
+[
+  {
+    "id": "ingreso-neto",
+    "term": "Ingreso bruto frente a ingreso neto",
+    "englishTerm": "Gross Revenue vs. Net Revenue (IFRS 15 / ASC 606)",
+    "track": "core",
+    "definition": "El ingreso bruto suma el valor de los bienes vendidos antes de deducciones. El ingreso neto resta los descuentos comerciales y las devoluciones procesadas sobre pedidos efectivamente entregados, excluyendo siempre los impuestos recaudados para el fisco. Es la base real sobre la que se mide la rentabilidad.",
+    "formula": "ingreso_neto_usd = SUM(subtotal_usd - discount_usd - COALESCE(devoluciones_usd, 0))",
+    "relatedLessons": [
+      "c0-negocio-01-ingreso-costo-margen"
+    ],
+    "relatedTerms": [
+      "margen-bruto",
+      "c01-grain-fanout"
+    ],
+    "sources": [
+      {
+        "title": "IFRS 15 Revenue from Contracts with Customers",
+        "url": "https://www.ifrs.org/issued-standards/list-of-standards/ifrs-15-revenue-from-contracts-with-customers/",
+        "publisher": "IFRS Foundation / IASB",
+        "accessed": "2026-10-29",
+        "supports": "Reconocimiento de ingresos netos de descuentos, devoluciones e impuestos recaudados por cuenta de terceros."
+      }
+    ]
+  },
+  {
+    "id": "margen-bruto",
+    "term": "Margen bruto y costo directo (COGS)",
+    "englishTerm": "Gross Margin & Cost of Goods Sold (Non-Additive Ratio)",
+    "track": "core",
+    "definition": "El costo directo (COGS) es lo que cuesta fabricar o adquirir los productos vendidos. El margen bruto en dinero es el ingreso neto menos ese costo directo. Expresado en porcentaje, es una métrica no aditiva: se calcula dividiendo la suma del margen entre la suma del ingreso.",
+    "formula": "margen_bruto_pct = SUM(ingreso_neto_usd - costo_directo_usd) * 100.0 / SUM(ingreso_neto_usd)",
+    "relatedLessons": [
+      "c0-negocio-01-ingreso-costo-margen"
+    ],
+    "relatedTerms": [
+      "ingreso-neto",
+      "c09-non-additive-simpson"
+    ],
+    "sources": [
+      {
+        "title": "Additive, Semi-Additive, and Non-Additive Facts",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/additive-semi-additive-non-additive-facts/",
+        "publisher": "Kimball Group",
+        "accessed": "2026-10-29",
+        "supports": "Regla de agregación de razones y márgenes porcentuales mediante la suma del numerador entre la suma del denominador."
+      }
+    ]
+  },
+  {
+    "id": "embudo-conversion",
+    "term": "Embudo de conversión",
+    "englishTerm": "Conversion Funnel (Product & Marketing Analytics)",
+    "track": "core",
+    "definition": "Secuencia ordenada de etapas que recorre una persona desde el primer contacto hasta completar una acción objetivo, como pagar y recibir un pedido. Exige contar entidades únicas (sesiones, clientes o pedidos con COUNT DISTINCT) para evitar que los eventos repetidos o reintentos distorsionen los porcentajes.",
+    "formula": "conversion_global_pct = COUNT(DISTINCT id_paso_final) * 100.0 / COUNT(DISTINCT id_paso_inicial)",
+    "relatedLessons": [
+      "c0-negocio-02-embudos-conversion"
+    ],
+    "relatedTerms": [
+      "tasa-caida-dropoff",
+      "kpi-vs-metrica-vanidad"
+    ],
+    "sources": [
+      {
+        "title": "Interpret your Funnel Analysis: Conversion Rate, Drop-off & Time to Convert",
+        "url": "https://amplitude.com/docs/analytics/charts/funnel-analysis/funnel-analysis-interpret",
+        "publisher": "Amplitude Documentation",
+        "accessed": "2026-10-29",
+        "supports": "Cálculo de conversión acumulada y por etapa sobre unidades únicas de análisis."
+      }
+    ]
+  },
+  {
+    "id": "tasa-caida-dropoff",
+    "term": "Tasa de caída y conversión paso a paso",
+    "englishTerm": "Step Conversion & Drop-off Rate",
+    "track": "core",
+    "definition": "La conversión paso a paso mide qué porcentaje de quienes alcanzaron una etapa avanzan a la inmediata siguiente. Su complemento a cien es la tasa de caída (drop-off), que localiza el cuello de botella exacto donde se pierden usuarios o pedidos dentro del flujo operativo.",
+    "formula": "dropoff_paso_k_pct = 100.0 - (entidades_paso_k * 100.0 / entidades_paso_k_menos_1)",
+    "relatedLessons": [
+      "c0-negocio-02-embudos-conversion"
+    ],
+    "relatedTerms": [
+      "embudo-conversion",
+      "umbral-decision"
+    ],
+    "sources": [
+      {
+        "title": "GA4 Funnel Exploration: Open vs. Closed Funnels",
+        "url": "https://support.google.com/analytics/answer/9327974",
+        "publisher": "Google Analytics Help",
+        "accessed": "2026-10-29",
+        "supports": "Medición de tasas de continuación y abandono entre pasos consecutivos de un embudo."
+      }
+    ]
+  },
+  {
+    "id": "kpi-vs-metrica-vanidad",
+    "term": "Indicador de desempeño (KPI) frente a métrica de vanidad",
+    "englishTerm": "Key Performance Indicator (KPI) vs. Vanity Metric",
+    "track": "core",
+    "definition": "Una métrica de vanidad acumula volumen bruto (impresiones, clics o registros históricos) y aparenta éxito aunque el negocio pierda dinero. Un KPI mide el progreso hacia un objetivo operativo mediante una fórmula con denominador claro, grano explícito, ventana temporal, responsable y umbral de acción.",
+    "formula": "cpa_usd = SUM(spend_usd) / SUM(attributed_conversions)",
+    "relatedLessons": [
+      "c0-negocio-03-kpi-metrica-vanidad"
+    ],
+    "relatedTerms": [
+      "metrica-guardia",
+      "ingreso-neto"
+    ],
+    "sources": [
+      {
+        "title": "Key Performance Indicators: Developing, Implementing, and Using Winning KPIs (4th Edition)",
+        "url": "https://www.wiley.com/en-us/Key+Performance+Indicators+%28KPI%29%3A+Developing%2C+Implementing%2C+and+Using+Winning+KPIs%2C+4th+Edition-p-9781119620778",
+        "publisher": "John Wiley & Sons (David Parmenter)",
+        "accessed": "2026-10-29",
+        "supports": "Criterios para distinguir un KPI accionable de un contador de volumen sin contexto."
+      }
+    ]
+  },
+  {
+    "id": "metrica-guardia",
+    "term": "Métrica guardia",
+    "englishTerm": "Guardrail Metric",
+    "track": "core",
+    "definition": "Indicador de control que acompaña a un KPI principal para vigilar que perseguir una meta de crecimiento no deteriore la salud del negocio. Por ejemplo, al optimizar las ventas de una campaña promocional, la tasa de reembolso y el margen bruto actúan como métricas guardia.",
+    "formula": "tasa_reembolso_pct = SUM(devuelto_usd) * 100.0 / SUM(subtotal_usd - discount_usd)",
+    "relatedLessons": [
+      "c0-negocio-03-kpi-metrica-vanidad",
+      "c0-negocio-04-pregunta-a-decision"
+    ],
+    "relatedTerms": [
+      "kpi-vs-metrica-vanidad",
+      "umbral-decision"
+    ],
+    "sources": [
+      {
+        "title": "Trustworthy Online Controlled Experiments: A Practical Guide to A/B Testing",
+        "url": "https://experimentguide.com/",
+        "publisher": "Cambridge University Press (Kohavi, Tang & Xu)",
+        "accessed": "2026-10-29",
+        "supports": "Diseño de métricas guardia para proteger márgenes, calidad y experiencia del usuario al optimizar un indicador."
+      }
+    ]
+  },
+  {
+    "id": "hipotesis-refutable",
+    "term": "Hipótesis de negocio refutable",
+    "englishTerm": "Refutable Business Hypothesis (CRISP-DM)",
+    "track": "core",
+    "definition": "Afirmación cuantitativa y específica que traduce una duda vaga en una comprobación que los datos pueden confirmar o desmentir. Incluye la palanca o segmento evaluado, la métrica afectada, la dirección del cambio esperado y el corte de comparación antes de ejecutar la consulta.",
+    "formula": "Si aplicamos [palanca] en [segmento], entonces [métrica] cambiará en al menos [delta]",
+    "relatedLessons": [
+      "c0-negocio-04-pregunta-a-decision"
+    ],
+    "relatedTerms": [
+      "umbral-decision",
+      "metrica-guardia"
+    ],
+    "sources": [
+      {
+        "title": "CRISP-DM 1.0 Guide — Phase 1: Business Understanding",
+        "url": "https://www.ibm.com/docs/en/spss-modeler/saas?topic=dm-crisp-help-overview",
+        "publisher": "IBM Documentation / CRISP-DM Consortium",
+        "accessed": "2026-10-29",
+        "supports": "Traducción de objetivos de negocio ambiguos en preguntas analíticas verificables con criterios de éxito."
+      }
+    ]
+  },
+  {
+    "id": "umbral-decision",
+    "term": "Umbral de decisión",
+    "englishTerm": "Decision Threshold & Action Rule",
+    "track": "core",
+    "definition": "Valor numérico acordado antes de mirar el reporte que separa dos cursos de acción distintos. Evita que un equipo adapte su interpretación a conveniencia después de conocer el resultado y conecta directamente el número obtenido en SQL con una decisión operativa concreta.",
+    "formula": "CASE WHEN margen_con_descuento >= margen_sin_descuento THEN 'Mantener' ELSE 'Retirar' END",
+    "relatedLessons": [
+      "c0-negocio-04-pregunta-a-decision"
+    ],
+    "relatedTerms": [
+      "hipotesis-refutable",
+      "kpi-vs-metrica-vanidad"
+    ],
+    "sources": [
+      {
+        "title": "Trustworthy Online Controlled Experiments: A Practical Guide to A/B Testing",
+        "url": "https://experimentguide.com/",
+        "publisher": "Cambridge University Press (Kohavi, Tang & Xu)",
+        "accessed": "2026-10-29",
+        "supports": "Fijación previa de reglas y umbrales de lanzamiento para tomar decisiones objetivas basadas en datos."
+      }
+    ]
+  }
+]
