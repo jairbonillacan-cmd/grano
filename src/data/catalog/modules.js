@@ -127,11 +127,11 @@ function mod(id, track, level, title, goal, prerequisites, lessons, projectSpec)
       };
     }
     return {
-      id: plannedId,
+      id: entry.id || plannedId,
       order,
       title: entry.title,
       minutes: entry.minutes || 20,
-      status: 'planned',
+      status: entry.status || 'planned',
     };
   });
 

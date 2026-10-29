@@ -1,55 +1,61 @@
 import { MODULES as CATALOG_MODULES } from '../catalog/modules.js';
 import { LEARNING_STAGES, ROLE_META } from '../learningPath2026.js';
 
-import l1 from './c1-sql-joins/c1-sql-joins-02-grano-fanout.js';
-import l2 from './c2-sql-analitico/c2-sql-analitico-01-window-functions.js';
-import l3 from './c2-sql-analitico/c2-sql-analitico-02-asof-lateral-ctes.js';
-import l4 from './c2-dimensional/c2-dimensional-02-star-schema-obt.js';
-import l5 from './c2-dimensional/c2-dimensional-03-scd2-history.js';
-import l6 from './c2-dimensional/c2-dimensional-04-metrics-simpson.js';
-import l7 from './de2-formatos/de2-formatos-01-columnar-parquet.js';
-import l8 from './de2-formatos/de2-formatos-02-arrow-lance-vortex.js';
-import l9 from './de2-formatos/de2-formatos-03-duckdb-polars-marimo.js';
-import l10 from './de3-lakehouse/de3-lakehouse-01-iceberg-v3-medallion.js';
-import l11 from './de3-transformacion/de3-transformacion-01-dbt-sqlmesh-dag.js';
-import l12 from './de3-transformacion/de3-transformacion-03-contracts-semantic-layer.js';
-import l13 from './da3-producto/da3-producto-02-cohorts-retention-ltv.js';
-import l14 from './da3-experimentos/da3-experimentos-01-ab-testing-cuped.js';
-import l15 from './bi3-dashboards/bi3-dashboards-01-bi-tufte-code.js';
-import l16 from './de4-streaming/de4-streaming-01-cdc-kafka-streaming.js';
-import l17 from './de4-streaming/de4-streaming-03-flink-watermarks-mv.js';
-import l18 from './x4-ia-datos/x4-ia-datos-01-mcp-semantic-ai-rag.js';
+import lesson_1 from './c1-sql-joins/c1-sql-joins-02-grano-fanout.js';
+import lesson_2 from './c2-sql-analitico/c2-sql-analitico-01-window-functions.js';
+import lesson_3 from './c2-sql-analitico/c2-sql-analitico-02-asof-lateral-ctes.js';
+import lesson_4 from './c2-dimensional/c2-dimensional-02-star-schema-obt.js';
+import lesson_5 from './c2-dimensional/c2-dimensional-03-scd2-history.js';
+import lesson_6 from './c2-dimensional/c2-dimensional-04-metrics-simpson.js';
+import lesson_7 from './de2-formatos/de2-formatos-01-columnar-parquet.js';
+import lesson_8 from './de2-formatos/de2-formatos-02-arrow-lance-vortex.js';
+import lesson_9 from './de2-formatos/de2-formatos-03-duckdb-polars-marimo.js';
+import lesson_10 from './de3-lakehouse/de3-lakehouse-01-iceberg-v3-medallion.js';
+import lesson_11 from './de3-transformacion/de3-transformacion-01-dbt-sqlmesh-dag.js';
+import lesson_12 from './de3-transformacion/de3-transformacion-03-contracts-semantic-layer.js';
+import lesson_13 from './da3-producto/da3-producto-02-cohorts-retention-ltv.js';
+import lesson_14 from './da3-experimentos/da3-experimentos-01-ab-testing-cuped.js';
+import lesson_15 from './bi3-dashboards/bi3-dashboards-01-bi-tufte-code.js';
+import lesson_16 from './de4-streaming/de4-streaming-01-cdc-kafka-streaming.js';
+import lesson_17 from './de4-streaming/de4-streaming-03-flink-watermarks-mv.js';
+import lesson_18 from './x4-ia-datos/x4-ia-datos-01-mcp-semantic-ai-rag.js';
 
 export const LESSONS_V2 = [
-  l1,
-  l2,
-  l3,
-  l4,
-  l5,
-  l6,
-  l7,
-  l8,
-  l9,
-  l10,
-  l11,
-  l12,
-  l13,
-  l14,
-  l15,
-  l16,
-  l17,
-  l18,
+  lesson_1,
+  lesson_2,
+  lesson_3,
+  lesson_4,
+  lesson_5,
+  lesson_6,
+  lesson_7,
+  lesson_8,
+  lesson_9,
+  lesson_10,
+  lesson_11,
+  lesson_12,
+  lesson_13,
+  lesson_14,
+  lesson_15,
+  lesson_16,
+  lesson_17,
+  lesson_18,
 ];
 
 /**
- * Índice por ID que resuelve tanto el id v2 (`c1-sql-joins-02-grano-fanout`)
- * como el legacyId (`l1-joins-fanout`).
+ * Índice por ID que resuelve el id v2, el legacyId (si existe)
+ * y el id corto de catálogo (<moduleId>-<01..99>).
  */
 export const LESSONS_BY_ID = Object.fromEntries(
   LESSONS_V2.flatMap((lesson) => {
     const entries = [[lesson.id, lesson]];
     if (lesson.legacyId) {
       entries.push([lesson.legacyId, lesson]);
+    }
+    if (lesson.moduleId && typeof lesson.order === 'number') {
+      const catalogKey = `${lesson.moduleId}-${String(lesson.order).padStart(2, '0')}`;
+      if (catalogKey !== lesson.id) {
+        entries.push([catalogKey, lesson]);
+      }
     }
     return entries;
   })
@@ -64,7 +70,7 @@ function splitNoteIntoPoints(noteText) {
 }
 
 /**
- * Adaptador de lección v2 al formato esperado por el `LessonPlayer` actual,
+ * Adaptador de lección v2 al formato esperado por LessonPlayer y vistas,
  * preservando simultáneamente todas las propiedades del esquema v2.
  */
 export function adaptLessonForLegacyPlayer(v2) {
@@ -89,12 +95,20 @@ export function adaptLessonForLegacyPlayer(v2) {
 
   const pr = v2.practice || {};
   const codeChallenge = {
+    type: pr.type || 'sql',
     title: pr.title || `Práctica: ${v2.title}`,
-    language: pr.language || 'sql',
+    language: pr.language || (pr.type === 'sql' ? 'sql' : 'python'),
     instruction: pr.prompt || '',
     description: pr.prompt || '',
+    prompt: pr.prompt || '',
+    starterCode: pr.starterCode || '',
     templateCode: pr.starterCode || '',
     template: pr.starterCode || '',
+    expected: pr.expected || '',
+    orderMatters: Boolean(pr.orderMatters),
+    hints: pr.hints || [],
+    solution: pr.solution || '',
+    solutionExplanation: pr.solutionExplanation || '',
     blanks: pr.blanks || [],
     expectedOutput: pr.solutionExplanation || '',
     expectedOutputTable: pr.expectedOutputTable || [],
@@ -124,13 +138,19 @@ export function adaptLessonForLegacyPlayer(v2) {
     },
   };
 
+  const catalogKey =
+    v2.moduleId && typeof v2.order === 'number'
+      ? `${v2.moduleId}-${String(v2.order).padStart(2, '0')}`
+      : v2.id;
+
   return {
     ...v2,
     id: v2.legacyId || v2.id,
     v2Id: v2.id,
+    catalogId: catalogKey,
     order: v2.legacyOrder ?? v2.order,
     moduleOrder: v2.order,
-    stageId: v2.stageId || 'stage-1',
+    stageId: v2.stageId || `stage-${Math.min(6, Math.max(1, (v2.level || 0) + 1))}`,
     subtitle: v2.subtitle || v2.title,
     goal: v2.goal || (v2.objectives || [])[0] || '',
     visualType,

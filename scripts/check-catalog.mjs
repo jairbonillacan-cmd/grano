@@ -6,10 +6,10 @@
 import { MODULES, MODULES_BY_ID } from '../src/data/catalog/modules.js';
 import { TRACKS, TRACK_IDS } from '../src/data/catalog/tracks.js';
 import { LEVELS } from '../src/data/catalog/levels.js';
-import { LESSONS } from '../src/data/learningPath2026.js';
+import { LESSONS, LESSONS_BY_ID } from '../src/data/lessons/index.js';
 
 const errors = [];
-const legacyIds = new Set(LESSONS.map((l) => l.id));
+const legacyIds = new Set(LESSONS.filter((l) => l.legacyId).map((l) => l.legacyId));
 const levelIds = new Set(LEVELS.map((l) => l.id));
 const seenModules = new Set();
 const seenLessonIds = new Set();
@@ -170,13 +170,17 @@ for (const m of MODULES) {
     }
 
     if (lesson.status === 'existing') {
-      if (!legacyIds.has(lesson.legacyId)) {
-        errors.push(`${m.id}: lección heredada inexistente "${lesson.legacyId}"`);
-      } else {
-        legacyCounts.set(lesson.legacyId, (legacyCounts.get(lesson.legacyId) || 0) + 1);
-      }
-      if (typeof lesson.legacyOrder !== 'number' || lesson.legacyOrder < 1 || lesson.legacyOrder > 18) {
-        errors.push(`${m.id} (${lesson.id}): legacyOrder debe estar entre 1 y 18`);
+      if (lesson.legacyId) {
+        if (!legacyIds.has(lesson.legacyId)) {
+          errors.push(`${m.id}: lección heredada inexistente "${lesson.legacyId}"`);
+        } else {
+          legacyCounts.set(lesson.legacyId, (legacyCounts.get(lesson.legacyId) || 0) + 1);
+        }
+        if (typeof lesson.legacyOrder !== 'number' || lesson.legacyOrder < 1 || lesson.legacyOrder > 18) {
+          errors.push(`${m.id} (${lesson.id}): legacyOrder debe estar entre 1 y 18`);
+        }
+      } else if (!LESSONS_BY_ID[lesson.id]) {
+        errors.push(`${m.id} (${lesson.id}): marcada como 'existing' pero no se encontró en src/data/lessons/index.js`);
       }
     } else if (lesson.status !== 'planned') {
       errors.push(`${m.id} (${lesson.id}): status desconocido "${lesson.status}"`);
