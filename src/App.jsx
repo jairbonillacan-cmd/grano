@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { LEARNING_STAGES, LESSONS } from './data/learningPath2026.js';
 import AppShell from './layout/AppShell.jsx';
 import HomeView from './views/HomeView.jsx';
 import RoadmapView from './views/RoadmapView.jsx';
-import TrackPathView from './views/TrackPathView.jsx';
 import LessonPlayer from './views/LessonPlayer.jsx';
+import Onboarding from './views/Onboarding.jsx';
+import SettingsView from './views/SettingsView.jsx';
 import TutorPanel from './components/TutorPanel.jsx';
 import DiagnosticModal from './components/DiagnosticModal.jsx';
 import SpacedRepetitionView from './components/SpacedRepetitionView.jsx';
@@ -14,6 +15,8 @@ import LearningAnalyticsView from './components/LearningAnalyticsView.jsx';
 import { UiShowcase } from './components/ui/index.js';
 import { CommandPaletteModal } from './state/CommandPaletteModal.jsx';
 import { useAppController } from './state/useAppController.js';
+
+const PracticeView = lazy(() => import('./views/PracticeView.jsx'));
 
 export default function App() {
   const {
@@ -127,6 +130,13 @@ export default function App() {
         }}
       />
 
+      {viewMode === 'onboarding' && (
+        <Onboarding
+          onComplete={() => handleNavigate('home')}
+          onSkip={() => handleNavigate('home')}
+        />
+      )}
+
       {viewMode === 'home' && (
         <HomeView
           stages={LEARNING_STAGES}
@@ -147,20 +157,17 @@ export default function App() {
       )}
 
       {viewMode === 'roadmap' && (
-        <>
-          <TrackPathView completedIds={completedIds} onOpenLesson={openLesson} />
-          <RoadmapView
-            stages={LEARNING_STAGES}
-            lessons={LESSONS}
-            completedIds={completedIds}
-            lessonSteps={lessonSteps}
-            completedLabIds={completedLabIds}
-            diagnosticResult={diagnosticResult}
-            nextRecommendedLesson={nextRecommendedLesson}
-            onOpenLesson={openLesson}
-            onOpenDiagnostic={() => setDiagnosticOpen(true)}
-          />
-        </>
+        <RoadmapView
+          stages={LEARNING_STAGES}
+          lessons={LESSONS}
+          completedIds={completedIds}
+          lessonSteps={lessonSteps}
+          completedLabIds={completedLabIds}
+          diagnosticResult={diagnosticResult}
+          nextRecommendedLesson={nextRecommendedLesson}
+          onOpenLesson={openLesson}
+          onOpenDiagnostic={() => setDiagnosticOpen(true)}
+        />
       )}
 
       {viewMode === 'lesson' && (
@@ -188,6 +195,12 @@ export default function App() {
       )}
 
       {viewMode === 'practice' && (
+        <Suspense fallback={<div className="practice-loading">Cargando laboratorio SQL…</div>}>
+          <PracticeView initialLessonId={activeLessonId} onSelectLesson={openLesson} />
+        </Suspense>
+      )}
+
+      {viewMode === 'review' && (
         <SpacedRepetitionView
           leitnerState={leitnerState}
           completedIds={completedIds}
@@ -225,6 +238,10 @@ export default function App() {
           onOpenLesson={openLesson}
           onOpenDiagnostic={() => setDiagnosticOpen(true)}
         />
+      )}
+
+      {viewMode === 'settings' && (
+        <SettingsView onNavigate={handleNavigate} onBack={() => handleNavigate('home')} />
       )}
     </AppShell>
   );
