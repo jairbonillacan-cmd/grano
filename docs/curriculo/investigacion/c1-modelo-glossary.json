@@ -1,0 +1,202 @@
+[
+  {
+    "id": "clave-primaria-subrogada",
+    "term": "Clave primaria, natural y subrogada",
+    "englishTerm": "Primary Key, Natural Key & Surrogate Key",
+    "track": "core",
+    "definition": "Una clave primaria identifica cada fila sin admitir nulos ni duplicados. La clave natural nace del negocio (`products.sku`), mientras la clave subrogada es un entero secuencial sin significado (`product_id`, `change_id`). No se confunde con un índice secundario, que acelera búsquedas pero permite valores repetidos.",
+    "formula": "SELECT COUNT(*) = COUNT(DISTINCT product_id) AS pk_valida FROM products;",
+    "relatedLessons": [
+      "c1-modelo-01-claves-primarias-foraneas",
+      "c1-modelo-02-normalizacion-1fn-3fn"
+    ],
+    "relatedTerms": [
+      "clave-foranea",
+      "c01-grain-fanout",
+      "c07-scd-type-2"
+    ],
+    "sources": [
+      {
+        "title": "Kimball Group — Dimensional Modeling Techniques: Surrogate Keys",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/surrogate-key/",
+        "publisher": "Kimball Group",
+        "accessed": "2026-10-29",
+        "supports": "Distinción entre claves naturales operativas y claves subrogadas enteras para mantener la estabilidad del modelo e historizar cambios."
+      }
+    ]
+  },
+  {
+    "id": "clave-foranea",
+    "term": "Clave foránea (Foreign Key)",
+    "englishTerm": "Foreign Key Constraint",
+    "track": "core",
+    "definition": "Columna o conjunto de columnas en una tabla hija (`orders.customer_id`) cuyos valores apuntan a la clave primaria de una tabla padre (`customers.customer_id`). En una relación uno a muchos la clave foránea se repite legítimamente en la tabla hija; no debe confundirse con la clave primaria de la propia tabla hija.",
+    "formula": "SELECT COUNT(*) AS pedidos, COUNT(DISTINCT customer_id) AS clientes_con_pedido FROM orders;",
+    "relatedLessons": [
+      "c1-modelo-01-claves-primarias-foraneas",
+      "c1-modelo-03-integridad-huerfanos"
+    ],
+    "relatedTerms": [
+      "clave-primaria-subrogada",
+      "integridad-referencial-huerfanos"
+    ],
+    "sources": [
+      {
+        "title": "PostgreSQL 17 Documentation — Section 5.4: Constraints (Primary and Foreign Keys)",
+        "url": "https://www.postgresql.org/docs/current/ddl-constraints.html",
+        "publisher": "PostgreSQL Global Development Group",
+        "accessed": "2026-10-29",
+        "supports": "Definición y semántica de claves foráneas entre tabla referenciante (hija) y tabla referenciada (padre)."
+      }
+    ]
+  },
+  {
+    "id": "dependencia-funcional",
+    "term": "Dependencia funcional y Tercera Forma Normal (3FN)",
+    "englishTerm": "Functional Dependency & Third Normal Form (3NF)",
+    "track": "core",
+    "definition": "Existe una dependencia funcional `X -> Y` cuando cada valor de `X` determina un único valor de `Y` (como `store_id -> store_name`). Una tabla está en Tercera Forma Normal (3FN) cuando cada columna que no es clave depende solo de la clave primaria completa y no transitivamente de otra columna.",
+    "formula": "SELECT store_id, COUNT(DISTINCT store_name) AS nombres_por_id FROM stores GROUP BY store_id HAVING COUNT(DISTINCT store_name) > 1;",
+    "relatedLessons": [
+      "c1-modelo-02-normalizacion-1fn-3fn"
+    ],
+    "relatedTerms": [
+      "anomalia-actualizacion",
+      "clave-primaria-subrogada",
+      "c06-star-vs-obt"
+    ],
+    "sources": [
+      {
+        "title": "E. F. Codd (1970) — A Relational Model of Data for Large Shared Data Banks",
+        "url": "https://www.seas.upenn.edu/~zives/03f/cis550/codd.pdf",
+        "publisher": "Communications of the ACM",
+        "accessed": "2026-10-29",
+        "supports": "Formulación original de la normalización relacional y eliminación de dependencias redundantes."
+      }
+    ]
+  },
+  {
+    "id": "anomalia-actualizacion",
+    "term": "Anomalía de actualización, inserción y borrado",
+    "englishTerm": "Update, Insertion & Deletion Anomalies",
+    "track": "core",
+    "definition": "Inconsistencia que ocurre en una tabla desnormalizada cuando un dato maestro se repite en miles de filas transaccionales: cambiar el nombre de una tienda exige actualizar miles de pedidos (`update anomaly`), y borrar el último pedido de una tienda borraría también los datos de la tienda (`deletion anomaly`).",
+    "formula": "SELECT store_id, COUNT(order_id) AS filas_a_reescribir_sin_3fn FROM orders GROUP BY store_id;",
+    "relatedLessons": [
+      "c1-modelo-02-normalizacion-1fn-3fn"
+    ],
+    "relatedTerms": [
+      "dependencia-funcional",
+      "clave-primaria-subrogada"
+    ],
+    "sources": [
+      {
+        "title": "E. F. Codd (1970) — A Relational Model of Data for Large Shared Data Banks",
+        "url": "https://www.seas.upenn.edu/~zives/03f/cis550/codd.pdf",
+        "publisher": "Communications of the ACM",
+        "accessed": "2026-10-29",
+        "supports": "Demostración de las anomalías de actualización, inserción y borrado provocadas por redundancia en tablas no normalizadas."
+      }
+    ]
+  },
+  {
+    "id": "integridad-referencial-huerfanos",
+    "term": "Integridad referencial y registro huérfano",
+    "englishTerm": "Referential Integrity & Orphan Records",
+    "track": "core",
+    "definition": "Propiedad que garantiza que todo valor no nulo de una clave foránea en una tabla hija existe como clave primaria en su tabla padre. Un registro huérfano es una fila hija que apunta a una entidad padre inexistente o dada de baja. No debe confundirse con una clave foránea legítimamente nula, como un visitante web sin sesión iniciada.",
+    "formula": "SELECT COUNT(*) AS huerfanos FROM order_items oi ANTI JOIN orders o ON oi.order_id = o.order_id;",
+    "relatedLessons": [
+      "c1-modelo-03-integridad-huerfanos",
+      "c1-modelo-05-validacion-bloqueante"
+    ],
+    "relatedTerms": [
+      "clave-foranea",
+      "anti-join"
+    ],
+    "sources": [
+      {
+        "title": "PostgreSQL 17 Documentation — Section 5.4.5: Foreign Keys",
+        "url": "https://www.postgresql.org/docs/current/ddl-constraints.html",
+        "publisher": "PostgreSQL Global Development Group",
+        "accessed": "2026-10-29",
+        "supports": "Garantía de integridad referencial entre tablas relacionadas y prevención de referencias huérfanas."
+      }
+    ]
+  },
+  {
+    "id": "anti-join",
+    "term": "ANTI JOIN y exclusión segura ante valores NULL",
+    "englishTerm": "Relational Anti-Join (ANTI JOIN / NOT EXISTS)",
+    "track": "core",
+    "definition": "Operación relacional que devuelve únicamente las filas de la tabla izquierda que no tienen ninguna coincidencia en la tabla derecha (`FROM a ANTI JOIN b ON a.id = b.id` o `WHERE NOT EXISTS`). A diferencia de `NOT IN`, no colapsa a cero filas cuando la tabla derecha contiene valores `NULL`.",
+    "formula": "SELECT e.event_id FROM events e ANTI JOIN customers c ON e.customer_id = c.customer_id;",
+    "relatedLessons": [
+      "c1-modelo-03-integridad-huerfanos"
+    ],
+    "relatedTerms": [
+      "integridad-referencial-huerfanos",
+      "clave-foranea"
+    ],
+    "sources": [
+      {
+        "title": "DuckDB Documentation — FROM & JOIN Clauses (ANTI JOIN and SEMI JOIN)",
+        "url": "https://duckdb.org/docs/sql/query_syntax/from.html",
+        "publisher": "DuckDB Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Sintaxis y comportamiento de ANTI JOIN en DuckDB para filtrar filas sin correspondencia en la tabla derecha."
+      }
+    ]
+  },
+  {
+    "id": "idempotencia-duplicados",
+    "term": "Clave de idempotencia y auditoría de duplicados",
+    "englishTerm": "Idempotency Key & Duplicate Detection",
+    "track": "core",
+    "definition": "Identificador único generado por el emisor de una operación (`payments.idempotency_key`) para garantizar que, si la red falla y el mensaje se reenvía varias veces, el sistema receptor detecte las copias repetidas. No se confunde con un reintento legítimo de negocio (`attempt_number = 2`), que posee su propia clave de idempotencia distinta.",
+    "formula": "SELECT idempotency_key, COUNT(*) AS copias FROM payments GROUP BY idempotency_key HAVING COUNT(*) > 1;",
+    "relatedLessons": [
+      "c1-modelo-04-auditoria-calidad",
+      "c1-modelo-05-validacion-bloqueante"
+    ],
+    "relatedTerms": [
+      "clave-primaria-subrogada",
+      "validacion-bloqueante-wap"
+    ],
+    "sources": [
+      {
+        "title": "dbt Labs Documentation — Add Data Tests to Your DAG (unique, not_null, accepted_values)",
+        "url": "https://docs.getdbt.com/docs/build/data-tests",
+        "publisher": "dbt Labs",
+        "accessed": "2026-10-29",
+        "supports": "Auditoría sistemática de unicidad, nulos y valores aceptados sobre tablas analíticas."
+      }
+    ]
+  },
+  {
+    "id": "validacion-bloqueante-wap",
+    "term": "Validación bloqueante y patrón Write-Audit-Publish (WAP)",
+    "englishTerm": "Blocking Data Quality Gate & Write-Audit-Publish",
+    "track": "core",
+    "definition": "Arquitectura de control de calidad en tres pasos: escribir la tabla transformada en un área aislada (Write), ejecutar consultas de validación que deben devolver exactamente cero filas con fallos (Audit) y exponer la tabla a los usuarios solo si todas las reglas críticas aprueban (Publish). Evita publicar datos corruptos.",
+    "formula": "SELECT regla, fallos, CASE WHEN fallos = 0 THEN 'PASS' ELSE 'BLOCKED' END AS estado FROM auditoria;",
+    "relatedLessons": [
+      "c1-modelo-05-validacion-bloqueante"
+    ],
+    "relatedTerms": [
+      "idempotencia-duplicados",
+      "integridad-referencial-huerfanos",
+      "c18-iceberg-v3",
+      "c19-data-contracts-odcs"
+    ],
+    "sources": [
+      {
+        "title": "SQLMesh Documentation — Audits (Blocking vs. Non-Blocking Data Quality Audits)",
+        "url": "https://sqlmesh.readthedocs.io/en/stable/concepts/audits/",
+        "publisher": "Tobiko Data",
+        "accessed": "2026-10-29",
+        "supports": "Ejecución de auditorías bloqueantes basadas en consultas que devuelven cero filas para detener la publicación ante errores."
+      }
+    ]
+  }
+]
