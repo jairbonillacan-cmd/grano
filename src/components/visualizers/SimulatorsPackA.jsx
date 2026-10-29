@@ -7,11 +7,17 @@ import {
   HardDrive,
   Zap,
   RefreshCw,
-  RotateCcw,
 } from 'lucide-react';
-import { Button } from '../ui/index.js';
+import {
+  SimulatorFrame,
+  SimSegmented,
+  handleInteractiveRowKeyDown,
+} from './SimulatorFrame.jsx';
 
-export function AsOfJoinTimelineSim() {
+export function AsOfJoinTimelineSim({
+  visualType = 'asof-timeline',
+  onStateChange,
+}) {
   const [joinMode, setJoinMode] = useState('asof'); // 'inner' | 'asof'
   const [selectedPurchaseIdx, setSelectedPurchaseIdx] = useState(1);
 
@@ -20,28 +26,22 @@ export function AsOfJoinTimelineSim() {
       changeId: 'CHG-01',
       userId: 'U-409',
       changeTs: '09:00:00',
-      minutesFromNine: 0,
       tier: 'Basic',
       monthlyFeeUsd: 19,
-      discountPct: 0,
     },
     {
       changeId: 'CHG-02',
       userId: 'U-409',
       changeTs: '10:15:00',
-      minutesFromNine: 75,
       tier: 'Pro',
       monthlyFeeUsd: 49,
-      discountPct: 10,
     },
     {
       changeId: 'CHG-03',
       userId: 'U-409',
       changeTs: '11:30:00',
-      minutesFromNine: 150,
       tier: 'Enterprise',
       monthlyFeeUsd: 199,
-      discountPct: 25,
     },
   ];
 
@@ -50,40 +50,31 @@ export function AsOfJoinTimelineSim() {
       purchaseId: 'BUY-801',
       userId: 'U-409',
       purchaseTs: '09:42:00',
-      minutesFromNine: 42,
       amountUsd: 45.0,
       matchedChangeId: 'CHG-01',
       matchedTs: '09:00:00',
       matchedTier: 'Basic',
       lagMinutes: 42,
-      stepExplanation:
-        'La compra ocurre a las 09:42. ASOF JOIN busca hacia atrás el último cambio de plan con timestamp menor o igual a 09:42 y encuentra Basic (09:00, hace 42 min). Con INNER JOIN exacto, 09:42:00 no coincide con 09:00:00 y la transacción desaparece.',
     },
     {
       purchaseId: 'BUY-802',
       userId: 'U-409',
       purchaseTs: '10:20:00',
-      minutesFromNine: 80,
       amountUsd: 120.0,
       matchedChangeId: 'CHG-02',
       matchedTs: '10:15:00',
       matchedTier: 'Pro',
       lagMinutes: 5,
-      stepExplanation:
-        'A las 10:15 el usuario subió a Pro. Cinco minutos después (10:20) compra $120.00. ASOF JOIN descarta Basic (09:00) por existir un estado más reciente (10:15) y descarta Enterprise (11:30) porque aún no había ocurrido.',
     },
     {
       purchaseId: 'BUY-803',
       userId: 'U-409',
       purchaseTs: '11:45:00',
-      minutesFromNine: 165,
       amountUsd: 380.0,
       matchedChangeId: 'CHG-03',
       matchedTs: '11:30:00',
       matchedTier: 'Enterprise',
       lagMinutes: 15,
-      stepExplanation:
-        'A las 11:30 el cliente pasa a Enterprise. La compra de las 11:45 ($380.00) hereda el estado Enterprise vigente desde hace 15 minutos, atribuyendo el ingreso al nivel de suscripción correcto sin duplicar filas.',
     },
   ];
 
@@ -94,394 +85,291 @@ export function AsOfJoinTimelineSim() {
     setSelectedPurchaseIdx(1);
   };
 
+  const liveReadout =
+    joinMode === 'inner'
+      ? `Con INNER JOIN por igualdad de timestamp, la compra ${activePurchase.purchaseId} (${activePurchase.purchaseTs.slice(0, 5)}, $${activePurchase.amountUsd.toFixed(2)}) no coincide al segundo con ningún cambio de plan (09:00, 10:15, 11:30) y el cruce devuelve 0 filas ($0.00 de $545.00 atribuidos).`
+      : `Con ASOF JOIN (>=), la compra ${activePurchase.purchaseId} a las ${activePurchase.purchaseTs.slice(0, 5)} ($${activePurchase.amountUsd.toFixed(2)}) busca hacia atrás ${activePurchase.lagMinutes} min y hereda el plan ${activePurchase.matchedTier} (${activePurchase.matchedChangeId} de las ${activePurchase.matchedTs.slice(0, 5)}), atribuyendo los $545.00 totales sin duplicar filas.`;
+
   return (
-    <div className="sim-frame viz-card" data-stage="1">
-      <div className="sim-frame__header">
-        <div className="sim-frame__title-group">
-          <span className="sim-frame__stage-icon" aria-hidden="true">
-            <Database size={18} />
-          </span>
-          <div className="sim-frame__headings">
-            <div className="sim-frame__kicker">Etapa 1 · Series Temporales y ASOF JOIN</div>
-            <h3 className="sim-frame__title">
-              Simulador temporal: INNER JOIN exacto frente a ASOF JOIN
-            </h3>
-            <p className="sim-frame__desc">
-              Los eventos de compra y los cambios de suscripción ocurren en milisegundos distintos.
-              Alterna el motor de cruce y selecciona cada compra para inspeccionar cómo se resuelve
-              el estado vigente.
-            </p>
+    <SimulatorFrame
+      kicker="SQL analítico · Series temporales y ASOF JOIN"
+      title="Cruce temporal: INNER JOIN exacto frente a ASOF JOIN"
+      instruction="Alterna el tipo de JOIN y selecciona una compra en la línea de tiempo para inspeccionar qué estado de suscripción hereda."
+      onReset={handleReset}
+      visualType={visualType}
+      mode={`${joinMode}:${activePurchase.purchaseId}`}
+      metrics={{
+        joinMode,
+        selectedPurchaseId: activePurchase.purchaseId,
+        purchaseTs: activePurchase.purchaseTs,
+        amountUsd: activePurchase.amountUsd,
+        matchedTier: joinMode === 'asof' ? activePurchase.matchedTier : null,
+        matchedRevenueUsd: joinMode === 'asof' ? 545 : 0,
+        matchedPurchasesCount: joinMode === 'asof' ? 3 : 0,
+      }}
+      liveReadout={liveReadout}
+      readoutTone={joinMode === 'inner' ? 'bad' : 'ok'}
+      onStateChange={onStateChange}
+      controls={
+        <>
+          <SimSegmented
+            ariaLabel="Tipo de JOIN temporal"
+            value={joinMode}
+            onChange={setJoinMode}
+            options={[
+              {
+                value: 'inner',
+                label: 'INNER JOIN exacto (0 coincidencias)',
+                tone: 'bad',
+              },
+              {
+                value: 'asof',
+                label: 'ASOF JOIN (estado vigente)',
+                tone: 'ok',
+              },
+            ]}
+          />
+          <SimSegmented
+            ariaLabel="Inspeccionar compra"
+            value={selectedPurchaseIdx}
+            onChange={setSelectedPurchaseIdx}
+            options={purchases.map((p, idx) => ({
+              value: idx,
+              label: `${p.purchaseId} · ${p.purchaseTs.slice(0, 5)} ($${p.amountUsd})`,
+            }))}
+          />
+        </>
+      }
+    >
+      <div className="sim-panel tabular">
+        <div className="sim-panel__header">
+          <div className="sim-panel__title">
+            <Clock size={14} aria-hidden="true" /> Línea de tiempo de{' '}
+            <code>U-409</code> (09:00 a 12:00) · Pista 1: cambios en{' '}
+            <code>subscription_changes</code> · Pista 2: compras en{' '}
+            <code>purchases</code>
           </div>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          icon={RotateCcw}
-          className="sim-reset-btn"
-          onClick={handleReset}
-          ariaLabel="Reiniciar simulador"
-        >
-          Reiniciar
-        </Button>
+
+        <div className="sim-three-col">
+          {tierChanges.map((tc, idx) => {
+            const p = purchases[idx];
+            const isMatched =
+              joinMode === 'asof' && activePurchase.matchedChangeId === tc.changeId;
+            const isSelected = selectedPurchaseIdx === idx;
+            const cardClass = [
+              'sim-Timeline-card',
+              'sim-Timeline-card--clickable',
+              isSelected
+                ? joinMode === 'asof'
+                  ? 'sim-Timeline-card--matched'
+                  : 'sim-Timeline-card--danger'
+                : isMatched
+                ? 'sim-Timeline-card--matched'
+                : '',
+            ]
+              .filter(Boolean)
+              .join(' ');
+
+            return (
+              <div
+                key={p.purchaseId}
+                role="button"
+                tabIndex={0}
+                aria-pressed={isSelected}
+                data-sim-interactive="true"
+                className={cardClass}
+                onClick={() => setSelectedPurchaseIdx(idx)}
+                onKeyDown={(e) =>
+                  handleInteractiveRowKeyDown(
+                    e,
+                    () => setSelectedPurchaseIdx(idx),
+                    idx,
+                    purchases.length,
+                    setSelectedPurchaseIdx
+                  )
+                }
+              >
+                <div className="sim-Timeline-card__head">
+                  <span>
+                    {tc.changeTs.slice(0, 5)} Plan {tc.tier} → Compra{' '}
+                    {p.purchaseTs.slice(0, 5)}
+                  </span>
+                  <span>${p.amountUsd.toFixed(2)}</span>
+                </div>
+                <div className="sim-Timeline-card__meta">
+                  {joinMode === 'asof' ? (
+                    <>
+                      <code>{p.purchaseId}</code> hereda{' '}
+                      <strong>{p.matchedTier}</strong> (<code>{tc.changeId}</code>,{' '}
+                      -{p.lagMinutes} min)
+                    </>
+                  ) : (
+                    <span className="sim-text-danger">
+                      {p.purchaseTs.slice(0, 5)} ≠ {tc.changeTs.slice(0, 5)} (sin cruce exacto)
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
-      <div className="sim-frame__controls">
-        <div className="sim-segmented" role="group" aria-label="Tipo de JOIN temporal">
-          <button
-            type="button"
-            className={`sim-segmented__btn ${
-              joinMode === 'inner' ? 'sim-segmented__btn--active-danger' : ''
-            }`}
-            onClick={() => setJoinMode('inner')}
-          >
-            INNER JOIN exacto (0 coincidencias)
-          </button>
-          <button
-            type="button"
-            className={`sim-segmented__btn ${
-              joinMode === 'asof' ? 'sim-segmented__btn--active' : ''
-            }`}
-            onClick={() => setJoinMode('asof')}
-          >
-            ASOF JOIN (estado vigente en ese instante)
-          </button>
-        </div>
-
-        <div className="sim-segmented" role="group" aria-label="Inspeccionar compra">
-          {purchases.map((p, idx) => (
-            <button
-              key={p.purchaseId}
-              type="button"
-              className={`sim-segmented__btn ${
-                selectedPurchaseIdx === idx ? 'sim-segmented__btn--active' : ''
-              }`}
-              onClick={() => setSelectedPurchaseIdx(idx)}
-            >
-              Inspeccionar {p.purchaseTs.slice(0, 5)} (${p.amountUsd})
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="sim-frame__body">
-        <div className="sim-panel tabular">
-          <div className="sim-panel__header">
-            <div className="sim-panel__title">
-              <Clock size={15} /> Línea de tiempo continua del usuario <code>U-409</code> (09:00 a
-              12:00)
-            </div>
+      <div className="sim-two-col">
+        <div className="sim-panel">
+          <div className="sim-panel__title">
+             Resultado SQL:{' '}
+            {joinMode === 'inner'
+              ? 'ON p.user_id = s.user_id AND p.purchase_ts = s.change_ts'
+              : 'ASOF JOIN ... MATCH_CONDITION (p.purchase_ts >= s.change_ts)'}
           </div>
-
-          <div className="sim-track-section">
-            <div className="sim-track-label">
-              Pista 1: Cambios de nivel en <code>subscription_changes</code> (estado vigente hacia
-              adelante)
-            </div>
-            <div className="sim-three-col">
-              {tierChanges.map((tc) => {
-                const isMatched =
-                  joinMode === 'asof' && activePurchase.matchedChangeId === tc.changeId;
-                return (
-                  <div
-                    key={tc.changeId}
-                    className={`sim-Timeline-card ${
-                      isMatched ? 'sim-Timeline-card--matched' : ''
-                    }`}
-                  >
-                    <div className="sim-Timeline-card__head">
-                      <span>
-                        {tc.changeTs.slice(0, 5)} · {tc.tier}
-                      </span>
-                      <span>${tc.monthlyFeeUsd}/mes</span>
-                    </div>
-                    <div className="sim-Timeline-card__meta">
-                      ID: <code>{tc.changeId}</code> · Vigente desde las {tc.changeTs.slice(0, 5)}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="sim-track-section">
-            <div className="sim-track-label">
-              Pista 2: Eventos puntuales en <code>purchases</code> (haz clic en una compra para ver
-              el cruce)
-            </div>
-            <div className="sim-three-col">
-              {purchases.map((p, idx) => {
-                const isSelected = selectedPurchaseIdx === idx;
-                const cardClass = [
-                  'sim-Timeline-card',
-                  'sim-Timeline-card--clickable',
-                  isSelected
-                    ? joinMode === 'asof'
-                      ? 'sim-Timeline-card--matched'
-                      : 'sim-Timeline-card--danger'
-                    : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ');
-
-                return (
-                  <div
-                    key={p.purchaseId}
-                    className={cardClass}
-                    onClick={() => setSelectedPurchaseIdx(idx)}
-                  >
-                    <div className="sim-Timeline-card__head">
-                      <span>Compra {p.purchaseTs.slice(0, 5)}</span>
-                      <span>${p.amountUsd.toFixed(2)}</span>
-                    </div>
-                    <div className="sim-Timeline-card__meta">
-                      {joinMode === 'asof' ? (
-                        <>
-                          Empareja con <strong>{p.matchedTier}</strong> ({p.matchedTs.slice(0, 5)},
-                          -{p.lagMinutes} min)
-                        </>
-                      ) : (
-                        <span className="sim-text-danger">
-                          Sin coincidencia exacta en {p.purchaseTs}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        <div className="sim-two-col">
-          <div className="sim-panel">
-            <div className="sim-panel__title">
-              Tablas origen: 3 cambios de estado y 3 compras ($545.00 totales)
-            </div>
-            <div className="sim-table-scroll">
-              <table className="sim-table tabular">
-                <thead>
-                  <tr>
-                    <th>Tabla</th>
-                    <th>Evento</th>
-                    <th>Timestamp</th>
-                    <th className="num">Atributo / Monto</th>
+          <div className="sim-table-scroll">
+            <table key={joinMode} className="sim-table sim-table--stack tabular">
+              <thead>
+                <tr>
+                  <th>purchase_id</th>
+                  <th>purchase_ts</th>
+                  <th className="num">amount_usd</th>
+                  <th>change_ts</th>
+                  <th>tier_vigente</th>
+                </tr>
+              </thead>
+              <tbody>
+                {joinMode === 'inner' ? (
+                  <tr className="row-duplicated anim-row-stagger">
+                    <td colSpan={5} data-label="Resultado" className="sim-table-empty-cell">
+                      0 filas devueltas: ningún timestamp de compra (09:42, 10:20, 11:45)
+                      coincide al segundo con un cambio de plan (09:00, 10:15, 11:30).
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {tierChanges.map((tc) => {
-                    const isMatched =
-                      joinMode === 'asof' && activePurchase.matchedChangeId === tc.changeId;
-                    return (
-                      <tr
-                        key={`${tc.changeId}-${isMatched ? 'match' : 'idle'}`}
-                        className={isMatched ? 'row-optimal row-flash' : ''}
-                      >
-                        <td>
-                          <code>subscription_changes</code>
-                        </td>
-                        <td>{tc.changeId}</td>
-                        <td>{tc.changeTs.slice(0, 5)}</td>
-                        <td className="num">
-                          Plan <strong>{tc.tier}</strong>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  {purchases.map((p, idx) => {
+                ) : (
+                  purchases.map((p, idx) => {
                     const isSelected = selectedPurchaseIdx === idx;
                     return (
                       <tr
                         key={`${p.purchaseId}-${isSelected ? 'sel' : 'idle'}`}
-                        className={`row-clickable ${isSelected ? 'row-selected row-flash' : ''}`}
+                        tabIndex={0}
+                        aria-selected={isSelected}
+                        data-sim-interactive="true"
+                        className={`row-clickable anim-row-stagger ${
+                          isSelected ? 'row-selected' : 'row-optimal'
+                        }`}
                         onClick={() => setSelectedPurchaseIdx(idx)}
+                        onKeyDown={(e) =>
+                          handleInteractiveRowKeyDown(
+                            e,
+                            () => setSelectedPurchaseIdx(idx),
+                            idx,
+                            purchases.length,
+                            setSelectedPurchaseIdx
+                          )
+                        }
                       >
-                        <td>
-                          <code>purchases</code>
+                        <td data-label="Compra">{p.purchaseId}</td>
+                        <td data-label="Hora compra">{p.purchaseTs.slice(0, 5)}</td>
+                        <td data-label="Importe" className="num">
+                          ${p.amountUsd.toFixed(2)}
                         </td>
-                        <td>{p.purchaseId}</td>
-                        <td>{p.purchaseTs.slice(0, 5)}</td>
-                        <td className="num">
-                          Compra <strong>${p.amountUsd.toFixed(2)}</strong>
+                        <td data-label="Hora plan">{p.matchedTs.slice(0, 5)}</td>
+                        <td data-label="Plan heredado">
+                          <strong>{p.matchedTier}</strong>
                         </td>
                       </tr>
                     );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div className="sim-panel">
-            <div className="sim-panel__title">
-              {joinMode === 'inner'
-                ? 'Resultado SQL: ON p.user_id = s.user_id AND p.purchase_ts = s.change_ts'
-                : 'Resultado SQL: ASOF JOIN ... MATCH_CONDITION (p.purchase_ts >= s.change_ts)'}
-            </div>
-            <div className="sim-table-scroll">
-              <table key={joinMode} className="sim-table tabular">
-                <thead>
-                  <tr>
-                    <th>purchase_id</th>
-                    <th>purchase_ts</th>
-                    <th className="num">amount_usd</th>
-                    <th>change_ts</th>
-                    <th>tier_vigente</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {joinMode === 'inner' ? (
-                    <tr className="row-duplicated row-flash">
-                      <td colSpan={5} className="sim-table-empty-cell">
-                        0 filas devueltas. Ningún timestamp de compra (09:42, 10:20, 11:45) es
-                        idéntico al segundo con un cambio de plan (09:00, 10:15, 11:30).
-                      </td>
-                    </tr>
-                  ) : (
-                    purchases.map((p, idx) => {
-                      const isSelected = selectedPurchaseIdx === idx;
-                      return (
-                        <tr
-                          key={`${p.purchaseId}-${isSelected ? 'sel' : 'idle'}`}
-                          className={`row-clickable ${
-                            isSelected ? 'row-selected row-flash' : 'row-optimal'
-                          }`}
-                          onClick={() => setSelectedPurchaseIdx(idx)}
-                        >
-                          <td>{p.purchaseId}</td>
-                          <td>{p.purchaseTs.slice(0, 5)}</td>
-                          <td className="num">${p.amountUsd.toFixed(2)}</td>
-                          <td>{p.matchedTs.slice(0, 5)}</td>
-                          <td>
-                            <strong>{p.matchedTier}</strong>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="sim-two-col tabular">
-              <div className={`sim-metric-box ${joinMode === 'inner' ? 'box-danger' : 'box-ok'}`}>
-                <div className="sim-metric-title">Ingresos atribuidos en el cruce</div>
-                <div className="sim-metric-nums">
-                  <strong>
-                    {joinMode === 'inner'
-                      ? '$0.00 (0 de 3 compras)'
-                      : '$545.00 (3 de 3 compras)'}
-                  </strong>
-                </div>
-              </div>
-              <div className="sim-metric-box">
-                <div className="sim-metric-title">Complejidad algorítmica</div>
-                <div className="sim-metric-nums">
-                  <strong>
-                    {joinMode === 'inner'
-                      ? 'Hash Join exacto (pierde eventos)'
-                      : 'O(N + M) en barrido ordenado'}
-                  </strong>
-                </div>
-              </div>
-            </div>
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
 
         <div className="sim-comparison-card">
           <div className="sim-comparison-card__title">
-            Cobertura de Eventos de Compra Emparejados ($545.00 USD Totales)
+            Cobertura de compras emparejadas ($545.00 USD reales)
           </div>
           <div className="sim-comparison-bars">
             <div className="sim-bar-row">
               <div className="sim-bar-header">
-                <span className="sim-bar-label">INNER JOIN por igualdad de timestamp</span>
-                <span className="sim-bar-value">$0.00 USD (0% emparejado)</span>
+                <span className="sim-bar-label">
+                  INNER JOIN por igualdad de timestamp
+                </span>
+                <span className="sim-bar-value">$0.00 (0 de 3 compras)</span>
               </div>
               <div className="sim-bar-track">
                 <div
                   className="sim-bar-fill sim-bar-fill--danger"
-                  style={{ '--bar-pct': '4%' }}
+                  data-pct="4"
                 />
               </div>
             </div>
             <div className="sim-bar-row">
               <div className="sim-bar-header">
-                <span className="sim-bar-label">ASOF JOIN (p.purchase_ts &gt;= s.change_ts)</span>
-                <span className="sim-bar-value">$545.00 USD (100% emparejado sin duplicados)</span>
+                <span className="sim-bar-label">
+                  ASOF JOIN (p.purchase_ts &gt;= s.change_ts)
+                </span>
+                <span className="sim-bar-value">$545.00 (3 de 3 · O(N + M))</span>
               </div>
               <div className="sim-bar-track">
                 <div
                   className="sim-bar-fill sim-bar-fill--success"
-                  style={{ '--bar-pct': '100%' }}
+                  data-pct="100"
                 />
               </div>
             </div>
           </div>
         </div>
-
-        <div className={`viz-result-banner ${joinMode === 'inner' ? 'danger' : 'success'} tabular`}>
-          <div className="viz-banner-title">
-            Paso a paso ({activePurchase.purchaseId} a las {activePurchase.purchaseTs.slice(0, 5)}{' '}
-            por ${activePurchase.amountUsd.toFixed(2)}):
-          </div>
-          <p>{activePurchase.stepExplanation}</p>
-        </div>
       </div>
-
-      <div className="sim-frame__footer">
-        <span className="sim-frame__footer-label">Qué observar:</span>
-        <span className="sim-frame__footer-text">
-          ASOF JOIN busca hacia atrás el estado más reciente (timestamp &lt;= compra) en tiempo
-          lineal O(N + M) sin perder eventos ni provocar fan-out.
-        </span>
-      </div>
-    </div>
+    </SimulatorFrame>
   );
 }
 
-export function StarVsObtSim() {
+export function StarVsObtSim({
+  visualType = 'star-vs-obt',
+  onStateChange,
+}) {
   const [archMode, setArchMode] = useState('star'); // 'star' | 'obt'
   const [workload, setWorkload] = useState('update'); // 'update' | 'scan'
 
   const metrics = {
     star: {
       update: {
-        storageGb: '4.2 GB (hechos compactos + dimensiones)',
-        updateCost: '1 fila insertada/cerrada en dim_customer_scd2 (18 ms)',
-        querySpeed: '1.15 s (requiere Hash Join en tiempo de consulta)',
-        filesRewritten: '1 archivo en dimensión (0 archivos de hechos tocados)',
-        status: 'success',
+        storageGb: '4.2 GB (hechos + dimensiones)',
+        updateCost: '1 fila en dim_customer (18 ms)',
+        querySpeed: '1.15 s (Hash Join en lectura)',
+        filesRewritten: 1,
+        status: 'ok',
         summary:
-          'En Esquema Estrella, actualizar el segmento corporativo de 1 cliente solo modifica dim_customer_scd2 (50,000 filas). Las 10,000,000 de filas en fct_orders permanecen intactas porque apuntan a la llave sustituta entera customer_sk.',
+          'En Esquema Estrella con carga de mutación: actualizar el segmento de U-101 solo modifica 1 fila en dim_customer_scd2 (18 ms, 0 archivos de hechos tocados) y mantiene 4.2 GB en disco.',
       },
       scan: {
         storageGb: '4.2 GB (sin redundancia de texto)',
-        updateCost: 'Mantenimiento aislado en dimensiones ligeras',
-        querySpeed: '1.15 s (escaneo de hechos + Hash Join con 2 dimensiones)',
-        filesRewritten: 'Lectura de 2 columnas en fct_orders + tabla dim_customer_scd2',
-        status: 'success',
+        updateCost: 'Mantenimiento aislado (18 ms)',
+        querySpeed: '1.15 s (escaneo + Hash Join)',
+        filesRewritten: 0,
+        status: 'ok',
         summary:
-          'Al escanear 10 millones de pedidos agrupando por segmento de cliente, el motor lee customer_sk y amount_usd desde fct_orders y ejecuta un Hash Join en memoria contra dim_customer_scd2. Es ideal como núcleo gobernado multi-dominio.',
+          'En Esquema Estrella con escaneo BI de 10M de pedidos: el motor lee customer_sk y amount_usd desde fct_orders y ejecuta un Hash Join en memoria contra dim_customer_scd2 en 1.15 s.',
       },
     },
     obt: {
       update: {
-        storageGb: '6.8 GB (columnas desnormalizadas con compresión RLE)',
-        updateCost: '14,200 filas reescritas en 85 archivos Parquet (9.4 s)',
+        storageGb: '6.8 GB (columnas desnormalizadas)',
+        updateCost: '14,200 filas en 85 Parquet (9.4 s)',
         querySpeed: '0.42 s (0 joins en lectura)',
-        filesRewritten: '85 de 450 archivos Parquet reescritos por Copy-on-Write',
-        status: 'danger',
+        filesRewritten: 85,
+        status: 'bad',
         summary:
-          'En una One Big Table (OBT), el atributo customer_segment está copiado físicamente en cada pedido. Si un cliente corporativo cambia de segmento y debes corregir sus 14,200 pedidos históricos, el motor reescribe decenas de archivos Parquet pesados.',
+          'En One Big Table (OBT) con carga de mutación: como customer_segment está copiado en cada pedido, actualizar a U-101 obliga a reescribir 14,200 filas repartidas en 85 archivos Parquet (9,400 ms).',
       },
       scan: {
-        storageGb: '6.8 GB (diccionario Parquet mitiga el texto repetido)',
-        updateCost: 'Alto costo de escritura en mutaciones dimensionales',
-        querySpeed: '0.42 s (barrido columnar puro sin ningún JOIN)',
-        filesRewritten: 'Lectura directa de 2 columnas contiguas en obt_orders_wide',
-        status: 'success',
+        storageGb: '6.8 GB (compresión por diccionario)',
+        updateCost: 'Reescritura pesada en mutaciones',
+        querySpeed: '0.42 s (barrido columnar sin JOIN)',
+        filesRewritten: 0,
+        status: 'ok',
         summary:
-          'Al consultar 10 millones de filas en BI, OBT brilla: el motor lee únicamente las columnas customer_segment (codificada por diccionario) y amount_usd en un solo pase secuencial sin construir tablas Hash Join en RAM.',
+          'En One Big Table (OBT) con escaneo BI de 10M de pedidos: el motor lee directamente customer_segment y amount_usd en un solo barrido columnar sin JOINs, completando la consulta en 0.42 s (2.7x más rápido).',
       },
     },
   };
@@ -494,305 +382,198 @@ export function StarVsObtSim() {
   };
 
   return (
-    <div className="sim-frame viz-card" data-stage="2">
-      <div className="sim-frame__header">
-        <div className="sim-frame__title-group">
-          <span className="sim-frame__stage-icon" aria-hidden="true">
-            <Layers size={18} />
-          </span>
-          <div className="sim-frame__headings">
-            <div className="sim-frame__kicker">Etapa 2 · Arquitectura Dimensional</div>
-            <h3 className="sim-frame__title">
-              Simulador de modelado: Esquema Estrella (Kimball) frente a One Big Table (OBT)
-            </h3>
-            <p className="sim-frame__desc">
-              Compara el costo físico en disco, el impacto de actualizar 1 cliente y la velocidad de
-              escaneo sobre 10,000,000 de pedidos.
-            </p>
+    <SimulatorFrame
+      kicker="Modelado dimensional · Estrella frente a OBT"
+      title="Esquema en estrella (Kimball) frente a One Big Table (OBT)"
+      instruction="Alterna la arquitectura física y el tipo de carga para comparar el costo de actualizar 1 cliente frente a escanear 10M de pedidos."
+      onReset={handleReset}
+      visualType={visualType}
+      mode={`${archMode}:${workload}`}
+      metrics={{
+        archMode,
+        workload,
+        storageGb: archMode === 'star' ? 4.2 : 6.8,
+        updateMs: archMode === 'star' ? 18 : 9400,
+        scanSeconds: archMode === 'star' ? 1.15 : 0.42,
+        filesRewritten: currentMetric.filesRewritten,
+      }}
+      liveReadout={currentMetric.summary}
+      readoutTone={currentMetric.status}
+      onStateChange={onStateChange}
+      controls={
+        <>
+          <SimSegmented
+            ariaLabel="Arquitectura de tabla"
+            value={archMode}
+            onChange={setArchMode}
+            options={[
+              { value: 'star', label: 'Esquema Estrella (Kimball)' },
+              {
+                value: 'obt',
+                label: 'One Big Table (obt_orders_wide)',
+                tone: workload === 'update' ? 'bad' : 'ok',
+              },
+            ]}
+          />
+          <SimSegmented
+            ariaLabel="Carga de trabajo"
+            value={workload}
+            onChange={setWorkload}
+            options={[
+              {
+                value: 'update',
+                label: '1. Actualizar 1 cliente (U-101)',
+                icon: <RefreshCw size={12} />,
+                tone: archMode === 'obt' ? 'bad' : 'ok',
+              },
+              {
+                value: 'scan',
+                label: '2. Escanear 10M filas en BI',
+                icon: <Zap size={12} />,
+                tone: 'ok',
+              },
+            ]}
+          />
+        </>
+      }
+    >
+      <div className="sim-three-col tabular">
+        <div className="sim-metric-box">
+          <div className="sim-metric-title">
+            <HardDrive size={13} aria-hidden="true" /> Almacenamiento (10M filas)
+          </div>
+          <div className="sim-metric-nums">
+            <strong>{currentMetric.storageGb}</strong>
           </div>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          icon={RotateCcw}
-          className="sim-reset-btn"
-          onClick={handleReset}
-          ariaLabel="Reiniciar simulador"
+        <div
+          className={`sim-metric-box ${
+            workload === 'update' && archMode === 'obt' ? 'box-danger' : 'box-ok'
+          }`}
         >
-          Reiniciar
-        </Button>
-      </div>
-
-      <div className="sim-frame__controls">
-        <div className="sim-segmented" role="group" aria-label="Arquitectura de tabla">
-          <button
-            type="button"
-            className={`sim-segmented__btn ${
-              archMode === 'star' ? 'sim-segmented__btn--active' : ''
-            }`}
-            onClick={() => setArchMode('star')}
-          >
-            Esquema Estrella (Kimball)
-          </button>
-          <button
-            type="button"
-            className={`sim-segmented__btn ${
-              archMode === 'obt' ? 'sim-segmented__btn--active' : ''
-            }`}
-            onClick={() => setArchMode('obt')}
-          >
-            One Big Table (obt_orders_wide)
-          </button>
+          <div className="sim-metric-title">
+            <Database size={13} aria-hidden="true" /> Costo de mutación (U-101)
+          </div>
+          <div className="sim-metric-nums">
+            <strong>{currentMetric.updateCost}</strong>
+          </div>
         </div>
-
-        <div className="sim-segmented" role="group" aria-label="Carga de trabajo">
-          <button
-            type="button"
-            className={`sim-segmented__btn ${
-              workload === 'update'
-                ? archMode === 'obt'
-                  ? 'sim-segmented__btn--active-danger'
-                  : 'sim-segmented__btn--active'
-                : ''
-            }`}
-            onClick={() => setWorkload('update')}
-          >
-            <RefreshCw size={13} />
-            1. Actualizar segmento de 1 cliente (U-101)
-          </button>
-          <button
-            type="button"
-            className={`sim-segmented__btn ${
-              workload === 'scan' ? 'sim-segmented__btn--active' : ''
-            }`}
-            onClick={() => setWorkload('scan')}
-          >
-            <Zap size={13} />
-            2. Escanear 10M de filas en dashboard BI
-          </button>
+        <div className="sim-metric-box box-ok">
+          <div className="sim-metric-title">
+            <Layers size={13} aria-hidden="true" /> Latencia de lectura (10M)
+          </div>
+          <div className="sim-metric-nums">
+            <strong>{currentMetric.querySpeed}</strong>
+          </div>
         </div>
       </div>
 
-      <div className="sim-frame__body">
-        <div className="sim-three-col tabular">
-          <div className="sim-metric-box">
-            <div className="sim-metric-title">
-              <HardDrive size={13} /> Costo de almacenamiento (10M filas)
-            </div>
-            <div className="sim-metric-nums">
-              <strong>{currentMetric.storageGb}</strong>
-            </div>
+      <div className="sim-two-col">
+        <div className="sim-panel">
+          <div className="sim-panel__title">
+            {archMode === 'star'
+              ? 'fct_orders (10M filas · llaves enteras) + dim_customer_scd2 (50k)'
+              : 'obt_orders_wide (10M filas · atributos desnormalizados repetidos)'}
           </div>
-          <div
-            className={`sim-metric-box ${
-              workload === 'update' && archMode === 'obt' ? 'box-danger' : 'box-ok'
-            }`}
-          >
-            <div className="sim-metric-title">
-              <Database size={13} /> Costo de actualización (1 cliente)
-            </div>
-            <div className="sim-metric-nums">
-              <strong>{currentMetric.updateCost}</strong>
-            </div>
-          </div>
-          <div className="sim-metric-box box-ok">
-            <div className="sim-metric-title">
-              <Layers size={13} /> Velocidad de consulta (10M filas)
-            </div>
-            <div className="sim-metric-nums">
-              <strong>{currentMetric.querySpeed}</strong>
-            </div>
-          </div>
-        </div>
-
-        <div className="sim-two-col">
-          <div className="sim-panel">
-            <div className="sim-panel__title">
-              {archMode === 'star'
-                ? 'Tabla de hechos: fct_orders (10,000,000 filas · llaves enteras de 4 bytes)'
-                : 'Tabla ancha: obt_orders_wide (10,000,000 filas · atributos repetidos)'}
-            </div>
-            <div className="sim-table-scroll">
-              {archMode === 'star' ? (
-                <table key={`star-${workload}`} className="sim-table tabular">
-                  <thead>
-                    <tr>
-                      <th>order_id</th>
-                      <th className="num">customer_sk</th>
-                      <th className="num">product_sk</th>
-                      <th className="num">amount_usd</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr className={workload === 'scan' ? 'row-optimal row-flash' : ''}>
-                      <td>ORD-9001</td>
-                      <td className="num">
-                        <code>4012</code>
-                      </td>
-                      <td className="num">
-                        <code>88</code>
-                      </td>
-                      <td className="num">$1,250.00</td>
-                    </tr>
-                    <tr className={workload === 'scan' ? 'row-optimal row-flash' : ''}>
-                      <td>ORD-9002</td>
-                      <td className="num">
-                        <code>4012</code>
-                      </td>
-                      <td className="num">
-                        <code>94</code>
-                      </td>
-                      <td className="num">$890.00</td>
-                    </tr>
-                    <tr className={workload === 'scan' ? 'row-optimal row-flash' : ''}>
-                      <td>ORD-9003</td>
-                      <td className="num">
-                        <code>7105</code>
-                      </td>
-                      <td className="num">
-                        <code>88</code>
-                      </td>
-                      <td className="num">$340.00</td>
-                    </tr>
-                  </tbody>
-                </table>
-              ) : (
-                <table key={`obt-${workload}`} className="sim-table tabular">
-                  <thead>
-                    <tr>
-                      <th>order_id</th>
-                      <th>customer_id</th>
-                      <th>customer_segment</th>
-                      <th>product_category</th>
-                      <th className="num">amount_usd</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr
-                      className={
-                        workload === 'update'
-                          ? 'row-duplicated row-flash'
-                          : 'row-optimal row-flash'
-                      }
-                    >
-                      <td>ORD-9001</td>
-                      <td>U-101</td>
-                      <td>
-                        {workload === 'update' ? 'Enterprise (Reescrito)' : 'Enterprise'}
-                      </td>
-                      <td>Cloud Compute</td>
-                      <td className="num">$1,250.00</td>
-                    </tr>
-                    <tr
-                      className={
-                        workload === 'update'
-                          ? 'row-duplicated row-flash'
-                          : 'row-optimal row-flash'
-                      }
-                    >
-                      <td>ORD-9002</td>
-                      <td>U-101</td>
-                      <td>
-                        {workload === 'update' ? 'Enterprise (Reescrito)' : 'Enterprise'}
-                      </td>
-                      <td>Storage</td>
-                      <td className="num">$890.00</td>
-                    </tr>
-                    <tr className={workload === 'scan' ? 'row-optimal row-flash' : ''}>
-                      <td>ORD-9003</td>
-                      <td>U-204</td>
-                      <td>Mid-Market</td>
-                      <td>Cloud Compute</td>
-                      <td className="num">$340.00</td>
-                    </tr>
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </div>
-
-          <div className="sim-panel">
-            <div className="sim-panel__title">
-              {archMode === 'star'
-                ? 'Dimensiones: dim_customer_scd2 (50k filas) + dim_product (2k filas)'
-                : 'Impacto físico en bloques Parquet bajo esta operación'}
-            </div>
+          <div className="sim-table-scroll">
             {archMode === 'star' ? (
-              <div className="sim-table-scroll">
-                <table key={`dim-${workload}`} className="sim-table tabular">
-                  <thead>
-                    <tr>
-                      <th>Dimensión</th>
-                      <th className="num">sk</th>
-                      <th>natural_key</th>
-                      <th>Atributo gobernado</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr className={workload === 'update' ? 'row-optimal row-flash' : ''}>
-                      <td>
-                        <code>dim_customer_scd2</code>
-                      </td>
-                      <td className="num">
-                        <code>4012</code>
-                      </td>
-                      <td>U-101</td>
-                      <td>
-                        {workload === 'update'
-                          ? 'Segmento actualizado en 1 sola fila'
-                          : 'Segmento: Enterprise'}
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <code>dim_customer_scd2</code>
-                      </td>
-                      <td className="num">
-                        <code>7105</code>
-                      </td>
-                      <td>U-204</td>
-                      <td>Segmento: Mid-Market</td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <code>dim_product</code>
-                      </td>
-                      <td className="num">
-                        <code>88</code>
-                      </td>
-                      <td>PRD-09</td>
-                      <td>Categoría: Cloud Compute</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+              <table key={`star-${workload}`} className="sim-table sim-table--stack tabular">
+                <thead>
+                  <tr>
+                    <th>order_id</th>
+                    <th className="num">customer_sk</th>
+                    <th>dim_customer (join)</th>
+                    <th className="num">amount_usd</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="row-optimal anim-row-stagger">
+                    <td data-label="Pedido">ORD-9001</td>
+                    <td data-label="Clave SK" className="num">
+                      <code>4012</code>
+                    </td>
+                    <td data-label="Dimensión">
+                      {workload === 'update'
+                        ? 'U-101 → Enterprise (1 fila tocada)'
+                        : 'U-101 · Enterprise'}
+                    </td>
+                    <td data-label="Importe" className="num">$1,250.00</td>
+                  </tr>
+                  <tr className="row-optimal anim-row-stagger">
+                    <td data-label="Pedido">ORD-9002</td>
+                    <td data-label="Clave SK" className="num">
+                      <code>4012</code>
+                    </td>
+                    <td data-label="Dimensión">U-101 · Enterprise</td>
+                    <td data-label="Importe" className="num">$890.00</td>
+                  </tr>
+                  <tr className="anim-row-stagger">
+                    <td data-label="Pedido">ORD-9003</td>
+                    <td data-label="Clave SK" className="num">
+                      <code>7105</code>
+                    </td>
+                    <td data-label="Dimensión">U-204 · Mid-Market</td>
+                    <td data-label="Importe" className="num">$340.00</td>
+                  </tr>
+                </tbody>
+              </table>
             ) : (
-              <div className="block-strip tabular">
-                <div
-                  className={`disk-block ${
-                    workload === 'update' ? 'scanned-bad' : 'scanned-good'
-                  }`}
-                >
-                  {workload === 'update'
-                    ? 'Amplificación de escritura: 85 archivos Parquet reescritos para mutar U-101'
-                    : 'Lectura columnar directa: solo se descomprimen customer_segment y amount_usd'}
-                </div>
-                <div className="disk-block pruned">
-                  Compresión de diccionario en Parquet reduce cadenas repetidas (&quot;Enterprise&quot;)
-                  a índices de 1 byte en reposo.
-                </div>
-                <div className="disk-block scanned-good">
-                  Regla híbrida 2026: modela Silver/Core en Estrella para gobernar cambios y
-                  materializa OBT en Gold solo para motores BI extremos.
-                </div>
-              </div>
+              <table key={`obt-${workload}`} className="sim-table sim-table--stack tabular">
+                <thead>
+                  <tr>
+                    <th>order_id</th>
+                    <th>customer_id</th>
+                    <th>customer_segment</th>
+                    <th className="num">amount_usd</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    className={`anim-row-stagger ${
+                      workload === 'update' ? 'row-duplicated' : 'row-optimal'
+                    }`}
+                  >
+                    <td data-label="Pedido">ORD-9001</td>
+                    <td data-label="Cliente">U-101</td>
+                    <td data-label="Segmento">
+                      {workload === 'update'
+                        ? 'Enterprise (reescrito en disco)'
+                        : 'Enterprise'}
+                    </td>
+                    <td data-label="Importe" className="num">$1,250.00</td>
+                  </tr>
+                  <tr
+                    className={`anim-row-stagger ${
+                      workload === 'update' ? 'row-duplicated' : 'row-optimal'
+                    }`}
+                  >
+                    <td data-label="Pedido">ORD-9002</td>
+                    <td data-label="Cliente">U-101</td>
+                    <td data-label="Segmento">
+                      {workload === 'update'
+                        ? 'Enterprise (reescrito en disco)'
+                        : 'Enterprise'}
+                    </td>
+                    <td data-label="Importe" className="num">$890.00</td>
+                  </tr>
+                  <tr className="row-optimal anim-row-stagger">
+                    <td data-label="Pedido">ORD-9003</td>
+                    <td data-label="Cliente">U-204</td>
+                    <td data-label="Segmento">Mid-Market</td>
+                    <td data-label="Importe" className="num">$340.00</td>
+                  </tr>
+                </tbody>
+              </table>
             )}
           </div>
         </div>
 
         <div className="sim-comparison-card">
           <div className="sim-comparison-card__title">
-            Comparación Cuantitativa: Estrella vs. OBT ({workload === 'update' ? 'Mutación Dimensional' : 'Escaneo BI 10M Filas'})
+            Comparación cuantitativa:{' '}
+            {workload === 'update'
+              ? 'Mutación de 1 cliente'
+              : 'Escaneo BI de 10M de filas'}
           </div>
           <div className="sim-comparison-bars">
             {workload === 'update' ? (
@@ -800,28 +581,28 @@ export function StarVsObtSim() {
                 <div className="sim-bar-row">
                   <div className="sim-bar-header">
                     <span className="sim-bar-label">
-                      Esquema Estrella — Actualización aislada en dim_customer_scd2
+                      Estrella — Mutación aislada en dim_customer_scd2
                     </span>
-                    <span className="sim-bar-value">18 ms (1 archivo tocado)</span>
+                    <span className="sim-bar-value">18 ms (1 archivo)</span>
                   </div>
                   <div className="sim-bar-track">
                     <div
                       className="sim-bar-fill sim-bar-fill--success"
-                      style={{ '--bar-pct': '5%' }}
+                      data-pct="5"
                     />
                   </div>
                 </div>
                 <div className="sim-bar-row">
                   <div className="sim-bar-header">
                     <span className="sim-bar-label">
-                      One Big Table — Reescritura de pedidos históricos del cliente
+                      OBT — Reescritura de pedidos históricos en Parquet
                     </span>
-                    <span className="sim-bar-value">9,400 ms (85 archivos Parquet reescritos)</span>
+                    <span className="sim-bar-value">9,400 ms (85 archivos)</span>
                   </div>
                   <div className="sim-bar-track">
                     <div
                       className="sim-bar-fill sim-bar-fill--danger"
-                      style={{ '--bar-pct': '100%' }}
+                      data-pct="100"
                     />
                   </div>
                 </div>
@@ -831,81 +612,73 @@ export function StarVsObtSim() {
                 <div className="sim-bar-row">
                   <div className="sim-bar-header">
                     <span className="sim-bar-label">
-                      Esquema Estrella — Escaneo de hechos + Hash Join en memoria
+                      Estrella — Escaneo de hechos + Hash Join en RAM
                     </span>
-                    <span className="sim-bar-value">1.15 s (4.2 GB en disco)</span>
+                    <span className="sim-bar-value">1.15 s (4.2 GB)</span>
                   </div>
                   <div className="sim-bar-track">
                     <div
                       className="sim-bar-fill sim-bar-fill--stage"
-                      style={{ '--bar-pct': '72%' }}
+                      data-pct="72"
                     />
                   </div>
                 </div>
                 <div className="sim-bar-row">
                   <div className="sim-bar-header">
                     <span className="sim-bar-label">
-                      One Big Table — Barrido columnar secuencial sin JOIN
+                      OBT — Barrido columnar secuencial sin JOIN
                     </span>
-                    <span className="sim-bar-value">0.42 s (2.7x más rápido en lectura pura)</span>
+                    <span className="sim-bar-value">0.42 s (2.7x más rápido)</span>
                   </div>
                   <div className="sim-bar-track">
                     <div
                       className="sim-bar-fill sim-bar-fill--success"
-                      style={{ '--bar-pct': '28%' }}
+                      data-pct="28"
                     />
                   </div>
                 </div>
               </>
             )}
           </div>
-        </div>
-
-        <div className={`viz-result-banner ${currentMetric.status} tabular`}>
-          <div className="viz-banner-title">
-            Diagnóstico arquitectónico ({archMode === 'star' ? 'Esquema Estrella' : 'One Big Table'}{' '}
-            · {workload === 'update' ? 'Mutación de 1 cliente' : 'Escaneo de 10M de filas'}):
-          </div>
-          <p>{currentMetric.summary}</p>
+          <p className="sim-subnote">
+            Regla práctica: modela Silver en Estrella para gobernar cambios y materializa
+            OBT en Gold solo cuando el motor de consulta requiera latencia mínima sin
+            JOINs.
+          </p>
         </div>
       </div>
-
-      <div className="sim-frame__footer">
-        <span className="sim-frame__footer-label">Qué observar:</span>
-        <span className="sim-frame__footer-text">
-          El Esquema Estrella minimiza el costo de actualizar dimensiones; OBT elimina los JOINs en
-          lectura a cambio de amplificar las escrituras.
-        </span>
-      </div>
-    </div>
+    </SimulatorFrame>
   );
 }
 
-export function ArrowZeroCopySim() {
+export function ArrowZeroCopySim({
+  visualType = 'arrow-zero-copy',
+  onStateChange,
+}) {
   const [transportMode, setTransportMode] = useState('arrow'); // 'copy' | 'arrow'
   const [activeHop, setActiveHop] = useState(0);
 
   const pipelines = {
     copy: {
-      title: 'Serialización y copia en cada salto (75% de CPU copiando memoria)',
+      title: 'Serialización y copia en cada salto (75% de CPU en serde)',
       totalLatencyMs: 3420,
-      cpuCopyPct: '75% CPU en serde/copia',
-      memoryCopies: '4 copias completas en RAM',
-      peakRamGb: '4.8 GB RAM pico',
+      cpuCopyPct: '75% CPU en copia',
+      memoryCopies: '4 copias en RAM',
+      peakRamGb: '4.8 GB pico',
       steps: [
         {
           stepNum: 1,
-          stage: 'Postgres (Filas en heap)',
-          format: 'Tuplas orientadas a filas en protocolo de texto/binario libpq',
+          stage: 'Postgres (filas en heap)',
+          format: 'Tuplas por filas en protocolo libpq',
           cpuPct: '18% CPU',
           ramAllocated: '1.2 GB',
           action:
-            'Copia #1: serializa cada fila y convierte números/fechas a flujo de bytes de red.',
+            'Copia #1: serializa cada fila y convierte números y fechas a flujo de bytes de red.',
         },
         {
           stepNum: 2,
           stage: 'Archivo intermedio CSV / Pickle',
-          format: 'Cadenas de texto UTF-8 o grafo de objetos Python serializados',
+          format: 'Texto UTF-8 o grafo de objetos Python',
           cpuPct: '24% CPU',
           ramAllocated: '2.3 GB',
           action:
@@ -914,7 +687,7 @@ export function ArrowZeroCopySim() {
         {
           stepNum: 3,
           stage: 'DataFrame clásico en memoria',
-          format: 'Arrays fragmentados y objetos boxed en heap de Python',
+          format: 'Arrays fragmentados en heap de Python',
           cpuPct: '19% CPU',
           ramAllocated: '3.7 GB',
           action:
@@ -923,7 +696,7 @@ export function ArrowZeroCopySim() {
         {
           stepNum: 4,
           stage: 'Serialización JSON hacia BI',
-          format: 'Claves repetidas en texto JSON para el navegador',
+          format: 'Claves repetidas en texto JSON',
           cpuPct: '14% CPU',
           ramAllocated: '4.8 GB',
           action:
@@ -932,17 +705,17 @@ export function ArrowZeroCopySim() {
       ],
     },
     arrow: {
-      title: 'Apache Arrow IPC Zero-Copy (0 copias entre DuckDB, Polars y Browser Wasm)',
+      title: 'Apache Arrow IPC Zero-Copy (0 copias entre DuckDB, Polars y Wasm)',
       totalLatencyMs: 185,
-      cpuCopyPct: '0% CPU en recodificación',
-      memoryCopies: '0 copias (puntero compartido)',
-      peakRamGb: '1.1 GB RAM única',
+      cpuCopyPct: '0% CPU en copia',
+      memoryCopies: '0 copias (puntero)',
+      peakRamGb: '1.1 GB única',
       steps: [
         {
           stepNum: 1,
-          stage: 'Parquet a Buffer Apache Arrow',
-          format: 'Columnas contiguas SIMD en dirección 0x7F8A0040',
-          cpuPct: '4% CPU (lectura SIMD)',
+          stage: 'Parquet a buffer Apache Arrow',
+          format: 'Columnas contiguas SIMD en 0x7F8A0040',
+          cpuPct: '4% CPU (SIMD)',
           ramAllocated: '1.1 GB',
           action:
             'Carga única: decodifica las páginas columnares directamente al formato en memoria de Apache Arrow.',
@@ -950,8 +723,8 @@ export function ArrowZeroCopySim() {
         {
           stepNum: 2,
           stage: 'Motor SQL DuckDB',
-          format: 'Lee el mismo RecordBatch en 0x7F8A0040 (0 copias)',
-          cpuPct: '0% CPU en copia',
+          format: 'Lee el mismo RecordBatch en 0x7F8A0040',
+          cpuPct: '0% CPU copia',
           ramAllocated: '1.1 GB (compartida)',
           action:
             'Zero-Copy: DuckDB apunta sus vectores de ejecución directamente a la dirección de memoria de Arrow.',
@@ -959,8 +732,8 @@ export function ArrowZeroCopySim() {
         {
           stepNum: 3,
           stage: 'Motor DataFrame Polars (DA)',
-          format: 'Intercambio vía Arrow C Data Interface (0 copias)',
-          cpuPct: '0% CPU en copia',
+          format: 'Intercambio por Arrow C Data Interface',
+          cpuPct: '0% CPU copia',
           ramAllocated: '1.1 GB (compartida)',
           action:
             'Zero-Copy: Polars recibe únicamente el puntero de 64 bits al buffer columnar sin clonar un solo byte.',
@@ -968,11 +741,11 @@ export function ArrowZeroCopySim() {
         {
           stepNum: 4,
           stage: 'Navegador BI con DuckDB-Wasm',
-          format: 'Stream Arrow IPC directo a WebAssembly lineal (0 parseo JSON)',
+          format: 'Stream Arrow IPC a memoria lineal Wasm',
           cpuPct: '2% CPU (proyección)',
-          ramAllocated: '1.1 GB (vista directa)',
+          ramAllocated: '1.1 GB (vista)',
           action:
-            'Zero-Copy: el cliente BI mapea el buffer Arrow IPC en la memoria de WebAssembly y renderiza al instante.',
+            'Zero-Copy: el cliente BI mapea el buffer Arrow IPC en WebAssembly y renderiza sin parsear JSON.',
         },
       ],
     },
@@ -986,246 +759,185 @@ export function ArrowZeroCopySim() {
     setActiveHop(0);
   };
 
+  const liveReadout = `En modo ${
+    transportMode === 'arrow' ? 'Apache Arrow Zero-Copy' : 'serialización clásica'
+  } · Etapa #${currentStep.stepNum} (${currentStep.stage}): ${currentStep.action} Latencia total: ${
+    currentPipe.totalLatencyMs
+  } ms y memoria pico: ${currentPipe.peakRamGb}.`;
+
   return (
-    <div className="sim-frame viz-card" data-stage="3">
-      <div className="sim-frame__header">
-        <div className="sim-frame__title-group">
-          <span className="sim-frame__stage-icon" aria-hidden="true">
-            <Cpu size={18} />
-          </span>
-          <div className="sim-frame__headings">
-            <div className="sim-frame__kicker">Etapa 3 · Memoria Columnar Apache Arrow</div>
-            <h3 className="sim-frame__title">
-              Simulador de memoria: Serialización clásica frente a Apache Arrow IPC Zero-Copy
-            </h3>
-            <p className="sim-frame__desc">
-              Observa por qué los pipelines tradicionales gastan hasta el 75% de la CPU traduciendo
-              formatos y cómo Apache Arrow comparte el mismo bloque de RAM entre motores con 0
-              copias.
-            </p>
+    <SimulatorFrame
+      kicker="Formatos y motores · Memoria columnar Apache Arrow"
+      title="Serialización clásica frente a Apache Arrow IPC Zero-Copy"
+      instruction="Alterna el modo de transporte en memoria y selecciona cada etapa del pipeline para inspeccionar copias en RAM y gasto de CPU."
+      onReset={handleReset}
+      visualType={visualType}
+      mode={`${transportMode}:hop-${currentStep.stepNum}`}
+      metrics={{
+        transportMode,
+        hop: currentStep.stepNum,
+        stage: currentStep.stage,
+        totalLatencyMs: currentPipe.totalLatencyMs,
+        peakRamGb: transportMode === 'arrow' ? 1.1 : 4.8,
+        memoryCopies: transportMode === 'arrow' ? 0 : 4,
+      }}
+      liveReadout={liveReadout}
+      readoutTone={transportMode === 'copy' ? 'bad' : 'ok'}
+      onStateChange={onStateChange}
+      controls={
+        <>
+          <SimSegmented
+            ariaLabel="Modo de transporte en memoria"
+            value={transportMode}
+            onChange={setTransportMode}
+            options={[
+              {
+                value: 'copy',
+                label: 'Serialización clásica (4 copias · 75% CPU)',
+                tone: 'bad',
+              },
+              {
+                value: 'arrow',
+                label: 'Apache Arrow IPC Zero-Copy (0 copias)',
+                tone: 'ok',
+              },
+            ]}
+          />
+          <SimSegmented
+            ariaLabel="Etapa del pipeline"
+            value={activeHop}
+            onChange={setActiveHop}
+            options={currentPipe.steps.map((s, idx) => ({
+              value: idx,
+              label: `Etapa ${s.stepNum}`,
+              tone: transportMode === 'copy' ? 'bad' : 'default',
+            }))}
+          />
+          <div className="sim-metrics-strip tabular">
+            <span className={`sim-metric ${transportMode === 'copy' ? 'sim-metric--bad' : 'sim-metric--ok'}`}>
+              <span className="sim-metric__label">CPU:</span>
+              <span className="sim-metric__value">{currentPipe.cpuCopyPct}</span>
+            </span>
+            <span className={`sim-metric ${transportMode === 'copy' ? 'sim-metric--bad' : 'sim-metric--ok'}`}>
+              <span className="sim-metric__label">Copias:</span>
+              <span className="sim-metric__value">{currentPipe.memoryCopies}</span>
+            </span>
+            <span className="sim-metric">
+              <span className="sim-metric__label">RAM pico:</span>
+              <span className="sim-metric__value">{currentPipe.peakRamGb}</span>
+            </span>
+            <span className="sim-metric">
+              <span className="sim-metric__label">Latencia:</span>
+              <span className="sim-metric__value">{currentPipe.totalLatencyMs} ms</span>
+            </span>
           </div>
-        </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          icon={RotateCcw}
-          className="sim-reset-btn"
-          onClick={handleReset}
-          ariaLabel="Reiniciar simulador"
-        >
-          Reiniciar
-        </Button>
-      </div>
+        </>
+      }
+    >
+      <div className="sim-two-col">
+        <div className="sim-panel">
+          <div className="sim-panel__title">{currentPipe.title}</div>
+          <div className="sim-table-scroll">
+            <table key={transportMode} className="sim-table sim-table--stack tabular">
+              <thead>
+                <tr>
+                  <th>Etapa</th>
+                  <th>Componente / Motor</th>
+                  <th className="num">CPU Serde</th>
+                  <th className="num">RAM acumulada</th>
+                </tr>
+              </thead>
+              <tbody>
+                {currentPipe.steps.map((s, idx) => {
+                  const isSelected = activeHop === idx;
+                  const rowClass = [
+                    'row-clickable',
+                    'anim-row-stagger',
+                    isSelected
+                      ? transportMode === 'copy'
+                        ? 'row-duplicated'
+                        : 'row-selected'
+                      : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ');
 
-      <div className="sim-frame__controls">
-        <div className="sim-segmented" role="group" aria-label="Modo de transporte en memoria">
-          <button
-            type="button"
-            className={`sim-segmented__btn ${
-              transportMode === 'copy' ? 'sim-segmented__btn--active-danger' : ''
-            }`}
-            onClick={() => setTransportMode('copy')}
-          >
-            Postgres / CSV / Pandas / JSON (75% CPU copiando)
-          </button>
-          <button
-            type="button"
-            className={`sim-segmented__btn ${
-              transportMode === 'arrow' ? 'sim-segmented__btn--active' : ''
-            }`}
-            onClick={() => setTransportMode('arrow')}
-          >
-            Apache Arrow IPC Zero-Copy (0 copias en RAM)
-          </button>
-        </div>
-
-        <div className="sim-segmented" role="group" aria-label="Etapa del pipeline">
-          {currentPipe.steps.map((s, idx) => (
-            <button
-              key={s.stepNum}
-              type="button"
-              className={`sim-segmented__btn ${
-                activeHop === idx
-                  ? transportMode === 'copy'
-                    ? 'sim-segmented__btn--active-danger'
-                    : 'sim-segmented__btn--active'
-                  : ''
-              }`}
-              onClick={() => setActiveHop(idx)}
-            >
-              Etapa {s.stepNum}: {s.stage}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="sim-frame__body">
-        <div className="sim-four-col tabular">
-          <div className={`sim-metric-box ${transportMode === 'copy' ? 'box-danger' : 'box-ok'}`}>
-            <div className="sim-metric-title">
-              <Cpu size={13} /> Costo de CPU en copia
-            </div>
-            <div className="sim-metric-nums">
-              <strong>{currentPipe.cpuCopyPct}</strong>
-            </div>
-          </div>
-          <div className={`sim-metric-box ${transportMode === 'copy' ? 'box-danger' : 'box-ok'}`}>
-            <div className="sim-metric-title">Copias en memoria RAM</div>
-            <div className="sim-metric-nums">
-              <strong>{currentPipe.memoryCopies}</strong>
-            </div>
-          </div>
-          <div className="sim-metric-box">
-            <div className="sim-metric-title">Consumo pico de RAM</div>
-            <div className="sim-metric-nums">
-              <strong>{currentPipe.peakRamGb}</strong>
-            </div>
-          </div>
-          <div className="sim-metric-box">
-            <div className="sim-metric-title">Latencia extremo a extremo</div>
-            <div className="sim-metric-nums">
-              <strong>{currentPipe.totalLatencyMs} ms</strong>
-            </div>
-          </div>
-        </div>
-
-        <div className="sim-two-col">
-          <div className="sim-panel">
-            <div className="sim-panel__title">{currentPipe.title}</div>
-            <div className="sim-table-scroll">
-              <table key={transportMode} className="sim-table tabular">
-                <thead>
-                  <tr>
-                    <th>Etapa</th>
-                    <th>Componente / Motor</th>
-                    <th className="num">CPU Serde</th>
-                    <th className="num">RAM acumulada</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {currentPipe.steps.map((s, idx) => {
-                    const isSelected = activeHop === idx;
-                    const rowClass = [
-                      'row-clickable',
-                      isSelected
-                        ? transportMode === 'copy'
-                          ? 'row-duplicated row-flash'
-                          : 'row-selected row-flash'
-                        : '',
-                    ]
-                      .filter(Boolean)
-                      .join(' ');
-
-                    return (
-                      <tr
-                        key={`${s.stepNum}-${isSelected ? 'sel' : 'idle'}`}
-                        className={rowClass}
-                        onClick={() => setActiveHop(idx)}
-                      >
-                        <td>#{s.stepNum}</td>
-                        <td>{s.stage}</td>
-                        <td className="num">{s.cpuPct}</td>
-                        <td className="num">{s.ramAllocated}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div className="sim-panel">
-            <div className="sim-panel__title">
-              {transportMode === 'copy'
-                ? 'Fragmentación y recodificación en memoria (4 representaciones distintas)'
-                : 'Buffer columnar único en RAM (compartido por DuckDB, Polars y Wasm)'}
-            </div>
-            {transportMode === 'copy' ? (
-              <div className="block-strip tabular">
-                <div className="disk-block scanned-bad">
-                  1. Heap Postgres (Filas) convertidas a texto CSV / Pickle (Copia #1 y #2)
-                </div>
-                <div className="disk-block scanned-bad">
-                  2. Objetos PyObject dispersos en RAM para Pandas (Copia #3)
-                </div>
-                <div className="disk-block scanned-bad">
-                  3. Serialización a texto JSON para enviar al navegador (Copia #4)
-                </div>
-              </div>
-            ) : (
-              <div className="block-strip tabular">
-                <div className="disk-block scanned-good">
-                  Dirección base <code>0x7F8A0040</code>: Buffer Arrow{' '}
-                  <code>amount_usd (float64[10M])</code> contiguo en RAM
-                </div>
-                <div className="disk-block scanned-good">
-                  Lectores simultáneos sin copia: <strong>DuckDB</strong> + <strong>Polars</strong>{' '}
-                  + <strong>Browser Wasm</strong> leen <code>0x7F8A0040</code>
-                </div>
-                <div className="disk-block pruned">
-                  Intercambio de metadatos en nanosegundos: solo se transfiere el struct de punteros
-                  C Data Interface (64 bytes).
-                </div>
-              </div>
-            )}
+                  return (
+                    <tr
+                      key={`${s.stepNum}-${isSelected ? 'sel' : 'idle'}`}
+                      tabIndex={0}
+                      aria-selected={isSelected}
+                      data-sim-interactive="true"
+                      className={rowClass}
+                      onClick={() => setActiveHop(idx)}
+                      onKeyDown={(e) =>
+                        handleInteractiveRowKeyDown(
+                          e,
+                          () => setActiveHop(idx),
+                          idx,
+                          currentPipe.steps.length,
+                          setActiveHop
+                        )
+                      }
+                    >
+                      <td data-label="Etapa">#{s.stepNum}</td>
+                      <td data-label="Motor">{s.stage}</td>
+                      <td data-label="CPU Serde" className="num">{s.cpuPct}</td>
+                      <td data-label="RAM" className="num">{s.ramAllocated}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
 
         <div className="sim-comparison-card">
           <div className="sim-comparison-card__title">
-            Comparación de Latencia Total y Memoria Pico (10M de Filas)
+            Latencia y memoria en etapa #{currentStep.stepNum}: {currentStep.stage}
           </div>
           <div className="sim-comparison-bars">
             <div className="sim-bar-row">
               <div className="sim-bar-header">
                 <span className="sim-bar-label">
-                  Pipeline con Serialización Clásica (4 copias en RAM · 4.8 GB)
+                  Serialización clásica (4 copias · 4.8 GB RAM)
                 </span>
-                <span className="sim-bar-value">3,420 ms (75% CPU en Serde)</span>
+                <span className="sim-bar-value">3,420 ms (75% CPU)</span>
               </div>
               <div className="sim-bar-track">
                 <div
                   className="sim-bar-fill sim-bar-fill--danger"
-                  style={{ '--bar-pct': '100%' }}
+                  data-pct="100"
                 />
               </div>
             </div>
             <div className="sim-bar-row">
               <div className="sim-bar-header">
                 <span className="sim-bar-label">
-                  Apache Arrow IPC Zero-Copy (0 copias · 1.1 GB compartidos)
+                  Apache Arrow IPC Zero-Copy (0 copias · 1.1 GB)
                 </span>
                 <span className="sim-bar-value">185 ms (18.4x más rápido)</span>
               </div>
               <div className="sim-bar-track">
                 <div
                   className="sim-bar-fill sim-bar-fill--success"
-                  style={{ '--bar-pct': '6%' }}
+                  data-pct="6"
                 />
               </div>
             </div>
           </div>
-        </div>
-
-        <div
-          className={`viz-result-banner ${transportMode === 'copy' ? 'danger' : 'success'} tabular`}
-        >
-          <div className="viz-banner-title">
-            Detalle de la Etapa #{currentStep.stepNum} ({currentStep.stage} · Formato:{' '}
-            {currentStep.format}):
+          <div className="block-strip tabular">
+            <div
+              className={`disk-block ${
+                transportMode === 'copy' ? 'scanned-bad' : 'scanned-good'
+              }`}
+            >
+              <strong>Formato en etapa #{currentStep.stepNum}:</strong> {currentStep.format}
+            </div>
           </div>
-          <p>{currentStep.action}</p>
         </div>
       </div>
-
-      <div className="sim-frame__footer">
-        <span className="sim-frame__footer-label">Qué observar:</span>
-        <span className="sim-frame__footer-text">
-          Con Apache Arrow, DuckDB, Polars y WebAssembly apuntan a la misma dirección física de
-          memoria (0x7F8A0040) sin serializar ni duplicar buffers.
-        </span>
-      </div>
-    </div>
+    </SimulatorFrame>
   );
 }
 

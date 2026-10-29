@@ -1,763 +1,1127 @@
 /* ==========================================================================
-   SIMULADORES INTERACTIVOS Y LABORATORIOS DE PRÁCTICA (FASE 2)
+   VIEWS / SIMULATORS.CSS — T13 Consolidación visual de los 18 simuladores
+   Paleta disciplinada (§4.1), marco común <SimulatorFrame>, @container queries,
+   cero estilos en línea (data-pct) y tokens canónicos de tokens.css.
    ========================================================================== */
 
 /* ==========================================================================
    1. MARCO COMÚN DE SIMULADOR (.sim-frame)
    ========================================================================== */
 
-.sim-frame {
-  position: relative;
+.sim-frame,
+.sim-frame.viz-card {
+  container-type: inline-size;
+  container-name: simulator;
   background-color: var(--surface);
-  border: 1px solid var(--border);
-  border-top: 4px solid var(--stage);
-  border-radius: var(--r-lg);
-  box-shadow: var(--shadow-1);
-  margin: 1.25rem 0;
+  border: 1px solid var(--line);
+  border-radius: var(--r-3);
+  padding: 0;
+  margin: 0.75rem 0;
+  box-shadow: none;
   overflow: hidden;
-  max-width: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .sim-frame__header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 0.75rem;
-  padding: 1.125rem 1.25rem 0.875rem 1.25rem;
-  border-bottom: 1px solid var(--border);
+  gap: var(--sp-3);
+  padding: 0.5625rem 0.875rem;
+  border-bottom: 1px solid var(--line);
+  background-color: var(--surface);
 }
 
-.sim-frame__title-group {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  min-width: 0;
-  flex: 1;
-}
-
-.sim-frame__stage-icon {
-  width: 2.375rem;
-  height: 2.375rem;
-  border-radius: var(--r-md);
-  background-color: var(--stage-soft);
-  color: var(--stage-deep);
-  border: 1px solid color-mix(in oklab, var(--stage) 30%, transparent);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
+.sim-frame__titles,
+.sim-frame__title-group,
 .sim-frame__headings {
   min-width: 0;
   flex: 1;
 }
 
+.sim-frame__eyebrow-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-bottom: 0.125rem;
+}
+
+.sim-frame__eyebrow,
 .sim-frame__kicker {
   font-family: var(--font-mono);
-  font-size: var(--fs-xs);
+  font-size: var(--fs-1);
   font-weight: 600;
-  color: var(--stage-deep);
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  margin-bottom: 2px;
+  color: var(--brand);
+  margin-bottom: 0.125rem;
+}
+
+.sim-frame__area-pills {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.sim-area-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.0625rem 0.375rem;
+  border-radius: var(--r-1);
+  border: 1px solid var(--line);
+  background-color: var(--sunken);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.sim-area-dot {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: var(--r-pill);
+  display: inline-block;
+}
+
+.sim-area-dot--de {
+  background-color: var(--track-de);
+}
+
+.sim-area-dot--da {
+  background-color: var(--track-da);
+}
+
+.sim-area-dot--bi {
+  background-color: var(--track-bi);
 }
 
 .sim-frame__title {
+  margin: 0;
   font-family: var(--font-display);
-  font-size: var(--fs-lg);
+  font-size: var(--fs-4);
   font-weight: 600;
-  color: var(--text);
-  margin: 0 0 0.25rem 0;
-  line-height: 1.3;
+  line-height: var(--lh-tight);
+  color: var(--ink);
+  letter-spacing: -0.015em;
 }
 
+.sim-frame__instruction,
 .sim-frame__desc {
-  font-size: var(--fs-sm);
-  color: var(--text-2);
-  margin: 0;
-  line-height: 1.5;
+  margin: 0.1875rem 0 0 0;
+  font-size: var(--fs-2);
+  color: var(--ink-2);
+  line-height: var(--lh-ui);
 }
 
 .sim-reset-btn {
-  min-height: 2.75rem;
-  min-width: 2.75rem;
-  padding: 0 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3125rem;
+  min-height: 2rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: var(--r-1);
+  border: 1px solid var(--line-control);
+  background-color: var(--surface);
+  color: var(--ink-2);
+  font-family: var(--font-sans);
+  font-size: var(--fs-1);
+  font-weight: 600;
+  cursor: pointer;
   flex-shrink: 0;
+  transition:
+    background-color var(--dur-1) var(--ease-out),
+    color var(--dur-1) var(--ease-out),
+    border-color var(--dur-1) var(--ease-out);
 }
 
-/* Zona de controles y Segmented Control (.sim-segmented) */
+.sim-reset-btn:hover {
+  background-color: var(--sunken);
+  color: var(--ink);
+  border-color: var(--ink-3);
+}
+
+.sim-reset-btn:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Barra de controles */
 .sim-frame__controls {
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 0.75rem;
-  padding: 0.75rem 1.25rem;
-  background-color: var(--surface-2);
-  border-bottom: 1px solid var(--border);
+  gap: 0.5rem;
+  padding: 0.4375rem 0.875rem;
+  background-color: var(--sunken);
+  border-bottom: 1px solid var(--line);
 }
 
 .sim-control-group {
   display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-  min-width: 0;
-  max-width: 100%;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .sim-control-label {
   font-family: var(--font-mono);
-  font-size: var(--fs-xs);
+  font-size: var(--fs-1);
   font-weight: 600;
-  color: var(--text-2);
+  color: var(--ink-2);
 }
 
-.sim-segmented {
-  display: inline-flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-  padding: 0.25rem;
-  background-color: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  max-width: 100%;
-}
-
-.sim-segmented__btn {
-  min-height: 2.375rem;
-  padding: 0.375rem 0.75rem;
-  border-radius: var(--r-sm);
-  border: 1px solid transparent;
-  background-color: transparent;
-  color: var(--text-2);
-  font-family: var(--font-sans);
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  line-height: 1.25;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  cursor: pointer;
-  text-align: left;
-  transition:
-    background-color var(--dur-1) var(--ease-out),
-    color var(--dur-1) var(--ease-out),
-    border-color var(--dur-1) var(--ease-out),
-    box-shadow var(--dur-1) var(--ease-out);
-}
-
-.sim-segmented__btn:hover:not(:disabled) {
-  color: var(--text);
-  background-color: var(--surface-2);
-}
-
-.sim-segmented__btn:focus-visible {
-  outline: 2px solid var(--stage);
-  outline-offset: 2px;
-}
-
-.sim-segmented__btn--active {
-  background-color: var(--stage-soft);
-  color: var(--stage-deep);
-  border-color: color-mix(in oklab, var(--stage) 45%, transparent);
-  box-shadow: var(--shadow-1);
-}
-
-.sim-segmented__btn--active-danger {
-  background-color: var(--danger-soft);
-  color: var(--danger);
-  border-color: color-mix(in oklab, var(--danger) 42%, transparent);
-  box-shadow: var(--shadow-1);
-}
-
-.sim-segmented__btn--active-success {
-  background-color: var(--stage-soft);
-  color: var(--stage-deep);
-  border-color: var(--stage);
-  box-shadow: var(--shadow-1);
-}
-
-/* Cuerpo interactivo y pie compacto */
+/* Lienzo principal de visualización */
+.sim-frame__canvas,
 .sim-frame__body {
-  padding: 1.25rem;
+  padding: 0.5625rem 0.875rem;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  min-width: 0;
-}
-
-.sim-frame__footer {
-  display: flex;
-  align-items: center;
   gap: 0.5rem;
-  padding: 0.625rem 1.25rem;
-  background-color: var(--surface-2);
-  border-top: 1px solid var(--border);
-  font-size: var(--fs-xs);
-  color: var(--text-2);
-  line-height: 1.4;
+  background-color: var(--surface);
 }
 
-.sim-frame__footer-label {
+/* Lectura viva inferior (.sim-live-readout) — Paso 2 */
+.sim-live-readout {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.375rem 0.5rem;
+  padding: 0.4375rem 0.875rem;
+  background-color: var(--sunken);
+  border-top: 1px solid var(--line);
+  border-left: 3px solid var(--brand);
+  font-size: var(--fs-2);
+  line-height: 1.4;
+  color: var(--ink-2);
+}
+
+.sim-live-readout--ok {
+  border-left-color: var(--ok);
+  background-color: color-mix(in oklab, var(--ok-soft) 55%, var(--sunken));
+}
+
+.sim-live-readout--bad {
+  border-left-color: var(--bad);
+  background-color: color-mix(in oklab, var(--bad-soft) 55%, var(--sunken));
+}
+
+.sim-live-readout--warn {
+  border-left-color: var(--warn);
+  background-color: color-mix(in oklab, var(--warn-soft) 55%, var(--sunken));
+}
+
+.sim-live-readout__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3125rem;
   font-family: var(--font-mono);
-  font-weight: 600;
-  color: var(--stage-deep);
-  white-space: nowrap;
+  font-size: var(--fs-1);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink);
   flex-shrink: 0;
 }
 
-.sim-frame__footer-text {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.sim-live-readout__dot {
+  width: 0.4375rem;
+  height: 0.4375rem;
+  border-radius: var(--r-pill);
+  background-color: var(--brand);
 }
 
-@media (max-width: 680px) {
-  .sim-frame__header {
-    padding: 0.875rem 1rem;
-    flex-wrap: wrap;
-  }
+.sim-live-readout--ok .sim-live-readout__dot {
+  background-color: var(--ok);
+}
 
-  .sim-frame__title-group {
-    flex: 1 1 100%;
-  }
+.sim-live-readout--bad .sim-live-readout__dot {
+  background-color: var(--bad);
+}
 
-  .sim-reset-btn {
-    margin-left: auto;
-  }
+.sim-live-readout--warn .sim-live-readout__dot {
+  background-color: var(--warn);
+}
 
-  .sim-frame__controls {
-    padding: 0.625rem 1rem;
-  }
-
-  .sim-frame__body {
-    padding: 1rem;
-  }
-
-  .sim-frame__footer {
-    padding: 0.625rem 1rem;
-    flex-wrap: wrap;
-  }
-
-  .sim-frame__footer-text {
-    white-space: normal;
-  }
+.sim-live-readout__text {
+  color: var(--ink);
+  font-weight: 450;
+  flex: 1;
+  min-width: 14rem;
 }
 
 /* ==========================================================================
-   2. TABLAS DE SIMULADORES (.sim-table-scroll + .sim-table)
+   2. CONTROLES INTERACTIVOS (SEGMENTED, SLIDER, MÉTRICAS)
    ========================================================================== */
 
-.sim-table-scroll {
-  width: 100%;
-  max-width: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
+.sim-segmented {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  padding: 0.1875rem;
   background-color: var(--surface);
-  /* Sombra lateral indicadora de scroll horizontal */
-  background-image:
-    linear-gradient(to right, var(--surface) 30%, transparent),
-    linear-gradient(to left, var(--surface) 30%, transparent),
-    radial-gradient(farthest-side at 0 50%, rgb(16 24 40 / 0.14), transparent),
-    radial-gradient(farthest-side at 100% 50%, rgb(16 24 40 / 0.14), transparent);
-  background-position: left center, right center, left center, right center;
-  background-repeat: no-repeat;
-  background-size: 1.75rem 100%, 1.75rem 100%, 0.75rem 100%, 0.75rem 100%;
-  background-attachment: local, local, scroll, scroll;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-2);
 }
 
-.sim-table,
-.viz-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  font-variant-numeric: tabular-nums;
-  background-color: transparent;
-  margin: 0;
-}
-
-.sim-table th,
-.sim-table td,
-.viz-table th,
-.viz-table td {
-  padding: 0.5625rem 0.75rem;
-  text-align: left;
-  border-bottom: 1px solid var(--border);
-  vertical-align: middle;
-}
-
-.sim-table tbody tr:last-child td,
-.viz-table tbody tr:last-child td {
-  border-bottom: none;
-}
-
-.sim-table thead th,
-.viz-table thead th {
-  position: sticky;
-  top: 0;
-  z-index: 3;
-  background-color: var(--surface-2);
+.sim-segmented__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  min-height: 1.875rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: var(--r-1);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink-2);
   font-family: var(--font-sans);
-  font-size: var(--fs-xs);
+  font-size: var(--fs-1);
   font-weight: 600;
-  color: var(--text);
-  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color var(--dur-1) var(--ease-out),
+    color var(--dur-1) var(--ease-out),
+    border-color var(--dur-1) var(--ease-out);
 }
 
-/* Primera columna sticky a la izquierda */
-.sim-table th:first-child,
-.sim-table td:first-child {
-  position: sticky;
-  left: 0;
-  z-index: 2;
-  background-color: var(--surface);
-  border-right: 1px solid var(--border);
+.sim-segmented__btn:hover:not(.is-active):not(.sim-segmented__btn--active) {
+  color: var(--ink);
+  background-color: var(--sunken);
 }
 
-.sim-table thead th:first-child {
-  z-index: 4;
-  background-color: var(--surface-2);
+.sim-segmented__btn.is-active,
+.sim-segmented__btn--active {
+  background-color: var(--brand);
+  color: var(--brand-ink);
+  border-color: var(--brand);
 }
 
-/* Números alineados a la derecha en fuente mono */
-.sim-table th.num,
-.sim-table td.num,
-.viz-table th.num,
-.viz-table td.num {
-  text-align: right;
+.sim-segmented__btn--active-ok,
+.sim-segmented__btn--active-success {
+  background-color: var(--ok);
+  color: #FFFFFF;
+  border-color: var(--ok);
+}
+
+.sim-segmented__btn--active-danger {
+  background-color: var(--bad);
+  color: #FFFFFF;
+  border-color: var(--bad);
+}
+
+.sim-segmented__btn:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Grupo de Slider */
+.sim-slider-group,
+.sim-slider-box,
+.viz-slider-box {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+  flex: 1;
+  min-width: 13.5rem;
+}
+
+.sim-slider-label {
   font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-1);
+  font-weight: 600;
+  color: var(--ink);
   white-space: nowrap;
 }
 
-/* Estados semánticos de fila y destello de 900ms */
-.sim-table tbody tr.row-flash td {
-  animation: grain-fill var(--dur-3) var(--ease-out);
-}
-
-.sim-table tbody tr.row-duplicated td,
-.sim-table tbody tr.row-danger td,
-.viz-table tbody tr.row-duplicated td {
-  background-color: var(--danger-soft);
-  color: var(--danger);
-  font-weight: 600;
-}
-
-.sim-table tbody tr.row-valid td,
-.sim-table tbody tr.row-optimal td,
-.viz-table tbody tr.row-valid td {
-  background-color: var(--success-soft);
-  color: var(--success);
-  font-weight: 600;
-}
-
-.sim-table tbody tr.row-selected td {
-  background-color: var(--stage-soft);
-  color: var(--text);
-  font-weight: 600;
-}
-
-.sim-table tbody tr.row-muted-highlight td {
-  background-color: var(--surface-2);
-}
-
-.sim-table tbody tr.row-clickable {
+.sim-slider,
+.sim-slider-box input[type='range'],
+.viz-slider-box input[type='range'] {
+  flex: 1;
+  min-width: 6.5rem;
+  height: 1.5rem;
+  accent-color: var(--brand);
   cursor: pointer;
 }
 
-.sim-table tbody tr.row-clickable:hover td {
-  background-color: color-mix(in oklab, var(--stage-soft) 55%, var(--surface));
+.sim-slider-caption {
+  font-size: var(--fs-1);
+  color: var(--ink-2);
+  width: 100%;
+  margin-top: 0.125rem;
 }
 
-.sim-table-empty-cell {
-  text-align: center !important;
-  padding: 1.25rem 0.75rem !important;
-  color: var(--danger);
-  background-color: var(--danger-soft) !important;
-  font-weight: 600;
+.sim-slider:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: var(--r-1);
 }
 
-/* Celdas de matriz de retención (SimulatorsPackB) */
-.sim-cell-m0 {
-  background-color: var(--surface-2) !important;
-  color: var(--text);
-  font-weight: 600;
-}
-
-.sim-cell-pending {
-  background-color: var(--surface-2) !important;
-  color: var(--text-2);
-  font-style: italic;
-}
-
-.sim-cell-solid {
-  background-color: var(--success-soft) !important;
-  color: var(--success);
-  font-weight: 600;
-}
-
-.sim-cell-stable {
-  background-color: color-mix(in oklab, var(--success-soft) 65%, var(--surface)) !important;
-  color: var(--success);
-  font-weight: 600;
-}
-
-.sim-cell-warn {
-  background-color: var(--warning-soft) !important;
-  color: color-mix(in oklab, var(--warning) 75%, var(--text));
-  font-weight: 600;
-}
-
-.sim-cell-critical {
-  background-color: var(--danger-soft) !important;
-  color: var(--danger);
-  font-weight: 600;
-}
-
-.sim-text-success {
-  color: var(--success);
-  font-weight: 600;
-}
-
-.sim-text-danger {
-  color: var(--danger);
-  font-weight: 600;
-}
-
-.sim-text-primary {
-  color: var(--primary);
-  font-weight: 600;
-}
-
-.sim-text-muted {
-  color: var(--text-2);
-  font-weight: 600;
-}
-
-.sim-subnote {
-  font-family: var(--font-sans);
-  font-size: var(--fs-xs);
-  color: var(--text-2);
-  font-weight: 400;
-  margin-top: 2px;
-}
-
-.sim-subnote--danger {
-  color: var(--danger);
-}
-
-/* ==========================================================================
-   3. BARRAS COMPARATIVAS Y RESULTADOS NUMÉRICOS
-   ========================================================================== */
-
-.sim-comparison-card {
-  background-color: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  padding: 0.875rem 1rem;
+/* Cinta de métricas resumidas */
+.sim-metrics-strip {
   display: flex;
-  flex-direction: column;
-  gap: 0.625rem;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.375rem;
 }
 
-.sim-comparison-card__title {
-  font-family: var(--font-sans);
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  color: var(--text-2);
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
+.sim-metric {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.1875rem 0.5rem;
+  border-radius: var(--r-1);
+  background-color: var(--surface);
+  border: 1px solid var(--line);
+  font-size: var(--fs-1);
 }
 
-.sim-comparison-bars {
-  display: flex;
-  flex-direction: column;
-  gap: 0.625rem;
+.sim-metric__label {
+  color: var(--ink-3);
+  font-weight: 500;
 }
 
-.sim-bar-row {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.sim-bar-header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.5rem;
-  font-size: var(--fs-xs);
+.sim-metric__value {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
 
-.sim-bar-label {
-  font-weight: 600;
-  color: var(--text);
-  min-width: 0;
+.sim-metric--ok {
+  border-color: color-mix(in oklab, var(--ok) 45%, var(--line));
+  background-color: var(--ok-soft);
 }
 
-.sim-bar-value {
-  font-family: var(--font-mono);
-  font-weight: 600;
-  color: var(--text);
-  white-space: nowrap;
+.sim-metric--ok .sim-metric__value {
+  color: var(--ok);
 }
 
-.sim-bar-track {
-  width: 100%;
-  height: 0.625rem;
-  background-color: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-pill);
-  overflow: hidden;
+.sim-metric--bad,
+.sim-metric--danger {
+  border-color: color-mix(in oklab, var(--bad) 45%, var(--line));
+  background-color: var(--bad-soft);
 }
 
-.sim-bar-fill {
-  width: var(--bar-pct, 0%);
-  height: 100%;
-  border-radius: var(--r-pill);
-  transition:
-    width var(--dur-3) var(--ease-out),
-    background-color var(--dur-2) var(--ease-out);
+.sim-metric--bad .sim-metric__value,
+.sim-metric--danger .sim-metric__value {
+  color: var(--bad);
 }
 
-.sim-bar-fill--danger {
-  background-color: var(--danger);
+.sim-metric--warn {
+  border-color: color-mix(in oklab, var(--warn) 45%, var(--line));
+  background-color: var(--warn-soft);
 }
 
-.sim-bar-fill--success {
-  background-color: var(--success);
-}
-
-.sim-bar-fill--stage {
-  background-color: var(--stage);
-}
-
-.sim-bar-fill--warning {
-  background-color: var(--warning);
-}
-
-.sim-bar-fill--neutral {
-  background-color: var(--text-2);
-}
-
-/* Barra compacta dentro de celdas de tabla (ej. BI Anti-Slop) */
-.sim-inline-bar {
-  width: 6.875rem;
-  height: 0.625rem;
-  background-color: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: var(--r-pill);
-  overflow: hidden;
+.sim-metric--warn .sim-metric__value {
+  color: var(--warn);
 }
 
 /* ==========================================================================
-   LAYOUTS INTERNOS DE SIMULADORES (GRIDS, SLIDERS, TIMELINES, DISK BLOCKS)
+   3. REJILLAS, PANELES Y TABLAS CON @CONTAINER QUERIES (PASO 5)
    ========================================================================== */
 
-.sim-two-col,
-.viz-two-col {
+.sim-two-col {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
-  min-width: 0;
+  gap: 0.625rem;
 }
 
 .sim-three-col {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.625rem;
-  min-width: 0;
 }
 
-.sim-four-col,
-.viz-bars-grid {
+.sim-four-col {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.625rem;
-  min-width: 0;
+  gap: 0.5rem;
 }
 
-@media (max-width: 860px) {
-  .sim-two-col,
-  .viz-two-col {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .sim-four-col,
-  .viz-bars-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 560px) {
-  .sim-three-col,
-  .sim-four-col,
-  .viz-bars-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-.sim-panel,
-.viz-mini-table-box {
+.sim-panel {
   background-color: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  padding: 0.875rem;
+  border: 1px solid var(--line);
+  border-radius: var(--r-2);
+  padding: 0.625rem 0.75rem;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.625rem;
+  gap: 0.375rem;
 }
 
-.sim-panel--soft {
-  background-color: var(--surface-2);
+.sim-panel--active {
+  border-color: var(--brand);
+  background-color: color-mix(in oklab, var(--brand-soft) 45%, var(--surface));
+}
+
+.sim-panel--ok,
+.sim-panel--valid {
+  border-color: color-mix(in oklab, var(--ok) 55%, var(--line));
+  background-color: color-mix(in oklab, var(--ok-soft) 45%, var(--surface));
+}
+
+.sim-panel--bad,
+.sim-panel--err {
+  border-color: color-mix(in oklab, var(--bad) 55%, var(--line));
+  background-color: color-mix(in oklab, var(--bad-soft) 45%, var(--surface));
+}
+
+.sim-panel--muted {
+  opacity: 0.52;
+  background-color: var(--sunken);
 }
 
 .sim-panel__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
   gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
-.sim-panel__title,
-.viz-table-label {
-  font-family: var(--font-sans);
-  font-size: var(--fs-xs);
+.sim-panel__title {
+  font-family: var(--font-mono);
+  font-size: var(--fs-1);
   font-weight: 600;
-  color: var(--text-2);
+  color: var(--ink);
+}
+
+.sim-panel__badge {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 0.0625rem 0.375rem;
+  border-radius: var(--r-1);
+  background-color: var(--sunken);
+  border: 1px solid var(--line);
+  color: var(--ink-2);
+}
+
+/* Contenedor de tabla con sombra lateral sutil cuando hace scroll horizontal */
+.sim-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--r-2);
+  background:
+    linear-gradient(to right, var(--surface) 25%, transparent),
+    linear-gradient(to left, var(--surface) 25%, transparent),
+    radial-gradient(farthest-side at 0 50%, rgb(15 23 42 / 0.12), transparent),
+    radial-gradient(farthest-side at 100% 50%, rgb(15 23 42 / 0.12), transparent);
+  background-position: 0 0, 100% 0, 0 0, 100% 0;
+  background-repeat: no-repeat;
+  background-size: 2rem 100%, 2rem 100%, 0.625rem 100%, 0.625rem 100%;
+  background-attachment: local, local, scroll, scroll;
+}
+
+.sim-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: var(--fs-1);
+  font-variant-numeric: tabular-nums;
+}
+
+.sim-table th {
+  text-align: left;
+  padding: 0.25rem 0.5625rem;
+  background-color: var(--sunken);
+  color: var(--ink-2);
+  font-weight: 600;
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.sim-table td {
+  padding: 0.28125rem 0.5625rem;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+  vertical-align: middle;
+}
+
+.sim-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Índices automáticos de escalonamiento para .anim-row-stagger */
+.sim-table tbody tr:nth-child(1) { --row-index: 0; }
+.sim-table tbody tr:nth-child(2) { --row-index: 1; }
+.sim-table tbody tr:nth-child(3) { --row-index: 2; }
+.sim-table tbody tr:nth-child(4) { --row-index: 3; }
+.sim-table tbody tr:nth-child(5) { --row-index: 4; }
+.sim-table tbody tr:nth-child(6) { --row-index: 5; }
+.sim-table tbody tr:nth-child(7) { --row-index: 6; }
+.sim-table tbody tr:nth-child(8) { --row-index: 7; }
+
+/* Estados semánticos de filas (§4.1: datos en --ink, resaltado en --brand, error en --bad, correcto en --ok) */
+.sim-table tbody tr.row-clickable {
+  cursor: pointer;
+  transition: background-color var(--dur-1) var(--ease-out);
+}
+
+.sim-table tbody tr.row-clickable:hover {
+  background-color: var(--sunken);
+}
+
+.sim-table tbody tr.row-clickable:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.sim-table tbody tr.row-current,
+.sim-table tbody tr.row-selected {
+  background-color: var(--brand-soft);
+}
+
+.sim-table tbody tr.row-current td:first-child,
+.sim-table tbody tr.row-selected td:first-child {
+  box-shadow: inset 3px 0 0 var(--brand);
+  font-weight: 700;
+}
+
+.sim-table tbody tr.row-in-window,
+.sim-table tbody tr.row-valid,
+.sim-table tbody tr.row-optimal {
+  background-color: color-mix(in oklab, var(--ok-soft) 70%, var(--surface));
+}
+
+.sim-table tbody tr.row-in-window td:first-child,
+.sim-table tbody tr.row-valid td:first-child,
+.sim-table tbody tr.row-optimal td:first-child {
+  box-shadow: inset 3px 0 0 var(--ok);
+}
+
+.sim-table tbody tr.row-duplicated,
+.sim-table tbody tr.row-danger {
+  background-color: var(--bad-soft);
+}
+
+.sim-table tbody tr.row-duplicated td:first-child,
+.sim-table tbody tr.row-danger td:first-child {
+  box-shadow: inset 3px 0 0 var(--bad);
+}
+
+.sim-table tbody tr.row-Warning {
+  background-color: var(--warn-soft);
+}
+
+.sim-table tbody tr.row-Warning td:first-child {
+  box-shadow: inset 3px 0 0 var(--warn);
+}
+
+.sim-table tbody tr.row-muted,
+.sim-table tbody tr.row-muted-highlight {
+  opacity: 0.45;
+  background-color: var(--sunken);
+}
+
+.sim-table th.num,
+.sim-table td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.sim-text-success { color: var(--ok); font-weight: 600; }
+.sim-text-danger { color: var(--bad); font-weight: 600; }
+.sim-text-primary { color: var(--brand); font-weight: 600; }
+.sim-text-muted { color: var(--ink-3); }
+
+.sim-subnote {
+  font-size: var(--fs-1);
+  color: var(--ink-2);
+  margin: 0.125rem 0 0 0;
+}
+
+.sim-subnote--danger {
+  color: var(--bad);
+}
+
+/* Celdas de mapa de calor de cohortes (monocromáticas con --brand / --ok / --warn / --bad) */
+.cohort-cell,
+.sim-cell-m0,
+.sim-cell-pending,
+.sim-cell-solid,
+.sim-cell-stable,
+.sim-cell-warn,
+.sim-cell-critical {
+  text-align: center;
+  font-weight: 600;
+  border-radius: 2px;
+}
+
+.sim-cell-m0 {
+  background-color: var(--sunken);
+  color: var(--ink);
+}
+
+.sim-cell-pending {
+  color: var(--ink-3);
+}
+
+.cohort-cell--high,
+.sim-cell-solid {
+  background-color: color-mix(in oklab, var(--ok-soft) 80%, var(--surface));
+  color: var(--ok);
+}
+
+.cohort-cell--mid,
+.sim-cell-stable {
+  background-color: var(--brand-soft);
+  color: var(--brand);
+}
+
+.cohort-cell--low,
+.sim-cell-warn {
+  background-color: var(--warn-soft);
+  color: var(--ink);
+}
+
+.cohort-cell--critical,
+.sim-cell-critical {
+  background-color: var(--bad-soft);
+  color: var(--bad);
+}
+
+/* @container query (< 520px / 32.5rem) — Paso 5 */
+@container (max-width: 32.5rem) {
+  .sim-frame__header {
+    padding: 0.625rem 0.75rem;
+  }
+
+  .sim-frame__controls {
+    padding: 0.5rem 0.75rem;
+  }
+
+  .sim-frame__canvas {
+    padding: 0.625rem 0.75rem;
+  }
+
+  .sim-live-readout {
+    padding: 0.5rem 0.75rem;
+  }
+
+  .sim-two-col,
+  .sim-three-col,
+  .sim-four-col {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sim-slider-group {
+    min-width: 100%;
+  }
+
+  /* Tablas con clase .sim-table--stack pasan a tarjetas apiladas */
+  .sim-table-scroll:has(.sim-table--stack) {
+    border: none;
+    background: transparent;
+    overflow-x: visible;
+  }
+
+  .sim-table--stack,
+  .sim-table--stack tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .sim-table--stack thead {
+    display: none;
+  }
+
+  .sim-table--stack tbody tr {
+    display: block;
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
+    margin-bottom: 0.4375rem;
+    padding: 0.25rem 0;
+    background-color: var(--surface);
+  }
+
+  .sim-table--stack tbody tr:last-child {
+    margin-bottom: 0;
+  }
+
+  .sim-table--stack tbody td {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.25rem 0.625rem;
+    border-bottom: 1px dashed var(--line);
+    text-align: right;
+  }
+
+  .sim-table--stack tbody td:last-child {
+    border-bottom: none;
+  }
+
+  .sim-table--stack tbody td[data-label]::before {
+    content: attr(data-label);
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ink-3);
+    text-align: left;
+    flex-shrink: 0;
+  }
+}
+
+/* ==========================================================================
+   4. BARRAS CUANTITATIVAS SIN ESTILOS EN LÍNEA (data-pct 0..100) — PASO 3
+   ========================================================================== */
+
+.sim-bar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4375rem;
+}
+
+.sim-bar-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1875rem;
+}
+
+.sim-bar-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: var(--fs-1);
+  color: var(--ink);
+}
+
+.sim-bar-track {
+  width: 100%;
+  height: 0.5625rem;
+  border-radius: var(--r-pill);
+  background-color: var(--sunken);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.sim-bar-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: var(--r-pill);
+  background-color: var(--brand);
+  transition: width var(--dur-4) var(--ease-out);
+}
+
+.sim-bar-fill--ok,
+.sim-bar-fill--success {
+  background-color: var(--ok);
+}
+
+.sim-bar-fill--bad,
+.sim-bar-fill--danger {
+  background-color: var(--bad);
+}
+
+.sim-bar-fill--warn,
+.sim-bar-fill--warning {
+  background-color: var(--warn);
+}
+
+/* Mapeo declarativo data-pct="0" .. data-pct="100" (cero style={{}}) */
+.sim-bar-fill[data-pct="0"] { width: 0%; }
+.sim-bar-fill[data-pct="1"] { width: 1%; }
+.sim-bar-fill[data-pct="2"] { width: 2%; }
+.sim-bar-fill[data-pct="3"] { width: 3%; }
+.sim-bar-fill[data-pct="4"] { width: 4%; }
+.sim-bar-fill[data-pct="5"] { width: 5%; }
+.sim-bar-fill[data-pct="6"] { width: 6%; }
+.sim-bar-fill[data-pct="7"] { width: 7%; }
+.sim-bar-fill[data-pct="8"] { width: 8%; }
+.sim-bar-fill[data-pct="9"] { width: 9%; }
+.sim-bar-fill[data-pct="10"] { width: 10%; }
+.sim-bar-fill[data-pct="11"] { width: 11%; }
+.sim-bar-fill[data-pct="12"] { width: 12%; }
+.sim-bar-fill[data-pct="13"] { width: 13%; }
+.sim-bar-fill[data-pct="14"] { width: 14%; }
+.sim-bar-fill[data-pct="15"] { width: 15%; }
+.sim-bar-fill[data-pct="16"] { width: 16%; }
+.sim-bar-fill[data-pct="17"] { width: 17%; }
+.sim-bar-fill[data-pct="18"] { width: 18%; }
+.sim-bar-fill[data-pct="19"] { width: 19%; }
+.sim-bar-fill[data-pct="20"] { width: 20%; }
+.sim-bar-fill[data-pct="21"] { width: 21%; }
+.sim-bar-fill[data-pct="22"] { width: 22%; }
+.sim-bar-fill[data-pct="23"] { width: 23%; }
+.sim-bar-fill[data-pct="24"] { width: 24%; }
+.sim-bar-fill[data-pct="25"] { width: 25%; }
+.sim-bar-fill[data-pct="26"] { width: 26%; }
+.sim-bar-fill[data-pct="27"] { width: 27%; }
+.sim-bar-fill[data-pct="28"] { width: 28%; }
+.sim-bar-fill[data-pct="29"] { width: 29%; }
+.sim-bar-fill[data-pct="30"] { width: 30%; }
+.sim-bar-fill[data-pct="31"] { width: 31%; }
+.sim-bar-fill[data-pct="32"] { width: 32%; }
+.sim-bar-fill[data-pct="33"] { width: 33%; }
+.sim-bar-fill[data-pct="34"] { width: 34%; }
+.sim-bar-fill[data-pct="35"] { width: 35%; }
+.sim-bar-fill[data-pct="36"] { width: 36%; }
+.sim-bar-fill[data-pct="37"] { width: 37%; }
+.sim-bar-fill[data-pct="38"] { width: 38%; }
+.sim-bar-fill[data-pct="39"] { width: 39%; }
+.sim-bar-fill[data-pct="40"] { width: 40%; }
+.sim-bar-fill[data-pct="41"] { width: 41%; }
+.sim-bar-fill[data-pct="42"] { width: 42%; }
+.sim-bar-fill[data-pct="43"] { width: 43%; }
+.sim-bar-fill[data-pct="44"] { width: 44%; }
+.sim-bar-fill[data-pct="45"] { width: 45%; }
+.sim-bar-fill[data-pct="46"] { width: 46%; }
+.sim-bar-fill[data-pct="47"] { width: 47%; }
+.sim-bar-fill[data-pct="48"] { width: 48%; }
+.sim-bar-fill[data-pct="49"] { width: 49%; }
+.sim-bar-fill[data-pct="50"] { width: 50%; }
+.sim-bar-fill[data-pct="51"] { width: 51%; }
+.sim-bar-fill[data-pct="52"] { width: 52%; }
+.sim-bar-fill[data-pct="53"] { width: 53%; }
+.sim-bar-fill[data-pct="54"] { width: 54%; }
+.sim-bar-fill[data-pct="55"] { width: 55%; }
+.sim-bar-fill[data-pct="56"] { width: 56%; }
+.sim-bar-fill[data-pct="57"] { width: 57%; }
+.sim-bar-fill[data-pct="58"] { width: 58%; }
+.sim-bar-fill[data-pct="59"] { width: 59%; }
+.sim-bar-fill[data-pct="60"] { width: 60%; }
+.sim-bar-fill[data-pct="61"] { width: 61%; }
+.sim-bar-fill[data-pct="62"] { width: 62%; }
+.sim-bar-fill[data-pct="63"] { width: 63%; }
+.sim-bar-fill[data-pct="64"] { width: 64%; }
+.sim-bar-fill[data-pct="65"] { width: 65%; }
+.sim-bar-fill[data-pct="66"] { width: 66%; }
+.sim-bar-fill[data-pct="67"] { width: 67%; }
+.sim-bar-fill[data-pct="68"] { width: 68%; }
+.sim-bar-fill[data-pct="69"] { width: 69%; }
+.sim-bar-fill[data-pct="70"] { width: 70%; }
+.sim-bar-fill[data-pct="71"] { width: 71%; }
+.sim-bar-fill[data-pct="72"] { width: 72%; }
+.sim-bar-fill[data-pct="73"] { width: 73%; }
+.sim-bar-fill[data-pct="74"] { width: 74%; }
+.sim-bar-fill[data-pct="75"] { width: 75%; }
+.sim-bar-fill[data-pct="76"] { width: 76%; }
+.sim-bar-fill[data-pct="77"] { width: 77%; }
+.sim-bar-fill[data-pct="78"] { width: 78%; }
+.sim-bar-fill[data-pct="79"] { width: 79%; }
+.sim-bar-fill[data-pct="80"] { width: 80%; }
+.sim-bar-fill[data-pct="81"] { width: 81%; }
+.sim-bar-fill[data-pct="82"] { width: 82%; }
+.sim-bar-fill[data-pct="83"] { width: 83%; }
+.sim-bar-fill[data-pct="84"] { width: 84%; }
+.sim-bar-fill[data-pct="85"] { width: 85%; }
+.sim-bar-fill[data-pct="86"] { width: 86%; }
+.sim-bar-fill[data-pct="87"] { width: 87%; }
+.sim-bar-fill[data-pct="88"] { width: 88%; }
+.sim-bar-fill[data-pct="89"] { width: 89%; }
+.sim-bar-fill[data-pct="90"] { width: 90%; }
+.sim-bar-fill[data-pct="91"] { width: 91%; }
+.sim-bar-fill[data-pct="92"] { width: 92%; }
+.sim-bar-fill[data-pct="93"] { width: 93%; }
+.sim-bar-fill[data-pct="94"] { width: 94%; }
+.sim-bar-fill[data-pct="95"] { width: 95%; }
+.sim-bar-fill[data-pct="96"] { width: 96%; }
+.sim-bar-fill[data-pct="97"] { width: 97%; }
+.sim-bar-fill[data-pct="98"] { width: 98%; }
+.sim-bar-fill[data-pct="99"] { width: 99%; }
+.sim-bar-fill[data-pct="100"] { width: 100%; }
+
+/* ==========================================================================
+   5. COMPONENTES VISUALES DE FLUJO, TIMELINE Y COMPARACIÓN
+   ========================================================================== */
+
+.sim-flow-strip {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 0.375rem;
-  margin: 0;
+  padding: 0.5rem 0.625rem;
+  border-radius: var(--r-2);
+  background-color: var(--sunken);
+  border: 1px solid var(--line);
+}
+
+.sim-flow-node {
+  padding: 0.25rem 0.5625rem;
+  border-radius: var(--r-1);
+  background-color: var(--surface);
+  border: 1px solid var(--line-strong);
+  font-family: var(--font-mono);
+  font-size: var(--fs-1);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.sim-flow-node--active {
+  background-color: var(--brand-soft);
+  border-color: var(--brand);
+  color: var(--brand);
+}
+
+.sim-flow-node--ok {
+  background-color: var(--ok-soft);
+  border-color: var(--ok);
+  color: var(--ok);
+}
+
+.sim-flow-node--bad,
+.sim-flow-node--danger {
+  background-color: var(--bad-soft);
+  border-color: var(--bad);
+  color: var(--bad);
+}
+
+.sim-flow-arrow {
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: var(--fs-1);
+}
+
+.sim-comparison-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4375rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--r-2);
+  border: 1px solid var(--line);
+  background-color: var(--sunken);
+}
+
+.sim-comparison-card__title {
+  font-family: var(--font-mono);
+  font-size: var(--fs-1);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.sim-comparison-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4375rem;
+}
+
+.sim-bar-label {
+  color: var(--ink-2);
+  font-weight: 500;
+}
+
+.sim-bar-value {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.sim-bar-fill--stage {
+  background-color: var(--brand);
+}
+
+.sim-bar-fill--neutral {
+  background-color: var(--ink-3);
+}
+
+.sim-inline-bar {
+  display: inline-block;
+  height: 0.5rem;
+  border-radius: var(--r-pill);
+  vertical-align: middle;
 }
 
 .sim-metric-box,
 .viz-metric-box {
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--r-2);
+  border: 1px solid var(--line);
   background-color: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  padding: 0.75rem 0.875rem;
-  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.1875rem;
 }
 
 .sim-metric-box.box-danger,
 .viz-metric-box.box-danger {
-  background-color: var(--danger-soft);
-  border-color: color-mix(in oklab, var(--danger) 35%, var(--border));
+  border-color: var(--bad);
+  background-color: var(--bad-soft);
 }
 
 .sim-metric-box.box-ok,
 .viz-metric-box.box-ok {
-  background-color: var(--success-soft);
-  border-color: color-mix(in oklab, var(--success) 35%, var(--border));
+  border-color: var(--ok);
+  background-color: var(--ok-soft);
 }
 
 .sim-metric-title,
 .viz-metric-title {
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  color: var(--text-2);
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
+  font-size: var(--fs-1);
+  color: var(--ink-2);
+  font-weight: 500;
 }
 
 .sim-metric-nums,
 .viz-metric-nums {
   font-family: var(--font-mono);
-  font-size: var(--fs-sm);
-  color: var(--text);
+  font-size: var(--fs-3);
+  font-weight: 700;
+  color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
 
-/* Sliders interactivos */
-.sim-slider-box,
-.viz-slider-box {
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-  font-size: var(--fs-xs);
-  color: var(--text);
-  flex: 1 1 16.25rem;
-  min-width: 0;
-}
-
-.sim-slider-box input[type='range'],
-.viz-slider-box input[type='range'] {
-  width: 100%;
-  accent-color: var(--stage);
-  cursor: pointer;
-}
-
-.sim-slider-caption {
-  font-size: var(--fs-xs);
-  color: var(--text-2);
-}
-
-/* Bloques de disco / memoria */
 .sim-storage-blocks,
 .viz-storage-blocks {
   display: flex;
   flex-direction: column;
-  gap: 0.625rem;
+  gap: 0.375rem;
 }
 
 .sim-storage-lead {
+  font-size: var(--fs-1);
+  color: var(--ink-2);
   margin: 0;
-  font-size: var(--fs-sm);
-  color: var(--text);
 }
 
 .block-strip {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+  gap: 0.375rem;
 }
 
 .disk-block {
-  padding: 0.625rem 0.75rem;
-  border-radius: var(--r-sm);
-  border: 1px solid var(--border);
+  padding: 0.4375rem 0.5625rem;
+  border-radius: var(--r-1);
+  border: 1px solid var(--line);
+  background-color: var(--surface);
   font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  line-height: 1.4;
+  font-size: var(--fs-1);
+  color: var(--ink);
 }
 
 .disk-block.scanned-bad {
-  background-color: var(--danger-soft);
-  border-color: color-mix(in oklab, var(--danger) 40%, var(--border));
-  color: var(--danger);
-  font-weight: 600;
+  border-color: var(--bad);
+  background-color: var(--bad-soft);
+  color: var(--bad);
 }
 
 .disk-block.scanned-good {
-  background-color: var(--success-soft);
-  border-color: color-mix(in oklab, var(--success) 40%, var(--border));
-  color: var(--success);
-  font-weight: 600;
+  border-color: var(--ok);
+  background-color: var(--ok-soft);
+  color: var(--ok);
 }
 
 .disk-block.pruned {
-  background-color: var(--surface-2);
+  opacity: 0.45;
+  background-color: var(--sunken);
   border-style: dashed;
-  color: var(--text-2);
 }
 
-/* Tarjetas de pista temporal (ASOF JOIN) */
 .sim-track-section {
   display: flex;
   flex-direction: column;
@@ -765,108 +1129,169 @@
 }
 
 .sim-track-label {
-  font-size: var(--fs-xs);
+  font-family: var(--font-mono);
+  font-size: var(--fs-1);
   font-weight: 600;
-  color: var(--text-2);
+  color: var(--ink-2);
+}
+
+.sim-comparison-card__col {
+  padding: 0.5rem 0.625rem;
+  border-radius: var(--r-2);
+  border: 1px solid var(--line);
+  background-color: var(--sunken);
+  font-size: var(--fs-1);
+  color: var(--ink-2);
+  line-height: 1.45;
+}
+
+.sim-comparison-card__col strong {
+  display: block;
+  color: var(--ink);
+  font-size: var(--fs-1);
+  margin-bottom: 0.125rem;
+}
+
+.sim-code-strip {
+  padding: 0.4375rem 0.625rem;
+  border-radius: var(--r-1);
+  background-color: var(--sunken);
+  border: 1px solid var(--line);
+  font-family: var(--font-mono);
+  font-size: var(--fs-1);
+  color: var(--ink);
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+/* Tarjetas de línea temporal (ASOF Join, Iceberg, Flink) */
+.sim-Timeline-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
 }
 
 .sim-Timeline-card {
-  padding: 0.625rem 0.75rem;
-  border-radius: var(--r-sm);
-  border: 1px solid var(--border);
+  padding: 0.5rem 0.625rem;
+  border-radius: var(--r-2);
+  border: 1px solid var(--line);
   background-color: var(--surface);
   transition:
-    background-color var(--dur-1) var(--ease-out),
-    border-color var(--dur-1) var(--ease-out);
+    border-color var(--dur-1) var(--ease-out),
+    background-color var(--dur-1) var(--ease-out);
 }
 
 .sim-Timeline-card--clickable {
   cursor: pointer;
 }
 
+.sim-Timeline-card--clickable:hover {
+  background-color: var(--sunken);
+  border-color: var(--line-strong);
+}
+
+.sim-Timeline-card--clickable:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.sim-Timeline-card--active {
+  border-color: var(--brand);
+  background-color: var(--brand-soft);
+}
+
+.sim-Timeline-card--valid,
 .sim-Timeline-card--matched {
-  border: 2px solid var(--stage);
-  background-color: var(--stage-soft);
+  border-color: var(--ok);
+  background-color: var(--ok-soft);
 }
 
+.sim-Timeline-card--err,
 .sim-Timeline-card--danger {
-  border: 2px solid var(--danger);
-  background-color: var(--danger-soft);
+  border-color: var(--bad);
+  background-color: var(--bad-soft);
 }
 
+.sim-Timeline-card--muted {
+  opacity: 0.5;
+  background-color: var(--sunken);
+}
+
+.sim-Timeline-card__row,
 .sim-Timeline-card__head {
   display: flex;
+  align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 0.5rem;
   font-weight: 600;
-  font-size: var(--fs-sm);
-  color: var(--text);
+  font-size: var(--fs-1);
+  color: var(--ink);
 }
 
 .sim-Timeline-card__meta {
-  font-size: var(--fs-xs);
-  color: var(--text-2);
-  margin-top: 0.25rem;
+  font-size: var(--fs-1);
+  color: var(--ink-2);
+  margin-top: 0.125rem;
 }
 
-/* Listas dentro de simuladores */
 .sim-list {
   margin: 0;
-  padding-left: 1.125rem;
-  font-size: var(--fs-sm);
-  line-height: 1.6;
-  color: var(--text);
+  padding-left: 1rem;
+  font-size: var(--fs-1);
+  line-height: 1.5;
+  color: var(--ink);
 }
 
-/* SVG Curva de Supervivencia */
+/* SVG Curva de retención de cohortes */
 .sim-chart-svg {
   width: 100%;
   height: auto;
-  max-height: 12.5rem;
+  max-height: 7.25rem;
   background-color: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-sm);
+  border: 1px solid var(--line);
+  border-radius: var(--r-1);
   display: block;
 }
 
 .sim-legend-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  font-size: var(--fs-xs);
+  gap: 0.375rem;
+  font-size: var(--fs-1);
 }
 
 .sim-legend-pill {
-  padding: 0.125rem 0.5rem;
-  border-radius: var(--r-sm);
+  padding: 0.125rem 0.4375rem;
+  border-radius: var(--r-1);
   font-weight: 600;
   font-family: var(--font-mono);
-  font-size: var(--fs-xs);
+  font-size: 0.6875rem;
 }
 
 .sim-legend-pill--solid {
-  background-color: var(--success-soft);
-  color: var(--success);
+  background-color: var(--ok-soft);
+  color: var(--ok);
 }
 
 .sim-legend-pill--warn {
-  background-color: var(--warning-soft);
-  color: color-mix(in oklab, var(--warning) 75%, var(--text));
+  background-color: var(--brand-soft);
+  color: var(--brand);
 }
 
 .sim-legend-pill--danger {
-  background-color: var(--danger-soft);
-  color: var(--danger);
+  background-color: var(--bad-soft);
+  color: var(--bad);
 }
 
-/* Roles triad en CohortRetentionSim */
+/* Tarjetas de áreas DE / DA / BI en CohortRetentionSim */
 .triad-roles-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.75rem;
+  gap: 0.5rem;
 }
 
-@media (max-width: 768px) {
+@container (max-width: 32.5rem) {
   .triad-roles-grid {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -874,52 +1299,56 @@
 
 .triad-role-card {
   background-color: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  padding: 0.875rem;
-  font-size: var(--fs-xs);
+  border: 1px solid var(--line);
+  border-radius: var(--r-2);
+  padding: 0.625rem 0.75rem;
+  font-size: var(--fs-1);
 }
 
 .triad-role-card h4 {
-  margin: 0.5rem 0 0.375rem 0;
-  font-size: var(--fs-sm);
-  color: var(--text);
+  margin: 0.375rem 0 0.25rem 0;
+  font-size: var(--fs-2);
+  color: var(--ink);
 }
 
 .triad-role-card ul {
   margin: 0;
   padding-left: 1rem;
-  color: var(--text-2);
-  line-height: 1.5;
+  color: var(--ink-2);
+  line-height: 1.45;
 }
 
 .role-badge {
   display: inline-flex;
   align-items: center;
-  padding: 0.125rem 0.5rem;
+  gap: 0.25rem;
+  padding: 0.0625rem 0.4375rem;
   border-radius: var(--r-pill);
   font-family: var(--font-mono);
-  font-size: var(--fs-xs);
+  font-size: 0.6875rem;
   font-weight: 600;
+  background-color: var(--sunken);
+  border: 1px solid var(--line);
+  color: var(--ink);
 }
 
 .role-badge.DE {
-  background-color: var(--role-de-soft);
-  color: var(--role-de-deep);
+  border-color: color-mix(in oklab, var(--track-de) 45%, var(--line));
+  color: var(--track-de);
 }
 
 .role-badge.DA {
-  background-color: var(--role-da-soft);
-  color: var(--role-da-deep);
+  border-color: color-mix(in oklab, var(--track-da) 45%, var(--line));
+  color: var(--track-da);
 }
 
 .role-badge.BI {
-  background-color: var(--role-bi-soft);
-  color: var(--role-bi-deep);
+  border-color: color-mix(in oklab, var(--track-bi) 45%, var(--line));
+  color: var(--track-bi);
 }
 
 /* ==========================================================================
-   4. AUTHENTIC CODE LAB (.codelab)
+   6. AUTHENTIC CODE LAB (.codelab) Y PIPELINE ORDER CHALLENGE
    ========================================================================== */
 
 .codelab {
@@ -945,23 +1374,23 @@
 .codelab__title {
   margin: 0;
   font-family: var(--font-display);
-  font-size: var(--fs-lg);
+  font-size: var(--fs-5);
   font-weight: 600;
-  color: var(--text);
+  color: var(--ink);
 }
 
 .codelab__desc {
   margin: 0;
-  font-size: var(--fs-sm);
-  color: var(--text-2);
+  font-size: var(--fs-2);
+  color: var(--ink-2);
   line-height: 1.55;
 }
 
 .codelab-editor {
-  background-color: var(--code-bg);
+  background-color: #141923;
   color: #EEF0F6;
-  border-radius: var(--r-md);
-  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+  border: 1px solid var(--line);
   overflow: hidden;
   box-shadow: var(--shadow-1);
 }
@@ -976,7 +1405,7 @@
   background-color: rgb(255 255 255 / 0.04);
   border-bottom: 1px solid rgb(255 255 255 / 0.1);
   font-family: var(--font-mono);
-  font-size: var(--fs-xs);
+  font-size: var(--fs-1);
   color: #A3AAC0;
 }
 
@@ -1002,7 +1431,7 @@
   display: table;
   width: 100%;
   font-family: var(--font-mono);
-  font-size: var(--fs-sm);
+  font-size: var(--fs-2);
   line-height: 1.65;
 }
 
@@ -1039,7 +1468,7 @@
   margin: 0 0.125rem;
   border-radius: 4px;
   font-family: var(--font-mono);
-  font-size: var(--fs-xs);
+  font-size: var(--fs-1);
   font-weight: 600;
   background-color: rgb(139 140 255 / 0.2);
   color: #B4B5FF;
@@ -1053,7 +1482,6 @@
   border-color: #3DD68C;
 }
 
-/* Inputs integrados de alto contraste en el editor */
 .codelab-inputs-panel {
   background-color: rgb(255 255 255 / 0.03);
   border-top: 1px solid rgb(255 255 255 / 0.12);
@@ -1065,9 +1493,9 @@
 
 .codelab-blank-row {
   background-color: var(--surface);
-  color: var(--text);
-  border: 1.5px solid var(--border);
-  border-radius: var(--r-md);
+  color: var(--ink);
+  border: 1.5px solid var(--line);
+  border-radius: var(--r-2);
   padding: 0.75rem 0.875rem;
   display: flex;
   flex-direction: column;
@@ -1076,13 +1504,13 @@
 }
 
 .codelab-blank-row--valid {
-  border-color: var(--success);
-  background-color: var(--success-soft);
+  border-color: var(--ok);
+  background-color: var(--ok-soft);
 }
 
 .codelab-blank-row--err {
-  border-color: var(--danger);
-  background-color: var(--danger-soft);
+  border-color: var(--bad);
+  background-color: var(--bad-soft);
 }
 
 .codelab-blank-header {
@@ -1091,24 +1519,24 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 0.5rem;
-  font-size: var(--fs-sm);
-  color: var(--text);
+  font-size: var(--fs-2);
+  color: var(--ink);
 }
 
 .codelab-hint-btn {
   background: transparent;
   border: none;
-  color: var(--primary);
+  color: var(--brand);
   font-family: var(--font-sans);
-  font-size: var(--fs-xs);
+  font-size: var(--fs-1);
   font-weight: 600;
   cursor: pointer;
   padding: 0.25rem 0.5rem;
-  border-radius: var(--r-sm);
+  border-radius: var(--r-1);
 }
 
 .codelab-hint-btn:hover {
-  background-color: var(--primary-soft);
+  background-color: var(--brand-soft);
 }
 
 .codelab-code-input,
@@ -1116,13 +1544,13 @@
   width: 100%;
   height: 2.75rem;
   padding: 0 0.75rem;
-  border-radius: var(--r-sm);
-  border: 1.5px solid var(--border);
+  border-radius: var(--r-1);
+  border: 1.5px solid var(--line-control);
   background-color: var(--surface);
   font-family: var(--font-mono);
-  font-size: var(--fs-sm);
+  font-size: var(--fs-2);
   font-weight: 600;
-  color: var(--text);
+  color: var(--ink);
   transition:
     border-color var(--dur-1) var(--ease-out),
     box-shadow var(--dur-1) var(--ease-out);
@@ -1131,26 +1559,26 @@
 .codelab-code-input:focus-visible,
 .lab-code-input:focus-visible {
   outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px var(--primary-soft);
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-soft);
 }
 
 .codelab-code-input.is-ok,
 .lab-code-input.is-ok {
-  border-color: var(--success);
+  border-color: var(--ok);
   background-color: var(--surface);
 }
 
 .codelab-code-input.is-err,
 .lab-code-input.is-err {
-  border-color: var(--danger);
+  border-color: var(--bad);
   background-color: var(--surface);
 }
 
 .codelab-hint-text,
 .lab-hint-text {
-  font-size: var(--fs-xs);
-  color: var(--text-2);
+  font-size: var(--fs-1);
+  color: var(--ink-2);
   margin: 0;
   line-height: 1.45;
 }
@@ -1167,10 +1595,7 @@
   min-height: 2.75rem;
 }
 
-/* ==========================================================================
-   5. PIPELINE ORDER CHALLENGE (.pipeline-challenge)
-   ========================================================================== */
-
+/* Pipeline Order Challenge */
 .pipeline-challenge {
   display: flex;
   flex-direction: column;
@@ -1186,15 +1611,15 @@
 .pipeline-challenge__title {
   margin: 0;
   font-family: var(--font-display);
-  font-size: var(--fs-lg);
+  font-size: var(--fs-5);
   font-weight: 600;
-  color: var(--text);
+  color: var(--ink);
 }
 
 .pipeline-challenge__desc {
   margin: 0;
-  font-size: var(--fs-sm);
-  color: var(--text-2);
+  font-size: var(--fs-2);
+  color: var(--ink-2);
   line-height: 1.55;
 }
 
@@ -1210,8 +1635,8 @@
   align-items: center;
   gap: 0.75rem;
   padding: 0.75rem 0.875rem;
-  border-radius: var(--r-md);
-  border: 1.5px solid var(--border);
+  border-radius: var(--r-2);
+  border: 1.5px solid var(--line);
   background-color: var(--surface);
   box-shadow: var(--shadow-1);
   transition:
@@ -1223,24 +1648,24 @@
 .pipeline-step-card--dragging {
   opacity: 0.65;
   border-style: dashed;
-  border-color: var(--stage);
+  border-color: var(--brand);
 }
 
 .pipeline-step-card.is-ok {
-  border-color: var(--success);
-  background-color: var(--success-soft);
+  border-color: var(--ok);
+  background-color: var(--ok-soft);
 }
 
 .pipeline-step-card.is-err {
-  border-color: var(--danger);
-  background-color: var(--danger-soft);
+  border-color: var(--bad);
+  background-color: var(--bad-soft);
 }
 
 .pipeline-step-handle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-2);
+  color: var(--ink-2);
   cursor: grab;
   padding: 0.25rem 0.125rem;
 }
@@ -1253,11 +1678,11 @@
   width: 1.75rem;
   height: 1.75rem;
   border-radius: var(--r-pill);
-  background-color: var(--surface-2);
-  border: 1px solid var(--border);
-  color: var(--text);
+  background-color: var(--sunken);
+  border: 1px solid var(--line);
+  color: var(--ink);
   font-family: var(--font-mono);
-  font-size: var(--fs-xs);
+  font-size: var(--fs-1);
   font-weight: 600;
   display: inline-flex;
   align-items: center;
@@ -1266,14 +1691,14 @@
 }
 
 .pipeline-step-card.is-ok .pipeline-step-index {
-  background-color: var(--success);
-  border-color: var(--success);
+  background-color: var(--ok);
+  border-color: var(--ok);
   color: #FFFFFF;
 }
 
 .pipeline-step-card.is-err .pipeline-step-index {
-  background-color: var(--danger);
-  border-color: var(--danger);
+  background-color: var(--bad);
+  border-color: var(--bad);
   color: #FFFFFF;
 }
 
@@ -1289,13 +1714,13 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 0.5rem;
-  font-size: var(--fs-sm);
-  color: var(--text);
+  font-size: var(--fs-2);
+  color: var(--ink);
 }
 
 .pipeline-step-detail {
-  font-size: var(--fs-xs);
-  color: var(--text-2);
+  font-size: var(--fs-1);
+  color: var(--ink-2);
   margin: 0;
   line-height: 1.45;
 }
@@ -1307,20 +1732,20 @@
   padding: 0.125rem 0.5rem;
   border-radius: var(--r-pill);
   font-family: var(--font-mono);
-  font-size: var(--fs-xs);
+  font-size: var(--fs-1);
   font-weight: 600;
 }
 
 .pipeline-step-status--valid {
   background-color: var(--surface);
-  color: var(--success);
-  border: 1px solid color-mix(in oklab, var(--success) 40%, transparent);
+  color: var(--ok);
+  border: 1px solid color-mix(in oklab, var(--ok) 40%, transparent);
 }
 
 .pipeline-step-status--err {
   background-color: var(--surface);
-  color: var(--danger);
-  border: 1px solid color-mix(in oklab, var(--danger) 40%, transparent);
+  color: var(--bad);
+  border: 1px solid color-mix(in oklab, var(--bad) 40%, transparent);
 }
 
 .pipeline-step-controls {
@@ -1336,12 +1761,12 @@
   min-width: 2.75rem;
   min-height: 2.75rem;
   padding: 0;
-  border-radius: var(--r-sm);
-  border: 1px solid var(--border);
+  border-radius: var(--r-1);
+  border: 1px solid var(--line-control);
   background-color: var(--surface);
-  color: var(--text);
+  color: var(--ink);
   font-family: var(--font-mono);
-  font-size: var(--fs-md);
+  font-size: var(--fs-3);
   font-weight: 600;
   display: inline-flex;
   align-items: center;
@@ -1353,8 +1778,8 @@
 }
 
 .pipeline-move-btn:hover:not(:disabled) {
-  background-color: var(--surface-2);
-  border-color: var(--text-2);
+  background-color: var(--sunken);
+  border-color: var(--ink-2);
 }
 
 .pipeline-move-btn:disabled {
@@ -1371,30 +1796,30 @@
     grid-column: 1 / -1;
     justify-content: flex-end;
     padding-top: 0.375rem;
-    border-top: 1px dashed var(--border);
+    border-top: 1px dashed var(--line);
   }
 }
 
 /* ==========================================================================
-   CLASES DE COMPATIBILIDAD (USADAS EN OTROS COMPONENTES DE LECCIÓN)
+   7. CLASES DE COMPATIBILIDAD (USADAS EN OTROS COMPONENTES DE LECCIÓN)
    ========================================================================== */
 
 .code-block-dark {
-  background-color: var(--code-bg);
+  background-color: #141923;
   color: #EEF0F6;
   font-family: var(--font-mono);
-  font-size: var(--fs-sm);
+  font-size: var(--fs-2);
   line-height: 1.55;
   padding: 1rem;
-  border-radius: var(--r-md);
+  border-radius: var(--r-2);
   overflow-x: auto;
   margin: 0.75rem 0;
 }
 
 .viz-card {
   background-color: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-lg);
+  border: 1px solid var(--line);
+  border-radius: var(--r-3);
   box-shadow: var(--shadow-1);
   padding: 1.25rem;
   margin: 1.25rem 0;
@@ -1415,8 +1840,8 @@
 }
 
 .viz-desc {
-  font-size: var(--fs-sm);
-  color: var(--text-2);
+  font-size: var(--fs-2);
+  color: var(--ink-2);
   margin: 0;
 }
 
@@ -1430,12 +1855,12 @@
 .viz-toggle-btn {
   min-height: 2.375rem;
   padding: 0.375rem 0.75rem;
-  border-radius: var(--r-sm);
-  border: 1px solid var(--border);
+  border-radius: var(--r-1);
+  border: 1px solid var(--line-control);
   background-color: var(--surface);
-  color: var(--text);
+  color: var(--ink);
   font-family: var(--font-sans);
-  font-size: var(--fs-xs);
+  font-size: var(--fs-1);
   font-weight: 600;
   display: inline-flex;
   align-items: center;
@@ -1446,27 +1871,27 @@
 .viz-result-banner,
 .editorial-feedback {
   padding: 0.75rem 1rem;
-  border-radius: var(--r-md);
-  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+  border: 1px solid var(--line);
   border-left-width: 4px;
   background-color: var(--surface);
-  font-size: var(--fs-sm);
+  font-size: var(--fs-2);
 }
 
 .viz-result-banner.danger,
 .editorial-feedback.err {
-  border-left-color: var(--danger);
-  background-color: var(--danger-soft);
+  border-left-color: var(--bad);
+  background-color: var(--bad-soft);
 }
 
 .viz-result-banner.success,
 .editorial-feedback.ok {
-  border-left-color: var(--success);
-  background-color: var(--success-soft);
+  border-left-color: var(--ok);
+  background-color: var(--ok-soft);
 }
 
 .viz-banner-title {
   font-weight: 600;
   margin-bottom: 0.25rem;
-  font-size: var(--fs-sm);
+  font-size: var(--fs-2);
 }
