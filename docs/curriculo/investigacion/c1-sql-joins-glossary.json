@@ -1,0 +1,151 @@
+[
+  {
+    "id": "c1-joins-left-join",
+    "term": "Unión izquierda (LEFT JOIN)",
+    "englishTerm": "LEFT OUTER JOIN",
+    "track": "core",
+    "definition": "Operación que conserva todas las filas de la tabla izquierda y rellena con NULL las columnas de la tabla derecha cuando no existe coincidencia en la condición ON. Se confunde con INNER JOIN cuando se filtra la tabla derecha en WHERE, descartando los nulos.",
+    "formula": "SELECT c.customer_id, o.order_id FROM customers c LEFT JOIN orders o ON c.customer_id = o.customer_id AND o.status = 'completed';",
+    "relatedLessons": [
+      "c1-sql-joins-01-tipos-join",
+      "c1-sql-joins-02-grano-fanout"
+    ],
+    "relatedTerms": [
+      "c1-joins-semi-anti",
+      "c01-grain-fanout"
+    ],
+    "sources": [
+      {
+        "title": "PostgreSQL 17 Documentation — Section 7.2: Table Expressions and JOIN Clauses",
+        "url": "https://www.postgresql.org/docs/current/queries-table-expressions.html",
+        "publisher": "PostgreSQL Global Development Group",
+        "accessed": "2026-10-29",
+        "supports": "Semántica de LEFT OUTER JOIN y diferencia entre condiciones en ON frente a filtros en WHERE."
+      }
+    ]
+  },
+  {
+    "id": "c1-joins-semi-anti",
+    "term": "Uniones de existencia (SEMI JOIN y ANTI JOIN)",
+    "englishTerm": "SEMI JOIN / ANTI JOIN (EXISTS / NOT EXISTS)",
+    "track": "core",
+    "definition": "Operadores que filtran la tabla izquierda según exista (SEMI JOIN o EXISTS) o no exista (ANTI JOIN o NOT EXISTS) al menos una coincidencia en la tabla derecha. Se confunden con INNER JOIN, pero nunca duplican filas izquierdas ni proyectan columnas derechas.",
+    "formula": "SELECT c.segment, COUNT(*) FROM customers c ANTI JOIN experiment_assignments ea ON c.customer_id = ea.customer_id GROUP BY c.segment;",
+    "relatedLessons": [
+      "c1-sql-joins-01-tipos-join",
+      "c1-sql-joins-03-subconsultas"
+    ],
+    "relatedTerms": [
+      "c1-joins-left-join",
+      "c1-joins-subconsulta-escalar"
+    ],
+    "sources": [
+      {
+        "title": "DuckDB SQL Reference — FROM and JOIN Clause (SEMI and ANTI Joins)",
+        "url": "https://duckdb.org/docs/sql/query_syntax/from.html",
+        "publisher": "DuckDB Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Sintaxis y preservación de cardinalidad en SEMI JOIN y ANTI JOIN en DuckDB."
+      }
+    ]
+  },
+  {
+    "id": "c1-joins-chasm-trap",
+    "term": "Trampa de abismo (Chasm Trap)",
+    "englishTerm": "Chasm Trap (N:1:M Fan-out)",
+    "track": "core",
+    "definition": "Multiplicación cartesiana parcial que ocurre al unir una tabla maestra con dos tablas de detalle independientes (N:1:M) en la misma consulta. Si un pedido tiene 3 líneas y 2 devoluciones, genera 6 filas por pedido. Se evita pre-agregando cada detalle en CTEs.",
+    "formula": "-- 3 filas en order_items x 2 filas en refunds = 6 filas para el mismo order_id",
+    "relatedLessons": [
+      "c1-sql-joins-02-grano-fanout",
+      "c1-sql-joins-04-ctes-legibles"
+    ],
+    "relatedTerms": [
+      "c01-grain-fanout",
+      "c02-cte-preagg"
+    ],
+    "sources": [
+      {
+        "title": "The Data Warehouse Toolkit (3rd Edition), Chapter 2: Dimensional Modeling Techniques — Declare the Grain",
+        "url": "https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/grain/",
+        "publisher": "Kimball Group",
+        "accessed": "2026-10-29",
+        "supports": "Aislamiento de grano entre tablas de hechos de distinta granularidad para impedir productos cartesianos por clave."
+      }
+    ]
+  },
+  {
+    "id": "c1-joins-subconsulta-escalar",
+    "term": "Subconsulta escalar y correlacionada",
+    "englishTerm": "Scalar & Correlated Subquery",
+    "track": "core",
+    "definition": "Una subconsulta escalar devuelve como máximo una fila y una columna para actuar como un valor constante en SELECT, WHERE o HAVING. Se confunde con la subconsulta correlacionada, que referencia columnas de la consulta externa y evalúa una condición por cada fila.",
+    "formula": "SELECT product_id, list_price_usd - (SELECT AVG(list_price_usd) FROM products) AS diff_vs_avg FROM products;",
+    "relatedLessons": [
+      "c1-sql-joins-03-subconsultas",
+      "c1-sql-joins-04-ctes-legibles"
+    ],
+    "relatedTerms": [
+      "c1-joins-semi-anti",
+      "c1-joins-cte-with"
+    ],
+    "sources": [
+      {
+        "title": "DuckDB SQL Reference — Subqueries",
+        "url": "https://duckdb.org/docs/sql/expressions/subqueries.html",
+        "publisher": "DuckDB Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Comportamiento de subconsultas escalares, de existencia y descorrelación automática."
+      }
+    ]
+  },
+  {
+    "id": "c1-joins-cte-with",
+    "term": "Expresión de tabla común (CTE / WITH)",
+    "englishTerm": "Common Table Expression (WITH Clause)",
+    "track": "core",
+    "definition": "Conjunto de resultados temporal con nombre definido al inicio de una consulta mediante WITH. Permite dividir una consulta larga en pasos secuenciales legibles y verificables. Se confunde con una tabla temporal en disco, pero existe únicamente durante la ejecución de esa sentencia.",
+    "formula": "WITH reembolsos_por_pedido AS (SELECT order_id, SUM(refund_amount_usd) AS total_refund FROM refunds GROUP BY order_id) SELECT * FROM reembolsos_por_pedido;",
+    "relatedLessons": [
+      "c1-sql-joins-04-ctes-legibles",
+      "c1-sql-joins-02-grano-fanout"
+    ],
+    "relatedTerms": [
+      "c02-cte-preagg",
+      "c1-joins-subconsulta-escalar"
+    ],
+    "sources": [
+      {
+        "title": "DuckDB SQL Reference — Common Table Expressions (WITH Clause)",
+        "url": "https://duckdb.org/docs/sql/query_syntax/with.html",
+        "publisher": "DuckDB Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Encadenamiento de múltiples CTEs y control de materialización con MATERIALIZED y NOT MATERIALIZED."
+      }
+    ]
+  },
+  {
+    "id": "c1-joins-union-all",
+    "term": "Operaciones de conjuntos (UNION ALL, INTERSECT, EXCEPT)",
+    "englishTerm": "Set Operations (UNION ALL / INTERSECT / EXCEPT)",
+    "track": "core",
+    "definition": "Operadores que combinan o comparan verticalmente las filas devueltas por dos o más consultas con columnas compatibles. UNION ALL apila todas las filas sin deduplicar; se confunde con UNION, que ejecuta un paso adicional para eliminar filas duplicadas en todo el resultado.",
+    "formula": "SELECT customer_id FROM orders WHERE EXTRACT(YEAR FROM order_date) = 2023 INTERSECT SELECT customer_id FROM orders WHERE EXTRACT(YEAR FROM order_date) = 2024;",
+    "relatedLessons": [
+      "c1-sql-joins-05-conjuntos-union"
+    ],
+    "relatedTerms": [
+      "c1-joins-cte-with",
+      "c1-joins-left-join"
+    ],
+    "sources": [
+      {
+        "title": "DuckDB SQL Reference — Set Operations (UNION, INTERSECT, EXCEPT)",
+        "url": "https://duckdb.org/docs/sql/query_syntax/setops.html",
+        "publisher": "DuckDB Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Diferencia entre UNION ALL y UNION, operadores INTERSECT y EXCEPT, y extensión UNION BY NAME."
+      }
+    ]
+  }
+]
