@@ -1,408 +1,811 @@
-import React, { useMemo } from 'react';
-import { LEARNING_STAGES, LESSONS, ROLE_META } from '../data/learningPath2026.js';
-import { getAdaptiveRecommendations } from '../engine/adaptiveEngine.js';
+import React, { useState, useMemo } from 'react';
 import {
-  Button,
-  Card,
-  Chip,
-  EmptyState,
-  Illustration,
-  ProgressRing,
-  getStageNumber,
-} from './ui/index.js';
+  ArrowRight,
+  AlertCircle,
+  MessageSquare,
+  SlidersHorizontal,
+  BookOpen,
+  Check,
+} from 'lucide-react';
+import { MODULES } from '../data/catalog/modules.js';
+import { LEVELS } from '../data/catalog/levels.js';
+import { TRACKS } from '../data/catalog/tracks.js';
+import { LESSONS_BY_ID } from '../data/lessons/index.js';
+import {
+  useProfile,
+  useProgress,
+  openTutor,
+  getEphemeralState,
+} from '../state/store.js';
+import { Button, Segmented } from './ui/index.js';
+import { SettingsView } from '../views/SettingsView.jsx';
 
-function evaluateQuizEntry(lesson, rawEntry) {
-  if (rawEntry === undefined || rawEntry === null || rawEntry === '') {
-    return { attempted: false, correct: false };
-  }
-  if (typeof rawEntry === 'boolean') {
-    return { attempted: true, correct: rawEntry };
-  }
-  if (typeof rawEntry === 'string') {
-    const options = lesson?.checkpoint?.options;
-    if (Array.isArray(options)) {
-      const matched = options.find((o) => o.id === rawEntry);
-      if (matched) {
-        return { attempted: true, correct: Boolean(matched.correct) };
+const TRACK_FILTER_ITEMS = [
+  { id: 'all', label: 'Todas' },
+  { id: 'core', label: 'Tronco común' },
+  { id: 'de', label: 'DE', track: 'de' },
+  { id: 'da', label: 'DA', track: 'da' },
+  { id: 'bi', label: 'BI', track: 'bi' },
+];
+
+const INTERVIEW_TRACKS = [
+  { id: 'de', label: 'Ingeniería de Datos (DE)', track: 'de' },
+  { id: 'da', label: 'Análisis de Datos (DA)', track: 'da' },
+  { id: 'bi', label: 'Business Intelligence (BI)', track: 'bi' },
+];
+
+const TRACK_LABELS = {
+  core: 'Tronco común',
+  de: 'Ingeniería de Datos (DE)',
+  da: 'Análisis de Datos (DA)',
+  bi: 'Business Intelligence (BI)',
+};
+
+const WEEKDAY_ITEMS = [
+  { offset: 0, short: 'L', label: 'Lunes' },
+  { offset: 1, short: 'M', label: 'Martes' },
+  { offset: 2, short: 'X', label: 'Miércoles' },
+  { offset: 3, short: 'J', label: 'Jueves' },
+  { offset: 4, short: 'V', label: 'Viernes' },
+  { offset: 5, short: 'S', label: 'Sábado' },
+  { offset: 6, short: 'D', label: 'Domingo' },
+];
+
+function formatDateKey(dateObj) {
+  const yyyy = dateObj.getFullYear();
+  const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const dd = String(dateObj.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function getMondayOfCurrentWeek(now = new Date()) {
+  const ref = new Date(now);
+  const day = ref.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  const monday = new Date(ref);
+  monday.setHours(0, 0, 0, 0);
+  monday.setDate(ref.getDate() + diff);
+  return monday;
+}
+
+function evaluateLessonChecks(lessonId, legacyId, progressLessons, quizAnswers, lessonObj) {
+  let answered = 0;
+  let correct = 0;
+  const failedItems = [];
+
+  const entry =
+    progressLessons?.[lessonId] ||
+    (legacyId ? progressLessons?.[legacyId] : null) ||
+    null;
+
+  const checksMap = entry?.checks || {};
+  const checkEntries = Object.entries(checksMap);
+
+  if (checkEntries.length > 0) {
+    for (const [checkId, val] of checkEntries) {
+      answered += 1;
+      let isCorrect = false;
+      if (typeof val === 'boolean') {
+        isCorrect = val;
+      } else if (typeof val === 'string') {
+        const opts = lessonObj?.checkpoint?.options || lessonObj?.checks?.[0]?.options || [];
+        const matchedOpt = opts.find((o) => o.id === val);
+        isCorrect = Boolean(matchedOpt?.correct);
+      } else if (val && typeof val === 'object') {
+        if (typeof val.correct === 'boolean') {
+          isCorrect = val.correct;
+        } else if (val.optionId) {
+          const opts = lessonObj?.checkpoint?.options || lessonObj?.checks?.[0]?.options || [];
+          const matchedOpt = opts.find((o) => o.id === val.optionId);
+          isCorrect = Boolean(matchedOpt?.correct);
+        }
+      }
+
+      if (isCorrect) {
+        correct += 1;
+      } else if (lessonObj) {
+        const checkSpec =
+          (lessonObj.checks || []).find((c) => c.id === checkId) ||
+          lessonObj.checks?.[0] ||
+          null;
+        const sectionSpec =
+          (lessonObj.sections || []).find((s) => s.id === checkSpec?.sectionId) ||
+          lessonObj.sections?.[0] ||
+          null;
+
+        failedItems.push({
+          key: `${lessonObj.id}-${checkId}`,
+          lessonId: lessonObj.id,
+          stageId: lessonObj.stageId || 'stage-1',
+          lessonOrder: lessonObj.order,
+          lessonTitle: lessonObj.title,
+          sectionId: sectionSpec?.id || null,
+          sectionTitle: sectionSpec?.title || 'Comprobación de concepto',
+          prompt:
+            checkSpec?.prompt ||
+            lessonObj.checkpoint?.question ||
+            lessonObj.goal,
+        });
       }
     }
-    return { attempted: true, correct: rawEntry === 'true' || rawEntry === 'correct' };
+  } else {
+    // Fallback a quizAnswers pasados por props
+    const propAnswer =
+      quizAnswers?.[lessonId] ?? (legacyId ? quizAnswers?.[legacyId] : undefined);
+    if (propAnswer !== undefined && propAnswer !== null) {
+      answered += 1;
+      let isCorrect = false;
+      if (typeof propAnswer === 'boolean') {
+        isCorrect = propAnswer;
+      } else if (typeof propAnswer === 'string' && lessonObj) {
+        const opts = lessonObj?.checkpoint?.options || [];
+        const matchedOpt = opts.find((o) => o.id === propAnswer);
+        isCorrect = Boolean(matchedOpt?.correct);
+      }
+      if (isCorrect) {
+        correct += 1;
+      } else if (lessonObj) {
+        failedItems.push({
+          key: `${lessonObj.id}-checkpoint`,
+          lessonId: lessonObj.id,
+          stageId: lessonObj.stageId || 'stage-1',
+          lessonOrder: lessonObj.order,
+          lessonTitle: lessonObj.title,
+          sectionId: lessonObj.sections?.[0]?.id || null,
+          sectionTitle: lessonObj.sections?.[0]?.title || 'Comprobación de concepto',
+          prompt: lessonObj.checkpoint?.question || lessonObj.goal,
+        });
+      }
+    }
   }
-  if (typeof rawEntry === 'object') {
-    if (typeof rawEntry.correct === 'boolean') {
-      return { attempted: true, correct: rawEntry.correct };
-    }
-    if (typeof rawEntry.isCorrect === 'boolean') {
-      return { attempted: true, correct: rawEntry.isCorrect };
-    }
-    if (typeof rawEntry.optionId === 'string') {
-      return evaluateQuizEntry(lesson, rawEntry.optionId);
-    }
-  }
-  return { attempted: false, correct: false };
+
+  return { answered, correct, failedItems };
 }
 
 export function LearningAnalyticsView({
-  lessons = LESSONS,
+  lessons = [],
   completedIds = [],
-  quizScores = {},
-  quizAnswers,
-  codeSolvedIds = [],
-  completedLabIds,
-  diagnosticResult = null,
-  onOpenLesson = () => {},
-  onOpenDiagnostic = () => {},
+  quizAnswers = {},
+  onOpenLesson,
+  onOpenDiagnostic,
+  onNavigate,
+  onOpenTutor,
 }) {
-  const allLessons =
-    Array.isArray(lessons) && lessons.length > 0 ? lessons : LESSONS;
-  const effectiveQuizAnswers = quizAnswers || quizScores || {};
-  const effectiveLabIds = Array.isArray(completedLabIds)
-    ? completedLabIds
-    : Array.isArray(codeSolvedIds)
-      ? codeSolvedIds
-      : [];
+  const profile = useProfile();
+  const progress = useProgress();
 
-  const rec = useMemo(
-    () =>
-      getAdaptiveRecommendations(
-        allLessons,
-        completedIds,
-        effectiveQuizAnswers,
-        diagnosticResult
-      ),
-    [allLessons, completedIds, effectiveQuizAnswers, diagnosticResult]
+  const isSettingsUrl = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    return new URLSearchParams(window.location.search).get('view') === 'settings';
+  }, []);
+
+  // Si App.jsx cae en LearningAnalyticsView cuando viewMode === 'settings', renderizar SettingsView
+  if (isSettingsUrl || getEphemeralState()?.viewMode === 'settings') {
+    return (
+      <SettingsView
+        onNavigate={onNavigate}
+        onBack={() => onNavigate?.('analytics')}
+      />
+    );
+  }
+
+  const [trackFilter, setTrackFilter] = useState('all');
+  const [interviewTrack, setInterviewTrack] = useState(
+    () => profile?.track || 'de'
+  );
+  const [interviewLevel, setInterviewLevel] = useState(
+    () => Number(profile?.startLevel ?? 2)
   );
 
-  // 1. Progreso real por etapa (LEARNING_STAGES)
-  const stageProgressRows = useMemo(() => {
-    return LEARNING_STAGES.map((stage) => {
-      const stageLessons = allLessons.filter((l) => l.stageId === stage.id);
-      const total = stageLessons.length;
-      const done = stageLessons.filter((l) => completedIds.includes(l.id)).length;
-      const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  // Conjunto de lecciones completadas
+  const completedSet = useMemo(() => {
+    const set = new Set(Array.isArray(completedIds) ? completedIds : []);
+    for (const [id, entry] of Object.entries(progress?.lessons || {})) {
+      if (entry?.status === 'completed' || entry?.status === 'known') {
+        set.add(id);
+        const mapped = LESSONS_BY_ID[id];
+        if (mapped?.id) set.add(mapped.id);
+        if (mapped?.legacyId) set.add(mapped.legacyId);
+      }
+    }
+    return set;
+  }, [completedIds, progress?.lessons]);
+
+  // Datos de estudio semanal (7 días de la semana actual + últimas 4 semanas)
+  const weeklySeries = useMemo(() => {
+    const studyMap = progress?.studyMinutesByDay || {};
+    const monday = getMondayOfCurrentWeek();
+
+    const days = WEEKDAY_ITEMS.map((item) => {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + item.offset);
+      const key = formatDateKey(d);
+      const minutes = Math.max(0, Math.round(Number(studyMap[key] || 0)));
       return {
-        stage,
-        stageLessons,
-        total,
-        done,
+        ...item,
+        date: key,
+        minutes,
+      };
+    });
+
+    const weeks = [3, 2, 1, 0].map((weeksAgo) => {
+      const start = new Date(monday);
+      start.setDate(monday.getDate() - weeksAgo * 7);
+      let sum = 0;
+      for (let i = 0; i < 7; i += 1) {
+        const d = new Date(start);
+        d.setDate(start.getDate() + i);
+        const key = formatDateKey(d);
+        sum += Math.max(0, Math.round(Number(studyMap[key] || 0)));
+      }
+      const label =
+        weeksAgo === 0
+          ? 'Semana actual'
+          : weeksAgo === 1
+            ? 'Hace 1 sem.'
+            : `Hace ${weeksAgo} sem.`;
+      return {
+        id: `w-${weeksAgo}`,
+        label,
+        minutes: sum,
+        hours: (sum / 60).toFixed(1),
+      };
+    });
+
+    const currentWeekMinutes = days.reduce((acc, d) => acc + d.minutes, 0);
+    const totalAllTimeMinutes = Object.values(studyMap).reduce(
+      (acc, v) => acc + Math.max(0, Math.round(Number(v || 0))),
+      0
+    );
+
+    return {
+      days,
+      weeks,
+      currentWeekMinutes,
+      totalAllTimeMinutes,
+      maxDayMinutes: Math.max(30, ...days.map((d) => d.minutes)),
+      maxWeekMinutes: Math.max(60, ...weeks.map((w) => w.minutes)),
+    };
+  }, [progress?.studyMinutesByDay]);
+
+  // Métricas por módulo y por nivel (0..4) + precisión en checks + temas por reforzar
+  const analyticsData = useMemo(() => {
+    const failedChecksMap = new Map();
+    let totalChecksAnswered = 0;
+    let totalChecksCorrect = 0;
+
+    // Primero evaluar las 18 lecciones interactivas existentes por si tienen checks
+    for (const lesson of lessons) {
+      const res = evaluateLessonChecks(
+        lesson.v2Id || lesson.id,
+        lesson.id,
+        progress?.lessons,
+        quizAnswers,
+        lesson
+      );
+      for (const item of res.failedItems) {
+        failedChecksMap.set(item.key, item);
+      }
+    }
+
+    const enrichedModules = MODULES.map((mod) => {
+      const modLessons = mod.lessons || [];
+      let completedInMod = 0;
+      let modChecksAnswered = 0;
+      let modChecksCorrect = 0;
+
+      for (const lEntry of modLessons) {
+        const isDone =
+          completedSet.has(lEntry.id) ||
+          (lEntry.legacyId && completedSet.has(lEntry.legacyId));
+        if (isDone) completedInMod += 1;
+
+        const lessonObj =
+          LESSONS_BY_ID[lEntry.id] ||
+          (lEntry.legacyId ? LESSONS_BY_ID[lEntry.legacyId] : null) ||
+          lessons.find(
+            (x) => x.v2Id === lEntry.id || x.id === lEntry.legacyId
+          ) ||
+          null;
+
+        const checkStats = evaluateLessonChecks(
+          lEntry.id,
+          lEntry.legacyId,
+          progress?.lessons,
+          quizAnswers,
+          lessonObj
+        );
+        modChecksAnswered += checkStats.answered;
+        modChecksCorrect += checkStats.correct;
+        for (const fItem of checkStats.failedItems) {
+          failedChecksMap.set(fItem.key, {
+            ...fItem,
+            moduleTitle: mod.title,
+            level: mod.level,
+          });
+        }
+      }
+
+      totalChecksAnswered += modChecksAnswered;
+      totalChecksCorrect += modChecksCorrect;
+
+      const totalInMod = Math.max(1, modLessons.length);
+      const completionPct = Math.round((completedInMod / totalInMod) * 100);
+      const checkAccuracyPct =
+        modChecksAnswered > 0
+          ? Math.round((modChecksCorrect / modChecksAnswered) * 100)
+          : null;
+
+      return {
+        ...mod,
+        completedCount: completedInMod,
+        totalCount: modLessons.length,
+        completionPct,
+        checksAnswered: modChecksAnswered,
+        checksCorrect: modChecksCorrect,
+        checkAccuracyPct,
+      };
+    });
+
+    const filteredModules = enrichedModules.filter((m) =>
+      trackFilter === 'all' ? true : m.track === trackFilter
+    );
+
+    const levelSummaries = LEVELS.map((lvl) => {
+      const modsInLevel = filteredModules.filter((m) => m.level === lvl.level);
+      const totalLessonsInLevel = modsInLevel.reduce(
+        (acc, m) => acc + m.totalCount,
+        0
+      );
+      const completedInLevel = modsInLevel.reduce(
+        (acc, m) => acc + m.completedCount,
+        0
+      );
+      const pct =
+        totalLessonsInLevel > 0
+          ? Math.round((completedInLevel / totalLessonsInLevel) * 100)
+          : 0;
+      return {
+        ...lvl,
+        modules: modsInLevel,
+        completedCount: completedInLevel,
+        totalCount: totalLessonsInLevel,
         pct,
       };
     });
-  }, [allLessons, completedIds]);
 
-  // 2. Porcentaje de aciertos y progreso real por rol DE / DA / BI
-  const roleStats = useMemo(() => {
-    return ['DE', 'DA', 'BI'].map((roleKey) => {
-      const primaryLessons = allLessons.filter(
-        (l) => (l.coreFocus?.[0] || 'DE') === roleKey
-      );
-      const targetLessons =
-        primaryLessons.length > 0
-          ? primaryLessons
-          : allLessons.filter((l) => l.coreFocus?.includes(roleKey));
+    const globalAccuracyPct =
+      totalChecksAnswered > 0
+        ? Math.round((totalChecksCorrect / totalChecksAnswered) * 100)
+        : null;
 
-      const totalLessons = targetLessons.length;
-      let completedCount = 0;
-      let quizAttemptedCount = 0;
-      let quizCorrectCount = 0;
-      let labSolvedCount = 0;
+    return {
+      enrichedModules,
+      filteredModules,
+      levelSummaries,
+      failedChecks: Array.from(failedChecksMap.values()),
+      totalChecksAnswered,
+      totalChecksCorrect,
+      globalAccuracyPct,
+    };
+  }, [lessons, completedSet, progress?.lessons, quizAnswers, trackFilter]);
 
-      targetLessons.forEach((lesson) => {
-        if (completedIds.includes(lesson.id)) {
-          completedCount += 1;
-        }
-        if (effectiveLabIds.includes(lesson.id)) {
-          labSolvedCount += 1;
-        }
-        const qStatus = evaluateQuizEntry(lesson, effectiveQuizAnswers[lesson.id]);
-        if (qStatus.attempted) {
-          quizAttemptedCount += 1;
-          if (qStatus.correct) {
-            quizCorrectCount += 1;
-          }
-        }
-      });
+  const handleLaunchInterview = () => {
+    const trackInfo =
+      TRACKS.find((t) => t.id === interviewTrack) || TRACKS[1];
+    const levelInfo =
+      LEVELS.find((l) => l.level === Number(interviewLevel)) || LEVELS[2];
 
-      const accuracyPct =
-        quizAttemptedCount > 0
-          ? Math.round((quizCorrectCount / quizAttemptedCount) * 100)
-          : 0;
+    const promptText = `Iniciemos un simulacro de entrevista técnica para ${trackInfo.name} (${trackInfo.short}) en el Nivel ${levelInfo.level} (${levelInfo.name}). Hazme una pregunta de caso sobre Mercado Brisa y evalúa mi respuesta con criterio técnico.`;
 
-      const totalSignals = Math.max(1, totalLessons * 3);
-      const earnedSignals = completedCount + quizCorrectCount + labSolvedCount;
-      const verifiedProgressPct = Math.round((earnedSignals / totalSignals) * 100);
+    const payload = {
+      mode: 'interview',
+      track: interviewTrack,
+      level: Number(interviewLevel),
+      prefill: promptText,
+    };
 
-      return {
-        roleKey,
-        label: ROLE_META[roleKey]?.label || roleKey,
-        totalLessons,
-        completedCount,
-        quizAttemptedCount,
-        quizCorrectCount,
-        labSolvedCount,
-        accuracyPct,
-        verifiedProgressPct,
-        barValue: quizAttemptedCount > 0 ? accuracyPct : verifiedProgressPct,
-      };
-    });
-  }, [allLessons, completedIds, effectiveQuizAnswers, effectiveLabIds]);
-
-  // 3. Historial real de lecciones completadas
-  const completedLessonsHistory = useMemo(() => {
-    return allLessons
-      .filter((l) => completedIds.includes(l.id))
-      .map((lesson) => {
-        const stage = LEARNING_STAGES.find((s) => s.id === lesson.stageId);
-        const qStatus = evaluateQuizEntry(lesson, effectiveQuizAnswers[lesson.id]);
-        const labSolved = effectiveLabIds.includes(lesson.id);
-        return {
-          lesson,
-          stageNumber: stage ? stage.number : getStageNumber(lesson.stageId),
-          stageTitle: stage ? `Etapa ${stage.number}: ${stage.title}` : lesson.stageId,
-          primaryRole: lesson.coreFocus?.[0] || 'DE',
-          quizAttempted: qStatus.attempted,
-          quizCorrect: qStatus.correct,
-          labSolved,
-        };
-      });
-  }, [allLessons, completedIds, effectiveQuizAnswers, effectiveLabIds]);
-
-  const totalCompleted = completedLessonsHistory.length;
-  const totalQuizzesAnswered = useMemo(
-    () =>
-      allLessons.filter(
-        (l) => evaluateQuizEntry(l, effectiveQuizAnswers[l.id]).attempted
-      ).length,
-    [allLessons, effectiveQuizAnswers]
-  );
-  const totalLabsSolved = useMemo(
-    () => allLessons.filter((l) => effectiveLabIds.includes(l.id)).length,
-    [allLessons, effectiveLabIds]
-  );
+    if (typeof onOpenTutor === 'function') {
+      onOpenTutor(payload);
+    } else {
+      openTutor(payload);
+    }
+  };
 
   return (
-    <div className="sec-view">
+    <div className="sec-view progress-view" data-view="analytics">
       <header className="sec-header">
-        <div>
-          <div className="sec-header__eyebrow tabular">
-            Estado verificable · {totalCompleted}/{allLessons.length} lecciones ·{' '}
-            {totalQuizzesAnswered} checkpoints · {totalLabsSolved} laboratorios
+        <div className="sec-header__top">
+          <div>
+            <span className="sec-kicker tabular">
+              REGISTRO DE ESTUDIO · {completedSet.size} LECCIONES COMPLETADAS ·{' '}
+              {analyticsData.totalChecksAnswered} COMPROBACIONES RESPONDIDAS
+            </span>
+            <h1 className="sec-title">Progreso</h1>
+            <p className="sec-lead">
+              Tiempo de estudio semanal, avance por nivel y módulo, precisión en comprobaciones y simulacro de entrevista técnica.
+            </p>
           </div>
-          <h1 className="sec-header__title">Mi progreso</h1>
-          <p className="sec-header__lead">
-            Avance por etapa, porcentaje de aciertos por rol (DE, DA, BI) e
-            historial de lecciones completadas calculados a partir de tus
-            respuestas y laboratorios resueltos.
-          </p>
-        </div>
 
-        <div className="sec-header__actions">
-          {rec?.nextPrimaryLesson && (
+          <div className="sec-actions">
+            {typeof onOpenDiagnostic === 'function' && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={onOpenDiagnostic}
+              >
+                Test diagnóstico
+              </Button>
+            )}
             <Button
-              variant="primary"
-              size="md"
-              onClick={() => onOpenLesson(rec.nextPrimaryLesson.id)}
+              variant="ghost"
+              size="sm"
+              icon={SlidersHorizontal}
+              onClick={() => onNavigate?.('settings')}
             >
-              Continuar en Lección {rec.nextPrimaryLesson.order}
+              Ajustes
             </Button>
-          )}
-          <Button variant="secondary" size="md" onClick={onOpenDiagnostic}>
-            Test diagnóstico
-          </Button>
+          </div>
         </div>
       </header>
 
-      {/* 1. Anillos ProgressRing por cada una de las 6 etapas en grilla con su color data-stage */}
-      <section className="sec-section" aria-label="Progreso por etapa">
-        <h2 className="sec-section__title">Progreso por etapa (6 etapas)</h2>
-        <div className="ana-stages-grid">
-          {stageProgressRows.map(({ stage, stageLessons, total, done, pct }) => (
-            <Card
-              key={stage.id}
-              stage={stage.number}
-              accentTop
-              className="ana-stage-card"
-            >
-              <div className="ana-stage-card__top">
-                <div className="ana-stage-card__info">
-                  <span className="ana-stage-card__eyebrow tabular">
-                    ETAPA {stage.number}
-                  </span>
-                  <h3 className="ana-stage-card__title">{stage.title}</h3>
-                  <div className="ana-stage-card__count tabular">
-                    {done} de {total} lecciones ({pct}%)
-                  </div>
-                </div>
-
-                <ProgressRing
-                  size={64}
-                  value={pct}
-                  stage={stage.number}
-                  tone="stage"
-                  celebrate={pct === 100}
-                  label={`${pct}%`}
-                  ariaLabel={`Etapa ${stage.number}: ${pct}% completado`}
-                />
-              </div>
-
-              <div className="ana-stage-card__lessons">
-                {stageLessons.map((les) => {
-                  const isDone = completedIds.includes(les.id);
-                  return (
-                    <Chip
-                      key={les.id}
-                      variant={isDone ? 'success' : 'stage'}
-                      stage={stage.number}
-                      onClick={() => onOpenLesson(les.id)}
-                    >
-                      L{String(les.order).padStart(2, '0')} · {les.title}{' '}
-                      {isDone ? '✓' : ''}
-                    </Chip>
-                  );
-                })}
-              </div>
-            </Card>
-          ))}
-        </div>
-      </section>
-
-      {/* 2. Barras de aciertos/avance por rol (DE, DA, BI) usando colores e íconos de rol */}
-      <section className="sec-section" aria-label="Porcentaje de aciertos por rol">
-        <h2 className="sec-section__title">
-          Porcentaje de aciertos y avance por rol (DE · DA · BI)
-        </h2>
-        <div className="ana-roles-grid">
-          {roleStats.map((stat) => (
-            <Card
-              key={stat.roleKey}
-              className={`ana-role-card ana-role-card--${stat.roleKey.toLowerCase()}`}
-            >
-              <div>
-                <div className="ana-role-card__top">
-                  <Chip variant="role" role={stat.roleKey}>
-                    {stat.roleKey}
-                  </Chip>
-                  <span className="ana-role-card__count tabular">
-                    {stat.completedCount}/{stat.totalLessons} lecciones
-                  </span>
-                </div>
-                <h3 className="ana-role-card__title">{stat.label}</h3>
-                <div className="ana-role-card__pct tabular">
-                  {stat.quizAttemptedCount > 0
-                    ? `${stat.accuracyPct}%`
-                    : `${stat.verifiedProgressPct}%`}
-                </div>
-                <div className="ana-role-card__sub tabular">
-                  {stat.quizAttemptedCount > 0
-                    ? `Aciertos en checkpoints (${stat.quizCorrectCount} de ${stat.quizAttemptedCount})`
-                    : 'Sin checkpoints respondidos aún (avance general)'}
-                </div>
-              </div>
-
-              <div className="ana-role-card__bottom">
-                <div
-                  className="ana-role-bar"
-                  role="progressbar"
-                  aria-valuenow={stat.barValue}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-label={`Progreso en ${stat.label}`}
-                >
-                  <div
-                    className="ana-role-bar__fill"
-                    style={{ '--value': `${stat.barValue}%` }}
-                  />
-                </div>
-
-                <div className="ana-role-metrics tabular">
-                  <div className="ana-role-metrics__row">
-                    <span>Lecciones completadas:</span>
-                    <strong className="ana-role-metrics__val">
-                      {stat.completedCount} / {stat.totalLessons}
-                    </strong>
-                  </div>
-                  <div className="ana-role-metrics__row">
-                    <span>Checkpoints acertados:</span>
-                    <strong className="ana-role-metrics__val">
-                      {stat.quizCorrectCount} / {stat.quizAttemptedCount}
-                    </strong>
-                  </div>
-                  <div className="ana-role-metrics__row">
-                    <span>Laboratorios resueltos:</span>
-                    <strong className="ana-role-metrics__val">
-                      {stat.labSolvedCount} / {stat.totalLessons}
-                    </strong>
-                  </div>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
-      </section>
-
-      {/* 3. Historial de lecciones completadas */}
+      {/* 1. Horas / minutos por semana (barras simples en --brand) */}
       <section
         className="sec-section"
-        aria-label="Historial de lecciones completadas"
+        aria-labelledby="progress-time-heading"
+        data-testid="progress-weekly-time"
       >
-        <h2 className="sec-section__title">
-          Historial de lecciones completadas ({completedLessonsHistory.length})
-        </h2>
+        <div className="sec-section__head">
+          <div>
+            <h2 id="progress-time-heading" className="sec-section__title">
+              Tiempo de estudio por semana
+            </h2>
+            <p className="sec-section__sub">
+              Minutos registrados por día en la semana actual y acumulado de las últimas cuatro semanas.
+            </p>
+          </div>
+          <div className="progress-time-totals tabular">
+            <span>
+              Esta semana: <strong>{weeklySeries.currentWeekMinutes} min</strong> (
+              {(weeklySeries.currentWeekMinutes / 60).toFixed(1)} h)
+            </span>
+            <span aria-hidden="true">·</span>
+            <span>
+              Total acumulado: <strong>{weeklySeries.totalAllTimeMinutes} min</strong>
+            </span>
+          </div>
+        </div>
 
-        {completedLessonsHistory.length === 0 ? (
-          <EmptyState
-            illustration={<Illustration name="empty-projects" />}
-            title="Aún no has completado ninguna lección"
-            description="Cuando completes una lección o aciertes su pregunta de verificación, aparecerá registrada aquí con el estado de su checkpoint y laboratorio."
-            action={{
-              label: 'Comenzar en la Lección 1',
-              variant: 'primary',
-              onClick: () => onOpenLesson(allLessons[0]?.id || 'l1-joins-fanout'),
-            }}
-          />
+        <div className="progress-charts-grid">
+          {/* Barras diarias L..D */}
+          <div className="progress-chart-box">
+            <div className="progress-chart-box__head">
+              <span className="progress-chart-box__title">
+                Actividad diaria (semana actual)
+              </span>
+              <span className="progress-chart-box__unit tabular">min / día</span>
+            </div>
+            <div
+              className="progress-bars-vertical"
+              role="list"
+              aria-label="Minutos por día de la semana"
+            >
+              {weeklySeries.days.map((day) => {
+                const heightPct =
+                  day.minutes > 0
+                    ? Math.min(
+                        100,
+                        Math.max(10, Math.round((day.minutes / weeklySeries.maxDayMinutes) * 100))
+                      )
+                    : 0;
+                return (
+                  <div
+                    key={day.date}
+                    role="listitem"
+                    className="progress-vbar"
+                    title={`${day.label} (${day.date}): ${day.minutes} min`}
+                  >
+                    <span className="progress-vbar__val tabular">
+                      {day.minutes}
+                    </span>
+                    <div className="progress-vbar__track" aria-hidden="true">
+                      <div
+                        className="progress-vbar__fill"
+                        style={{ height: `${heightPct}%` }}
+                      />
+                    </div>
+                    <span className="progress-vbar__label">{day.short}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Barras horizontales de las últimas 4 semanas */}
+          <div className="progress-chart-box">
+            <div className="progress-chart-box__head">
+              <span className="progress-chart-box__title">
+                Últimas 4 semanas
+              </span>
+              <span className="progress-chart-box__unit tabular">minutos (horas)</span>
+            </div>
+            <div
+              className="progress-bars-horizontal"
+              role="list"
+              aria-label="Minutos estudiados por semana"
+            >
+              {weeklySeries.weeks.map((wk) => {
+                const widthPct =
+                  wk.minutes > 0
+                    ? Math.min(
+                        100,
+                        Math.max(6, Math.round((wk.minutes / weeklySeries.maxWeekMinutes) * 100))
+                      )
+                    : 0;
+                return (
+                  <div key={wk.id} role="listitem" className="progress-hbar">
+                    <div className="progress-hbar__meta">
+                      <span className="progress-hbar__label">{wk.label}</span>
+                      <span className="progress-hbar__val tabular">
+                        {wk.minutes} min ({wk.hours} h)
+                      </span>
+                    </div>
+                    <div className="progress-hbar__track" aria-hidden="true">
+                      <div
+                        className="progress-hbar__fill"
+                        style={{ width: `${widthPct}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 2. Temas por reforzar (checks fallados) */}
+      <section
+        className="sec-section"
+        aria-labelledby="progress-reinforce-heading"
+        data-testid="progress-reinforce-section"
+      >
+        <div className="sec-section__head">
+          <div>
+            <h2 id="progress-reinforce-heading" className="sec-section__title">
+              Temas por reforzar
+            </h2>
+            <p className="sec-section__sub">
+              Comprobaciones donde la respuesta seleccionada no fue correcta, con enlace directo a la lección.
+            </p>
+          </div>
+          {analyticsData.globalAccuracyPct !== null && (
+            <span className="progress-accuracy-pill tabular">
+              Precisión global en checks: {analyticsData.globalAccuracyPct} % (
+              {analyticsData.totalChecksCorrect}/{analyticsData.totalChecksAnswered})
+            </span>
+          )}
+        </div>
+
+        {analyticsData.failedChecks.length === 0 ? (
+          <p className="progress-clean-line" data-testid="progress-reinforce-empty">
+            <Check size={15} aria-hidden="true" />
+            <span>
+              No tienes comprobaciones falladas pendientes de refuerzo.
+            </span>
+          </p>
         ) : (
-          <div className="ana-history-list">
-            {completedLessonsHistory.map((item) => (
-              <Card
-                key={item.lesson.id}
-                stage={item.stageNumber}
-                className="ana-history-card"
-              >
-                <div className="ana-history-card__info">
-                  <div className="ana-history-card__chips">
-                    <Chip variant="success">Completada ✓</Chip>
-                    <Chip variant="role" role={item.primaryRole}>
-                      {item.primaryRole}
-                    </Chip>
-                    <span className="ana-history-card__stage tabular">
-                      {item.stageTitle}
+          <ul className="progress-reinforce-list">
+            {analyticsData.failedChecks.map((item) => (
+              <li key={item.key} className="progress-reinforce-row">
+                <div className="progress-reinforce-row__info">
+                  <div className="progress-reinforce-row__top">
+                    <AlertCircle
+                      size={15}
+                      aria-hidden="true"
+                      className="progress-reinforce-row__icon"
+                    />
+                    <span className="progress-reinforce-row__lesson">
+                      L{String(item.lessonOrder || 1).padStart(2, '0')} ·{' '}
+                      {item.lessonTitle}
+                    </span>
+                    <span className="progress-reinforce-row__sec">
+                      Sección: {item.sectionTitle}
                     </span>
                   </div>
-                  <strong className="ana-history-card__title">
-                    Lección {item.lesson.order}: {item.lesson.title}
-                  </strong>
-                  <div className="ana-history-card__meta tabular">
-                    Checkpoint:{' '}
-                    {item.quizAttempted
-                      ? item.quizCorrect
-                        ? 'Acertado ✓'
-                        : 'Respondido (por reforzar)'
-                      : 'Pendiente'}{' '}
-                    · Laboratorio: {item.labSolved ? 'Resuelto ✓' : 'Pendiente'}
-                  </div>
+                  <p className="progress-reinforce-row__prompt">{item.prompt}</p>
                 </div>
-
                 <Button
                   variant="secondary"
                   size="sm"
-                  onClick={() => onOpenLesson(item.lesson.id)}
+                  icon={BookOpen}
+                  onClick={() => onOpenLesson?.(item.stageId, item.lessonId)}
                 >
-                  Abrir lección
+                  Repasar lección
                 </Button>
-              </Card>
+              </li>
             ))}
-          </div>
+          </ul>
         )}
+      </section>
+
+      {/* 3. Avance por nivel (0..4) y módulo con precisión en checks */}
+      <section
+        className="sec-section"
+        aria-labelledby="progress-levels-heading"
+        data-testid="progress-levels-section"
+      >
+        <div className="sec-section__head">
+          <div>
+            <h2 id="progress-levels-heading" className="sec-section__title">
+              Avance por nivel y módulo
+            </h2>
+            <p className="sec-section__sub">
+              Lecciones completadas y porcentaje de acierto en comprobaciones dentro de los 26 módulos del catálogo.
+            </p>
+          </div>
+          <Segmented
+            ariaLabel="Filtrar módulos por área"
+            items={TRACK_FILTER_ITEMS}
+            value={trackFilter}
+            onChange={(val) => setTrackFilter(val)}
+            size="sm"
+          />
+        </div>
+
+        <div className="progress-levels-stack">
+          {analyticsData.levelSummaries.map((lvl) => (
+            <div key={lvl.level} className="progress-level-block">
+              <div className="progress-level-block__header">
+                <div className="progress-level-block__title-wrap">
+                  <span className="progress-level-badge tabular">
+                    Nivel {lvl.level}
+                  </span>
+                  <h3 className="progress-level-block__name">{lvl.name}</h3>
+                  <span className="progress-level-block__summary">
+                    {lvl.summary}
+                  </span>
+                </div>
+                <div className="progress-level-block__stats tabular">
+                  <span>
+                    {lvl.completedCount} de {lvl.totalCount} lecciones ({lvl.pct} %)
+                  </span>
+                </div>
+              </div>
+
+              <div className="progress-level-bar" aria-hidden="true">
+                <div
+                  className="progress-level-bar__fill"
+                  style={{ width: `${lvl.pct}%` }}
+                />
+              </div>
+
+              {lvl.modules.length > 0 && (
+                <div className="progress-module-table" role="table" aria-label={`Módulos del Nivel ${lvl.level}`}>
+                  <div className="progress-module-table__head" role="row">
+                    <span role="columnheader">Módulo</span>
+                    <span role="columnheader">Área</span>
+                    <span role="columnheader" className="is-num">Lecciones</span>
+                    <span role="columnheader" className="is-num">Precisión checks</span>
+                  </div>
+                  {lvl.modules.map((mod) => (
+                    <div
+                      key={mod.id}
+                      className="progress-module-table__row"
+                      role="row"
+                    >
+                      <div role="cell" className="progress-module-table__main">
+                        <span className="progress-module-table__title">
+                          {mod.title}
+                        </span>
+                        <span className="progress-module-table__goal">
+                          {mod.goal}
+                        </span>
+                      </div>
+                      <div role="cell" className="progress-module-table__track">
+                        <span
+                          className={`progress-track-chip progress-track-chip--${mod.track}`}
+                        >
+                          <span
+                            className={`progress-track-dot progress-track-dot--${mod.track}`}
+                            aria-hidden="true"
+                          />
+                          {TRACK_LABELS[mod.track] || 'Común'}
+                        </span>
+                      </div>
+                      <div
+                        role="cell"
+                        className="progress-module-table__cell is-num tabular"
+                      >
+                        {mod.completedCount}/{mod.totalCount} ({mod.completionPct} %)
+                      </div>
+                      <div
+                        role="cell"
+                        className="progress-module-table__cell is-num tabular"
+                      >
+                        {mod.checkAccuracyPct !== null
+                          ? `${mod.checkAccuracyPct} % (${mod.checksCorrect}/${mod.checksAnswered})`
+                          : 'Sin respuestas'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* 4. Simulacro de entrevista por área y nivel */}
+      <section
+        className="sec-section progress-interview-box"
+        aria-labelledby="progress-interview-heading"
+        data-testid="progress-interview-section"
+      >
+        <div className="progress-interview-box__info">
+          <span className="sec-kicker">PRÁCTICA CON EL TUTOR</span>
+          <h2 id="progress-interview-heading" className="sec-section__title">
+            Simulacro de entrevista técnica
+          </h2>
+          <p className="sec-section__sub">
+            Abre el tutor en modo entrevista con preguntas de arquitectura, SQL, modelado o inferencia adaptadas al área y nivel que elijas.
+          </p>
+        </div>
+
+        <div className="progress-interview-box__controls">
+          <div className="progress-interview-field">
+            <label
+              htmlFor="interview-track-select"
+              className="progress-interview-field__label"
+            >
+              Área evaluada
+            </label>
+            <select
+              id="interview-track-select"
+              className="settings-select"
+              value={interviewTrack}
+              onChange={(e) => setInterviewTrack(e.target.value)}
+            >
+              {INTERVIEW_TRACKS.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="progress-interview-field">
+            <label
+              htmlFor="interview-level-select"
+              className="progress-interview-field__label"
+            >
+              Nivel objetivo
+            </label>
+            <select
+              id="interview-level-select"
+              className="settings-select"
+              value={String(interviewLevel)}
+              onChange={(e) => setInterviewLevel(Number(e.target.value))}
+            >
+              {LEVELS.map((lvl) => (
+                <option key={lvl.level} value={String(lvl.level)}>
+                  Nivel {lvl.level} · {lvl.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <Button
+            variant="primary"
+            size="md"
+            icon={MessageSquare}
+            iconRight={ArrowRight}
+            onClick={handleLaunchInterview}
+            data-testid="launch-interview-btn"
+          >
+            Iniciar simulacro de entrevista
+          </Button>
+        </div>
       </section>
     </div>
   );

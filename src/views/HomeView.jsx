@@ -1,729 +1,625 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo } from 'react';
+import { ArrowRight, Play, Repeat, Compass, SlidersHorizontal } from 'lucide-react';
+import { Button } from '../components/ui/index.js';
+import { MODULES, getTrackPath } from '../data/catalog/modules.js';
+import { TRACKS } from '../data/catalog/tracks.js';
+import { LEVELS } from '../data/catalog/levels.js';
+import { FLASHCARDS } from '../data/flashcards.js';
+import { getDueCards } from '../engine/review.js';
 import {
-  BookOpen,
-  CheckCircle2,
-  Repeat,
-  Database,
-  Layers,
-  Cpu,
-  Workflow,
-  BarChart3,
-  Sparkles,
-  Check,
-  ArrowRight,
-} from 'lucide-react';
-import {
-  Button,
-  Card,
-  Chip,
-  ProgressBar,
-  ProgressRing,
-  EmptyState,
-  Badge,
-  Illustration,
-  getStageTheme,
-  getStageNumber,
-} from '../components/ui/index.js';
-import { INITIAL_FLASHCARDS, getDueCards } from '../engine/spacedRepetition.js';
+  useProfile,
+  useProgress,
+  useStore,
+  setTrack,
+  getEphemeralState,
+} from '../state/store.js';
+import { SettingsView } from './SettingsView.jsx';
 
 export const LESSON_STEP_LABELS = [
-  'Contexto',
-  'Simulador',
-  'Antipatrón vs. solución',
-  'Los tres roles',
-  'Comprueba lo aprendido',
-  'Práctica',
-  'Resumen',
+  '1 · Caso y concepto',
+  '2 · Esquema visual',
+  '3 · Ejemplo guiado SQL',
+  '4 · Práctica con rúbrica',
+  '5 · Comprobación y síntesis',
 ];
 
-const STAGE_ICON_MAP = {
-  Database,
-  Layers,
-  Cpu,
-  Workflow,
-  BarChart3,
-  Sparkles,
-};
+const WEEKDAY_LABELS = [
+  { key: 1, short: 'L', name: 'Lunes' },
+  { key: 2, short: 'M', name: 'Martes' },
+  { key: 3, short: 'X', name: 'Miércoles' },
+  { key: 4, short: 'J', name: 'Jueves' },
+  { key: 5, short: 'V', name: 'Viernes' },
+  { key: 6, short: 'S', name: 'Sábado' },
+  { key: 0, short: 'D', name: 'Domingo' },
+];
 
-function parseLessonMinutes(durationStr) {
-  if (!durationStr || typeof durationStr !== 'string') return 30;
-  const match = durationStr.match(/(\d+)/);
-  return match ? Number(match[1]) : 30;
+function parseDurationMinutes(lesson) {
+  if (typeof lesson?.minutes === 'number' && lesson.minutes > 0) {
+    return lesson.minutes;
+  }
+  if (typeof lesson?.duration === 'string') {
+    const match = lesson.duration.match(/(\d+)/);
+    if (match) return Number(match[1]);
+  }
+  return 25;
 }
 
-function readNormalizedLessonSteps(lessonStepsProp) {
-  let stored = {};
-  try {
-    const raw =
-      typeof window !== 'undefined'
-        ? window.localStorage.getItem('manual_datos_lesson_step')
-        : null;
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === 'object') {
-        stored = parsed;
-      }
-    }
-  } catch {
-    stored = {};
-  }
+function buildCurrentWeekDays(studyMinutesByDay = {}, now = new Date()) {
+  const ref = new Date(now);
+  const dayOfWeek = ref.getDay(); // 0 domingo .. 6 sábado
+  const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const monday = new Date(ref);
+  monday.setHours(0, 0, 0, 0);
+  monday.setDate(ref.getDate() + diffToMonday);
 
-  const combined = { ...stored, ...(lessonStepsProp || {}) };
-  const stepsMap = {};
-  const orderedIds = [];
-
-  Object.entries(combined).forEach(([key, val]) => {
-    if (key === 'lastLessonId' || key === 'activeLessonId') return;
-    const numericStep =
-      typeof val === 'number'
-        ? val
-        : val && typeof val === 'object' && typeof val.step === 'number'
-          ? val.step
-          : Number(val);
-    if (Number.isFinite(numericStep)) {
-      stepsMap[key] = Math.max(0, Math.floor(numericStep));
-      orderedIds.push(key);
-    }
+  return WEEKDAY_LABELS.map((item, idx) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + idx);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const isoDate = `${yyyy}-${mm}-${dd}`;
+    const minutes = Math.max(0, Math.round(Number(studyMinutesByDay?.[isoDate] || 0)));
+    return {
+      ...item,
+      date: isoDate,
+      minutes,
+    };
   });
-
-  return { stepsMap, orderedIds };
-}
-
-function resolveCardLessonId(card, lessons) {
-  if (card?.lessonId) return card.lessonId;
-  if (!card?.stageId || !Array.isArray(lessons) || lessons.length === 0) {
-    return undefined;
-  }
-  const stageLessons = lessons.filter((l) => l.stageId === card.stageId);
-  if (stageLessons.length === 0) return undefined;
-
-  const stageCards = INITIAL_FLASHCARDS.filter((c) => c.stageId === card.stageId);
-  const idxInStage = Math.max(
-    0,
-    stageCards.findIndex((c) => c.id === card.id)
-  );
-  const mappedIndex = Math.min(idxInStage, stageLessons.length - 1);
-  return stageLessons[mappedIndex]?.id;
 }
 
 export function HomeView({
-  stages = [],
   lessons = [],
-  activeLessonId,
-  nextRecommendedLesson,
-  lessonSteps = {},
   completedIds = [],
-  quizAnswers = {},
-  diagnosticResult = null,
-  leitnerState = {},
-  onOpenLesson = () => {},
-  onNavigate = () => {},
-  onOpenDiagnostic = () => {},
+  lessonSteps = {},
+  currentLesson,
+  nextRecommendedLesson,
+  dueCardsCount = 0,
+  onOpenLesson,
+  onNavigate,
+  onOpenDiagnostic,
 }) {
-  const completedSet = useMemo(() => new Set(completedIds), [completedIds]);
+  const fullState = useStore();
+  const profile = useProfile();
+  const progress = useProgress();
 
-  const { stepsMap, orderedIds } = useMemo(
-    () => readNormalizedLessonSteps(lessonSteps),
-    [lessonSteps]
+  const isSettingsUrl = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    return new URLSearchParams(window.location.search).get('view') === 'settings';
+  }, []);
+
+  if (isSettingsUrl || getEphemeralState()?.viewMode === 'settings') {
+    return <SettingsView onNavigate={onNavigate} />;
+  }
+
+  const activeTrackId = profile?.track || null;
+  const trackMeta = useMemo(
+    () =>
+      TRACKS.find((t) => t.id === activeTrackId) ||
+      TRACKS.find((t) => t.id === 'core') ||
+      TRACKS[0],
+    [activeTrackId]
   );
 
-  const hasStartedAnyLesson = completedIds.length > 0 || orderedIds.length > 0;
+  // Módulos de la ruta del usuario (Tronco común + su área elegida, o todos los de DE por defecto para contar la ruta estándar de 95 lecciones)
+  const routeModules = useMemo(() => {
+    const targetTrack = activeTrackId || 'de';
+    return getTrackPath(targetTrack);
+  }, [activeTrackId]);
 
-  const continueLesson = useMemo(() => {
-    const recentFirst = [...orderedIds].reverse();
+  const totalRouteLessons = useMemo(
+    () =>
+      routeModules.reduce(
+        (acc, mod) => acc + (Array.isArray(mod.lessons) ? mod.lessons.length : 0),
+        0
+      ),
+    [routeModules]
+  );
 
-    const inProgressId = recentFirst.find(
-      (id) => !completedSet.has(id) && (stepsMap[id] ?? 0) > 0
-    );
-    if (inProgressId) {
-      const found = lessons.find((l) => l.id === inProgressId);
-      if (found) return found;
+  // Progreso real combinando store y props
+  const completedSet = useMemo(() => {
+    const set = new Set(Array.isArray(completedIds) ? completedIds : []);
+    for (const [id, entry] of Object.entries(progress?.lessons || {})) {
+      if (entry?.status === 'completed' || entry?.status === 'known') {
+        set.add(id);
+      }
     }
+    return set;
+  }, [completedIds, progress?.lessons]);
 
-    const recentVisitedId = recentFirst.find((id) => !completedSet.has(id));
-    if (recentVisitedId) {
-      const found = lessons.find((l) => l.id === recentVisitedId);
-      if (found) return found;
+  const startedSet = useMemo(() => {
+    const set = new Set();
+    for (const [id, step] of Object.entries(lessonSteps || {})) {
+      if (Number(step) > 0) set.add(id);
     }
-
-    if (activeLessonId && !completedSet.has(activeLessonId) && orderedIds.length > 0) {
-      const active = lessons.find((l) => l.id === activeLessonId);
-      if (active) return active;
+    for (const [id, entry] of Object.entries(progress?.lessons || {})) {
+      if (
+        entry &&
+        (entry.status === 'in_progress' ||
+          entry.status === 'completed' ||
+          entry.status === 'known' ||
+          Number(entry.stepIndex || 0) > 0)
+      ) {
+        set.add(id);
+      }
     }
+    return set;
+  }, [lessonSteps, progress?.lessons]);
 
-    if (diagnosticResult?.recommendedLessonId) {
-      const diagLesson = lessons.find(
-        (l) => l.id === diagnosticResult.recommendedLessonId && !completedSet.has(l.id)
+  const isNewUser = completedSet.size === 0 && startedSet.size === 0;
+
+  // Nivel actual según las lecciones completadas o startLevel
+  const currentLevelNumber = useMemo(() => {
+    const baseLevel = Number(profile?.startLevel ?? 0);
+    if (completedSet.size === 0) return baseLevel;
+    let highestLevel = baseLevel;
+    for (const mod of routeModules) {
+      const hasCompletedInMod = (mod.lessons || []).some(
+        (l) => completedSet.has(l.id) || (l.legacyId && completedSet.has(l.legacyId))
       );
-      if (diagLesson) return diagLesson;
+      if (hasCompletedInMod && mod.level > highestLevel) {
+        highestLevel = mod.level;
+      }
     }
+    return highestLevel;
+  }, [profile?.startLevel, completedSet, routeModules]);
 
-    return (
-      nextRecommendedLesson ||
-      lessons.find((l) => !completedSet.has(l.id)) ||
-      lessons[0]
-    );
+  const currentLevelMeta = useMemo(
+    () => LEVELS.find((l) => l.level === currentLevelNumber) || LEVELS[0],
+    [currentLevelNumber]
+  );
+
+  // Primera lección ejecutable para usuario nuevo o lección activa para continuar
+  const playableLessons = useMemo(
+    () => (Array.isArray(lessons) && lessons.length > 0 ? lessons : []),
+    [lessons]
+  );
+
+  const firstRouteLesson = useMemo(() => {
+    if (playableLessons.length === 0) return null;
+    if (activeTrackId) {
+      const matchingTrack = playableLessons.find(
+        (l) => l.track === activeTrackId || l.track === 'core'
+      );
+      if (matchingTrack) return matchingTrack;
+    }
+    return playableLessons[0];
+  }, [playableLessons, activeTrackId]);
+
+  const activeContinueLesson = useMemo(() => {
+    // Priorizar una lección en curso no completada
+    for (const l of playableLessons) {
+      const isDone = completedSet.has(l.id) || (l.v2Id && completedSet.has(l.v2Id));
+      const isStarted = startedSet.has(l.id) || (l.v2Id && startedSet.has(l.v2Id));
+      if (isStarted && !isDone) return l;
+    }
+    if (
+      currentLesson &&
+      !completedSet.has(currentLesson.id) &&
+      (!currentLesson.v2Id || !completedSet.has(currentLesson.v2Id))
+    ) {
+      return currentLesson;
+    }
+    if (nextRecommendedLesson) return nextRecommendedLesson;
+    return firstRouteLesson;
   }, [
-    orderedIds,
-    stepsMap,
+    playableLessons,
     completedSet,
-    activeLessonId,
-    diagnosticResult,
+    startedSet,
+    currentLesson,
     nextRecommendedLesson,
-    lessons,
+    firstRouteLesson,
   ]);
 
-  const continueStage = useMemo(
-    () => stages.find((s) => s.id === continueLesson?.stageId) || stages[0],
-    [stages, continueLesson]
-  );
+  const activeStepIndex = useMemo(() => {
+    if (!activeContinueLesson) return 0;
+    const rawStep =
+      lessonSteps?.[activeContinueLesson.id] ??
+      progress?.lessons?.[activeContinueLesson.id]?.stepIndex ??
+      progress?.lessons?.[activeContinueLesson.v2Id]?.stepIndex ??
+      0;
+    return Math.min(4, Math.max(0, Number(rawStep) || 0));
+  }, [activeContinueLesson, lessonSteps, progress?.lessons]);
 
-  const currentStageNum = getStageNumber(
-    continueStage?.number || continueLesson?.stageId || 1
-  );
+  const activeSectionTitle = useMemo(() => {
+    if (!activeContinueLesson) return LESSON_STEP_LABELS[0];
+    const sections = activeContinueLesson.sections;
+    if (Array.isArray(sections) && sections.length > 0) {
+      const sec = sections[Math.min(activeStepIndex, sections.length - 1)];
+      if (sec?.title) return sec.title;
+    }
+    return LESSON_STEP_LABELS[activeStepIndex] || LESSON_STEP_LABELS[0];
+  }, [activeContinueLesson, activeStepIndex]);
 
-  const totalSteps = LESSON_STEP_LABELS.length;
-  const savedStepIndex = Math.min(
-    totalSteps - 1,
-    Math.max(0, Number(stepsMap?.[continueLesson?.id] ?? 0))
-  );
-  const stepLabel = LESSON_STEP_LABELS[savedStepIndex] || LESSON_STEP_LABELS[0];
-  const continueStepPct = completedSet.has(continueLesson?.id)
-    ? 100
-    : hasStartedAnyLesson && stepsMap?.[continueLesson?.id] !== undefined
-      ? Math.round(((savedStepIndex + 1) / totalSteps) * 100)
-      : Math.round((1 / totalSteps) * 100);
+  const remainingMinutes = useMemo(() => {
+    if (!activeContinueLesson) return 20;
+    const total = parseDurationMinutes(activeContinueLesson);
+    const ratioLeft = Math.max(0.2, (5 - activeStepIndex) / 5);
+    return Math.max(5, Math.round(total * ratioLeft));
+  }, [activeContinueLesson, activeStepIndex]);
 
-  const timeStats = useMemo(() => {
-    let totalMinutes = 0;
-    let remainingMinutes = 0;
-    lessons.forEach((l) => {
-      const mins = parseLessonMinutes(l.duration);
-      totalMinutes += mins;
-      if (!completedSet.has(l.id)) {
-        remainingMinutes += mins;
+  // Próximas 3 lecciones en la ruta (excluyendo completadas y la actual en "Continuar")
+  const upcomingLessons = useMemo(() => {
+    const list = [];
+    for (const l of playableLessons) {
+      const isDone = completedSet.has(l.id) || (l.v2Id && completedSet.has(l.v2Id));
+      const isCurrent = activeContinueLesson && l.id === activeContinueLesson.id;
+      if (!isDone && !isCurrent) {
+        list.push(l);
       }
-    });
-    const totalHours = Math.round((totalMinutes / 60) * 10) / 10;
-    const remainingHours = Math.round((remainingMinutes / 60) * 10) / 10;
-    return { totalHours, remainingHours };
-  }, [lessons, completedSet]);
+      if (list.length >= 3) break;
+    }
+    return list;
+  }, [playableLessons, completedSet, activeContinueLesson]);
 
-  const quizStats = useMemo(() => {
-    let answeredCount = 0;
-    let correctCount = 0;
+  // Tarjetas vencidas reales desde FSRS (review.js) sobre el catálogo de 75 flashcards
+  const effectiveDueCount = useMemo(() => {
+    if (isNewUser) return 0;
+    const dueList = getDueCards(fullState, { catalog: FLASHCARDS });
+    if (Array.isArray(dueList)) return dueList.length;
+    return Math.max(0, Number(dueCardsCount) || 0);
+  }, [fullState, dueCardsCount, isNewUser]);
 
-    lessons.forEach((lesson) => {
-      const ans = quizAnswers?.[lesson.id];
-      if (ans === undefined || ans === null || ans === '') return;
-      answeredCount += 1;
-      const opt = lesson.checkpoint?.options?.find((o) => o.id === ans);
-      if (opt?.correct === true || ans === true || ans === 'correct') {
-        correctCount += 1;
-      }
-    });
-
-    const accuracyPct =
-      answeredCount > 0 ? Math.round((correctCount / answeredCount) * 100) : 0;
-
-    return { answeredCount, correctCount, accuracyPct };
-  }, [lessons, quizAnswers]);
-
-  const dueCards = useMemo(() => {
-    const allDue = getDueCards(leitnerState, 'ALL');
-    return allDue.filter((card) => {
-      const cardWithLesson = {
-        ...card,
-        lessonId: card.lessonId || resolveCardLessonId(card, lessons),
-      };
-      return (
-        completedIds.includes(cardWithLesson.lessonId) ||
-        lessonSteps[cardWithLesson.lessonId] !== undefined ||
-        stepsMap[cardWithLesson.lessonId] !== undefined
-      );
-    });
-  }, [leitnerState, lessons, completedIds, lessonSteps, stepsMap]);
-
-  useEffect(() => {
+  React.useEffect(() => {
     if (typeof window !== 'undefined') {
       window.dispatchEvent(
-        new CustomEvent('manual_datos_due_count', { detail: dueCards.length })
+        new CustomEvent('manual_datos_due_count', {
+          detail: effectiveDueCount,
+        })
       );
     }
-  }, [dueCards.length]);
+  }, [effectiveDueCount]);
 
-  const dueByRole = useMemo(() => {
-    const counts = { DE: 0, DA: 0, BI: 0 };
-    dueCards.forEach((c) => {
-      if (counts[c.discipline] !== undefined) {
-        counts[c.discipline] += 1;
-      }
-    });
-    return counts;
-  }, [dueCards]);
+  // Minutos estudiados esta semana (7 celdas L..D)
+  const weekDays = useMemo(
+    () => buildCurrentWeekDays(progress?.studyMinutesByDay),
+    [progress?.studyMinutesByDay]
+  );
 
-  const globalPct =
-    lessons.length > 0 ? Math.round((completedIds.length / lessons.length) * 100) : 0;
+  const maxDayMinutes = useMemo(
+    () => Math.max(30, ...weekDays.map((d) => d.minutes)),
+    [weekDays]
+  );
 
-  const statusPhrase = hasStartedAnyLesson
-    ? `Etapa ${currentStageNum} de 6 · ${completedIds.length} de ${lessons.length} lecciones terminadas`
-    : `${lessons.length} lecciones en 6 etapas · empieza por la primera`;
+  const totalWeekMinutes = useMemo(
+    () => weekDays.reduce((acc, d) => acc + d.minutes, 0),
+    [weekDays]
+  );
 
-  const handleStageClick = (stage) => {
-    onNavigate('roadmap', stage.id);
-    if (typeof window !== 'undefined') {
-      window.setTimeout(() => {
-        const directEl =
-          document.getElementById(stage.id) ||
-          document.querySelector(
-            `[data-stage-id="${stage.id}"], [aria-label*="Etapa ${stage.number}"]`
-          );
-        if (directEl && typeof directEl.scrollIntoView === 'function') {
-          directEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      }, 60);
-    }
-  };
+  const statusTrackLabel = activeTrackId
+    ? trackMeta.name
+    : 'Tronco común (sin área asignada)';
+
+  const specializationChoices = useMemo(
+    () => TRACKS.filter((t) => t.id !== 'core'),
+    []
+  );
 
   return (
-    <div className="home-view">
-      {/* 1. CABECERA: dónde estás, sin saludo ni decoración */}
-      <section className="home-hero" aria-label="Estado actual">
-        <h1 className="home-hero__title">Hoy</h1>
-        <p className="home-hero__status tabular">{statusPhrase}</p>
-      </section>
-
-      {/* 2. TARJETA CONTINUAR CON DATA-STAGE DE LA LECCIÓN */}
-      {continueLesson && (
-        <Card
-          stage={currentStageNum}
-          accentTop
-          className="home-continue-card"
-        >
-          <div className="home-continue-card__top">
-            <div className="home-continue-card__chips">
-              <Chip variant="stage">
-                {!hasStartedAnyLesson
-                  ? 'Empieza por aquí'
-                  : completedSet.has(continueLesson.id)
-                    ? 'Repasar lección'
-                    : 'Continúa donde lo dejaste'}
-              </Chip>
-              <Chip variant="neutral">
-                Etapa {currentStageNum} · {getStageTheme(currentStageNum).shortName}
-              </Chip>
-              {!hasStartedAnyLesson && diagnosticResult && (
-                <Chip variant="primary">Recomendada por diagnóstico</Chip>
+    <div className="home-view" data-view="home">
+      <header className="home-header">
+        <div className="home-header__main">
+          <h1 className="home-header__title">Hoy</h1>
+          <p className="home-header__status tabular">
+            <span className="home-header__track">
+              {activeTrackId && (
+                <span
+                  className={`home-track-dot home-track-dot--${activeTrackId}`}
+                  aria-hidden="true"
+                />
               )}
-            </div>
-          </div>
-
-          <div className="home-continue-card__main">
-            <div className="home-continue-card__number tabular">
-              {String(continueLesson.order).padStart(2, '0')}
-            </div>
-
-            <div className="home-continue-card__copy">
-              <h2 className="home-continue-card__title">
-                {continueLesson.title}
-              </h2>
-              <p className="home-continue-card__desc">
-                {continueLesson.subtitle}
-              </p>
-            </div>
-          </div>
-
-          <div className="home-continue-card__progress">
-            <div className="home-continue-card__step-row tabular">
-              <span>
-                Paso {savedStepIndex + 1} de {totalSteps} · {stepLabel}
-              </span>
-              <span>{continueStepPct}%</span>
-            </div>
-            <ProgressBar
-              value={continueStepPct}
-              tone="stage"
-              stage={currentStageNum}
-              ariaLabel={`Progreso en la lección ${continueLesson.title}: ${continueStepPct}%`}
-            />
-          </div>
-
-          <div className="home-continue-card__footer">
-            <div className="home-continue-card__roles">
-              {(continueLesson.coreFocus || ['DE', 'DA', 'BI']).map((role) => (
-                <Chip key={role} role={role}>
-                  {role}
-                </Chip>
-              ))}
-              <Chip variant="neutral">{continueLesson.duration}</Chip>
-            </div>
-
-            <div className="home-continue-card__actions">
-              <Button
-                variant="secondary"
-                size="md"
-                onClick={() => onNavigate('roadmap')}
-              >
-                Ver ruta
-              </Button>
-              <Button
-                variant="primary"
-                size="lg"
-                iconRight={ArrowRight}
-                onClick={() => onOpenLesson(continueLesson.id, savedStepIndex)}
-              >
-                Continuar
-              </Button>
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {/* 3. MÉTRICAS (3 TARJETAS) */}
-      <section aria-label="Métricas reales de progreso" className="home-metrics-grid">
-        <Card className="home-metric-card">
-          <div className="home-metric-card__head">
-            <span className="home-metric-card__icon home-metric-card__icon--primary" aria-hidden="true">
-              <BookOpen size={20} />
+              {statusTrackLabel}
             </span>
-            <span className="home-metric-card__label">Lecciones completadas</span>
-          </div>
-
-          {completedIds.length > 0 ? (
-            <div className="home-metric-card__value tabular">
-              {completedIds.length}/{lessons.length}
-            </div>
-          ) : (
-            <p className="home-metric-card__motivate">
-              Ninguna todavía
-            </p>
-          )}
-
-          <ProgressBar
-            size="sm"
-            value={globalPct}
-            tone={globalPct === 100 ? 'success' : 'primary'}
-            ariaLabel={`Lecciones completadas: ${completedIds.length} de ${lessons.length}`}
-          />
-
-          <span className="home-metric-card__meta tabular">
-            {completedIds.length > 0
-              ? `${globalPct}% del programa · ${timeStats.remainingHours} h restantes`
-              : `${lessons.length} lecciones · ${timeStats.totalHours} h estimadas`}
-          </span>
-        </Card>
-
-        <Card className="home-metric-card">
-          <div className="home-metric-card__head">
-            <span className="home-metric-card__icon home-metric-card__icon--success" aria-hidden="true">
-              <CheckCircle2 size={20} />
+            <span className="home-header__sep" aria-hidden="true">·</span>
+            <span>
+              Nivel {currentLevelNumber} ({currentLevelMeta.name})
             </span>
-            <span className="home-metric-card__label">Quizzes acertados</span>
-          </div>
-
-          {quizStats.answeredCount > 0 && quizStats.accuracyPct > 0 ? (
-            <div className="home-metric-card__value tabular">
-              {quizStats.accuracyPct}%
-            </div>
-          ) : (
-            <p className="home-metric-card__motivate">
-              Ninguno todavía
-            </p>
-          )}
-
-          <ProgressBar
-            size="sm"
-            value={quizStats.accuracyPct}
-            tone={quizStats.accuracyPct >= 75 ? 'success' : 'primary'}
-            ariaLabel={`Porcentaje de quizzes acertados: ${quizStats.accuracyPct}%`}
-          />
-
-          <span className="home-metric-card__meta tabular">
-            {quizStats.answeredCount > 0
-              ? `${quizStats.correctCount} de ${quizStats.answeredCount} comprobaciones correctas`
-              : 'Hay una pregunta al final de cada lección'}
-          </span>
-        </Card>
-
-        <Card className="home-metric-card">
-          <div className="home-metric-card__head">
-            <span className="home-metric-card__icon home-metric-card__icon--warning" aria-hidden="true">
-              <Repeat size={20} />
+            <span className="home-header__sep" aria-hidden="true">·</span>
+            <span>
+              {completedSet.size} de {totalRouteLessons} lecciones
             </span>
-            <span className="home-metric-card__label">Repaso espaciado</span>
-          </div>
+          </p>
+        </div>
 
-          {dueCards.length > 0 ? (
-            <div className="home-metric-card__value home-metric-card__value--warning tabular">
-              {dueCards.length}
-            </div>
-          ) : (
-            <p className="home-metric-card__motivate">
-              {hasStartedAnyLesson
-                ? 'Mazo de memoria espaciada al día'
-                : 'Aparecen al empezar tu primera lección'}
-            </p>
-          )}
-
-          <ProgressBar
-            size="sm"
-            value={
-              dueCards.length > 0
-                ? Math.min(100, Math.round((dueCards.length / 18) * 100))
-                : hasStartedAnyLesson
-                  ? 100
-                  : 0
-            }
-            tone={dueCards.length > 0 ? 'warning' : 'success'}
-            ariaLabel={`Tarjetas de repaso para hoy: ${dueCards.length}`}
-          />
-
-          <span className="home-metric-card__meta tabular">
-            {dueCards.length > 0
-              ? `DE ${dueByRole.DE} · DA ${dueByRole.DA} · BI ${dueByRole.BI} listas hoy`
-              : 'Sistema Leitner de 5 cajas'}
-          </span>
-        </Card>
-      </section>
-
-      {/* 4. MAPA DE ETAPAS (CAMINO VISUAL) */}
-      <section aria-label="Mapa de las 6 etapas" className="home-section">
-        <div className="home-section__header">
-          <div>
-            <h2 className="home-section__title">Mapa de etapas</h2>
-            <p className="home-section__subtitle">
-              Pulsa una etapa para ver sus lecciones.
-            </p>
-          </div>
+        <div className="home-header__actions">
           <Button
             variant="ghost"
-            size="md"
-            onClick={() => onNavigate('roadmap')}
+            size="sm"
+            icon={SlidersHorizontal}
+            onClick={() => onNavigate?.('settings')}
           >
-            Ver ruta completa →
+            Ajustes
           </Button>
         </div>
+      </header>
 
-        <div className="home-stage-map">
-          {stages.map((stage) => {
-            const theme = getStageTheme(stage.number);
-            const StageIcon = STAGE_ICON_MAP[theme.iconName] || Database;
-            const stageLessons = lessons.filter((l) => l.stageId === stage.id);
-            const doneCount = stageLessons.filter((l) => completedSet.has(l.id)).length;
-            const hasStepInStage = stageLessons.some(
-              (l) => stepsMap?.[l.id] !== undefined
-            );
-            const rawPct =
-              stageLessons.length > 0
-                ? Math.round((doneCount / stageLessons.length) * 100)
-                : 0;
-            const isCompleted =
-              stageLessons.length > 0 && doneCount === stageLessons.length;
-            const isCurrent = !isCompleted && stage.number === currentStageNum;
-            const isInProgress = !isCompleted && (doneCount > 0 || hasStepInStage);
-            const stagePct = isCompleted
-              ? 100
-              : isInProgress && rawPct === 0
-                ? 15
-                : rawPct;
-
-            return (
-              <button
-                key={stage.id}
-                type="button"
-                data-stage={stage.number}
-                className={`home-stage-node ${isCurrent ? 'is-current' : ''} ${
-                  isCompleted ? 'is-completed' : ''
-                }`.trim()}
-                onClick={() => handleStageClick(stage)}
-                aria-label={`Etapa ${stage.number}: ${theme.shortName} (${
-                  isCompleted
-                    ? 'Completada'
-                    : isCurrent
-                      ? 'Etapa actual'
-                      : `${doneCount} de ${stageLessons.length} lecciones`
-                })`}
-              >
-                <div
-                  className={`home-stage-node__ring-wrap ${
-                    isCurrent ? 'anim-pulse-ring' : ''
-                  }`.trim()}
-                >
-                  <ProgressRing
-                    size={56}
-                    value={stagePct}
-                    tone={isCompleted ? 'success' : 'stage'}
-                    stage={stage.number}
-                    ariaLabel={`Progreso etapa ${stage.number}: ${stagePct}%`}
-                  >
-                    <span className="home-stage-node__icon" aria-hidden="true">
-                      {isCompleted ? <Check size={20} /> : <StageIcon size={20} />}
-                    </span>
-                  </ProgressRing>
-                </div>
-
-                <div className="home-stage-node__info">
-                  <span className="home-stage-node__eyebrow tabular">
-                    Etapa 0{stage.number}
-                  </span>
-                  <span className="home-stage-node__name">{theme.shortName}</span>
-                  <span className="home-stage-node__status tabular">
-                    {isCompleted ? (
-                      <span className="home-stage-node__completed-pill">
-                        <Check size={12} aria-hidden="true" />
-                        <span>Insignia</span>
-                      </span>
-                    ) : (
-                      `${doneCount}/${stageLessons.length} lecciones`
-                    )}
-                  </span>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* 5. REPASO DE HOY Y 6. DIAGNÓSTICO */}
-      <section aria-label="Repaso de hoy y diagnóstico" className="home-actions-grid">
-        <div className="home-review-block">
-          <div className="home-section__header">
-            <div>
-              <h2 className="home-section__title">Repaso de hoy</h2>
-              <p className="home-section__subtitle">
-                Tarjetas de tus lecciones iniciadas o completadas.
-              </p>
-            </div>
+      {isNewUser ? (
+        /* ESTADO USUARIO NUEVO: una sola tarjeta limpia sin cajas vacías */
+        <section
+          className="home-onboarding-card"
+          aria-labelledby="home-start-heading"
+          data-testid="home-new-user-card"
+        >
+          <div className="home-onboarding-card__top">
+            <span className="home-kicker">PUNTO DE PARTIDA</span>
+            <h2 id="home-start-heading" className="home-onboarding-card__title">
+              Empieza por: {firstRouteLesson?.title || 'Granularidad y el fan-out silencioso en los JOIN'}
+            </h2>
+            <p className="home-onboarding-card__goal">
+              {firstRouteLesson?.goal ||
+                'Identificar el grano exacto de cada tabla antes de cruzarlas en SQL y evitar que un JOIN 1:N multiplique importes sin dar error.'}
+            </p>
           </div>
 
-          {dueCards.length > 0 ? (
-            <Card className="home-review-card">
-              <div className="home-review-card__top">
-                <Chip variant="warning">{dueCards.length} tarjetas listas hoy</Chip>
-                <span className="home-review-card__roles tabular">
-                  DE {dueByRole.DE} · DA {dueByRole.DA} · BI {dueByRole.BI}
-                </span>
+          <div className="home-onboarding-card__meta tabular">
+            <span>
+              Duración estimada: {parseDurationMinutes(firstRouteLesson)} min
+            </span>
+            <span aria-hidden="true">·</span>
+            <span>
+              Módulo:{' '}
+              {MODULES.find((m) => m.id === firstRouteLesson?.moduleId)?.title ||
+                'SQL relacional y control del grano'}
+            </span>
+          </div>
+
+          <div className="home-onboarding-card__cta">
+            <Button
+              variant="primary"
+              size="md"
+              icon={Play}
+              onClick={() => {
+                if (firstRouteLesson) {
+                  onOpenLesson?.(firstRouteLesson.stageId, firstRouteLesson.id);
+                }
+              }}
+            >
+              Empezar lección
+            </Button>
+            <Button
+              variant="secondary"
+              size="md"
+              icon={Compass}
+              onClick={() => onNavigate?.('roadmap')}
+            >
+              Explorar ruta completa
+            </Button>
+            {typeof onOpenDiagnostic === 'function' && (
+              <Button
+                variant="ghost"
+                size="md"
+                onClick={onOpenDiagnostic}
+              >
+                Hacer test diagnóstico (5 min)
+              </Button>
+            )}
+          </div>
+
+          <div className="home-onboarding-card__tracks">
+            <div className="home-onboarding-card__tracks-head">
+              <span className="home-onboarding-card__tracks-label">
+                {activeTrackId
+                  ? `Área seleccionada: ${trackMeta.name} (${trackMeta.short}). Puedes cambiarla cuando quieras:`
+                  : 'Elige tu área de especialización (comparten el mismo tronco común):'}
+              </span>
+            </div>
+            <div
+              className="home-track-picker"
+              role="radiogroup"
+              aria-label="Seleccionar área de especialización"
+            >
+              {specializationChoices.map((t) => {
+                const selected = activeTrackId === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    className={`home-track-choice ${selected ? 'is-selected' : ''}`.trim()}
+                    data-track={t.id}
+                    onClick={() => setTrack(t.id)}
+                  >
+                    <div className="home-track-choice__title-row">
+                      <span
+                        className={`home-track-dot home-track-dot--${t.id}`}
+                        aria-hidden="true"
+                      />
+                      <strong>{t.name}</strong>
+                      <span className="home-track-choice__short">{t.short}</span>
+                    </div>
+                    <span className="home-track-choice__desc">{t.summary}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      ) : (
+        /* ESTADO CON PROGRESO: 1. Continuar, 2. Repaso de hoy, 3. Siguiente en tu ruta, 4. Esta semana */
+        <div className="home-active-stack" data-testid="home-progress-view">
+          {/* 1. Bloque principal "Continuar" */}
+          {activeContinueLesson && (
+            <section
+              className="home-continue-card"
+              aria-labelledby="home-continue-heading"
+            >
+              <div className="home-continue-card__body">
+                <div className="home-continue-card__meta tabular">
+                  <span className="home-kicker">CONTINUAR</span>
+                  <span aria-hidden="true">·</span>
+                  <span>Sección actual: {activeSectionTitle}</span>
+                  <span aria-hidden="true">·</span>
+                  <span>{remainingMinutes} min restantes</span>
+                </div>
+                <h2 id="home-continue-heading" className="home-continue-card__title">
+                  {activeContinueLesson.title}
+                </h2>
+                <p className="home-continue-card__goal">
+                  {activeContinueLesson.goal}
+                </p>
               </div>
-              <h3 className="home-review-card__title">
-                Consolida conceptos clave en memoria a largo plazo
-              </h3>
-              <p className="home-review-card__desc">
-                Tienes {dueCards.length} tarjetas correspondientes a las lecciones que ya empezaste o completaste.
-              </p>
-              <div className="home-review-card__actions">
+              <div className="home-continue-card__actions">
                 <Button
                   variant="primary"
                   size="md"
-                  onClick={() => onNavigate('practice')}
+                  iconRight={ArrowRight}
+                  onClick={() =>
+                    onOpenLesson?.(
+                      activeContinueLesson.stageId,
+                      activeContinueLesson.id
+                    )
+                  }
                 >
-                  Empezar repaso ({dueCards.length})
+                  Continuar
                 </Button>
               </div>
-            </Card>
-          ) : (
-            <EmptyState
-              illustration={<Illustration name="empty-reviews" size="sm" />}
-              title="0 tarjetas pendientes de repaso"
-              description={
-                hasStartedAnyLesson
-                  ? 'Estás al día con las tarjetas de las lecciones que has estudiado.'
-                  : 'Las tarjetas de repaso se desbloquean a medida que empiezas o completas cada lección.'
-              }
-              action={
-                hasStartedAnyLesson
-                  ? {
-                      label: 'Abrir mazo de repaso',
-                      variant: 'secondary',
-                      onClick: () => onNavigate('practice'),
-                    }
-                  : {
-                      label: 'Empezar lección 01',
-                      variant: 'secondary',
-                      onClick: () =>
-                        continueLesson && onOpenLesson(continueLesson.id, 0),
-                    }
-              }
-            />
+            </section>
           )}
-        </div>
 
-        {!diagnosticResult && (
-          <div className="home-diagnostic-block">
-            <div className="home-section__header">
-              <div>
-                <h2 className="home-section__title">Diagnóstico inicial</h2>
-                <p className="home-section__subtitle">
-                  Opcional · 6 preguntas prácticas en 3 minutos.
-                </p>
+          {/* 2. "Repaso de hoy": si es 0, una sola línea gris "Nada pendiente hoy", nunca tarjeta vacía */}
+          <section className="home-review-block" aria-label="Repaso de hoy">
+            {effectiveDueCount === 0 ? (
+              <p className="home-review-line-empty" data-testid="home-review-zero">
+                <span className="home-review-line-empty__label">Repaso de hoy:</span>{' '}
+                <span>Nada pendiente hoy</span>
+              </p>
+            ) : (
+              <div className="home-review-bar" data-testid="home-review-due">
+                <div className="home-review-bar__info">
+                  <Repeat size={16} aria-hidden="true" className="home-review-bar__icon" />
+                  <span className="home-review-bar__title">Repaso de hoy</span>
+                  <span className="home-review-bar__sep" aria-hidden="true">·</span>
+                  <span className="home-review-bar__count tabular">
+                    {effectiveDueCount}{' '}
+                    {effectiveDueCount === 1
+                      ? 'tarjeta vencida'
+                      : 'tarjetas vencidas'}
+                  </span>
+                </div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => onNavigate?.('practice')}
+                >
+                  Revisar tarjetas
+                </Button>
               </div>
+            )}
+          </section>
+
+          {/* 3. "Siguiente en tu ruta": las próximas 3 lecciones como lista compacta de filas */}
+          {upcomingLessons.length > 0 && (
+            <section
+              className="home-next-section"
+              aria-labelledby="home-next-heading"
+            >
+              <div className="home-section-head">
+                <h2 id="home-next-heading" className="home-section-title">
+                  Siguiente en tu ruta
+                </h2>
+                <button
+                  type="button"
+                  className="home-text-link"
+                  onClick={() => onNavigate?.('roadmap')}
+                >
+                  Ver ruta completa
+                </button>
+              </div>
+
+              <ul className="home-next-list">
+                {upcomingLessons.map((lesson) => {
+                  const mod = MODULES.find((m) => m.id === lesson.moduleId);
+                  const mins = parseDurationMinutes(lesson);
+                  return (
+                    <li key={lesson.id} className="home-next-row">
+                      <button
+                        type="button"
+                        className="home-next-row__btn"
+                        onClick={() => onOpenLesson?.(lesson.stageId, lesson.id)}
+                      >
+                        <span className="home-next-row__code tabular">
+                          L{String(lesson.order).padStart(2, '0')}
+                        </span>
+                        <span className="home-next-row__main">
+                          <span className="home-next-row__title">
+                            {lesson.title}
+                          </span>
+                          <span className="home-next-row__sub">
+                            {mod ? `${mod.title} · Nivel ${mod.level}` : lesson.subtitle}
+                          </span>
+                        </span>
+                        <span className="home-next-row__mins tabular">
+                          {mins} min
+                        </span>
+                        <ArrowRight
+                          size={15}
+                          aria-hidden="true"
+                          className="home-next-row__arrow"
+                        />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          )}
+
+          {/* 4. "Esta semana": 7 celdas (L..D) con opacidad proporcional de --brand según studyMinutesByDay */}
+          <section
+            className="home-week-section"
+            aria-labelledby="home-week-heading"
+          >
+            <div className="home-section-head">
+              <h2 id="home-week-heading" className="home-section-title">
+                Esta semana
+              </h2>
+              <span className="home-week-total tabular">
+                {totalWeekMinutes} min acumulados
+              </span>
             </div>
 
-            <Card className="home-diagnostic-card">
-              <div className="home-diagnostic-card__illus">
-                <Illustration name="diagnostic" size="sm" />
-              </div>
-              <div className="home-diagnostic-card__body">
-                <div className="home-diagnostic-card__chips">
-                  <Chip variant="primary">Diagnóstico de nivel</Chip>
-                </div>
-                <h3 className="home-diagnostic-card__title">
-                  Encuentra tu punto de partida
-                </h3>
-                <p className="home-diagnostic-card__desc">
-                  6 preguntas sobre SQL, modelado, motores columnares y experimentos. Te sugiere por qué etapa empezar.
-                </p>
-                <div className="home-diagnostic-card__actions">
-                  <Button
-                    variant="secondary"
-                    size="md"
-                    onClick={onOpenDiagnostic}
+            <div
+              className="home-week-grid"
+              role="list"
+              aria-label="Minutos estudiados por día de la semana"
+            >
+              {weekDays.map((day) => {
+                const ratio =
+                  day.minutes > 0
+                    ? Math.min(1, Math.max(0.18, day.minutes / maxDayMinutes))
+                    : 0;
+                const pct = Math.round(ratio * 85);
+                const cellBg =
+                  day.minutes > 0
+                    ? `color-mix(in srgb, var(--brand) ${pct}%, var(--surface))`
+                    : 'var(--sunken)';
+
+                return (
+                  <div
+                    key={day.date}
+                    role="listitem"
+                    className={`home-week-cell ${
+                      day.minutes > 0 ? 'home-week-cell--active' : ''
+                    }`.trim()}
+                    title={`${day.name} (${day.date}): ${day.minutes} min`}
                   >
-                    Hacer diagnóstico
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          </div>
-        )}
-      </section>
-
-      {/* 7. INSIGNIAS DE ETAPA */}
-      <section aria-label="Insignias de etapa" className="home-section">
-        <div className="home-section__header">
-          <div>
-            <h2 className="home-section__title">Insignias de etapa</h2>
-            <p className="home-section__subtitle">
-              Se marca una etapa al terminar sus 3 lecciones.
-            </p>
-          </div>
+                    <span className="home-week-cell__day">{day.short}</span>
+                    <span
+                      className="home-week-cell__swatch"
+                      style={{ backgroundColor: cellBg }}
+                      aria-hidden="true"
+                    />
+                    <span className="home-week-cell__mins tabular">
+                      {day.minutes > 0 ? `${day.minutes} m` : '0 m'}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
         </div>
-
-        <div className="home-badges-grid">
-          {stages.map((stage) => {
-            const theme = getStageTheme(stage.number);
-            const stageLessons = lessons.filter((l) => l.stageId === stage.id);
-            const doneCount = stageLessons.filter((l) =>
-              completedSet.has(l.id)
-            ).length;
-            const isStageCompleted =
-              stageLessons.length > 0 && doneCount === stageLessons.length;
-
-            return (
-              <Badge
-                key={stage.id}
-                stage={stage.number}
-                unlocked={isStageCompleted}
-                title={theme.shortName}
-                subtitle={
-                  isStageCompleted
-                    ? `${stageLessons.length}/${stageLessons.length} lecciones completadas`
-                    : `${doneCount} de ${stageLessons.length} lecciones`
-                }
-              />
-            );
-          })}
-        </div>
-      </section>
+      )}
     </div>
   );
 }
