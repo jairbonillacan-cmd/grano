@@ -1,0 +1,191 @@
+[
+  {
+    "id": "ruta-relativa-absoluta",
+    "term": "Ruta relativa frente a ruta absoluta",
+    "englishTerm": "Relative Path vs. Absolute Path (POSIX)",
+    "track": "core",
+    "definition": "Una ruta relativa parte de la carpeta actual del proyecto (`datos/stores.parquet`), mientras una absoluta empieza en la raíz del disco (`/Users/ana/...`). Se confunde con el nombre del archivo; usar rutas absolutas rompe el código en otras máquinas.",
+    "formula": "head -n 5 ./public/datasets/stores.csv",
+    "relatedLessons": [
+      "c0-herramientas-01-terminal-rutas"
+    ],
+    "relatedTerms": [
+      "tuberia-unix",
+      "entorno-virtual-python"
+    ],
+    "sources": [
+      {
+        "title": "The Open Group Base Specifications Issue 8 (POSIX.1-2024) — Pathname Resolution",
+        "url": "https://pubs.opengroup.org/onlinepubs/9799919799/utilities/V3_chap02.html",
+        "publisher": "IEEE / The Open Group",
+        "accessed": "2026-10-29",
+        "supports": "Resolución de rutas relativas al directorio de trabajo frente a rutas absolutas desde la raíz."
+      }
+    ]
+  },
+  {
+    "id": "tuberia-unix",
+    "term": "Tubería de comandos (Pipe)",
+    "englishTerm": "Unix Pipeline (`|`)",
+    "track": "core",
+    "definition": "El operador `|` conecta la salida estándar (`stdout`) de un comando con la entrada estándar (`stdin`) del siguiente sin crear archivos intermedios. Por ejemplo, `grep flagship stores.csv | wc -l`. Se confunde con la redirección a archivo `>`.",
+    "formula": "grep 'flagship' stores.csv | wc -l",
+    "relatedLessons": [
+      "c0-herramientas-01-terminal-rutas"
+    ],
+    "relatedTerms": [
+      "ruta-relativa-absoluta"
+    ],
+    "sources": [
+      {
+        "title": "The Unix Shell: Pipes and Filters",
+        "url": "https://swcarpentry.github.io/shell-novice/04-pipefilter.html",
+        "publisher": "The Carpentries",
+        "accessed": "2026-10-29",
+        "supports": "Encadenamiento de filtros de texto mediante tuberías estándar sin almacenar archivos temporales."
+      }
+    ]
+  },
+  {
+    "id": "commit-atomico",
+    "term": "Commit atómico en Git",
+    "englishTerm": "Atomic Commit",
+    "track": "core",
+    "definition": "Instantánea en Git que agrupa un único cambio lógico completo y verificable (por ejemplo, excluir almacenes del cálculo de tiendas) con un mensaje claro. Se confunde con guardar todo el trabajo del viernes en un solo commit.",
+    "formula": "git add consultas/tiendas.sql && git commit -m 'Excluye almacenes WH del objetivo retail'",
+    "relatedLessons": [
+      "c0-herramientas-02-git-commits-ramas"
+    ],
+    "relatedTerms": [
+      "area-preparacion-git"
+    ],
+    "sources": [
+      {
+        "title": "Pro Git Book (2nd Edition) — Chapter 2.2: Recording Changes to the Repository",
+        "url": "https://git-scm.com/book/en/v2/Git-Basics-Recording-Changes-to-the-Repository",
+        "publisher": "Git Project (git-scm.com)",
+        "accessed": "2026-10-29",
+        "supports": "Registro incremental de cambios verificables y descriptivos en el historial del repositorio."
+      }
+    ]
+  },
+  {
+    "id": "area-preparacion-git",
+    "term": "Área de preparación en Git",
+    "englishTerm": "Staging Area / Index",
+    "track": "core",
+    "definition": "Zona intermedia donde seleccionas con `git add` qué archivos o líneas exactas entrarán en el próximo commit antes de confirmarlo. Permite separar dos arreglos distintos hechos en la misma tarde. Se confunde con el directorio de trabajo.",
+    "formula": "git add archivo.py && git diff --staged",
+    "relatedLessons": [
+      "c0-herramientas-02-git-commits-ramas"
+    ],
+    "relatedTerms": [
+      "commit-atomico"
+    ],
+    "sources": [
+      {
+        "title": "Pro Git Book (2nd Edition) — Chapter 2.2: Recording Changes to the Repository",
+        "url": "https://git-scm.com/book/en/v2/Git-Basics-Recording-Changes-to-the-Repository",
+        "publisher": "Git Project (git-scm.com)",
+        "accessed": "2026-10-29",
+        "supports": "Separación entre directorio de trabajo, área de preparación (staging area) e historial confirmado."
+      }
+    ]
+  },
+  {
+    "id": "entorno-virtual-python",
+    "term": "Entorno virtual y archivo de bloqueo",
+    "englishTerm": "Virtual Environment & Lockfile (`uv.lock`)",
+    "track": "core",
+    "definition": "Carpeta aislada (`.venv`) que contiene el intérprete Python y las bibliotecas de un proyecto sin mezclarlas con el sistema. El archivo `uv.lock` fija las versiones exactas instaladas; se confunde con `pyproject.toml`, que solo declara rangos.",
+    "formula": "uv add polars duckdb && uv run validar_tiendas.py",
+    "relatedLessons": [
+      "c0-herramientas-03-python-inicial-uv"
+    ],
+    "relatedTerms": [
+      "ruta-relativa-absoluta",
+      "cuaderno-reactivo-dag"
+    ],
+    "sources": [
+      {
+        "title": "Astral uv Documentation — Working on Projects",
+        "url": "https://docs.astral.sh/uv/guides/projects/",
+        "publisher": "Astral",
+        "accessed": "2026-10-29",
+        "supports": "Creación de entornos virtuales aislados y resolución determinista en uv.lock."
+      }
+    ]
+  },
+  {
+    "id": "estado-oculto-cuaderno",
+    "term": "Estado oculto en cuadernos interactivos",
+    "englishTerm": "Hidden State in Notebooks",
+    "track": "core",
+    "definition": "Desfase en un cuaderno tradicional (`.ipynb`) cuando la memoria del kernel conserva variables de celdas borradas o ejecutadas fuera de orden (`In [12]` antes de `In [3]`). Se confunde con un error del motor de datos.",
+    "formula": "# Celda ejecutada fuera de orden -> resultado no reproducible al reiniciar el kernel",
+    "relatedLessons": [
+      "c0-herramientas-04-cuadernos-jupyter-marimo",
+      "de2-formatos-03-duckdb-polars-marimo"
+    ],
+    "relatedTerms": [
+      "cuaderno-reactivo-dag"
+    ],
+    "sources": [
+      {
+        "title": "Marimo Documentation — Reactive Execution and Hidden State Prevention",
+        "url": "https://docs.marimo.io/guides/reactivity/",
+        "publisher": "Marimo Team",
+        "accessed": "2026-10-29",
+        "supports": "Explicación de cómo la ejecución arbitraria de celdas genera estado oculto en memoria."
+      }
+    ]
+  },
+  {
+    "id": "cuaderno-reactivo-dag",
+    "term": "Cuaderno reactivo basado en grafo (DAG)",
+    "englishTerm": "Reactive Notebook (Directed Acyclic Graph)",
+    "track": "core",
+    "definition": "Cuaderno (como Marimo) que analiza qué variables define y consume cada celda para construir un grafo acíclico dirigido. Al cambiar un filtro, recalcula automáticamente las celdas dependientes y se guarda como `.py`. Se confunde con `.ipynb`.",
+    "formula": "uv run marimo edit analisis_tiendas.py",
+    "relatedLessons": [
+      "c0-herramientas-04-cuadernos-jupyter-marimo",
+      "de2-formatos-03-duckdb-polars-marimo"
+    ],
+    "relatedTerms": [
+      "estado-oculto-cuaderno",
+      "entorno-virtual-python"
+    ],
+    "sources": [
+      {
+        "title": "Marimo Documentation — Reactive Execution",
+        "url": "https://docs.marimo.io/guides/reactivity/",
+        "publisher": "Marimo Team",
+        "accessed": "2026-10-29",
+        "supports": "Orden topológico de ejecución mediante un grafo acíclico dirigido de celdas en archivos Python puros."
+      }
+    ]
+  },
+  {
+    "id": "traza-error-traceback",
+    "term": "Traza de error (Traceback)",
+    "englishTerm": "Stack Traceback",
+    "track": "core",
+    "definition": "Reporte que imprime Python o un motor SQL cuando falla la ejecución. Muestra la cadena de llamadas de arriba abajo y coloca en la última línea el tipo exacto de excepción (`KeyError`, `TypeError`) y su causa.",
+    "formula": "KeyError: 'target_usd'  # La columna real se llama 'monthly_target_usd'",
+    "relatedLessons": [
+      "c0-herramientas-05-trazas-error-documentacion"
+    ],
+    "relatedTerms": [
+      "entorno-virtual-python"
+    ],
+    "sources": [
+      {
+        "title": "Python 3.14 Official Tutorial — Chapter 8: Errors and Exceptions",
+        "url": "https://docs.python.org/3/tutorial/errors.html",
+        "publisher": "Python Software Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Lectura de trazas de pila (Most recent call last) y clasificación de excepciones."
+      }
+    ]
+  }
+]
