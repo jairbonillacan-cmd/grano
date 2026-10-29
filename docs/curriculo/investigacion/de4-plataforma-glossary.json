@@ -1,0 +1,281 @@
+[
+  {
+    "id": "spark-shuffle-intercambio",
+    "term": "Shuffle (redistribución de datos en red)",
+    "englishTerm": "Data Shuffle",
+    "track": "de",
+    "definition": "Operación física en motores distribuidos como Apache Spark donde los nodos intercambian registros por red para agrupar valores con el mismo identificador de partición. Ocurre en operaciones anchas como agregaciones, ordenamientos globales y cruces sin difusión previa, e implica serialización, escritura en disco local y transferencia entre ejecutores.",
+    "formula": "Costo_Shuffle = Bytes_Serializados + I/O_Disco_Local + Trafico_Red",
+    "relatedLessons": [
+      "de4-plataforma-01-spark-4-shuffles-skew-ansi"
+    ],
+    "relatedTerms": [
+      "sesgo-datos-data-skew",
+      "spark-aqe-adaptativo"
+    ],
+    "sources": [
+      {
+        "title": "Spark SQL, DataFrames and Datasets Guide — Performance Tuning",
+        "url": "https://spark.apache.org/docs/latest/sql-performance-tuning.html",
+        "publisher": "Apache Software Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Mecánica de particiones de intercambio (shuffle) y ajuste de rendimiento en Spark SQL."
+      }
+    ]
+  },
+  {
+    "id": "sesgo-datos-data-skew",
+    "term": "Sesgo de datos en particiones (data skew)",
+    "englishTerm": "Data Skew",
+    "track": "de",
+    "definition": "Distribución asimétrica del volumen de filas o bytes entre las particiones de un trabajo distribuido, provocada por identificadores muy frecuentes o valores nulos concentrados. Genera tareas rezagadas (stragglers) donde un único ejecutor procesa una fracción desproporcionada del trabajo mientras el resto del clúster permanece ocioso.",
+    "formula": "Factor_Sesgo = Filas_Particion_Maxima / Mediana_Filas_Particion",
+    "relatedLessons": [
+      "de4-plataforma-01-spark-4-shuffles-skew-ansi"
+    ],
+    "relatedTerms": [
+      "spark-shuffle-intercambio",
+      "spark-aqe-adaptativo"
+    ],
+    "sources": [
+      {
+        "title": "Spark SQL Performance Tuning — Optimizing Skew Join",
+        "url": "https://spark.apache.org/docs/latest/sql-performance-tuning.html",
+        "publisher": "Apache Software Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Detección y particionado automático de cruces con sesgo de datos mediante AQE."
+      }
+    ]
+  },
+  {
+    "id": "spark-aqe-adaptativo",
+    "term": "Ejecución adaptativa de consultas (AQE)",
+    "englishTerm": "Adaptive Query Execution",
+    "track": "de",
+    "definition": "Mecanismo de optimización en tiempo de ejecución de Apache Spark que reevalúa el plan físico de consulta al finalizar cada etapa de intercambio (shuffle). Utiliza estadísticas reales de bytes y conteos de filas para fusionar particiones pequeñas, dividir particiones sesgadas y convertir cruces costosos en cruces por difusión (broadcast).",
+    "relatedLessons": [
+      "de4-plataforma-01-spark-4-shuffles-skew-ansi"
+    ],
+    "relatedTerms": [
+      "spark-shuffle-intercambio",
+      "sesgo-datos-data-skew"
+    ],
+    "sources": [
+      {
+        "title": "Spark SQL Performance Tuning — Adaptive Query Execution",
+        "url": "https://spark.apache.org/docs/latest/sql-performance-tuning.html",
+        "publisher": "Apache Software Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Coalescencia de particiones post-shuffle, conversión dinámica de joins y manejo de skew en AQE."
+      }
+    ]
+  },
+  {
+    "id": "spark-modo-ansi",
+    "term": "Modo ANSI SQL estricto",
+    "englishTerm": "ANSI SQL Compliance Mode",
+    "track": "de",
+    "definition": "Configuración activada por defecto en Apache Spark 4.0 (spark.sql.ansi.enabled=true) que aplica las reglas del estándar SQL en conversiones de tipos y operaciones aritméticas. Lanza excepciones explícitas ante desbordamientos numéricos, divisiones por cero o conversiones de texto inválidas en lugar de insertar valores nulos de forma silenciosa.",
+    "relatedLessons": [
+      "de4-plataforma-01-spark-4-shuffles-skew-ansi"
+    ],
+    "relatedTerms": [
+      "spark-aqe-adaptativo"
+    ],
+    "sources": [
+      {
+        "title": "ANSI Compliance — Apache Spark Documentation",
+        "url": "https://spark.apache.org/docs/latest/sql-ref-ansi-compliance.html",
+        "publisher": "Apache Software Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Comportamiento por defecto de spark.sql.ansi.enabled en Spark 4.0 y reglas de conversión de tipos."
+      }
+    ]
+  },
+  {
+    "id": "planos-arquitectura-datos",
+    "term": "Separación de planos en plataforma de datos",
+    "englishTerm": "Data Platform Plane Separation",
+    "track": "de",
+    "definition": "Patrón de diseño que desacopla una plataforma de datos en cuatro subsistemas con escalado independiente: ingesta (captura por lotes y eventos), almacenamiento abierto en objetos (Parquet e Iceberg), cómputo efímero distribuido o local (Spark, Flink, DuckDB) y consumo gobernado con acuerdos de nivel de servicio diferenciados.",
+    "relatedLessons": [
+      "de4-plataforma-02-arquitectura-integral-plataforma",
+      "de4-plataforma-06-entrevista-system-design-de"
+    ],
+    "relatedTerms": [
+      "c17-medallion-architecture",
+      "c18-iceberg-v3"
+    ],
+    "sources": [
+      {
+        "title": "Apache Iceberg Table Specification",
+        "url": "https://iceberg.apache.org/spec/",
+        "publisher": "Apache Software Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Desacoplamiento entre catálogo, almacenamiento en formatos abiertos y múltiples motores de cómputo."
+      }
+    ]
+  },
+  {
+    "id": "clasificacion-pii-nist",
+    "term": "Información de identificación personal (PII)",
+    "englishTerm": "Personally Identifiable Information (PII)",
+    "track": "de",
+    "definition": "Cualquier atributo mantenido por una organización que permite distinguir o rastrear la identidad de una persona física, ya sea de forma directa (correo electrónico, documento fiscal, teléfono) o mediante vinculación con otros datos (código postal, fecha de nacimiento e historial de compras), según la guía NIST SP 800-122.",
+    "relatedLessons": [
+      "de4-plataforma-03-seguridad-pii-enmascaramiento"
+    ],
+    "relatedTerms": [
+      "enmascaramiento-dinamico-ddm",
+      "seguridad-nivel-fila-rls"
+    ],
+    "sources": [
+      {
+        "title": "NIST SP 800-122: Guide to Protecting the Confidentiality of PII",
+        "url": "https://csrc.nist.gov/pubs/sp/800/122/final",
+        "publisher": "National Institute of Standards and Technology (NIST)",
+        "accessed": "2026-10-29",
+        "supports": "Definición de identificadores directos, cuasi-identificadores vinculables y niveles de impacto de confidencialidad."
+      }
+    ]
+  },
+  {
+    "id": "enmascaramiento-dinamico-ddm",
+    "term": "Enmascaramiento dinámico de datos (DDM)",
+    "englishTerm": "Dynamic Data Masking",
+    "track": "de",
+    "definition": "Técnica de control de acceso a nivel de columna que transforma u oculta atributos sensibles en el momento de la consulta según el rol del usuario solicitante, sin modificar los bloques físicos almacenados. Permite entregar resúmenes criptográficos, dominios de correo o rangos generalizados a perfiles analíticos no autorizados.",
+    "relatedLessons": [
+      "de4-plataforma-03-seguridad-pii-enmascaramiento"
+    ],
+    "relatedTerms": [
+      "clasificacion-pii-nist",
+      "seguridad-nivel-fila-rls"
+    ],
+    "sources": [
+      {
+        "title": "NIST SP 800-122: Guide to Protecting the Confidentiality of PII",
+        "url": "https://csrc.nist.gov/pubs/sp/800/122/final",
+        "publisher": "National Institute of Standards and Technology (NIST)",
+        "accessed": "2026-10-29",
+        "supports": "Controles técnicos de anonimización, seudonimización y redacción de atributos sensibles."
+      }
+    ]
+  },
+  {
+    "id": "seguridad-nivel-fila-rls",
+    "term": "Seguridad a nivel de fila (RLS)",
+    "englishTerm": "Row-Level Security",
+    "track": "de",
+    "definition": "Política declarativa aplicada en el motor de base de datos o catálogo que filtra automáticamente los registros visibles de una tabla según el contexto de sesión o rol del consumidor. Impide que una consulta amplia devuelva filas de otras regiones, tiendas o inquilinos sin depender de filtros manuales en la aplicación.",
+    "relatedLessons": [
+      "de4-plataforma-03-seguridad-pii-enmascaramiento"
+    ],
+    "relatedTerms": [
+      "clasificacion-pii-nist",
+      "enmascaramiento-dinamico-ddm"
+    ],
+    "sources": [
+      {
+        "title": "PostgreSQL Documentation — Row Security Policies",
+        "url": "https://www.postgresql.org/docs/current/ddl-rowsecurity.html",
+        "publisher": "The PostgreSQL Global Development Group",
+        "accessed": "2026-10-29",
+        "supports": "Políticas declarativas de filtrado por fila mediante expresiones USING y WITH CHECK."
+      }
+    ]
+  },
+  {
+    "id": "estado-remoto-iac-drift",
+    "term": "Estado remoto y deriva de infraestructura (drift)",
+    "englishTerm": "Remote State and Infrastructure Drift",
+    "track": "de",
+    "definition": "En herramientas declarativas como Terraform, el archivo de estado registra la correspondencia entre el código en control de versiones y los recursos reales desplegados. La deriva (drift) ocurre cuando cambios manuales en consola o fallos parciales hacen que la configuración real difiera del estado declarado en el repositorio.",
+    "relatedLessons": [
+      "de4-plataforma-04-iac-terraform-cicd-datos"
+    ],
+    "relatedTerms": [
+      "planos-arquitectura-datos"
+    ],
+    "sources": [
+      {
+        "title": "Terraform Language Documentation — State",
+        "url": "https://developer.hashicorp.com/terraform/language/state",
+        "publisher": "HashiCorp",
+        "accessed": "2026-10-29",
+        "supports": "Propósito del archivo de estado de Terraform, bloqueo remoto y detección de deriva (drift)."
+      }
+    ]
+  },
+  {
+    "id": "finops-especificacion-focus",
+    "term": "Atribución FinOps y especificación FOCUS",
+    "englishTerm": "FinOps FOCUS Cost Attribution",
+    "track": "de",
+    "definition": "Práctica de ingeniería financiera de nube que asigna el gasto de cómputo, almacenamiento y transferencia a equipos, dominios o consultas mediante etiquetas estandarizadas. La especificación abierta FOCUS define un esquema común (como BilledCost, EffectiveCost y ResourceId) para normalizar la facturación entre múltiples proveedores de nube y plataformas de datos.",
+    "formula": "Costo_Total_Carga = Costo_Computo + Costo_Almacenamiento + Costo_Transferencia",
+    "relatedLessons": [
+      "de4-plataforma-05-finops-atribucion-retencion",
+      "de4-plataforma-06-entrevista-system-design-de"
+    ],
+    "relatedTerms": [
+      "politica-retencion-ciclo-vida"
+    ],
+    "sources": [
+      {
+        "title": "FOCUS — FinOps Open Cost and Usage Specification",
+        "url": "https://focus.finops.org/",
+        "publisher": "FinOps Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Esquema abierto FOCUS para normalización de costos, etiquetas de atribución y métricas BilledCost versus EffectiveCost."
+      }
+    ]
+  },
+  {
+    "id": "politica-retencion-ciclo-vida",
+    "term": "Política de retención y ciclo de vida del almacenamiento",
+    "englishTerm": "Storage Lifecycle and Retention Policy",
+    "track": "de",
+    "definition": "Conjunto de reglas automatizadas que gobiernan cuánto tiempo permanece un conjunto de datos en almacenamiento activo (hot), cuándo transita a capas de archivo de menor precio por gigabyte (warm o cold) y cuándo se purga definitivamente para cumplir requisitos legales de privacidad y evitar el crecimiento indefinido de costos.",
+    "relatedLessons": [
+      "de4-plataforma-05-finops-atribucion-retencion"
+    ],
+    "relatedTerms": [
+      "finops-especificacion-focus",
+      "c18-iceberg-v3"
+    ],
+    "sources": [
+      {
+        "title": "Amazon S3 User Guide — Managing the storage lifecycle of objects",
+        "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-lifecycle-mgmt.html",
+        "publisher": "Amazon Web Services",
+        "accessed": "2026-10-29",
+        "supports": "Reglas de transición entre clases de almacenamiento y expiración automática de objetos."
+      }
+    ]
+  },
+  {
+    "id": "presupuesto-latencia-capacidad",
+    "term": "Dimensionamiento de capacidad y presupuesto de latencia",
+    "englishTerm": "Capacity Sizing and Latency Budget",
+    "track": "de",
+    "definition": "Cálculo cuantitativo utilizado en el diseño de sistemas de datos para estimar el caudal de ingesta (eventos por segundo y megabytes por día), el volumen de almacenamiento anual con factor de crecimiento y el tiempo máximo asignado a cada etapa de una tubería para cumplir un acuerdo de nivel de servicio.",
+    "formula": "Caudal_Pico_EPS = (Eventos_Diarios / 86400) * Factor_Hora_Pico",
+    "relatedLessons": [
+      "de4-plataforma-06-entrevista-system-design-de"
+    ],
+    "relatedTerms": [
+      "planos-arquitectura-datos",
+      "finops-especificacion-focus"
+    ],
+    "sources": [
+      {
+        "title": "Google SRE Book — Service Level Objectives",
+        "url": "https://sre.google/sre-book/service-level-objectives/",
+        "publisher": "Google SRE",
+        "accessed": "2026-10-29",
+        "supports": "Definición de SLI, SLO, presupuestos de latencia y disponibilidad en sistemas distribuidos."
+      }
+    ]
+  }
+]
