@@ -46,7 +46,7 @@ Cada una de las cinco lecciones cuenta con al menos tres fuentes verificadas (`h
 | # | Tipo | Fuente y título | Editorial / Autor | URL | Fecha (`accessed`) | Afirmación técnica que respalda |
 |---|---|---|---|---|---|---|
 | 1 | Primaria | Polars User Guide — Strings (`Expr.str`) and Temporal Data (`Expr.dt`) | Polars Project | https://docs.pola.rs/user-guide/expressions/strings/ | `2026-10-29` | Limpieza vectorizada con `.str.strip_chars()`, `.str.to_uppercase()`, `.str.extract()`, `.str.json_decode()`, conversión con `.str.to_datetime()` y manejo de husos con `.dt.replace_time_zone()` y `.dt.convert_time_zone()`. |
-| 2 | Primaria | Polars User Guide — Time Zones and Temporal Operations | Polars Project | https://docs.pola.rs/user-guide/expressions/time-series/#time-zones | `2026-10-29` | Diferencia semántica entre asignar una zona horaria a un timestamp sin zona (`replace_time_zone`) y convertir un instante físico a UTC u otra zona IANA (`convert_time_zone`). |
+| 2 | Primaria | Polars User Guide — Time Zones and Temporal Operations | Polars Project | https://docs.pola.rs/user-guide/transformations/time-series/timezones/ | `2026-10-29` | Diferencia semántica entre asignar una zona horaria a un timestamp sin zona (`replace_time_zone`) y convertir un instante físico a UTC u otra zona IANA (`convert_time_zone`). |
 | 3 | Primaria | Python 3.13 Standard Library — `zoneinfo`: IANA Time Zone Support | Python Software Foundation | https://docs.python.org/3/library/zoneinfo.html | `2026-10-29` | Uso de identificadores oficiales de la base de datos IANA (`America/Mexico_City`, `America/Bogota`, `Europe/Madrid`, `UTC`) frente a desplazamientos fijos que ignoran cambios de horario. |
 
 ### Lección 5 · `c1-python-05-cuaderno-a-script-cli`

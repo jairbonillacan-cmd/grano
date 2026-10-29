@@ -390,7 +390,7 @@ function buildMockOutput(prompt, jsonMode = null) {
         },
         {
           id: 'q2',
-          prompt: '[MOCK] ¿Qué ocurre al sumar orders.order_total_usd tras un JOIN directo con order_items?',
+          prompt: '[MOCK] ¿Qué ocurre al sumar orders.total_usd tras un JOIN directo con order_items?',
           options: [
             { id: 'a', text: 'Se duplica el total por cada ítem del pedido', correct: true, feedback: '[MOCK] Exacto, se produce fan-out 1:N.' },
             { id: 'b', text: 'El motor SQL agrupa automáticamente', correct: false, feedback: '[MOCK] SQL no deduce el grano sin una CTE previa.' },
@@ -415,7 +415,7 @@ function buildMockOutput(prompt, jsonMode = null) {
     return JSON.stringify({
       score: 3,
       fortalezas: ['[MOCK] Identificaste el grano de las tablas antes de proponer el JOIN.'],
-      mejoras: ['[MOCK] Conviene añadir una comprobación de reconciliación con SUM(order_total_usd).'],
+      mejoras: ['[MOCK] Conviene añadir una comprobación de reconciliación con SUM(total_usd).'],
       respuestaModelo: '[MOCK] Primero verifico el grano de orders y order_items, pre-agrego por order_id en una CTE y compruebo que el total cuadre.',
       siguientePregunta: '[MOCK] ¿Cómo cambiarías tu consulta si un pedido pudiera tener varios reembolsos parciales en refunds?',
     });

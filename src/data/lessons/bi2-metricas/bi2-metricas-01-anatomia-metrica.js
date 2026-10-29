@@ -57,7 +57,7 @@ LEFT JOIN dev_por_pedido d ON o.order_id = d.order_id;`,
     {
       id: 'grano-y-fanout-devoluciones',
       heading: 'Alineación de grano antes de restar devoluciones',
-      body: 'Declarar la fórmula en papel no evita errores si la consulta SQL viola el **grano** de las tablas. En Mercado Brisa, la tabla `orders` tiene grano de un registro por pedido (`18,000` filas). En cambio, `refunds` registra cada evento de devolución (`2,400` filas repartidas en `2,100` pedidos únicos).\n\nExisten `300` pedidos que sufrieron dos reembolsos parciales en fechas distintas. Si ejecutas un `LEFT JOIN` directo entre `orders` y `refunds` y sumas `subtotal_usd - discount_usd`, esos `300` pedidos duplicarán su subtotal. Esta multiplicación silenciosa de filas se llama **fan-out**. Distorsiona tanto el ingreso como el conteo de pedidos.\n\nLa regla de ingeniería analítica es estricta. Antes de unir una tabla de hechos principal con un detalle de eventos, debes colapsar la tabla secundaria al grano de la clave de unión. Agrupar `refunds` por `order_id` dentro de una CTE garantiza una relación uno a uno y preserva la aditividad.',
+      body: 'Declarar la fórmula en papel no evita errores si la consulta SQL viola el **grano** de las tablas. En Mercado Brisa, la tabla `orders` tiene grano de un registro por pedido (`18,000` filas). En cambio, `refunds` registra cada evento de devolución (`1,450` filas repartidas en `1,150` pedidos únicos).\n\nExisten `300` pedidos que sufrieron dos reembolsos parciales en fechas distintas. Si ejecutas un `LEFT JOIN` directo entre `orders` y `refunds` y sumas `subtotal_usd - discount_usd`, esos `300` pedidos duplicarán su subtotal. Esta multiplicación silenciosa de filas se llama **fan-out**. Distorsiona tanto el ingreso como el conteo de pedidos.\n\nLa regla de ingeniería analítica es estricta. Antes de unir una tabla de hechos principal con un detalle de eventos, debes colapsar la tabla secundaria al grano de la clave de unión. Agrupar `refunds` por `order_id` dentro de una CTE garantiza una relación uno a uno y preserva la aditividad.',
       example: {
         language: 'sql',
         code: `SELECT
@@ -68,10 +68,10 @@ LEFT JOIN dev_por_pedido d ON o.order_id = d.order_id;`,
 FROM refunds;`,
         expectedOutput: [
           {
-            filas_en_refunds: 2400,
-            pedidos_con_reembolso: 2100,
+            filas_en_refunds: 1450,
+            pedidos_con_reembolso: 1150,
             pedidos_con_multiples_reembolsos: 300,
-            total_reembolsado_todos_estados_usd: 335590.02,
+            total_reembolsado_todos_estados_usd: 321097.25,
           },
         ],
       },
@@ -79,7 +79,7 @@ FROM refunds;`,
     {
       id: 'filtros-canonicos-y-clausula-filter',
       heading: 'Filtros canónicos y aislamiento con FILTER (WHERE)',
-      body: 'Un **filtro canónico** define qué filas representan transacciones legítimas para una métrica. En Mercado Brisa, los pedidos `pending` (`600` filas) aún no se han cobrado en firme. Los pedidos `cancelled` (`1,200` filas) fueron anulados antes de consolidar venta. Por ello, el universo canónico realizado comprende solo `completed` (`14,680` filas) y `refunded` (`1,520` filas), sumando `16,200` pedidos.\n\n¿Por qué incluimos el estado `refunded` dentro del universo realizado? Porque muchos de esos pedidos tuvieron devoluciones parciales y conservan ingreso neto positivo. Además, excluirlos del denominador inflaría artificialmente el **ticket promedio neto** al esconder las ventas que sufrieron reclamos.\n\nA veces necesitas reportar en una misma consulta métricas con distintos universos. Un `WHERE` global contamina todas las columnas de la tabla. En DuckDB, la cláusula `FILTER (WHERE ...)` adjunta a cada agregación encapsula el filtro canónico dentro de cada medida sin alterar el resto del reporte.',
+      body: 'Un **filtro canónico** define qué filas representan transacciones legítimas para una métrica. En Mercado Brisa, los pedidos `pending` (`720` filas) aún no se han cobrado en firme. Los pedidos `cancelled` (`1,080` filas) fueron anulados antes de consolidar venta. Por ello, el universo canónico realizado comprende solo `completed` (`14,760` filas) y `refunded` (`1,440` filas), sumando `16,200` pedidos.\n\n¿Por qué incluimos el estado `refunded` dentro del universo realizado? Porque muchos de esos pedidos tuvieron devoluciones parciales y conservan ingreso neto positivo. Además, excluirlos del denominador inflaría artificialmente el **ticket promedio neto** al esconder las ventas que sufrieron reclamos.\n\nA veces necesitas reportar en una misma consulta métricas con distintos universos. Un `WHERE` global contamina todas las columnas de la tabla. En DuckDB, la cláusula `FILTER (WHERE ...)` adjunta a cada agregación encapsula el filtro canónico dentro de cada medida sin alterar el resto del reporte.',
     },
   ],
 
@@ -102,7 +102,7 @@ LEFT JOIN refunds r ON o.order_id = r.order_id;`,
         expectedOutput: [
           {
             filas_evaluadas: 18300,
-            ingreso_distorsionado_usd: 6725874.24,
+            ingreso_distorsionado_usd: 6386345.41,
           },
         ],
       },
@@ -134,9 +134,9 @@ WHERE o.status IN ('completed', 'refunded');`,
         expectedOutput: [
           {
             pedidos_realizados: 16200,
-            subtotal_bruto_usd: 6328889.84,
-            descuentos_usd: 402920.0,
-            devoluciones_usd: 274579.98,
+            subtotal_bruto_usd: 5991229.78,
+            descuentos_usd: 65305.4,
+            devoluciones_usd: 274534.52,
             ingreso_neto_canonico_usd: 5651389.86,
             ticket_neto_promedio_usd: 348.85,
           },
@@ -354,7 +354,7 @@ ORDER BY ingreso_neto_canonico_usd DESC;`,
       id: 'fc-bi2-01-02',
       front:
         '¿Por qué ocurre fan-out al unir orders directamente con refunds en Mercado Brisa?',
-      back: 'Porque orders tiene grano de 1 fila por pedido (18,000 filas) y refunds tiene grano de evento de reembolso (2,400 filas en 2,100 pedidos), duplicando el subtotal de los 300 pedidos con dos devoluciones.',
+      back: 'Porque orders tiene grano de 1 fila por pedido (18,000 filas) y refunds tiene grano de evento de reembolso (1,450 filas en 1,150 pedidos), duplicando el subtotal de los 300 pedidos con dos devoluciones.',
     },
     {
       id: 'fc-bi2-01-03',

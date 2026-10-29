@@ -66,8 +66,13 @@ FROM orders;`,
   COUNT(customer_id) AS supuestos_usuarios_logueados
 FROM events
 GROUP BY event_type
-ORDER BY supuestos_usuarios_totales DESC;`,
+ORDER BY supuestos_usuarios_totales DESC, event_type ASC;`,
         expectedOutput: [
+          {
+            event_type: 'add_to_cart',
+            supuestos_usuarios_totales: 15400,
+            supuestos_usuarios_logueados: 14056
+          },
           {
             event_type: 'checkout_completed',
             supuestos_usuarios_totales: 15400,
@@ -77,11 +82,6 @@ ORDER BY supuestos_usuarios_totales DESC;`,
             event_type: 'checkout_started',
             supuestos_usuarios_totales: 15400,
             supuestos_usuarios_logueados: 14058
-          },
-          {
-            event_type: 'add_to_cart',
-            supuestos_usuarios_totales: 15400,
-            supuestos_usuarios_logueados: 14056
           },
           {
             event_type: 'page_view',

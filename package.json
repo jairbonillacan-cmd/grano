@@ -14,8 +14,10 @@
     "check:content": "node scripts/check-content.mjs",
     "check:copy": "node scripts/check-copy.mjs",
     "check:contrast": "node scripts/check-contrast.mjs",
-    "check": "npm run check:catalog && npm run check:content && npm run check:copy && npm run check:contrast",
-    "shots": "node scripts/shots.mjs"
+    "check:sql": "node scripts/check-sql.mjs",
+    "check": "npm run check:catalog && npm run check:content && npm run check:copy && npm run check:contrast && npm run check:sql",
+    "shots": "node scripts/shots.mjs",
+    "test": "vitest run"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.4",

@@ -6,7 +6,7 @@ import {
   Link2,
   BookOpen,
 } from 'lucide-react';
-import { MODULES } from '../data/catalog/modules.js';
+import { MODULES } from '../data/lessons/index.js';
 import { LEVELS } from '../data/catalog/levels.js';
 import { LESSONS_BY_ID } from '../data/lessons/index.js';
 import {

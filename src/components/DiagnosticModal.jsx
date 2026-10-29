@@ -10,7 +10,7 @@ import {
 } from './ui/index.js';
 import { TRACKS } from '../data/catalog/tracks.js';
 import { LEVELS } from '../data/catalog/levels.js';
-import { getTrackPath } from '../data/catalog/modules.js';
+import { getTrackPath } from '../data/lessons/index.js';
 import { LESSONS_BY_ID } from '../data/lessons/index.js';
 import {
   completeOnboarding,

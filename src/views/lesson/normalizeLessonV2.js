@@ -1,5 +1,4 @@
-import { LESSONS_BY_ID } from '../../data/lessons/index.js';
-import { MODULES, MODULES_BY_ID } from '../../data/catalog/modules.js';
+import { LESSONS_BY_ID, MODULES, MODULES_BY_ID } from '../../data/lessons/index.js';
 import { TRACKS } from '../../data/catalog/tracks.js';
 import { LEVELS } from '../../data/catalog/levels.js';
 import { stripSectionNumber, splitGoalIntoChecks } from '../../utils/formatText.jsx';

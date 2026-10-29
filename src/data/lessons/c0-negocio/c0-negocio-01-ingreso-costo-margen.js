@@ -423,7 +423,7 @@ ORDER BY ingreso_neto_usd DESC;`,
     },
     {
       title: 'Dimensional Modeling Techniques: Additive, Semi-Additive, and Non-Additive Facts',
-      url: 'https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/additive-semi-additive-non-additive-facts/',
+      url: 'https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/additive-semi-additive-non-additive-fact/',
       publisher: 'Kimball Group',
       accessed: '2026-10-29',
       supports: 'Clasificación de importes monetarios como hechos aditivos y de porcentajes de margen como hechos no aditivos que requieren SUM/SUM.'

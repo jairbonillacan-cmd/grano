@@ -242,8 +242,8 @@ function JoinFanoutVisualizer({ visualType = 'join-grain', onStateChange }) {
 
   const liveReadout =
     mode === 'fanout'
-      ? 'Con JOIN directo 1:N, el pedido ORD-1 ($250.00) se triplica por sus 3 productos en order_items y SUM(order_total_usd) reporta $850.00 en lugar de los $350.00 reales (+142.8% de inflación).'
-      : 'Al preagregar order_items en una CTE por order_id antes del JOIN, ambas tablas igualan su grano a 1 fila por pedido y SUM(order_total_usd) devuelve los $350.00 exactos (0% de desviación).';
+      ? 'Con JOIN directo 1:N, el pedido ORD-1 ($250.00) se triplica por sus 3 productos en order_items y SUM(total_usd) reporta $850.00 en lugar de los $350.00 reales (+142.8% de inflación).'
+      : 'Al preagregar order_items en una CTE por order_id antes del JOIN, ambas tablas igualan su grano a 1 fila por pedido y SUM(total_usd) devuelve los $350.00 exactos (0% de desviación).';
 
   return (
     <SimulatorFrame
@@ -294,7 +294,7 @@ function JoinFanoutVisualizer({ visualType = 'join-grain', onStateChange }) {
                 <tr>
                   <th>order_id</th>
                   <th>customer</th>
-                  <th className="num">order_total_usd</th>
+                  <th className="num">total_usd</th>
                 </tr>
               </thead>
               <tbody>
@@ -363,7 +363,7 @@ function JoinFanoutVisualizer({ visualType = 'join-grain', onStateChange }) {
                   <tr>
                     <th>order_id</th>
                     <th className="num">unidades (SUM)</th>
-                    <th className="num">order_total_usd (1:1)</th>
+                    <th className="num">total_usd (1:1)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -386,7 +386,7 @@ function JoinFanoutVisualizer({ visualType = 'join-grain', onStateChange }) {
 
       <div className="sim-comparison-card">
         <div className="sim-comparison-card__title">
-          Comparación de ingreso total reportado por SUM(order_total_usd)
+          Comparación de ingreso total reportado por SUM(total_usd)
         </div>
         <div className="sim-comparison-bars">
           <div className="sim-bar-row">

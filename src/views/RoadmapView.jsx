@@ -3,7 +3,7 @@ import { ChevronRight, ArrowUpRight } from 'lucide-react';
 import { Button, Segmented } from '../components/ui/index.js';
 import { TRACKS } from '../data/catalog/tracks.js';
 import { LEVELS } from '../data/catalog/levels.js';
-import { MODULES } from '../data/catalog/modules.js';
+import { MODULES } from '../data/lessons/index.js';
 import { LESSONS_BY_ID } from '../data/lessons/index.js';
 import { setTrack, useProfile, useProgress } from '../state/store.js';
 import { Onboarding } from './Onboarding.jsx';
@@ -670,7 +670,7 @@ export function RoadmapView({
                                       data-lesson-status={lesson.computedStatus}
                                       onClick={() =>
                                         onOpenLesson(
-                                          lesson.legacyId || lesson.id
+                                          lesson.legacyId || lesson.v2Id || lesson.id
                                         )
                                       }
                                     >

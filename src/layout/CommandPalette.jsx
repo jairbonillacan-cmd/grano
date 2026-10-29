@@ -19,7 +19,7 @@ import {
   Home,
 } from 'lucide-react';
 import { Button, Chip, Kbd } from '../components/ui/index.js';
-import { MODULES } from '../data/catalog/modules.js';
+import { MODULES } from '../data/lessons/index.js';
 import { LESSONS as CATALOG_LESSONS } from '../data/lessons/index.js';
 import { GLOSSARY_TERMS } from '../data/glossary.js';
 

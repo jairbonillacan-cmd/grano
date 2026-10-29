@@ -1,4 +1,7 @@
-import { MODULES as CATALOG_MODULES } from '../catalog/modules.js';
+import {
+  MODULES as CATALOG_MODULES,
+  getTrackPath as getCatalogTrackPath,
+} from '../catalog/modules.js';
 import { LEARNING_STAGES, ROLE_META } from '../learningPath2026.js';
 
 import lesson_1 from './c1-sql-joins/c1-sql-joins-02-grano-fanout.js';
@@ -350,6 +353,14 @@ export const MODULES = CATALOG_MODULES.map((mod) => ({
     };
   }),
 }));
+
+// Las vistas leen MODULES desde aquí y no desde el catálogo: el catálogo marca
+// como 'planned' toda lección que no sea legacy, aunque su archivo ya exista.
+export const MODULES_BY_ID = Object.fromEntries(MODULES.map((m) => [m.id, m]));
+
+export function getTrackPath(trackId) {
+  return getCatalogTrackPath(trackId).map((m) => MODULES_BY_ID[m.id] || m);
+}
 
 export function getLessonById(id) {
   return LESSONS_BY_ID[id] || null;

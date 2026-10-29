@@ -3,7 +3,7 @@ import { ArrowRight, ChevronDown, Check } from 'lucide-react';
 import { Button } from '../components/ui/index.js';
 import { TRACKS } from '../data/catalog/tracks.js';
 import { LEVELS } from '../data/catalog/levels.js';
-import { MODULES, getTrackPath } from '../data/catalog/modules.js';
+import { MODULES, getTrackPath } from '../data/lessons/index.js';
 import {
   DiagnosticModal,
   collectKnownLessonIdsForLevel,

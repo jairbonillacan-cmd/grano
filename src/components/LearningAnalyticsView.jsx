@@ -7,7 +7,7 @@ import {
   BookOpen,
   Check,
 } from 'lucide-react';
-import { MODULES } from '../data/catalog/modules.js';
+import { MODULES } from '../data/lessons/index.js';
 import { LEVELS } from '../data/catalog/levels.js';
 import { TRACKS } from '../data/catalog/tracks.js';
 import { LESSONS_BY_ID } from '../data/lessons/index.js';

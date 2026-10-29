@@ -13,8 +13,28 @@ export const MAX_RESULT_ROWS = 50;
 export const MAX_SELECTION_CHARS = 2000;
 export const MAX_TOTAL_PROMPT_CHARS = 24_000;
 
-export const MERCADO_BRISA_SCHEMA_SUMMARY =
-  'customers (customer_id, full_name, city, signup_date), customer_changes (SCD2), products (product_id, sku, category, unit_price_usd), orders (order_id, customer_id, store_id, order_ts, shipping_fee_usd, order_total_usd), order_items (order_id, product_id, quantity, item_price_usd), payments (payment_id, order_id, method, amount_usd), refunds (refund_id, order_id, refund_usd, refund_ts), events (event_id, customer_id, event_type, event_ts), marketing_spend, experiments, experiment_assignments, stores, calendar';
+export const DATASET_SCHEMA_PATH = path.join(PROJECT_ROOT, 'public', 'datasets', 'schema.json');
+
+/**
+ * Construye el resumen del esquema de Mercado Brisa a partir de schema.json,
+ * con el grano y todas las columnas reales (y su tipo) de cada tabla. Escribirlo a mano
+ * hacía que el tutor inventara columnas (order_total_usd, quantity...).
+ */
+export function buildSchemaSummary(schemaPath = DATASET_SCHEMA_PATH) {
+  try {
+    const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
+    return schema.tables
+      .map((t) => {
+        const grain = t.grain ? ` [${t.grain}]` : '';
+        return `${t.name}${grain}: ${t.columns.map((c) => `${c.name} ${c.type}`).join(', ')}`;
+      })
+      .join('; ');
+  } catch {
+    return 'tablas customers, customer_changes, products, orders, order_items, payments, refunds, events, marketing_spend, experiments, experiment_assignments, stores, calendar (esquema no disponible: no inventes nombres de columna)';
+  }
+}
+
+export const MERCADO_BRISA_SCHEMA_SUMMARY = buildSchemaSummary();
 
 const TRACK_NAMES = {
   core: 'Tronco común',
