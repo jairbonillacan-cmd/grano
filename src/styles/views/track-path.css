@@ -2,8 +2,8 @@
 .track-path {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 20px;
+  gap: 1rem;
+  padding: 1.25rem;
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
   background: var(--surface);
@@ -21,11 +21,11 @@
   flex-wrap: wrap;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 12px 24px;
+  gap: 0.75rem 1.5rem;
 }
 
 .track-path__title {
-  margin: 0 0 4px;
+  margin: 0 0 0.25rem;
   font-size: var(--fs-xl);
 }
 
@@ -38,8 +38,8 @@
 
 .track-path__switch {
   display: inline-flex;
-  gap: 2px;
-  padding: 2px;
+  gap: 0.125rem;
+  padding: 0.125rem;
   border: 1px solid var(--line);
   border-radius: var(--r-md);
   background: var(--sunken);
@@ -48,9 +48,9 @@
 .track-path__option {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  height: 32px;
-  padding: 0 12px;
+  gap: 0.5rem;
+  height: 2rem;
+  padding: 0 0.75rem;
   border: 1px solid transparent;
   border-radius: var(--r-sm);
   background: transparent;
@@ -83,8 +83,8 @@
 
 .track-path__dot {
   flex-shrink: 0;
-  width: 8px;
-  height: 8px;
+  width: 0.5rem;
+  height: 0.5rem;
   border-radius: 2px;
   background: var(--track, var(--ink-3));
 }
@@ -92,14 +92,14 @@
 .track-path__choices {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  gap: 0.75rem;
 }
 
 .track-path__choice {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 16px;
+  gap: 0.5rem;
+  padding: 1rem;
   border: 1px solid var(--line);
   border-left: 2px solid var(--track);
   border-radius: var(--r-md);
@@ -120,7 +120,7 @@
 .track-path__choice-name {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.5rem;
   font-weight: 600;
 }
 
@@ -131,7 +131,7 @@
 
 .track-path__choice-list {
   margin: 0;
-  padding-left: 18px;
+  padding-left: 1.125rem;
   color: var(--ink-2);
   font-size: var(--fs-xs);
   line-height: 1.5;
@@ -140,7 +140,7 @@
 .track-path__summary {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 0.375rem;
 }
 
 .track-path__summary-text {
@@ -173,8 +173,8 @@
 .track-path__level {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding-top: 12px;
+  gap: 0.5rem;
+  padding-top: 0.75rem;
   border-top: 1px solid var(--line);
 }
 
@@ -182,7 +182,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 4px 12px;
+  gap: 0.25rem 0.75rem;
 }
 
 .track-path__level-num {
@@ -218,9 +218,9 @@
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto auto;
   align-items: center;
-  gap: 12px;
+  gap: 0.75rem;
   width: 100%;
-  padding: 10px 8px;
+  padding: 0.625rem 0.5rem;
   border: 0;
   border-radius: var(--r-sm);
   background: transparent;
@@ -274,15 +274,15 @@
 }
 
 .track-path__module-body {
-  padding: 4px 8px 12px 28px;
+  padding: 0.25rem 0.5rem 0.75rem 1.75rem;
 }
 
 .track-path__lesson {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 0.625rem;
   width: 100%;
-  padding: 6px 8px;
+  padding: 0.375rem 0.5rem;
   border: 0;
   border-radius: var(--r-sm);
   background: transparent;
@@ -308,12 +308,12 @@ button.track-path__lesson:hover {
   display: inline-grid;
   place-items: center;
   flex-shrink: 0;
-  width: 20px;
-  height: 20px;
+  width: 1.25rem;
+  height: 1.25rem;
   border: 1px solid var(--line-control);
   border-radius: 4px;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--ink-2);
 }
 
@@ -325,16 +325,16 @@ button.track-path__lesson .track-path__lesson-state {
 .track-path__soon {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 0.25rem;
   margin-left: auto;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 0.6875rem;
   white-space: nowrap;
 }
 
 .track-path__project {
-  margin: 8px 0 0;
-  padding: 8px 10px;
+  margin: 0.5rem 0 0;
+  padding: 0.5rem 0.625rem;
   border-left: 2px solid var(--line-strong);
   color: var(--ink-2);
   font-size: var(--fs-xs);

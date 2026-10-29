@@ -1,10 +1,13 @@
+// Mapa heredado de tokens de etapa/rol a variables CSS (--role-de, --role-da, --role-bi, --brand).
+// Conservado para compatibilidad con vistas existentes sin acoplar colores hexadecimales.
+
 export const STAGE_THEMES = [
   {
     number: 1,
     id: 'stage-1',
     shortName: 'SQL',
     name: 'Fundamentos y SQL analítico',
-    color: '#FF6B4A',
+    color: 'var(--brand)',
     iconName: 'Database',
   },
   {
@@ -12,7 +15,7 @@ export const STAGE_THEMES = [
     id: 'stage-2',
     shortName: 'Modelado',
     name: 'Modelado dimensional y diseño de métricas',
-    color: '#F2A516',
+    color: 'var(--role-da)',
     iconName: 'Layers',
   },
   {
@@ -20,7 +23,7 @@ export const STAGE_THEMES = [
     id: 'stage-3',
     shortName: 'Columnar',
     name: 'Motores columnares y formatos físicos',
-    color: '#1DB371',
+    color: 'var(--role-de)',
     iconName: 'Cpu',
   },
   {
@@ -28,7 +31,7 @@ export const STAGE_THEMES = [
     id: 'stage-4',
     shortName: 'Lakehouse',
     name: 'Lakehouse abierto, transformación y capa semántica',
-    color: '#16A8B8',
+    color: 'var(--role-bi)',
     iconName: 'Workflow',
   },
   {
@@ -36,7 +39,7 @@ export const STAGE_THEMES = [
     id: 'stage-5',
     shortName: 'Estadística y BI',
     name: 'Estadística aplicada, experimentación y visualización',
-    color: '#3C7BFF',
+    color: 'var(--brand)',
     iconName: 'BarChart3',
   },
   {
@@ -44,10 +47,10 @@ export const STAGE_THEMES = [
     id: 'stage-6',
     shortName: 'Streaming e IA',
     name: 'Flujos en tiempo real y agentes MCP',
-    color: '#8A5CFF',
+    color: 'var(--role-de)',
     iconName: 'Sparkles',
   },
-];
+]
 
 export const ROLE_THEMES = {
   DE: {
@@ -56,7 +59,7 @@ export const ROLE_THEMES = {
     short: 'DE',
     label: 'Ingeniería de datos',
     iconName: 'Database',
-    color: '#2F6BFF',
+    color: 'var(--role-de)',
   },
   DA: {
     key: 'DA',
@@ -64,7 +67,7 @@ export const ROLE_THEMES = {
     short: 'DA',
     label: 'Análisis de datos',
     iconName: 'Sigma',
-    color: '#0FA968',
+    color: 'var(--role-da)',
   },
   BI: {
     key: 'BI',
@@ -72,74 +75,114 @@ export const ROLE_THEMES = {
     short: 'BI',
     label: 'Business Intelligence',
     iconName: 'LayoutDashboard',
-    color: '#F08A24',
+    color: 'var(--role-bi)',
   },
-};
+}
+
+export const STAGE_VARS = {
+  0: 'var(--brand)',
+  1: 'var(--role-da)',
+  2: 'var(--role-de)',
+  3: 'var(--role-bi)',
+  4: 'var(--brand)',
+  5: 'var(--role-de)',
+  6: 'var(--role-bi)',
+  de: 'var(--role-de)',
+  da: 'var(--role-da)',
+  bi: 'var(--role-bi)',
+}
 
 export function getStageNumber(stageOrLesson) {
-  if (stageOrLesson === null || stageOrLesson === undefined) return 1;
+  if (stageOrLesson === null || stageOrLesson === undefined) return 1
 
   if (typeof stageOrLesson === 'number' && Number.isFinite(stageOrLesson)) {
-    return Math.min(6, Math.max(1, Math.round(stageOrLesson)));
+    return Math.min(6, Math.max(1, Math.round(stageOrLesson)))
   }
 
   if (typeof stageOrLesson === 'string') {
-    const trimmed = stageOrLesson.trim().toLowerCase();
-    const directNum = Number(trimmed);
+    const trimmed = stageOrLesson.trim().toLowerCase()
+    const directNum = Number(trimmed)
     if (Number.isFinite(directNum) && directNum >= 1 && directNum <= 6) {
-      return Math.round(directNum);
+      return Math.round(directNum)
     }
-    const stageMatch = trimmed.match(/stage-(\d+)/);
+    const stageMatch = trimmed.match(/stage-(\d+)/)
     if (stageMatch) {
-      const n = Number(stageMatch[1]);
-      return Math.min(6, Math.max(1, n));
+      const n = Number(stageMatch[1])
+      return Math.min(6, Math.max(1, n))
     }
-    const lessonMatch = trimmed.match(/^l(\d+)/);
+    const lessonMatch = trimmed.match(/^l(\d+)/)
     if (lessonMatch) {
-      const lessonNum = Number(lessonMatch[1]);
-      return Math.min(6, Math.max(1, Math.ceil(lessonNum / 3)));
+      const lessonNum = Number(lessonMatch[1])
+      return Math.min(6, Math.max(1, Math.ceil(lessonNum / 3)))
     }
-    return 1;
+    return 1
   }
 
   if (typeof stageOrLesson === 'object') {
     if (typeof stageOrLesson.stage === 'number') {
-      return getStageNumber(stageOrLesson.stage);
+      return getStageNumber(stageOrLesson.stage)
     }
     if (typeof stageOrLesson.stageNumber === 'number') {
-      return getStageNumber(stageOrLesson.stageNumber);
+      return getStageNumber(stageOrLesson.stageNumber)
     }
-    if (typeof stageOrLesson.number === 'number' && stageOrLesson.number >= 1 && stageOrLesson.number <= 6) {
-      return stageOrLesson.number;
+    if (
+      typeof stageOrLesson.number === 'number' &&
+      stageOrLesson.number >= 1 &&
+      stageOrLesson.number <= 6
+    ) {
+      return stageOrLesson.number
     }
     if (stageOrLesson.stageId) {
-      return getStageNumber(stageOrLesson.stageId);
+      return getStageNumber(stageOrLesson.stageId)
     }
     if (stageOrLesson.id) {
-      return getStageNumber(stageOrLesson.id);
+      return getStageNumber(stageOrLesson.id)
     }
     if (typeof stageOrLesson.order === 'number') {
-      return Math.min(6, Math.max(1, Math.ceil(stageOrLesson.order / 3)));
+      return Math.min(6, Math.max(1, Math.ceil(stageOrLesson.order / 3)))
     }
   }
 
-  return 1;
+  return 1
 }
 
 export function getStageTheme(stageOrLesson) {
-  const num = getStageNumber(stageOrLesson);
-  return STAGE_THEMES[num - 1] || STAGE_THEMES[0];
+  const num = getStageNumber(stageOrLesson)
+  return STAGE_THEMES[num - 1] || STAGE_THEMES[0]
 }
 
 export function getRoleMeta(roleKey) {
-  if (!roleKey) return ROLE_THEMES.DE;
-  const upper = String(roleKey).trim().toUpperCase();
-  if (ROLE_THEMES[upper]) return ROLE_THEMES[upper];
+  if (!roleKey) return ROLE_THEMES.DE
+  const upper = String(roleKey).trim().toUpperCase()
+  if (ROLE_THEMES[upper]) return ROLE_THEMES[upper]
   if (upper.includes('DA') || upper.includes('ANÁLISIS') || upper.includes('ANALISIS')) {
-    return ROLE_THEMES.DA;
+    return ROLE_THEMES.DA
   }
   if (upper.includes('BI') || upper.includes('BUSINESS')) {
-    return ROLE_THEMES.BI;
+    return ROLE_THEMES.BI
   }
-  return ROLE_THEMES.DE;
+  return ROLE_THEMES.DE
+}
+
+export function resolveStageToken(stage) {
+  if (stage === undefined || stage === null || stage === '') return null
+  if (typeof stage === 'number' && STAGE_VARS[stage]) {
+    return STAGE_VARS[stage]
+  }
+  const key = String(stage).trim().toLowerCase()
+  if (STAGE_VARS[key]) return STAGE_VARS[key]
+  const match = key.match(/(\d+)/)
+  if (match && STAGE_VARS[Number(match[1])]) {
+    return STAGE_VARS[Number(match[1])]
+  }
+  if (key.startsWith('var(') || key.startsWith('#') || key.startsWith('rgb')) {
+    return stage
+  }
+  return 'var(--brand)'
+}
+
+export function stageStyle(stage, extra = {}) {
+  const token = resolveStageToken(stage)
+  if (!token) return extra
+  return { '--stage-color': token, ...extra }
 }

@@ -1,139 +1,90 @@
-import React from 'react';
-import { Check } from 'lucide-react';
-import { getStageNumber } from './stageTheme.js';
+// Indicador secuencial de pasos con lista ordenada (<ol>), aria-current="step" en el paso activo
+// y botones enfocables por teclado cuando se proporciona onStepClick.
+import React from 'react'
+import { Check } from 'lucide-react'
+import { resolveStageToken } from './stageTheme.js'
 
 export function Stepper({
   steps = [],
-  activeStep = 0,
-  completedSteps = [],
-  variant = 'full',
-  stage,
+  currentIndex = 0,
+  completedIndices = [],
   onStepClick,
-  ariaLabel = 'Pasos de la lección',
+  stage,
+  compact = false,
   className = '',
-  ...rest
 }) {
-  const completedSet = new Set(Array.isArray(completedSteps) ? completedSteps : []);
-  const stageAttr = stage ? getStageNumber(stage) : undefined;
-  const isCompact = variant === 'compact';
-
-  const normalizedSteps = steps.map((step, index) => {
-    const isString = typeof step === 'string';
-    const stepObj = isString ? { id: index, label: step } : step || {};
-    const stepId = stepObj.id ?? index;
-    const isActive =
-      stepObj.status === 'active' || activeStep === index || activeStep === stepId;
-    const isCompleted =
-      stepObj.status === 'completed' ||
-      Boolean(stepObj.completed) ||
-      completedSet.has(index) ||
-      completedSet.has(stepId) ||
-      (typeof activeStep === 'number' && index < activeStep);
-
-    return {
-      ...stepObj,
-      stepId,
-      index,
-      label: stepObj.label || stepObj.title || `Paso ${index + 1}`,
-      isActive,
-      isCompleted,
-      disabled: Boolean(stepObj.disabled),
-    };
-  });
-
-  const activeItem =
-    normalizedSteps.find((s) => s.isActive) || normalizedSteps[0] || null;
-
-  if (isCompact) {
-    return (
-      <div
-        className={`ui-stepper-compact ${className}`.trim()}
-        data-stage={stageAttr}
-        {...rest}
-      >
-        <ol className="ui-stepper-compact__dots" aria-label={ariaLabel}>
-          {normalizedSteps.map((step) => {
-            const dotState = step.isActive
-              ? 'ui-stepper-compact__dot--active'
-              : step.isCompleted
-                ? 'ui-stepper-compact__dot--completed'
-                : 'ui-stepper-compact__dot--pending';
-
-            return (
-              <li key={step.stepId} className="ui-stepper-compact__item">
-                <button
-                  type="button"
-                  className={`ui-stepper-compact__dot ${dotState}`}
-                  aria-current={step.isActive ? 'step' : undefined}
-                  aria-label={`Paso ${step.index + 1}: ${step.label}`}
-                  disabled={step.disabled}
-                  onClick={() => {
-                    if (typeof onStepClick === 'function' && !step.disabled) {
-                      onStepClick(step.index, step);
-                    }
-                  }}
-                />
-              </li>
-            );
-          })}
-        </ol>
-        {activeItem && (
-          <div className="ui-stepper-compact__caption tabular">
-            <span className="ui-stepper-compact__count">
-              Paso {activeItem.index + 1} de {normalizedSteps.length}
-            </span>
-            <span className="ui-stepper-compact__sep" aria-hidden="true">·</span>
-            <span className="ui-stepper-compact__label">{activeItem.label}</span>
-          </div>
-        )}
-      </div>
-    );
-  }
+  const completedSet = new Set(completedIndices)
+  const stageVar = stage !== undefined ? resolveStageToken(stage) : null
+  const classes = [
+    'ui-stepper',
+    compact ? 'ui-stepper--compact' : '',
+    className,
+  ]
+    .filter(Boolean)
+    .join(' ')
 
   return (
     <ol
-      className={`ui-stepper ${className}`.trim()}
-      aria-label={ariaLabel}
-      data-stage={stageAttr}
-      {...rest}
+      className={classes}
+      style={stageVar ? { '--stage-color': stageVar } : undefined}
+      aria-label="Pasos de la lección"
     >
-      {normalizedSteps.map((step, index) => {
-        const stateClass = step.isActive
-          ? 'ui-stepper__btn--active'
-          : step.isCompleted
-            ? 'ui-stepper__btn--completed'
-            : 'ui-stepper__btn--pending';
+      {steps.map((step, idx) => {
+        const isCurrent = idx === currentIndex
+        const isCompleted = completedSet.has(idx) || idx < currentIndex
+        const stateClass = isCurrent
+          ? 'is-current'
+          : isCompleted
+          ? 'is-done'
+          : 'is-upcoming'
+        const clickable = typeof onStepClick === 'function'
+
+        const content = (
+          <>
+            <span className="ui-stepper__dot" aria-hidden="true">
+              {isCompleted && !isCurrent ? (
+                <Check size={11} strokeWidth={2.25} />
+              ) : (
+                <span>{idx + 1}</span>
+              )}
+            </span>
+            {!compact && step?.label ? (
+              <span className="ui-stepper__label">{step.label}</span>
+            ) : null}
+          </>
+        )
 
         return (
-          <li key={step.stepId} className="ui-stepper__item">
-            <button
-              type="button"
-              className={`ui-stepper__btn ${stateClass}`}
-              aria-current={step.isActive ? 'step' : undefined}
-              disabled={step.disabled}
-              onClick={() => {
-                if (typeof onStepClick === 'function' && !step.disabled) {
-                  onStepClick(step.index, step);
-                }
-              }}
-            >
-              <span className="ui-stepper__index tabular">
-                {step.isCompleted && !step.isActive ? (
-                  <Check size={12} strokeWidth={2.75} />
-                ) : (
-                  step.number ?? index + 1
-                )}
-              </span>
-              <span className="ui-stepper__label">{step.label}</span>
-            </button>
-            {index < normalizedSteps.length - 1 && (
-              <span className="ui-stepper__divider" aria-hidden="true" />
+          <li
+            key={step?.id ?? idx}
+            className={`ui-stepper__item ${stateClass}`}
+            aria-current={isCurrent ? 'step' : undefined}
+          >
+            {clickable ? (
+              <button
+                type="button"
+                className="ui-stepper__button"
+                onClick={() => onStepClick(idx)}
+                title={step?.label || `Paso ${idx + 1}`}
+              >
+                {content}
+              </button>
+            ) : (
+              <div className="ui-stepper__static" title={step?.label || `Paso ${idx + 1}`}>
+                {content}
+              </div>
             )}
+            {idx < steps.length - 1 ? (
+              <span
+                className={`ui-stepper__connector ${isCompleted ? 'is-filled' : ''}`}
+                aria-hidden="true"
+              />
+            ) : null}
           </li>
-        );
+        )
       })}
     </ol>
-  );
+  )
 }
 
-export default Stepper;
+export default Stepper
