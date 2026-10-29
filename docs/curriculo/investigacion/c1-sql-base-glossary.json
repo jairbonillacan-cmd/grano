@@ -1,0 +1,313 @@
+[
+  {
+    "id": "orden-logico-sql",
+    "term": "Orden lógico de evaluación SQL",
+    "englishTerm": "Logical Query Processing Order",
+    "track": "core",
+    "definition": "Secuencia interna en que el motor evalúa una consulta (`FROM` → `WHERE` → `GROUP BY` → `HAVING` → `SELECT` → `DISTINCT` → `ORDER BY` → `LIMIT`), distinta del orden en que se escribe.",
+    "formula": "-- Orden lógico: 1) FROM stores -> 2) WHERE store_type = 'flagship' -> 3) SELECT store_code, monthly_target_usd * 12 AS annual_target_usd",
+    "confusedWith": "Orden sintáctico de escritura (donde SELECT se escribe primero aunque se evalúe casi al final).",
+    "relatedLessons": [
+      "c1-sql-base-01-select-from-where",
+      "c1-sql-base-02-orderby-limit-distinct",
+      "c1-sql-base-04-groupby-having"
+    ],
+    "relatedTerms": [
+      "proyeccion-select",
+      "predicado-where",
+      "filtro-grupos-having"
+    ],
+    "sources": [
+      {
+        "title": "PostgreSQL 17 Documentation — Chapter 7.2: Table Expressions",
+        "url": "https://www.postgresql.org/docs/17/queries-table-expressions.html",
+        "publisher": "PostgreSQL Global Development Group",
+        "accessed": "2026-10-29",
+        "supports": "Secuencia lógica de evaluación de FROM, WHERE, GROUP BY, HAVING y SELECT."
+      }
+    ]
+  },
+  {
+    "id": "proyeccion-select",
+    "term": "Proyección y alias de columna (SELECT ... AS)",
+    "englishTerm": "Column Projection and Aliasing",
+    "track": "core",
+    "definition": "Operación relacional que elige qué columnas existentes o expresiones calculadas devolver en la tabla de salida y les asigna un nombre legible mediante la palabra reservada `AS`.",
+    "formula": "SELECT sku, list_price_usd - unit_cost_usd AS unit_margin_usd FROM products;",
+    "confusedWith": "Filtrado de filas con WHERE (SELECT elige columnas verticales; WHERE filtra filas horizontales).",
+    "relatedLessons": [
+      "c1-sql-base-01-select-from-where"
+    ],
+    "relatedTerms": [
+      "orden-logico-sql",
+      "predicado-where"
+    ],
+    "sources": [
+      {
+        "title": "DuckDB SQL Reference — SELECT Clause",
+        "url": "https://duckdb.org/docs/stable/sql/query_syntax/select",
+        "publisher": "DuckDB Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Proyección de expresiones escalares y definición de alias de columna con AS."
+      }
+    ]
+  },
+  {
+    "id": "predicado-where",
+    "term": "Predicado de filtrado de filas (WHERE)",
+    "englishTerm": "Row-Level Search Condition (WHERE)",
+    "track": "core",
+    "definition": "Condición lógica evaluada fila por fila inmediatamente después de `FROM`. Solo las filas cuyo predicado produce `TRUE` pasan a las fases siguientes; las que producen `FALSE` o `UNKNOWN` se descartan.",
+    "formula": "SELECT order_id, total_usd FROM orders WHERE status = 'completed' AND total_usd >= 500;",
+    "confusedWith": "Cláusula HAVING (que filtra grupos ya agregados después de GROUP BY, no filas individuales).",
+    "relatedLessons": [
+      "c1-sql-base-01-select-from-where",
+      "c1-sql-base-03-null-logica-coalesce",
+      "c1-sql-base-04-groupby-having"
+    ],
+    "relatedTerms": [
+      "orden-logico-sql",
+      "logica-trivalente-null",
+      "filtro-grupos-having"
+    ],
+    "sources": [
+      {
+        "title": "DuckDB SQL Reference — WHERE Clause",
+        "url": "https://duckdb.org/docs/stable/sql/query_syntax/where",
+        "publisher": "DuckDB Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Evaluación booleana por fila en la cláusula WHERE."
+      }
+    ]
+  },
+  {
+    "id": "deduplicacion-distinct",
+    "term": "Deduplicación de filas proyectadas (SELECT DISTINCT)",
+    "englishTerm": "Tuple Deduplication (SELECT DISTINCT)",
+    "track": "core",
+    "definition": "Modificador de `SELECT` que elimina filas repetidas del resultado final comparando la combinación completa de todas las columnas proyectadas, tratando dos valores `NULL` como iguales entre sí.",
+    "formula": "SELECT DISTINCT region, country_code FROM stores ORDER BY region, country_code;",
+    "confusedWith": "COUNT(DISTINCT col) (que devuelve un número entero con la cantidad de valores únicos en vez de listar las filas).",
+    "relatedLessons": [
+      "c1-sql-base-02-orderby-limit-distinct",
+      "c1-sql-base-07-count-variantes"
+    ],
+    "relatedTerms": [
+      "ordenamiento-determinista",
+      "variantes-count-sql"
+    ],
+    "sources": [
+      {
+        "title": "PostgreSQL 17 Documentation — Chapter 7.3: Select Lists (DISTINCT)",
+        "url": "https://www.postgresql.org/docs/17/queries-select-lists.html",
+        "publisher": "PostgreSQL Global Development Group",
+        "accessed": "2026-10-29",
+        "supports": "Eliminación de filas duplicadas sobre la tupla completa de columnas seleccionadas."
+      }
+    ]
+  },
+  {
+    "id": "ordenamiento-determinista",
+    "term": "Ordenamiento determinista y acotación (ORDER BY y LIMIT)",
+    "englishTerm": "Deterministic Sorting and Top-N Limiting",
+    "track": "core",
+    "definition": "Patrón que combina `ORDER BY` con una columna de desempate única (como `order_id ASC`) antes de `LIMIT`, garantizando que el recorte de las primeras `N` filas sea siempre idéntico.",
+    "formula": "SELECT order_id, total_usd FROM orders WHERE status = 'refunded' ORDER BY total_usd DESC, order_id ASC LIMIT 5;",
+    "confusedWith": "Usar LIMIT sin ORDER BY (que devuelve un subconjunto arbitrario dependiente del orden físico de lectura).",
+    "relatedLessons": [
+      "c1-sql-base-02-orderby-limit-distinct"
+    ],
+    "relatedTerms": [
+      "orden-logico-sql",
+      "deduplicacion-distinct"
+    ],
+    "sources": [
+      {
+        "title": "PostgreSQL 17 Documentation — Chapter 7.5 & 7.6: Sorting Rows and LIMIT",
+        "url": "https://www.postgresql.org/docs/17/queries-order.html",
+        "publisher": "PostgreSQL Global Development Group",
+        "accessed": "2026-10-29",
+        "supports": "Necesidad de ORDER BY con desempate explícito para que LIMIT sea reproducible."
+      }
+    ]
+  },
+  {
+    "id": "logica-trivalente-null",
+    "term": "Lógica de tres valores (TRUE, FALSE, UNKNOWN)",
+    "englishTerm": "Three-Valued Logic (3VL) and IS NULL",
+    "track": "core",
+    "definition": "Sistema lógico de SQL donde cualquier comparación con `NULL` mediante `=` o `<>` devuelve `UNKNOWN`. Como `WHERE` solo conserva `TRUE`, verificar nulos exige `IS NULL`, `IS NOT NULL` o `IS DISTINCT FROM`.",
+    "formula": "SELECT order_id FROM orders WHERE campaign_id IS DISTINCT FROM 'CMP-VERANO';",
+    "confusedWith": "Comparación booleana binaria (`campaign_id = NULL` o `campaign_id <> 'X'`, que descarta los registros con NULL).",
+    "relatedLessons": [
+      "c1-sql-base-03-null-logica-coalesce"
+    ],
+    "relatedTerms": [
+      "predicado-where",
+      "coalesce-nullif"
+    ],
+    "sources": [
+      {
+        "title": "Modern SQL — Three-Valued Logic (3VL) in SQL",
+        "url": "https://modern-sql.com/concept/three-valued-logic",
+        "publisher": "Markus Winand",
+        "accessed": "2026-10-29",
+        "supports": "Tablas de verdad de UNKNOWN y efecto de <> sobre columnas con valores NULL."
+      }
+    ]
+  },
+  {
+    "id": "coalesce-nullif",
+    "term": "Funciones de control de nulos (COALESCE y NULLIF)",
+    "englishTerm": "NULL Handling Functions (COALESCE and NULLIF)",
+    "track": "core",
+    "definition": "`COALESCE(a, b, ...)` devuelve el primer argumento no nulo de izquierda a derecha para asignar valores de respaldo; `NULLIF(a, b)` devuelve `NULL` si `a = b`, evitando errores de división por cero.",
+    "formula": "SELECT order_id, COALESCE(campaign_id, 'ORGANICO') AS campaign_label, discount_usd / NULLIF(subtotal_usd, 0) AS pct_desc FROM orders;",
+    "confusedWith": "Modificar el dato almacenado en disco (COALESCE solo sustituye el nulo en el resultado proyectado o calculado).",
+    "relatedLessons": [
+      "c1-sql-base-03-null-logica-coalesce"
+    ],
+    "relatedTerms": [
+      "logica-trivalente-null",
+      "expresion-case-when"
+    ],
+    "sources": [
+      {
+        "title": "PostgreSQL 17 Documentation — Section 9.18: Conditional Expressions",
+        "url": "https://www.postgresql.org/docs/17/functions-conditional.html",
+        "publisher": "PostgreSQL Global Development Group",
+        "accessed": "2026-10-29",
+        "supports": "Comportamiento de evaluación en cortocircuito de COALESCE y prevención de divisiones por cero con NULLIF."
+      }
+    ]
+  },
+  {
+    "id": "agregacion-group-by",
+    "term": "Agrupación y cambio de grano (GROUP BY)",
+    "englishTerm": "Row Aggregation and Grain Reduction (GROUP BY)",
+    "track": "core",
+    "definition": "Cláusula que reúne múltiples filas con el mismo valor en las columnas indicadas y las colapsa en una única fila por grupo, permitiendo calcular sumas (`SUM`), promedios (`AVG`) o conteos (`COUNT`).",
+    "formula": "SELECT store_id, COUNT(*) AS pedidos, ROUND(SUM(total_usd), 2) AS ingresos_usd FROM orders GROUP BY store_id;",
+    "confusedWith": "Funciones de ventana con OVER (que calculan agregados sin colapsar las filas originales de la tabla).",
+    "relatedLessons": [
+      "c1-sql-base-04-groupby-having",
+      "c1-sql-joins-02-grano-fanout"
+    ],
+    "relatedTerms": [
+      "filtro-grupos-having",
+      "c01-grain-fanout"
+    ],
+    "sources": [
+      {
+        "title": "DuckDB SQL Reference — GROUP BY Clause",
+        "url": "https://duckdb.org/docs/stable/sql/query_syntax/groupby",
+        "publisher": "DuckDB Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Agrupación de filas por claves y uso de funciones de agregación."
+      }
+    ]
+  },
+  {
+    "id": "filtro-grupos-having",
+    "term": "Filtrado de grupos agregados (HAVING)",
+    "englishTerm": "Group-Level Filter Clause (HAVING)",
+    "track": "core",
+    "definition": "Cláusula evaluada después de `GROUP BY` que filtra grupos completos según el resultado de una función de agregación (como `HAVING COUNT(*) >= 1100` o `HAVING SUM(total_usd) > 500000`).",
+    "formula": "SELECT store_id, COUNT(*) AS completed_orders FROM orders WHERE status = 'completed' GROUP BY store_id HAVING COUNT(*) >= 1100;",
+    "confusedWith": "Cláusula WHERE (que filtra filas individuales antes de agrupar y no admite funciones como SUM o COUNT).",
+    "relatedLessons": [
+      "c1-sql-base-04-groupby-having"
+    ],
+    "relatedTerms": [
+      "predicado-where",
+      "agregacion-group-by",
+      "orden-logico-sql"
+    ],
+    "sources": [
+      {
+        "title": "DuckDB SQL Reference — HAVING Clause",
+        "url": "https://duckdb.org/docs/stable/sql/query_syntax/having",
+        "publisher": "DuckDB Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Diferencia de fase de evaluación entre WHERE (filas previas) y HAVING (grupos agregados)."
+      }
+    ]
+  },
+  {
+    "id": "agregacion-condicional-filter",
+    "term": "Expresión CASE WHEN y cláusula FILTER",
+    "englishTerm": "Conditional Expressions (CASE WHEN) and Aggregate FILTER",
+    "track": "core",
+    "definition": "`CASE WHEN` evalúa condiciones en orden para clasificar valores fila por fila; `FILTER (WHERE ...)` restringe qué filas entran a una función agregada específica sin contaminar promedios con ceros.",
+    "formula": "SELECT device_type, COUNT(*) FILTER (WHERE status = 'completed') AS completados, ROUND(AVG(discount_usd) FILTER (WHERE discount_usd > 0), 2) AS desc_medio FROM orders GROUP BY device_type;",
+    "confusedWith": "AVG(CASE WHEN cond THEN valor ELSE 0 END) (que divide entre todas las filas e introduce ceros falsos en el promedio).",
+    "relatedLessons": [
+      "c1-sql-base-05-case-when-filter"
+    ],
+    "relatedTerms": [
+      "agregacion-group-by",
+      "coalesce-nullif"
+    ],
+    "sources": [
+      {
+        "title": "DuckDB SQL Reference — FILTER Clause",
+        "url": "https://duckdb.org/docs/stable/sql/query_syntax/filter",
+        "publisher": "DuckDB Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Agregaciones condicionales limpias mediante FILTER (WHERE condicion)."
+      }
+    ]
+  },
+  {
+    "id": "truncado-temporal-date-trunc",
+    "term": "Truncado temporal (DATE_TRUNC) y diferencia de fechas (DATE_DIFF)",
+    "englishTerm": "Date Truncation (DATE_TRUNC) and Date Difference (DATE_DIFF)",
+    "track": "core",
+    "definition": "`DATE_TRUNC(unidad, fecha)` redondea una fecha o marca de tiempo hacia atrás al inicio exacto del año, trimestre, mes o día; `DATE_DIFF(unidad, inicio, fin)` cuenta las fronteras de esa unidad entre dos fechas.",
+    "formula": "SELECT DATE_TRUNC('quarter', order_date)::DATE AS quarter_start, COUNT(*) AS pedidos FROM orders GROUP BY quarter_start;",
+    "confusedWith": "EXTRACT(MONTH FROM fecha) (que devuelve un número del 1 al 12 sin año y mezcla meses de distintos años al agrupar).",
+    "relatedLessons": [
+      "c1-sql-base-06-fechas-date-trunc"
+    ],
+    "relatedTerms": [
+      "agregacion-group-by",
+      "predicado-where"
+    ],
+    "sources": [
+      {
+        "title": "DuckDB SQL Reference — Date Functions (date_trunc, date_diff)",
+        "url": "https://duckdb.org/docs/stable/sql/functions/date",
+        "publisher": "DuckDB Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Comportamiento de date_trunc y date_diff en series temporales SQL."
+      }
+    ]
+  },
+  {
+    "id": "variantes-count-sql",
+    "term": "Variantes de conteo: COUNT(*), COUNT(col) y COUNT(DISTINCT col)",
+    "englishTerm": "COUNT(*), COUNT(column), and COUNT(DISTINCT column)",
+    "track": "core",
+    "definition": "`COUNT(*)` cuenta todas las filas del grupo incluyendo nulos; `COUNT(col)` cuenta solo las filas donde `col` no es `NULL`; `COUNT(DISTINCT col)` cuenta cuántos valores diferentes no nulos existen en `col`.",
+    "formula": "SELECT COUNT(*) AS filas, COUNT(campaign_id) AS con_campana, COUNT(DISTINCT customer_id) AS clientes_unicos FROM orders;",
+    "confusedWith": "Asumir que COUNT(columna) incluye los valores NULL igual que COUNT(*), o que COUNT(*) cuenta clientes únicos.",
+    "relatedLessons": [
+      "c1-sql-base-07-count-variantes",
+      "c1-sql-joins-02-grano-fanout"
+    ],
+    "relatedTerms": [
+      "logica-trivalente-null",
+      "deduplicacion-distinct",
+      "c01-grain-fanout"
+    ],
+    "sources": [
+      {
+        "title": "DuckDB SQL Reference — Aggregate Functions (count)",
+        "url": "https://duckdb.org/docs/stable/sql/functions/aggregates",
+        "publisher": "DuckDB Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Diferencia semántica entre COUNT(*), COUNT(col) y COUNT(DISTINCT col)."
+      }
+    ]
+  }
+]
