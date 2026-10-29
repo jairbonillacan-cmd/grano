@@ -1,0 +1,195 @@
+[
+  {
+    "id": "polars-lazyframe",
+    "term": "Evaluación perezosa (LazyFrame en Polars)",
+    "englishTerm": "Polars LazyFrame & Query Optimizer",
+    "track": "core",
+    "definition": "Plan de consulta declarativo en Polars que retrasa la lectura de disco hasta invocar collect, aplicando antes poda de columnas y empuje de filtros.",
+    "formula": "pl.scan_parquet('orders.parquet').filter(pl.col('status') == 'completed').select(['order_id', 'total_usd']).collect()  # Se confunde con: pl.read_parquet(), que carga todo el archivo en RAM antes de filtrar.",
+    "relatedLessons": [
+      "c1-python-01-polars-pandas-cow",
+      "c1-python-02-io-csv-json-parquet"
+    ],
+    "relatedTerms": [
+      "pandas-copy-on-write",
+      "polars-expresion-columnar"
+    ],
+    "sources": [
+      {
+        "title": "Polars User Guide — Lazy API and Query Optimization",
+        "url": "https://docs.pola.rs/user-guide/lazy/",
+        "publisher": "Polars Project",
+        "accessed": "2026-10-29",
+        "supports": "Optimización de planes lógicos con predicate pushdown y projection pushdown antes de materializar datos."
+      }
+    ]
+  },
+  {
+    "id": "pandas-copy-on-write",
+    "term": "Copy-on-Write (CoW) en pandas 3.0",
+    "englishTerm": "pandas 3.0 Copy-on-Write",
+    "track": "core",
+    "definition": "Regla obligatoria en pandas 3.0 donde cualquier subconjunto indexado actúa como copia aislada, compartiendo memoria subyacente hasta que una columna se modifica explícitamente.",
+    "formula": "sub = df[df['is_active']]  # En pandas 3.0 modificar sub nunca altera df; la asignación encadenada df['a'][0] = 1 lanza ChainedAssignmentError.",
+    "relatedLessons": [
+      "c1-python-01-polars-pandas-cow"
+    ],
+    "relatedTerms": [
+      "polars-lazyframe",
+      "pyarrow-string-dtype"
+    ],
+    "sources": [
+      {
+        "title": "pandas 3.0 User Guide — Copy-on-Write (CoW)",
+        "url": "https://pandas.pydata.org/docs/user_guide/copy_on_write.html",
+        "publisher": "PyData / NumFOCUS",
+        "accessed": "2026-10-29",
+        "supports": "Semántica de copia diferida obligatoria en pandas 3.0 y eliminación de SettingWithCopyWarning."
+      }
+    ]
+  },
+  {
+    "id": "pyarrow-string-dtype",
+    "term": "Tipo de texto PyArrow (str / pl.String)",
+    "englishTerm": "Arrow Contiguous UTF-8 String Array",
+    "track": "core",
+    "definition": "Representación columnar que almacena cadenas UTF-8 en búferes contiguos de Apache Arrow en lugar de punteros dispersos a objetos de Python en memoria.",
+    "formula": "pl.read_csv('customers.csv', schema_overrides={'postal_code': pl.String})  # Se confunde con: el antiguo dtype object de pandas 1.x que guardaba punteros PyObject.",
+    "relatedLessons": [
+      "c1-python-01-polars-pandas-cow",
+      "c1-python-02-io-csv-json-parquet",
+      "c1-python-04-limpieza-texto-fechas-tz"
+    ],
+    "relatedTerms": [
+      "pandas-copy-on-write",
+      "esquema-explicito-io"
+    ],
+    "sources": [
+      {
+        "title": "pandas 3.0 User Guide — Working with Text Data (PyArrow String Dtype)",
+        "url": "https://pandas.pydata.org/docs/user_guide/text.html",
+        "publisher": "PyData / NumFOCUS",
+        "accessed": "2026-10-29",
+        "supports": "Almacenamiento de texto respaldado por PyArrow por defecto en pandas 3.0 y Polars."
+      }
+    ]
+  },
+  {
+    "id": "esquema-explicito-io",
+    "term": "Sobrescritura de esquema en lectura (schema_overrides)",
+    "englishTerm": "Explicit Schema & Type Overrides on Read",
+    "track": "core",
+    "definition": "Definición manual de tipos de dato al leer archivos CSV o JSON para impedir que la inferencia automática trunque ceros o falle.",
+    "formula": "pl.scan_csv('customers.csv', schema_overrides={'postal_code': pl.String})  # Evita que '06102' se convierta en el entero 6102 o que 'C1051' lance ComputeError.",
+    "relatedLessons": [
+      "c1-python-02-io-csv-json-parquet"
+    ],
+    "relatedTerms": [
+      "pyarrow-string-dtype",
+      "polars-lazyframe"
+    ],
+    "sources": [
+      {
+        "title": "Polars User Guide — IO: CSV, JSON and Parquet",
+        "url": "https://docs.pola.rs/user-guide/io/",
+        "publisher": "Polars Project",
+        "accessed": "2026-10-29",
+        "supports": "Control de inferencia de tipos en archivos de texto mediante schema_overrides."
+      }
+    ]
+  },
+  {
+    "id": "polars-expresion-columnar",
+    "term": "Expresión columnar vectorizada (pl.col)",
+    "englishTerm": "Vectorized Columnar Expression",
+    "track": "core",
+    "definition": "Función declarativa sobre una o más columnas que el motor compila y ejecuta en paralelo sobre vectores contiguos sin bucles del intérprete Python.",
+    "formula": "(pl.col('list_price_usd') - pl.col('unit_cost_usd')).alias('unit_margin_usd')  # Se confunde con: df.apply(lambda r: ..., axis=1), que itera fila por fila en Python.",
+    "relatedLessons": [
+      "c1-python-01-polars-pandas-cow",
+      "c1-python-03-expresiones-vectorizadas"
+    ],
+    "relatedTerms": [
+      "polars-lazyframe",
+      "validacion-cardinalidad-join"
+    ],
+    "sources": [
+      {
+        "title": "Polars User Guide — Expressions and Contexts",
+        "url": "https://docs.pola.rs/user-guide/expressions/",
+        "publisher": "Polars Project",
+        "accessed": "2026-10-29",
+        "supports": "Composición y ejecución paralelizada de expresiones columnares en Polars."
+      }
+    ]
+  },
+  {
+    "id": "validacion-cardinalidad-join",
+    "term": "Validación de cardinalidad en uniones (validate)",
+    "englishTerm": "Join Cardinality Validation (1:1, m:1)",
+    "track": "core",
+    "definition": "Parámetro de unión en Polars y pandas que verifica antes de cruzar dos tablas si las claves cumplen la relación esperada sin duplicados.",
+    "formula": "orders.join(items_por_pedido, on='order_id', how='left', validate='1:1')  # Falla de inmediato si la tabla derecha tiene múltiples filas por order_id.",
+    "relatedLessons": [
+      "c1-python-03-expresiones-vectorizadas"
+    ],
+    "relatedTerms": [
+      "polars-expresion-columnar"
+    ],
+    "sources": [
+      {
+        "title": "Polars User Guide — Transformations: Joins",
+        "url": "https://docs.pola.rs/user-guide/transformations/joins/",
+        "publisher": "Polars Project",
+        "accessed": "2026-10-29",
+        "supports": "Verificación de relaciones 1:1, 1:m y m:1 en tiempo de ejecución durante un join."
+      }
+    ]
+  },
+  {
+    "id": "normalizacion-utc-tz",
+    "term": "Normalización de zona horaria a UTC (convert_time_zone)",
+    "englishTerm": "Timezone Conversion vs Timezone Replacement",
+    "track": "core",
+    "definition": "Conversión de marcas temporales con distintos desplazamientos locales a un mismo instante en tiempo universal coordinado antes de truncar o agrupar por fecha.",
+    "formula": "pl.col('event_ts_raw').str.to_datetime(time_zone='UTC')  # Se confunde con: replace_time_zone, que cambia la etiqueta de zona sin ajustar la hora física.",
+    "relatedLessons": [
+      "c1-python-04-limpieza-texto-fechas-tz"
+    ],
+    "relatedTerms": [
+      "pyarrow-string-dtype"
+    ],
+    "sources": [
+      {
+        "title": "Polars User Guide — Time Zones and Temporal Operations",
+        "url": "https://docs.pola.rs/user-guide/expressions/time-series/#time-zones",
+        "publisher": "Polars Project",
+        "accessed": "2026-10-29",
+        "supports": "Conversión de instantes entre zonas horarias frente a asignación de etiqueta temporal."
+      }
+    ]
+  },
+  {
+    "id": "funcion-pura-transformacion",
+    "term": "Función pura de transformación tabular",
+    "englishTerm": "Pure DataFrame Transformation Function",
+    "track": "core",
+    "definition": "Función que recibe tablas en memoria y devuelve una tabla nueva sin leer archivos externos ni modificar estados globales, facilitando pruebas unitarias.",
+    "formula": "def calcular_margen(df_items: pl.DataFrame, df_prod: pl.DataFrame) -> pl.DataFrame: ...  # Se prueba en milisegundos con polars.testing.assert_frame_equal.",
+    "relatedLessons": [
+      "c1-python-05-cuaderno-a-script-cli"
+    ],
+    "relatedTerms": [
+      "polars-expresion-columnar"
+    ],
+    "sources": [
+      {
+        "title": "Polars API Reference — polars.testing.assert_frame_equal",
+        "url": "https://docs.pola.rs/api/python/stable/reference/testing.html",
+        "publisher": "Polars Project",
+        "accessed": "2026-10-29",
+        "supports": "Pruebas automatizadas deterministas sobre funciones de transformación de DataFrames."
+      }
+    ]
+  }
+]
