@@ -1,294 +1,425 @@
-// Lección migrada al esquema v2 mediante scripts/migrate-legacy.mjs
 const lesson = {
-  "id": "de2-formatos-03-duckdb-polars-marimo",
-  "moduleId": "de2-formatos",
-  "tracks": [
-    "de"
+  id: 'de2-formatos-03-duckdb-polars-marimo',
+  legacyId: 'l9-duckdb-polars-marimo',
+  legacyOrder: 9,
+  moduleId: 'de2-formatos',
+  tracks: ['de'],
+  level: 2,
+  order: 3,
+  title: 'Ejecución local con DuckDB, Polars perezoso y Marimo',
+  subtitle: 'Motores vectorizados embebidos, planes LazyFrame y cuadernos reactivos deterministas',
+  minutes: 30,
+  prerequisites: ['de2-formatos-02-arrow-lance-vortex'],
+  glossaryTerms: [
+    'vectorized-execution',
+    'predicate-pushdown',
+    'arrow-c-data-interface',
+    'marimo-dag-reactivo'
   ],
-  "level": 2,
-  "order": 3,
-  "title": "Ejecución local con DuckDB, Polars perezoso y Marimo",
-  "minutes": 30,
-  "prerequisites": [
-    "de2-formatos-02-arrow-lance-vortex"
+  contentVersion: 1,
+
+  hook: 'En Mercado Brisa (empresa ficticia), las 13 tablas completas del comercio electrónico (146 214 filas entre eventos, pedidos, líneas, pagos y reembolsos) pesan apenas **2.14 MB** en archivos Parquet comprimidos. Sin embargo, muchos equipos levantan un clúster distribuido con decenas de gigabytes de RAM solo para cruzar `orders` (`18 000` filas), `customers` (`2 400` filas) y `stores` (`14` filas). ¿Cómo procesan DuckDB y Polars decenas de millones de filas en una sola máquina local y cómo garantiza Marimo que el análisis sea 100 % reproducible?',
+
+  objectives: [
+    'Explicar cómo la ejecución vectorizada por lotes en DuckDB (DataChunks de 2 048 tuplas) aprovecha la caché del procesador y el derrame a disco.',
+    'Combinar planes perezosos de Polars (scan_parquet y LazyFrame) con consultas SQL en DuckDB mediante intercambio zero-copy sobre Apache Arrow.',
+    'Diseñar flujos analíticos reproducibles en cuadernos reactivos de Marimo eliminando el problema de estado oculto de los cuadernos tradicionales.'
   ],
-  "contentVersion": 1,
-  "hook": "En Mercado Brisa (empresa ficticia), un proceso diario de 45 GB de ventas corría en un clúster de 8 nodos: tardaba 7 minutos en arrancar máquinas y 9 minutos enviando datos por red. Además, los cuadernos Jupyter fallaban cuando alguien ejecutaba celdas fuera de orden dejando estado oculto. Al pasar a DuckDB, Polars en modo perezoso (`scan_parquet`) y Marimo en una sola máquina, terminó en 19 segundos. ¿Cuándo basta un solo nodo y cómo evita la ejecución perezosa agotar la RAM?",
-  "objectives": [
-    "Dimensionar cuándo una carga analítica cabe en un motor local multiproceso (DuckDB / Polars) sin pagar el costo de red de un clúster.",
-    "Reemplazar lecturas ansiosas (`read_parquet`) por planes perezosos (`scan_parquet` + `.collect()`) con poda de predicados y columnas.",
-    "Construir cuadernos reproducibles basados en un grafo reactivo acíclico (Marimo) sin estado oculto entre celdas."
-  ],
-  "sections": [
+
+  sections: [
     {
-      "id": "escalamiento-vertical-local-cuando-basta-un-solo",
-      "heading": "Escalamiento vertical local: cuándo basta un solo nodo",
-      "body": "Durante una década se asumió que cualquier dataset de más de 5 GB requería un clúster distribuido (Spark, Presto) con toda su complejidad de red, serialización JVM y tiempos de arranque. Pero el hardware cambió: hoy una sola instancia en la nube o estación de trabajo lee discos NVMe a **7 GB/s** y cuenta con entre 16 y 64 núcleos con instrucciones SIMD.\nPara el **90% de las cargas analíticas corporativas** (datasets activos de hasta 100 GB – 500 GB por ejecución), un motor columnar in-process escrito en C++ o Rust (**DuckDB 1.x** o **Polars**) corriendo en un solo nodo es más rápido, más simple de depurar y hasta un 85% más barato porque elimina el *Network Shuffle* entre servidores.",
-      "interactive": {
-        "component": "row-vs-columnar-storage",
-        "caption": "Simulador interactivo: Ejecución local con DuckDB, Polars perezoso y Marimo"
+      id: 'duckdb-ejecucion-vectorizada-local',
+      heading: 'Ejecución vectorizada en proceso y paralelismo en DuckDB',
+      body: 'Los motores transaccionales clásicos (como PostgreSQL o MySQL) procesan las consultas siguiendo el modelo **Volcano** tupla por tupla. El operador superior invoca `next()` millones de veces y provoca fallos constantes en la caché de instrucciones de la CPU. En el extremo opuesto, cargar archivos enteros de una sola vez en memoria agota la RAM rápidamente.\n\n**DuckDB** es un motor SQL analítico embebido (*in-process*, sin servidor externo). Opera sobre lotes columnares llamados **DataChunks** de 2 048 valores. Este tamaño hace que los vectores de entrada y salida de cada operador quepan íntegros dentro de la caché L1 y L2 del procesador. Así ejecuta bucles estrechos con instrucciones vectoriales SIMD.\n\nAdemás, aplica planificación **morsel-driven**. Divide el trabajo en fragmentos pequeños que reparte dinámicamente entre todos los núcleos de la CPU. Si una agregación o un `HASH JOIN` supera la memoria física disponible, DuckDB comprime y vuelca particiones intermedias a disco temporal (*out-of-core spilling*) sin abortar el proceso.',
+      example: {
+        language: 'sql',
+        code: `SELECT
+  s.region,
+  o.device_type,
+  COUNT(*) AS completed_orders,
+  ROUND(MEDIAN(o.total_usd), 2) AS median_ticket_usd,
+  ROUND(SUM(o.total_usd), 2) AS revenue_total_usd
+FROM orders AS o
+INNER JOIN stores AS s ON o.store_id = s.store_id
+WHERE o.status = 'completed'
+  AND o.order_date >= DATE '2025-01-01'
+GROUP BY ALL
+ORDER BY revenue_total_usd DESC
+LIMIT 6;`,
+        expectedOutput: [
+          { region: 'Iberia', device_type: 'desktop', completed_orders: 890, median_ticket_usd: 429.28, revenue_total_usd: 449168.72 },
+          { region: 'Andina', device_type: 'mobile', completed_orders: 891, median_ticket_usd: 338.95, revenue_total_usd: 371625.13 },
+          { region: 'Cono Sur', device_type: 'mobile', completed_orders: 912, median_ticket_usd: 298.34, revenue_total_usd: 355688.64 },
+          { region: 'Andina', device_type: 'desktop', completed_orders: 921, median_ticket_usd: 283.39, revenue_total_usd: 335544.1 },
+          { region: 'Cono Sur', device_type: 'desktop', completed_orders: 588, median_ticket_usd: 484.16, revenue_total_usd: 317530.04 },
+          { region: 'Cono Sur', device_type: 'pos_tienda', completed_orders: 581, median_ticket_usd: 251.92, revenue_total_usd: 199600.42 }
+        ],
+        explanation: 'DuckDB ejecuta el cruce entre orders y stores junto con el cálculo exacto de MEDIAN y GROUP BY ALL en pocos milisegundos.'
+      },
+      interactive: {
+        component: 'duckdb-polars',
+        props: {
+          mode: 'local-engine',
+          datasetSizeMb: 2.14
+        },
+        caption: 'Inspecciona cómo el planificador local empuja predicados y proyecciones hasta los archivos Parquet antes de ejecutar el cruce.'
       }
     },
     {
-      "id": "paralelismo-por-fragmentos-morsel-driven-en-duck",
-      "heading": "Paralelismo por fragmentos (morsel-driven) en DuckDB",
-      "body": "**DuckDB** es un motor SQL OLAP embebido (corre dentro de tu proceso Python, Node, R o directamente en el navegador vía **DuckDB-Wasm** sin instalar servidores). Su arquitectura se basa en **Morsel-Driven Parallelism**: divide el trabajo en fragmentos de ~100,000 filas (*morsels*) que reparte dinámicamente entre todos los hilos del CPU evitando bloqueos.\nSi una consulta (un `GROUP BY` o `JOIN` masivo) supera la memoria RAM disponible, el gestor de buffers de DuckDB 1.x vuelca automáticamente las particiones intermedias a disco (**Out-of-Core Spilling**) y las procesa en streaming, permitiéndote agregar un archivo Parquet de 120 GB en una portátil con solo 16 GB de RAM.",
-      "example": {
-        "language": "sql",
-        "code": "# EXCELENTE: 1) pl.scan_parquet() solo registra el plan lógico (0 MB leídos aún).\n# 2) El optimizador empuja el filtro y las 3 columnas hasta el archivo Parquet.\n# 3) DuckDB o Polars ejecutan en streaming respetando el límite de RAM.\nimport polars as pl\nimport duckdb\n\nlf_eventos = (\n    pl.scan_parquet(\"s3://lakehouse/silver/eventos_80gb.parquet\")\n    .filter(pl.col(\"event_year\") == 2026)\n    .select([\"region\", \"channel\", \"net_revenue_usd\"])\n)\n\n# Consulta SQL en DuckDB directamente sobre el LazyFrame de Polars (Zero-Copy):\nres_pl = duckdb.sql(\"\"\"\n    SELECT\n      region,\n      channel,\n      SUM(net_revenue_usd) AS revenue_total_usd,\n      APPROX_QUANTILE(net_revenue_usd, 0.95) AS p95_ticket_usd\n    FROM lf_eventos\n    GROUP BY ALL\n    ORDER BY revenue_total_usd DESC\n\"\"\").pl()",
-        "expectedOutput": [
-          {
-            "consumo_pico_ram": "680 MB (Ejecución por lotes en streaming)",
-            "optimizacion_previa": "Predicate + Projection Pushdown activos",
-            "estado_ejecucion": "Completado en 1.85 seg"
-          }
-        ]
+      id: 'polars-lazyframe-puente-duckdb',
+      heading: 'Planes perezosos en Polars y puente zero-copy con DuckDB',
+      body: 'En Python, **Polars** comparte la misma filosofía de ejecución columnar escrita en Rust. Su diferencia central está entre la API ansiosa (`pl.read_parquet()`) y la API perezosa (`pl.scan_parquet()`). Cuando invocas `scan_parquet()`, Polars no lee ningún byte de datos. Solo construye un grafo lógico llamado **LazyFrame**.\n\nAntes de materializar el resultado con `.collect(engine="streaming")`, el optimizador de Polars reescribe el plan aplicando cuatro transformaciones automáticas.\n\n- **Projection pushdown**: descarta todas las columnas que no participan en el resultado final.\n- **Predicate pushdown**: empuja los filtros `.filter()` hacia el lector Parquet para aprovechar *zone maps* y filtros de Bloom.\n- `Slice pushdown`: si encadenas `.head(100)`, detiene la lectura en cuanto reúne 100 filas válidas.\n- `Common subplan elimination`: evalúa una sola vez las subconsultas reutilizadas.\n\nComo DuckDB y Polars hablan **Apache Arrow**, puedes preparar expresiones en un `LazyFrame` de Polars y consultarlo por nombre en una sentencia SQL de DuckDB (`duckdb.sql("SELECT ... FROM lf_limpio")`). Ambos motores colaboran sin copiar memoria.',
+      example: {
+        language: 'python',
+        code: `import duckdb
+import polars as pl
+
+pedidos_validos = (
+    pl.scan_parquet("orders.parquet")
+    .filter(pl.col("status") == "completed")
+    .select(["order_id", "customer_id", "total_usd"])
+)
+clientes = pl.scan_parquet("customers.parquet").select(["customer_id", "segment"])
+
+resumen_segmento = duckdb.sql("""
+  SELECT
+    c.segment,
+    COUNT(*) AS completed_orders,
+    ROUND(MEDIAN(o.total_usd), 2) AS median_ticket_usd,
+    COUNT(*) FILTER (WHERE o.total_usd >= 120) AS high_value_orders,
+    ROUND(SUM(o.total_usd), 2) AS revenue_usd
+  FROM pedidos_validos AS o
+  INNER JOIN clientes AS c ON o.customer_id = c.customer_id
+  GROUP BY ALL
+  ORDER BY revenue_usd DESC
+""").pl()
+print(resumen_segmento.to_dicts())`,
+        expectedOutput: [
+          { segment: 'pro_barista', completed_orders: 6229, median_ticket_usd: 327.26, high_value_orders: 5016, revenue_usd: 2512933.23 },
+          { segment: 'retail', completed_orders: 5940, median_ticket_usd: 332.62, high_value_orders: 4851, revenue_usd: 2436924.93 },
+          { segment: 'cafeteria_b2b', completed_orders: 2591, median_ticket_usd: 444.51, high_value_orders: 2340, revenue_usd: 1319604.26 }
+        ],
+        explanation: 'DuckDB consume directamente los objetos LazyFrame de Polars mediante la interfaz Arrow C Stream, transfiriendo al lector únicamente las columnas y filtros requeridos.'
       }
     },
     {
-      "id": "evaluacion-inmediata-frente-a-evaluacion-perezos",
-      "heading": "Evaluación inmediata frente a evaluación perezosa en Polars",
-      "body": "En `pandas` (o en Polars modo Eager `pl.read_parquet()`), cada línea de código se ejecuta de inmediato a ciegas: primero carga toda la tabla en RAM, luego filtra, luego borra columnas, creando múltiples copias pesadas en el camino.\nEn **Polars Lazy API (`pl.scan_parquet()`)**, escribir `.filter(...)`, `.with_columns(...)` y `.select(...)` no toca ni un byte del disco: construye un **Grafo Lógico de Consulta**. Cuando finalmente llamas a `.collect(engine=\"streaming\")`, el optimizador de consultas de Polars:\n1) Empuja los filtros `WHERE` hasta el lector Parquet (**Predicate Pushdown**).\n2) Descarta todas las columnas que no se usan al final (**Projection Pushdown**).\n3) Fusiona expresiones en una sola pasada por lotes en streaming."
-    },
-    {
-      "id": "cuadernos-reactivos-como-grafos-aciclicos-en-mar",
-      "heading": "Cuadernos reactivos como grafos acíclicos en Marimo",
-      "body": "El talón de Aquiles de los notebooks tradicionales (`.ipynb`) en Análisis de Datos y BI es el **estado oculto**: si defines `umbral = 100` en la Celda 1, calculas `clientes_vip` en la Celda 2, y luego cambias `umbral = 500` en la Celda 1 sin volver a ejecutar la Celda 2, la pantalla muestra números contradictorios. Además, los archivos `.ipynb` son bloques JSON gigantes con imágenes incrustadas que producen conflictos imposibles de revisar en `git diff`.\n**Marimo** resuelve ambos problemas de raíz:\n- **Reactividad determinista (DAG de celdas)**: Marimo analiza qué variables define y consume cada celda. Cuando cambias un parámetro o un slider interactivo en una celda, Marimo **re-ejecuta automáticamente en orden topológico todas las celdas dependientes** (igual que una hoja de cálculo reactiva o un DAG de dbt).\n- **Archivos `.py` puros versionables en Git**: Un notebook Marimo se guarda como un script Python limpio (`.py`), ejecutable como pipeline desde la terminal (`python analisis.py`), como app interactiva (`marimo run analisis.py`) y 100% auditable en Pull Requests."
+      id: 'marimo-cuadernos-reactivos-dag',
+      heading: 'Cuadernos reactivos en Marimo y grafo DAG determinista',
+      body: 'Los cuadernos tradicionales basados en celdas mutables (`.ipynb`) sufren dos defectos graves en ingeniería de datos. El primero es el **estado oculto**. Ejecutar la celda 8 antes que la celda 3 o borrar una celda deja variables huérfanas en RAM que producen resultados imposibles de reproducir. El segundo es el almacenamiento en JSON con salidas binarias que dificulta las revisiones en Git.\n\n**Marimo** modela el cuaderno interactivo como un **grafo acíclico dirigido (DAG)** estático de dependencias entre celdas.\n\n1. Analiza el árbol sintáctico (AST) de cada celda para identificar qué variables define y cuáles consume.\n2. Cuando modificas un filtro o una consulta SQL integrada (`mo.sql(f"...")`), Marimo recalcula **en orden topológico** todas las celdas dependientes.\n3. Prohíbe redefinir la misma variable global en dos celdas distintas. Así el estado en memoria coincide siempre con el código visible.\n4. Guarda el cuaderno como un archivo **Python puro (`.py`)**. Puedes versionarlo en Git, probarlo con `pytest` y ejecutarlo desde la terminal.',
+      example: {
+        language: 'python',
+        code: `import marimo
+
+app = marimo.App()
+
+@app.cell
+def _():
+    import duckdb
+    import marimo as mo
+    umbral_alto_valor = 120
+    return duckdb, mo, umbral_alto_valor
+
+@app.cell
+def _(duckdb, umbral_alto_valor):
+    df_segmentos = duckdb.sql(f"""
+      SELECT
+        c.segment,
+        COUNT(*) AS completed_orders,
+        ROUND(MEDIAN(o.total_usd), 2) AS median_ticket_usd,
+        COUNT(*) FILTER (WHERE o.total_usd >= {umbral_alto_valor}) AS high_value_orders,
+        ROUND(SUM(o.total_usd), 2) AS revenue_usd
+      FROM 'orders.parquet' AS o
+      INNER JOIN 'customers.parquet' AS c ON o.customer_id = c.customer_id
+      WHERE o.status = 'completed'
+      GROUP BY ALL
+      ORDER BY revenue_usd DESC
+    """).df()
+    return (df_segmentos,)`,
+        expectedOutput: [
+          { segment: 'pro_barista', completed_orders: 6229, median_ticket_usd: 327.26, high_value_orders: 5016, revenue_usd: 2512933.23 },
+          { segment: 'retail', completed_orders: 5940, median_ticket_usd: 332.62, high_value_orders: 4851, revenue_usd: 2436924.93 },
+          { segment: 'cafeteria_b2b', completed_orders: 2591, median_ticket_usd: 444.51, high_value_orders: 2340, revenue_usd: 1319604.26 }
+        ],
+        explanation: 'En Marimo, la segunda celda declara explícitamente que depende de duckdb y umbral_alto_valor. Al cambiar umbral_alto_valor en la primera celda, df_segmentos se recalcula de inmediato.'
+      }
     }
   ],
-  "workedExample": {
-    "title": "Ejemplo guiado: Ejecución local con DuckDB, Polars perezoso y Marimo",
-    "description": "Compara el enfoque tradicional Eager en Pandas (que agota la RAM cargando todo el archivo) frente al pipeline híbrido Polars Lazy + DuckDB 1.x en streaming:",
-    "audit": "",
-    "steps": [
+
+  workedExample: {
+    title: 'Análisis local con SQL expresivo en DuckDB sobre Mercado Brisa',
+    description: 'Vamos a construir paso a paso un diagnóstico comercial local en DuckDB cruzando `orders`, `stores` y `customers`, aprovechando constructos analíticos modernos (`MEDIAN`, `FILTER (WHERE ...)` y `GROUP BY ALL`) sobre vectores Arrow.',
+    steps: [
       {
-        "label": "Antipatrón: lectura inmediata completa en memoria RAM",
-        "explanation": "Compara el enfoque tradicional Eager en Pandas (que agota la RAM cargando todo el archivo) frente al pipeline híbrido Polars Lazy + DuckDB 1.x en streaming:",
-        "code": "# MAL: 1) pd.read_parquet() intenta descomprimir las 50 columnas completas en RAM de golpe.\n# 2) Crea copias intermedias del DataFrame en cada paso antes de agrupar.\nimport pandas as pd\n\ndf_all = pd.read_parquet(\"s3://lakehouse/silver/eventos_80gb.parquet\")\ndf_filtered = df_all[df_all[\"event_year\"] == 2026]\ndf_clean = df_filtered[[\"region\", \"channel\", \"net_revenue_usd\"]]\nres = df_clean.groupby([\"region\", \"channel\"])[\"net_revenue_usd\"].sum()",
-        "expectedOutput": [
-          {
-            "consumo_pico_ram": "92.0 GB (Crash por OOM en nodo de 16 GB)",
-            "optimizacion_previa": "Ninguna (Lee 50 columnas antes de filtrar)",
-            "estado_ejecucion": "MemoryError"
-          }
-        ]
+        label: 'Paso 1 — Auditar la distribución de pedidos por estado en orders.parquet',
+        code: `SELECT
+  status,
+  COUNT(*) AS total_orders,
+  ROUND(MEDIAN(total_usd), 2) AS median_ticket_usd,
+  ROUND(SUM(total_usd), 2) AS gross_total_usd
+FROM orders
+GROUP BY ALL
+ORDER BY total_orders DESC;`,
+        expectedOutput: [
+          { status: 'completed', total_orders: 14760, median_ticket_usd: 348.28, gross_total_usd: 6269462.42 },
+          { status: 'refunded', total_orders: 1440, median_ticket_usd: 335.29, gross_total_usd: 605025.58 },
+          { status: 'cancelled', total_orders: 1080, median_ticket_usd: 386.42, gross_total_usd: 489003.49 },
+          { status: 'pending', total_orders: 720, median_ticket_usd: 351.9, gross_total_usd: 306326.28 }
+        ],
+        explanation: 'De los 18 000 pedidos de orders.parquet, exactamente 14 760 tienen estado completed y suman 6 269 462.42 USD.'
       },
       {
-        "label": "Solución óptima: escaneo perezoso en Polars y flujo en DuckDB",
-        "explanation": "Compara ahora la consulta corregida y verifica cómo las filas y totales coinciden con la auditoría.",
-        "code": "# EXCELENTE: 1) pl.scan_parquet() solo registra el plan lógico (0 MB leídos aún).\n# 2) El optimizador empuja el filtro y las 3 columnas hasta el archivo Parquet.\n# 3) DuckDB o Polars ejecutan en streaming respetando el límite de RAM.\nimport polars as pl\nimport duckdb\n\nlf_eventos = (\n    pl.scan_parquet(\"s3://lakehouse/silver/eventos_80gb.parquet\")\n    .filter(pl.col(\"event_year\") == 2026)\n    .select([\"region\", \"channel\", \"net_revenue_usd\"])\n)\n\n# Consulta SQL en DuckDB directamente sobre el LazyFrame de Polars (Zero-Copy):\nres_pl = duckdb.sql(\"\"\"\n    SELECT\n      region,\n      channel,\n      SUM(net_revenue_usd) AS revenue_total_usd,\n      APPROX_QUANTILE(net_revenue_usd, 0.95) AS p95_ticket_usd\n    FROM lf_eventos\n    GROUP BY ALL\n    ORDER BY revenue_total_usd DESC\n\"\"\").pl()",
-        "expectedOutput": [
-          {
-            "consumo_pico_ram": "680 MB (Ejecución por lotes en streaming)",
-            "optimizacion_previa": "Predicate + Projection Pushdown activos",
-            "estado_ejecucion": "Completado en 1.85 seg"
-          }
-        ]
+        label: 'Paso 2 — Cruzar pedidos completados de 2025 con stores por región y dispositivo',
+        code: `SELECT
+  s.region,
+  o.device_type,
+  COUNT(*) AS completed_orders,
+  ROUND(MEDIAN(o.total_usd), 2) AS median_ticket_usd,
+  ROUND(SUM(o.total_usd), 2) AS revenue_total_usd
+FROM orders AS o
+INNER JOIN stores AS s ON o.store_id = s.store_id
+WHERE o.status = 'completed'
+  AND o.order_date >= DATE '2025-01-01'
+GROUP BY ALL
+ORDER BY revenue_total_usd DESC
+LIMIT 6;`,
+        expectedOutput: [
+          { region: 'Iberia', device_type: 'desktop', completed_orders: 890, median_ticket_usd: 429.28, revenue_total_usd: 449168.72 },
+          { region: 'Andina', device_type: 'mobile', completed_orders: 891, median_ticket_usd: 338.95, revenue_total_usd: 371625.13 },
+          { region: 'Cono Sur', device_type: 'mobile', completed_orders: 912, median_ticket_usd: 298.34, revenue_total_usd: 355688.64 },
+          { region: 'Andina', device_type: 'desktop', completed_orders: 921, median_ticket_usd: 283.39, revenue_total_usd: 335544.1 },
+          { region: 'Cono Sur', device_type: 'desktop', completed_orders: 588, median_ticket_usd: 484.16, revenue_total_usd: 317530.04 },
+          { region: 'Cono Sur', device_type: 'pos_tienda', completed_orders: 581, median_ticket_usd: 251.92, revenue_total_usd: 199600.42 }
+        ],
+        explanation: 'El cruce con la tabla de dimensiones stores (14 filas) se ejecuta mediante un Hash Join en caché L1 y permite comparar la mediana de ticket por canal y región.'
+      },
+      {
+        label: 'Paso 3 — Consolidar métricas por segmento de cliente usando FILTER y GROUP BY ALL',
+        code: `SELECT
+  c.segment,
+  COUNT(*) AS completed_orders,
+  ROUND(MEDIAN(o.total_usd), 2) AS median_ticket_usd,
+  COUNT(*) FILTER (WHERE o.total_usd >= 120) AS high_value_orders,
+  ROUND(SUM(o.total_usd), 2) AS revenue_usd
+FROM orders AS o
+INNER JOIN customers AS c ON o.customer_id = c.customer_id
+WHERE o.status = 'completed'
+GROUP BY ALL
+ORDER BY revenue_usd DESC;`,
+        expectedOutput: [
+          { segment: 'pro_barista', completed_orders: 6229, median_ticket_usd: 327.26, high_value_orders: 5016, revenue_usd: 2512933.23 },
+          { segment: 'retail', completed_orders: 5940, median_ticket_usd: 332.62, high_value_orders: 4851, revenue_usd: 2436924.93 },
+          { segment: 'cafeteria_b2b', completed_orders: 2591, median_ticket_usd: 444.51, high_value_orders: 2340, revenue_usd: 1319604.26 }
+        ],
+        explanation: 'El segmento cafeteria_b2b presenta la mediana de ticket más alta (444.51 USD), mientras que pro_barista lidera en facturación acumulada (2 512 933.23 USD).'
       }
     ]
   },
-  "checks": [
-    {
-      "id": "c1",
-      "type": "mcq",
-      "prompt": "¿Qué problema crítico resuelve un cuaderno reactivo basado en un grafo acíclico dirigido (como **Marimo**) frente a un notebook tradicional `.ipynb` cuando un equipo de Datos y BI colabora en un análisis financiero?",
-      "options": [
-        {
-          "id": "a",
-          "text": "Elimina el estado oculto re-ejecutando automáticamente en orden topológico todas las celdas dependientes cuando cambia una variable, y guarda el código como un archivo `.py` puro limpio para control de versiones en Git y ejecución en producción.",
-          "correct": true,
-          "feedback": "Exacto. En un `.ipynb` tradicional, ejecutar celdas desordenadas deja variables en memoria que ya no corresponden al código visible. En Marimo el estado en memoria siempre es una función pura y determinista del código visible."
-        },
-        {
-          "id": "b",
-          "text": "Impide usar SQL o gráficos dentro del cuaderno.",
-          "correct": false,
-          "feedback": "Al contrario: Marimo integra celdas SQL nativas (con DuckDB) y componentes visuales interactivos que actualizan variables de Python automáticamente."
-        },
-        {
-          "id": "c",
-          "text": "Obliga a subir todos los datos privados de la empresa a un servidor público.",
-          "correct": false,
-          "feedback": "Marimo se ejecuta 100% localmente en tu entorno Python o contenedor privado sobre tus propios archivos `.py`."
-        }
-      ],
-      "explanation": "Exacto. En un `.ipynb` tradicional, ejecutar celdas desordenadas deja variables en memoria que ya no corresponden al código visible. En Marimo el estado en memoria siempre es una función pura y determinista del código visible."
-    },
-    {
-      "id": "c2",
-      "type": "mcq",
-      "prompt": "Tienes un archivo Parquet de 30 GB con 80 columnas en una portátil con 16 GB de RAM. En Polars necesitas filtrar un mes y agrupar por 2 columnas. ¿Qué patrón evita un error de memoria (`OutOfMemory`)?",
-      "options": [
-        {
-          "id": "a",
-          "text": "Usar pl.scan_parquet(...).filter(...).group_by(...).agg(...).collect(streaming=True)",
-          "correct": true,
-          "feedback": "Correcto: la API Lazy empuja los predicados y la proyección de 2 columnas al lector Parquet y procesa por lotes sin cargar los 30 GB."
-        },
-        {
-          "id": "b",
-          "text": "Usar df = pl.read_parquet(...) y luego borrar las 78 columnas sobrantes con df.drop(...).",
-          "correct": false,
-          "feedback": "Incorrecto: pl.read_parquet intenta cargar las 80 columnas completas en RAM antes de que se ejecute drop()."
-        },
-        {
-          "id": "c",
-          "text": "Convertir primero el archivo Parquet a un diccionario de Python.",
-          "correct": false,
-          "feedback": "Incorrecto: los objetos nativos de Python multiplican varias veces el consumo de memoria."
-        }
-      ],
-      "explanation": "La evaluación perezosa permite al optimizador de consultas inspeccionar toda la cadena de transformaciones antes de tocar el disco, leyendo solo los bloques y columnas indispensables."
-    },
-    {
-      "id": "c3",
-      "type": "mcq",
-      "prompt": "¿Qué ventaja aporta que un cuaderno de Marimo se guarde como un archivo `.py` estándar en lugar de un JSON `.ipynb` con salidas binarias incrustadas?",
-      "options": [
-        {
-          "id": "a",
-          "text": "Permite revisar diffs limpios en Git, ejecutarlo directamente como script o test de CI y evita conflictos por imágenes base64.",
-          "correct": true,
-          "feedback": "Correcto: al ser código Python puro sin blobs de salida ni contadores de ejecución mutables, se versiona y prueba como cualquier módulo."
-        },
-        {
-          "id": "b",
-          "text": "Hace que las consultas SQL ignoren los tipos de datos.",
-          "correct": false,
-          "feedback": "Incorrecto: el formato del archivo del cuaderno no desactiva la verificación de tipos de los motores SQL o DataFrame."
-        },
-        {
-          "id": "c",
-          "text": "Reemplaza el almacenamiento en Parquet por archivos de texto.",
-          "correct": false,
-          "feedback": "Incorrecto: Marimo es el entorno de código y reactividad; los datos siguen almacenándose en Parquet o bases analíticas."
-        }
-      ],
-      "explanation": "Guardar los cuadernos como scripts Python puros con dependencias declaradas por un DAG elimina la brecha entre la exploración del analista y la puesta en producción."
-    }
-  ],
-  "practice": {
-    "type": "sql",
-    "title": "SQL analítico expresivo en DuckDB con FILTER y cuantiles",
-    "language": "sql",
-    "prompt": "Utiliza extensiones analíticas nativas de DuckDB sobre `orders` (`status = 'completed'`) unido con `customers` para calcular por `segment`: `completed_orders`, `median_ticket_usd` (`ROUND(MEDIAN(o.total_usd), 2)`), `high_value_orders` (`COUNT(*) FILTER (WHERE o.total_usd >= 120)`) y `revenue_usd`, ordenado por `revenue_usd DESC`.",
-    "starterCode": "SELECT\n  c.segment,\n  COUNT(*) AS completed_orders,\n  ROUND(MEDIAN(o.total_usd), 2) AS median_ticket_usd,\n  -- TODO: Cuenta solo los pedidos con o.total_usd >= 120 usando COUNT(*) FILTER (WHERE o.total_usd >= 120)\n  0 AS high_value_orders,\n  ROUND(SUM(o.total_usd), 2) AS revenue_usd\nFROM orders o\nJOIN customers c ON o.customer_id = c.customer_id\nWHERE o.status = 'completed'\nGROUP BY ALL\nORDER BY revenue_usd DESC;",
-    "expected": "SELECT\n  c.segment,\n  COUNT(*) AS completed_orders,\n  ROUND(MEDIAN(o.total_usd), 2) AS median_ticket_usd,\n  COUNT(*) FILTER (WHERE o.total_usd >= 120) AS high_value_orders,\n  ROUND(SUM(o.total_usd), 2) AS revenue_usd\nFROM orders o\nJOIN customers c ON o.customer_id = c.customer_id\nWHERE o.status = 'completed'\nGROUP BY ALL\nORDER BY revenue_usd DESC;",
-    "orderMatters": true,
-    "hints": [
-      "En DuckDB puedes filtrar una agregación puntual con `COUNT(*) FILTER (WHERE o.total_usd >= 120) AS high_value_orders`.",
-      "La cláusula `GROUP BY ALL` deduce automáticamente todas las columnas de agrupación no agregadas (`c.segment`).",
-      "Conserva `ORDER BY revenue_usd DESC`."
+
+  practice: {
+    type: 'sql',
+    title: 'Agregación vectorizada con MEDIAN, FILTER y GROUP BY ALL sobre orders y customers',
+    prompt: 'Cruza las tablas `orders` (`o`) y `customers` (`c`) por `customer_id`, filtrando únicamente los pedidos con `o.status = \'completed\'`. Devuelve por cada segmento de cliente (`c.segment`): `segment`, `completed_orders` (`COUNT(*)`), `median_ticket_usd` (`ROUND(MEDIAN(o.total_usd), 2)`), `high_value_orders` (`COUNT(*) FILTER (WHERE o.total_usd >= 120)`) y `revenue_usd` (`ROUND(SUM(o.total_usd), 2)`). Agrupa con `GROUP BY ALL` y ordena por `revenue_usd` de mayor a menor.',
+    starterCode: `SELECT
+  c.segment,
+  COUNT(*) AS completed_orders,
+  -- Calcula median_ticket_usd, high_value_orders (total_usd >= 120) y revenue_usd
+FROM orders AS o
+INNER JOIN customers AS c ON o.customer_id = c.customer_id
+WHERE o.status = 'completed'
+GROUP BY ALL
+ORDER BY revenue_usd DESC;`,
+    solution: `SELECT
+  c.segment,
+  COUNT(*) AS completed_orders,
+  ROUND(MEDIAN(o.total_usd), 2) AS median_ticket_usd,
+  COUNT(*) FILTER (WHERE o.total_usd >= 120) AS high_value_orders,
+  ROUND(SUM(o.total_usd), 2) AS revenue_usd
+FROM orders AS o
+INNER JOIN customers AS c ON o.customer_id = c.customer_id
+WHERE o.status = 'completed'
+GROUP BY ALL
+ORDER BY revenue_usd DESC;`,
+    expectedOutputTable: [
+      { segment: 'pro_barista', completed_orders: 6229, median_ticket_usd: 327.26, high_value_orders: 5016, revenue_usd: 2512933.23 },
+      { segment: 'retail', completed_orders: 5940, median_ticket_usd: 332.62, high_value_orders: 4851, revenue_usd: 2436924.93 },
+      { segment: 'cafeteria_b2b', completed_orders: 2591, median_ticket_usd: 444.51, high_value_orders: 2340, revenue_usd: 1319604.26 }
     ],
-    "solution": "SELECT\n  c.segment,\n  COUNT(*) AS completed_orders,\n  ROUND(MEDIAN(o.total_usd), 2) AS median_ticket_usd,\n  COUNT(*) FILTER (WHERE o.total_usd >= 120) AS high_value_orders,\n  ROUND(SUM(o.total_usd), 2) AS revenue_usd\nFROM orders o\nJOIN customers c ON o.customer_id = c.customer_id\nWHERE o.status = 'completed'\nGROUP BY ALL\nORDER BY revenue_usd DESC;",
-    "solutionExplanation": "Aprovecha las capacidades analíticas de DuckDB (`MEDIAN`, `FILTER (WHERE ...)` y `GROUP BY ALL`) para calcular estadísticos robustos y conteos condicionales en una sola pasada vectorizada."
-  },
-  "roleNotes": {
-    "de": "Ejecuta transformaciones Silver/Gold ligeras y medianas (<500 GB) en contenedores serverless usando DuckDB o Polars Lazy, eliminando costos ociosos de clústeres JVM. Integra scripts de Marimo (`.py`) directamente en el CI/CD y en el orquestador (Dagster / Airflow) sin tener que reescribir el código de los analistas. Configura límites explícitos de memoria y directorio temporal (`SET memory_limit = '12GB'`, `SET temp_directory = '/nvme/tmp'`) para garantizar ejecuciones Out-of-Core seguras.",
-    "da": "Inicia siempre sus pipelines con `pl.scan_parquet()` en lugar de `read_parquet()`, encadenando filtros y transformaciones antes de materializar con `.collect(engine=\"streaming\")`. Combina en un mismo cuaderno **Marimo** expresiones programáticas de Polars con bloques SQL nativos de DuckDB sobre el mismo LazyFrame sin duplicar memoria. Garantiza reproducibilidad científica total: ningún análisis entregado a negocio depende del orden manual en que se presionó `Shift+Enter`.",
-    "bi": "Publica cuadernos Marimo en modo aplicación (`marimo run --headless`) o compila tableros con **DuckDB-Wasm** para ofrecer simuladores de escenarios de negocio en vivo. Audita en Pull Requests de Git la lógica exacta de las consultas que alimentan los reportes ejecutivos gracias a que viven en archivos `.py` y `.sql` limpios. Pre-calcula cubos Parquet compactos con DuckDB para que los dashboards carguen en menos de 100 milisegundos."
-  },
-  "summary": [
-    "Para conjuntos de decenas de gigabytes, el costo de red de un clúster supera al cómputo local vectorizado.",
-    "DuckDB procesa datos mayores que la RAM en fragmentos (morsels) volcando intermedios a disco.",
-    "En Polars, scan_parquet optimiza el plan completo antes de leer disco; read_parquet carga todo de golpe.",
-    "Marimo modela las celdas como un DAG reactivo y reproducible almacenado como script .py puro."
-  ],
-  "flashcards": [
-    {
-      "id": "fc-de2-local-01",
-      "front": "¿Por qué `pl.scan_parquet()` consume mucha menos RAM que `pl.read_parquet()` antes de un filtro y selección?",
-      "back": "Porque `scan_parquet` construye un plan lógico y empuja el filtro y las columnas al lector Parquet; `read_parquet` materializa toda la tabla primero."
-    },
-    {
-      "id": "fc-de2-local-02",
-      "front": "¿Qué es la ejecución guiada por fragmentos (morsel-driven parallelism) en DuckDB?",
-      "back": "Divide las tablas en lotes de ~100 000 filas que los hilos de CPU toman dinámicamente con robo de trabajo y vuelcan a disco si superan la RAM."
-    },
-    {
-      "id": "fc-de2-local-03",
-      "front": "¿Cómo impide Marimo el problema del estado oculto que ocurre en los cuadernos Jupyter tradicionales?",
-      "back": "Analiza estáticamente qué variables define y consume cada celda, prohíbe redefinir variables globales y reejecuta en orden topológico las celdas dependientes."
-    }
-  ],
-  "glossaryTerms": [
-    "c15-duckdb-polars-lazy",
-    "c16-duckdb-wasm-bi"
-  ],
-  "sources": [
-    {
-      "title": "DuckDB Documentation — Why DuckDB and Out-of-Core Execution",
-      "url": "https://duckdb.org/why_duckdb.html",
-      "publisher": "DuckDB Foundation",
-      "accessed": "2026-10-29",
-      "supports": "Ejecución vectorizada en proceso y gestión de memoria más allá de la RAM en un solo nodo."
-    },
-    {
-      "title": "Polars User Guide — Lazy API and Query Optimization",
-      "url": "https://docs.pola.rs/user-guide/lazy/",
-      "publisher": "Polars Project",
-      "accessed": "2026-10-29",
-      "supports": "Diferencia entre evaluación ansiosa y perezosa, predicate pushdown y projection pushdown."
-    },
-    {
-      "title": "Marimo Documentation — Reactive Execution and Reproducible Python Notebooks",
-      "url": "https://docs.marimo.io/guides/reactivity/",
-      "publisher": "Marimo Team",
-      "accessed": "2026-10-29",
-      "supports": "Ejecución determinista guiada por grafo acíclico dirigido (DAG) en archivos Python puros."
-    }
-  ],
-  "aiNotes": "El error común es mezclar `pl.read_parquet` con transformaciones pesadas o creer que cualquier tarea de 20 GB necesita Spark. Anima a verificar primero cuánto pesan las columnas realmente proyectadas tras aplicar predicate y projection pushdown.",
-  "needsReview": true,
-  "legacyId": "l9-duckdb-polars-marimo",
-  "legacyOrder": 9,
-  "stageId": "stage-3",
-  "subtitle": "Procesamiento analítico en un solo nodo, evaluación perezosa y cuadernos reactivos reproducibles en Git.",
-  "goal": "Aplicar la API Lazy de Polars (`scan_parquet`) junto con el motor SQL paralelizado de DuckDB 1.x para procesar datasets mayores que la RAM, y estructurar análisis reproducibles en cuadernos reactivos con Marimo.",
-  "pipelineChallenge": {
-    "title": "Consulta perezosa reactiva en Marimo y DuckDB",
-    "scenario": "Ordena los 4 pasos que ocurren cuando un analista modifica un filtro en un cuaderno reactivo Marimo conectado a Polars Lazy y DuckDB sobre un archivo Parquet de 80 GB.",
-    "steps": [
-      {
-        "id": "step-1",
-        "label": "1. Actualización reactiva del grafo de celdas en Marimo",
-        "role": "DA",
-        "detail": "Al cambiar el selector de fecha o región, Marimo identifica mediante su grafo estático qué celdas dependen del parámetro y las marca para re-ejecución determinista."
-      },
-      {
-        "id": "step-2",
-        "label": "2. Construcción y optimización del plan lógico de consulta",
-        "role": "DA",
-        "detail": "Polars y DuckDB combinan los filtros y selecciones en un árbol lógico, eliminando columnas no referenciadas y empujando predicados hacia la fuente."
-      },
-      {
-        "id": "step-3",
-        "label": "3. Ejecución paralela por fragmentos y volcado a disco",
-        "role": "DE",
-        "detail": "El motor lee únicamente los Row Groups válidos en lotes pequeños que caben en RAM, usando todos los núcleos del CPU y volcando a disco NVMe si una agregación excede el límite."
-      },
-      {
-        "id": "step-4",
-        "label": "4. Renderizado inmediato de la tabla y métricas certificadas",
-        "role": "BI",
-        "detail": "El resultado agregado final (pocas filas) actualiza automáticamente los gráficos y tablas del cuaderno o app sin discrepancias de estado oculto."
-      }
+    orderMatters: true,
+    hints: [
+      'Usa ROUND(MEDIAN(o.total_usd), 2) AS median_ticket_usd para calcular la mediana exacta del pedido.',
+      'Usa COUNT(*) FILTER (WHERE o.total_usd >= 120) AS high_value_orders para contar los pedidos de alto valor.',
+      'Completa con ROUND(SUM(o.total_usd), 2) AS revenue_usd y mantén GROUP BY ALL ORDER BY revenue_usd DESC.'
     ],
-    "explanation": "La combinación de reactividad determinista (Marimo), optimización perezosa de consultas (Polars Lazy) y ejecución paralelizada Out-of-Core (DuckDB 1.x) permite que un solo nodo ofrezca rendimiento de supercomputadora con reproducibilidad garantizada."
+    solutionExplanation: 'DuckDB empuja el filtro status = completed hacia el escaneo de orders.parquet y evalúa simultáneamente MEDIAN, COUNT(*) FILTER y SUM sobre los lotes vectorizados de cada segmento.'
   },
-  "relatedLessons": [
+
+  checks: [
     {
-      "id": "l7-columnar-parquet",
-      "reason": "El optimizador Lazy de Polars y DuckDB empuja tus filtros directamente a los Zone Maps de Parquet."
+      id: 'chk-duckdb-datachunks',
+      type: 'mcq',
+      prompt: '¿Por qué DuckDB procesa las columnas en lotes vectorizados (`DataChunks`) de 2 048 valores en lugar de procesar una fila a la vez o cargar toda la columna entera en un solo arreglo gigante?',
+      options: [
+        {
+          id: 'a',
+          text: 'Porque los vectores de 2 048 valores caben dentro de la caché L1/L2 del procesador, permitiendo aplicar instrucciones SIMD sin saturar el ancho de banda de la memoria RAM principal.',
+          correct: true,
+          feedback: 'Correcto. Los DataChunks mantienen los vectores dentro de la caché L1/L2 entre operadores.'
+        },
+        {
+          id: 'b',
+          text: 'Porque el estándar SQL-92 prohíbe que un motor relacional lea más de 2 048 filas por transacción.',
+          correct: false,
+          feedback: 'Incorrecto. El estándar SQL no impone ningún límite al tamaño de lote interno del motor.'
+        },
+        {
+          id: 'c',
+          text: 'Porque los archivos Parquet siempre tienen exactamente 2 048 filas por cada Row Group.',
+          correct: false,
+          feedback: 'Incorrecto. Un Row Group de Parquet suele tener entre 10 000 y 1 000 000 de filas.'
+        },
+        {
+          id: 'd',
+          text: 'Porque DuckDB delega cada lote de 2 048 filas a un contenedor Docker distinto a través de la red local.',
+          correct: false,
+          feedback: 'Incorrecto. DuckDB corre en el mismo proceso sin contenedores ni llamadas de red.'
+        }
+      ],
+      explanation: 'Materializar una columna entera de millones de elementos en cada paso intermedio expulsa los datos hacia la RAM principal. Procesar lotes de 2 048 tuplas mantiene los vectores calientes en la caché L1/L2 de la CPU.'
     },
     {
-      "id": "l8-arrow-lance-vortex",
-      "reason": "Apache Arrow es el puente Zero-Copy que permite a DuckDB consultar un LazyFrame de Polars sin copiar RAM."
+      id: 'chk-polars-lazyframe-optim',
+      type: 'mcq',
+      prompt: 'En Polars, encadenas `pl.scan_parquet("events.parquet").filter(pl.col("device_type") == "mobile").select(["event_id", "event_type"]).collect()`. ¿Qué hace el optimizador del `LazyFrame` antes de tocar el disco?',
+      options: [
+        {
+          id: 'a',
+          text: 'Aplica projection pushdown para leer únicamente las 3 columnas involucradas (device_type, event_id, event_type) y predicate pushdown para filtrar device_type == "mobile" durante el escaneo.',
+          correct: true,
+          feedback: 'Exacto. El optimizador reescribe el plan antes de ejecutar collect() para leer solo 3 columnas.'
+        },
+        {
+          id: 'b',
+          text: 'Carga primero las 12 columnas completas en memoria RAM y luego borra las 10 columnas sobrantes.',
+          correct: false,
+          feedback: 'Incorrecto. Ese sería el comportamiento ansioso de read_parquet(), no de scan_parquet().'
+        },
+        {
+          id: 'c',
+          text: 'Convierte el archivo Parquet en un archivo CSV temporal para poder leerlo línea por línea.',
+          correct: false,
+          feedback: 'Incorrecto. Polars lee directamente el formato binario Parquet con su lector nativo en Rust.'
+        },
+        {
+          id: 'd',
+          text: 'Ejecuta inmediatamente la lectura al invocar scan_parquet(), antes de conocer las llamadas a filter() y select().',
+          correct: false,
+          feedback: 'Incorrecto. scan_parquet() es perezoso y no lee datos hasta que se invoca collect().'
+        }
+      ],
+      explanation: 'scan_parquet() solo registra el nodo de entrada en el plan lógico. Al invocar collect(), el optimizador analiza todo el grafo y determina que solo necesita leer 3 de las 12 columnas y aplicar el predicado sobre device_type.'
     },
     {
-      "id": "l15-bi-tufte-code",
-      "reason": "Conecta el flujo reproducible de DuckDB y Marimo con las herramientas declarativas de BI-as-Code."
+      id: 'chk-marimo-reactive-dag',
+      type: 'mcq',
+      prompt: '¿Qué problema estructural de los cuadernos `.ipynb` tradicionales elimina Marimo mediante su grafo acíclico dirigido (DAG) reactivo?',
+      options: [
+        {
+          id: 'a',
+          text: 'El estado oculto producido por ejecutar celdas fuera de orden o redefinir variables globales en múltiples celdas, además de almacenar el cuaderno como un script .py puro versionable en Git.',
+          correct: true,
+          feedback: 'Correcto. El DAG estático de Marimo mantiene el estado en memoria sincronizado con el código visible.'
+        },
+        {
+          id: 'b',
+          text: 'La necesidad de instalar Python en el sistema operativo, ya que Marimo compila todo el código directamente a ensamblador.',
+          correct: false,
+          feedback: 'Incorrecto. Marimo se ejecuta sobre el intérprete de Python estándar.'
+        },
+        {
+          id: 'c',
+          text: 'La obligación de escribir consultas SQL con cláusula GROUP BY cuando se agregan métricas.',
+          correct: false,
+          feedback: 'Incorrecto. Las reglas sintácticas de SQL dependen del motor (como DuckDB), no del cuaderno.'
+        },
+        {
+          id: 'd',
+          text: 'El límite físico de 65 536 filas que tenían los archivos Parquet en disco.',
+          correct: false,
+          feedback: 'Incorrecto. Parquet nunca ha tenido ese límite de filas (ese era el límite del antiguo formato Excel .xls).'
+        }
+      ],
+      explanation: 'En un cuaderno tradicional puedes modificar una celda superior sin reejecutar las inferiores, dejando en RAM resultados obsoletos. Marimo prohíbe redefinir variables globales entre celdas, recalcula las celdas dependientes en orden topológico y guarda archivos .py limpios.'
     }
+  ],
+
+  roleNotes: {
+    de: 'Como persona de Ingeniería de Datos, antes de aprovisionar un clúster distribuido para cargas de trabajo menores a 100 GB, evalúa un nodo único con DuckDB o Polars en modo streaming sobre archivos Parquet: eliminarás el costo de barajado por red (shuffle) y reducirás drásticamente la factura de infraestructura.',
+    da: 'En Análisis de Datos, adopta pl.scan_parquet() en lugar de pl.read_parquet() como hábito por defecto y desarrolla tus exploraciones en cuadernos reactivos de Marimo para que cualquier cambio en un parámetro de fecha o tienda actualice todas las tablas y gráficos sin estados inconsistentes.',
+    bi: 'En Business Intelligence, aprovecha la capacidad de DuckDB para consultar archivos Parquet locales o en almacenamiento de objetos y entregar tablas Arrow a tus herramientas de visualización, prototipando modelos semánticos completos en tu portátil con tiempos de respuesta sub-segundo.'
+  },
+
+  summary: [
+    'DuckDB ejecuta consultas en proceso mediante lotes vectorizados (DataChunks de 2 048 filas) dentro de la caché L1/L2.',
+    'El modo perezoso de Polars (scan_parquet y LazyFrame) aplica poda de columnas y filtros antes de tocar el disco.',
+    'DuckDB y Polars colaboran en el mismo script sin copiar memoria gracias a la Arrow C Data Interface.',
+    'Marimo modela las celdas como un DAG reactivo en un archivo .py puro, impidiendo el estado oculto.'
+  ],
+
+  flashcards: [
+    {
+      id: 'fc-de2-03-a',
+      front: '¿Por qué el tamaño de DataChunk en DuckDB es de 2 048 tuplas?',
+      back: 'Porque ese volumen cabe dentro de las cachés rápidas L1 y L2 de la CPU, permitiendo procesar bucles vectorizados SIMD sin esperar a la memoria RAM principal.'
+    },
+    {
+      id: 'fc-de2-03-b',
+      front: '¿Qué diferencia de ejecución hay entre `pl.read_parquet()` y `pl.scan_parquet()` en Polars?',
+      back: '`read_parquet()` lee y materializa el archivo de inmediato en RAM; `scan_parquet()` devuelve un LazyFrame que optimiza proyecciones y filtros antes de ejecutar `.collect()`.'
+    },
+    {
+      id: 'fc-de2-03-c',
+      front: '¿Cómo impide Marimo el problema de estado oculto típico de Jupyter?',
+      back: 'Construye un DAG estático de referencias entre celdas, prohíbe redefinir una misma variable global en dos celdas y reejecuta en orden topológico las celdas dependientes.'
+    }
+  ],
+
+  sources: [
+    {
+      title: 'DuckDB Documentation — SQL on Apache Arrow',
+      url: 'https://duckdb.org/docs/stable/guides/python/sql_on_arrow.html',
+      publisher: 'DuckDB Foundation',
+      accessed: '2026-10-29',
+      supports: 'Consulta directa zero-copy de tablas Arrow y LazyFrames de Polars desde DuckDB con empuje de filtros y proyecciones.'
+    },
+    {
+      title: 'Polars User Guide — Lazy API and Query Optimization',
+      url: 'https://docs.pola.rs/user-guide/lazy/',
+      publisher: 'Polars Project',
+      accessed: '2026-10-29',
+      supports: 'Optimización de planes lógicos mediante predicate pushdown, projection pushdown y ejecución streaming.'
+    },
+    {
+      title: 'Marimo Documentation — Reactivity and Execution Model',
+      url: 'https://docs.marimo.io/guides/reactivity/',
+      publisher: 'Marimo Team',
+      accessed: '2026-10-29',
+      supports: 'Grafo acíclico dirigido (DAG) determinista entre celdas y almacenamiento en archivos Python puros.'
+    },
+    {
+      title: 'DuckDB — Why DuckDB: Vectorized Push-Based Execution',
+      url: 'https://duckdb.org/why_duckdb.html',
+      publisher: 'DuckDB Foundation',
+      accessed: '2026-10-29',
+      supports: 'Arquitectura de ejecución vectorizada por DataChunks y paralelismo morsel-driven.'
+    }
+  ],
+
+  aiNotes: 'Recuerda que las 13 tablas de Mercado Brisa suman 2.14 MB en Parquet y 146 214 filas, ejemplo directo de por qué los motores locales vectorizados (DuckDB y Polars) resuelven cruces en milisegundos sin requerir clústeres distribuidos. Guía en el uso de `MEDIAN()`, `COUNT(*) FILTER (WHERE ...)` y `GROUP BY ALL` sobre `orders` y `customers`.',
+
+  relatedLessons: [
+    'de2-formatos-01-columnar-parquet',
+    'de2-formatos-02-arrow-lance-vortex',
+    'de2-formatos-05-particionado-archivos-pequenos'
   ]
 };
 
