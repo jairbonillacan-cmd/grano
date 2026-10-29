@@ -29,15 +29,15 @@ const lesson = {
       body: 'Existen dos señales directas en SQL para diagnosticar la inclinación de una columna numérica.\n\nLa primera es comparar media y mediana. Con cola derecha, los valores altos jalan el promedio hacia arriba y se cumple `media > mediana`. En `refunds`, la mediana es `150.04` USD y la media sube a `221.45` USD (`+71.41` USD de brecha). Cuando la cola va hacia la izquierda (asimetría negativa), ocurre lo opuesto: `media < mediana`.\n\nLa segunda señal es la función `SKEWNESS(columna)` de DuckDB. Un valor cercano a `0` indica simetría. Un valor mayor que `0` confirma cola derecha: en `orders.total_usd` vale `0.98` y en `refunds.refund_amount_usd` llega a `1.63`.',
       example: {
         language: 'sql',
-        code: 'SELECT\n  reason,\n  COUNT(*) AS devoluciones,\n  ROUND(MEDIAN(refund_amount_usd), 2) AS mediana_usd,\n  ROUND(AVG(refund_amount_usd), 2) AS media_usd,\n  ROUND(QUANTILE_CONT(refund_amount_usd, 0.90), 2) AS p90_usd,\n  ROUND(SKEWNESS(refund_amount_usd), 2) AS coef_asimetria\nFROM refunds\nGROUP BY reason\nORDER BY devoluciones DESC;',
+        code: 'SELECT\n  reason,\n  COUNT(*) AS devoluciones,\n  ROUND(MEDIAN(refund_amount_usd), 2) AS mediana_usd,\n  ROUND(AVG(refund_amount_usd), 2) AS media_usd,\n  ROUND(QUANTILE_CONT(refund_amount_usd, 0.90), 2) AS p90_usd,\n  ROUND(SKEWNESS(refund_amount_usd), 2) AS coef_asimetria\nFROM refunds\nGROUP BY reason\nORDER BY devoluciones DESC, reason ASC;',
         expectedOutput: [
           {
-            reason: 'empaque_danado',
+            reason: 'cambio_opinion',
             devoluciones: 290,
-            mediana_usd: 144.4,
-            media_usd: 220.59,
-            p90_usd: 506.87,
-            coef_asimetria: 1.76
+            mediana_usd: 144.48,
+            media_usd: 218.16,
+            p90_usd: 491.31,
+            coef_asimetria: 1.59
           },
           {
             reason: 'defecto_molino',
@@ -46,6 +46,14 @@ const lesson = {
             media_usd: 220.87,
             p90_usd: 514.31,
             coef_asimetria: 1.54
+          },
+          {
+            reason: 'empaque_danado',
+            devoluciones: 290,
+            mediana_usd: 144.4,
+            media_usd: 220.59,
+            p90_usd: 506.87,
+            coef_asimetria: 1.76
           },
           {
             reason: 'retraso_envio',
@@ -62,14 +70,6 @@ const lesson = {
             media_usd: 227.27,
             p90_usd: 578.05,
             coef_asimetria: 1.64
-          },
-          {
-            reason: 'cambio_opinion',
-            devoluciones: 290,
-            mediana_usd: 144.48,
-            media_usd: 218.16,
-            p90_usd: 491.31,
-            coef_asimetria: 1.59
           }
         ]
       }

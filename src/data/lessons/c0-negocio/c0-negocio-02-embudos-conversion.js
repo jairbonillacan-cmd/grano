@@ -31,7 +31,7 @@ const lesson = {
   COUNT(*) - COUNT(DISTINCT session_id) AS eventos_duplicados_reintento
 FROM events
 GROUP BY event_type
-ORDER BY eventos_brutos DESC;`,
+ORDER BY eventos_brutos DESC, event_type ASC;`,
         expectedOutput: [
           {
             event_type: 'add_to_cart',

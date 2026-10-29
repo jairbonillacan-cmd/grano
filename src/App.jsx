@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from 'react';
-import { LEARNING_STAGES, LESSONS } from './data/learningPath2026.js';
+import { LEARNING_STAGES, LESSONS } from './data/lessons/index.js';
 import AppShell from './layout/AppShell.jsx';
 import HomeView from './views/HomeView.jsx';
 import RoadmapView from './views/RoadmapView.jsx';

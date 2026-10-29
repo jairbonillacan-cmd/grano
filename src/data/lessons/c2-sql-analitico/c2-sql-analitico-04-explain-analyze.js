@@ -172,8 +172,8 @@ WHERE o.status = 'completed'
           {
             pedidos_enero: 585,
             lineas_leidas: 1408,
-            unidades_vendidas: 2997,
-            ingresos_lineas_usd: 238509.76
+            unidades_vendidas: 2946,
+            ingresos_lineas_usd: 237640.88
           }
         ]
       }

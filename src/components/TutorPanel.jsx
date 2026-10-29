@@ -718,7 +718,7 @@ export function TutorPanel({
       resolvedLesson?.practice?.starterCode ||
       resolvedLesson?.workedExample?.steps?.[0]?.code ||
       resolvedLesson?.playground?.goodQuery ||
-      'SELECT order_id, customer_id, order_total_usd FROM orders LIMIT 10;';
+      'SELECT order_id, customer_id, status, total_usd FROM orders LIMIT 10;';
     setAttachedCode(sampleSql);
     setChatSubMode('review-sql');
     setShowCodeAttachmentBox(true);

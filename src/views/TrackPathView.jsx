@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Check, ChevronDown, Clock } from 'lucide-react';
 import { TRACKS } from '../data/catalog/tracks.js';
 import { LEVELS } from '../data/catalog/levels.js';
-import { MODULES, getTrackPath } from '../data/catalog/modules.js';
+import { MODULES, getTrackPath } from '../data/lessons/index.js';
 
 // Ruta por área: tronco común + el área elegida, agrupada por nivel.
 // Las lecciones que ya existen se abren; las planificadas se muestran como "En preparación".
@@ -173,14 +173,15 @@ export function TrackPathView({ completedIds = [], onOpenLesson = () => {} }) {
                           <div className="track-path__module-body">
                             <ol className="track-path__lessons">
                               {m.lessons.map((l) => {
-                                const isDone = l.legacyId && completed.has(l.legacyId);
+                                const openId = l.v2Id || l.legacyId || l.id;
+                                const isDone = completed.has(openId);
                                 return (
                                   <li key={`${m.id}-${l.id}`}>
                                     {l.status === 'existing' ? (
                                       <button
                                         type="button"
                                         className="track-path__lesson"
-                                        onClick={() => onOpenLesson(l.legacyId)}
+                                        onClick={() => onOpenLesson(openId)}
                                       >
                                         <span className="track-path__lesson-state" aria-hidden="true">
                                           {isDone ? <Check size={14} /> : l.order}

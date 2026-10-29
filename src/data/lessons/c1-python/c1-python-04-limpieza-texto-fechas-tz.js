@@ -408,7 +408,7 @@ auditoria_tz = (
     },
     {
       title: 'Polars User Guide — Time Zones and Temporal Operations (Expr.dt)',
-      url: 'https://docs.pola.rs/user-guide/expressions/time-series/#time-zones',
+      url: 'https://docs.pola.rs/user-guide/transformations/time-series/timezones/',
       publisher: 'Polars Project',
       accessed: '2026-10-29',
       supports: 'Parseo con str.to_datetime(time_zone="UTC") y diferencia entre replace_time_zone y convert_time_zone.'

@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { ArrowRight, Play, Repeat, Compass, SlidersHorizontal } from 'lucide-react';
 import { Button } from '../components/ui/index.js';
-import { MODULES, getTrackPath } from '../data/catalog/modules.js';
+import { MODULES, getTrackPath } from '../data/lessons/index.js';
 import { TRACKS } from '../data/catalog/tracks.js';
 import { LEVELS } from '../data/catalog/levels.js';
 import { FLASHCARDS } from '../data/flashcards.js';
@@ -177,6 +177,17 @@ export function HomeView({
 
   const firstRouteLesson = useMemo(() => {
     if (playableLessons.length === 0) return null;
+    // Primera lección escrita y no terminada siguiendo el orden de la ruta (nivel 0 primero),
+    // no el orden del arreglo de lecciones.
+    const byV2Id = new Map(playableLessons.map((l) => [l.v2Id || l.id, l]));
+    for (const mod of routeModules) {
+      for (const entry of mod.lessons || []) {
+        const lesson = entry.status === 'existing' ? byV2Id.get(entry.v2Id) : null;
+        if (lesson && !completedSet.has(lesson.id) && !completedSet.has(lesson.v2Id)) {
+          return lesson;
+        }
+      }
+    }
     if (activeTrackId) {
       const matchingTrack = playableLessons.find(
         (l) => l.track === activeTrackId || l.track === 'core'
@@ -184,7 +195,7 @@ export function HomeView({
       if (matchingTrack) return matchingTrack;
     }
     return playableLessons[0];
-  }, [playableLessons, activeTrackId]);
+  }, [playableLessons, routeModules, completedSet, activeTrackId]);
 
   const activeContinueLesson = useMemo(() => {
     // Priorizar una lección en curso no completada

@@ -162,7 +162,7 @@
     "sources": [
       {
         "title": "Polars User Guide — Time Zones and Temporal Operations",
-        "url": "https://docs.pola.rs/user-guide/expressions/time-series/#time-zones",
+        "url": "https://docs.pola.rs/user-guide/transformations/time-series/timezones/",
         "publisher": "Polars Project",
         "accessed": "2026-10-29",
         "supports": "Conversión de instantes entre zonas horarias frente a asignación de etiqueta temporal."
