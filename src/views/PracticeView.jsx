@@ -194,7 +194,6 @@ export function PracticeView({ initialLessonId = null, onSelectLesson = null }) 
                       className={`practice-exercise-item ${isSelected ? 'is-selected' : ''}`}
                       onClick={() => {
                         setSelectedLessonId(lesson.id);
-                        if (onSelectLesson) onSelectLesson(lesson.id);
                       }}
                       data-testid={`exercise-item-${lesson.id}`}
                     >

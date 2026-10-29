@@ -210,6 +210,7 @@ export async function resolveLessonContext({
 
   const aiNotes =
     lesson?.aiNotes ||
+    lesson?.aiContext ||
     lesson?.subtitle ||
     lesson?.playground?.badQueryLabel ||
     'Verificar siempre el grano de cada tabla antes de agregar o hacer JOIN.';

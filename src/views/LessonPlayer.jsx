@@ -1067,9 +1067,12 @@ export function LessonPlayer({
                 </span>
               </div>
 
-              {codeLabChallenge && codeLabChallenge.blanks?.length > 0 ? (
+              {(codeLabChallenge && codeLabChallenge.blanks?.length > 0) ||
+              lesson.practice?.type === 'sql' ? (
                 <div className="lp-wide-block">
                   <AuthenticCodeLab
+                    lessonId={lesson.id || lessonId}
+                    practice={lesson.practice}
                     challenge={codeLabChallenge}
                     onSolve={handleSolvePracticeLab}
                     onAskAiTutor={(promptText) =>
