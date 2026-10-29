@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { LEARNING_STAGES, LESSONS } from '../data/learningPath2026.js';
+import { LEARNING_STAGES, LESSONS } from '../data/lessons/index.js';
 import { LESSON_STEP_LABELS } from '../views/HomeView.jsx';
-import { GLOSSARY_CONCEPTS_2026 } from '../components/GlossaryAndGraphView.jsx';
+import { GLOSSARY_CONCEPTS_2026 } from '../data/glossary.js';
 import { getAdaptiveRecommendations } from '../engine/adaptiveEngine.js';
 import {
   LESSON_ID_ALIASES,

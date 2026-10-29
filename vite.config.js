@@ -7,11 +7,17 @@ export default defineConfig({
   server: {
     port: 5174,
     host: '127.0.0.1',
+    fs: {
+      allow: ['..'],
+    },
   },
   build: {
     rollupOptions: {
       output: {
         manualChunks(id) {
+          if (id.includes('@duckdb') || id.includes('@codemirror') || id.includes('@lezer')) {
+            return undefined;
+          }
           if (id.includes('node_modules')) {
             return 'vendor';
           }
