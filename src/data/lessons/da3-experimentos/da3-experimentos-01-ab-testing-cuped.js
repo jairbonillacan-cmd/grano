@@ -1,316 +1,494 @@
-// Lección migrada al esquema v2 mediante scripts/migrate-legacy.mjs
-const lesson = {
-  "id": "da3-experimentos-01-ab-testing-cuped",
-  "moduleId": "da3-experimentos",
-  "tracks": [
-    "da"
+export const lesson = {
+  id: 'da3-experimentos-01-ab-testing-cuped',
+  legacyId: 'l14-ab-testing-cuped',
+  v2Id: 'da3-experimentos-01-ab-testing-cuped',
+  moduleId: 'da3-experimentos',
+  track: 'da',
+  tracks: ['da', 'ds'],
+  level: 3,
+  order: 1,
+  legacyOrder: 14,
+  contentVersion: 2,
+  title: 'Pruebas A/B en producción: SRM, guardrails y CUPED',
+  subtitle: 'Pruebas A/B en producción: SRM, guardrails y reducción de varianza (CUPED)',
+  minutes: 30,
+  needsReview: false,
+  prerequisites: [
+    'da2-inferencia',
+    'da3-producto',
   ],
-  "level": 3,
-  "order": 1,
-  "title": "Pruebas A/B, diagnóstico SRM y reducción de varianza CUPED",
-  "minutes": 30,
-  "prerequisites": [
-    "da2-inferencia-05"
+  learningObjectives: [
+    'Diagnosticar desbalances de asignación (Sample Ratio Mismatch) mediante la prueba chi-cuadrado antes de interpretar métricas de negocio.',
+    'Definir métricas de protección (guardrails) para prevenir degradaciones colaterales en reembolsos, latencia o retención.',
+    'Aplicar el estimador lineal CUPED con covariables pre-experimento en SQL para reducir el error estándar sin introducir sesgo.',
   ],
-  "contentVersion": 1,
-  "hook": "En Mercado Brisa (empresa ficticia), producto lanza un pago rápido (variante B) asignando 50 % a control y 50 % a tratamiento. Al tercer día ven que el gasto medio en B es 25.20 USD frente a 24.10 USD en A y piden desplegarlo ya. Al auditar encuentras 50 100 usuarios en A y 47 200 en B, sin tamaño muestral previo. ¿Por qué debes frenar el despliegue y cómo operan SRM y CUPED?",
-  "objectives": [
-    "Ejecutar una prueba chi-cuadrado de bondad de ajuste para detectar Sample Ratio Mismatch (SRM) antes de mirar métricas.",
-    "Evitar la inflación de falsos positivos por inspección repetida (peeking) calculando tamaño de muestra o fronteras secuenciales.",
-    "Aplicar reducción de varianza CUPED en SQL usando el comportamiento pre-experimental como covariable."
+  hook: 'El equipo de producto de Mercado Brisa celebra que el recordatorio de carrito (EXP-PUSH-CART) elevó el gasto post-asignación en 5.94 USD por usuario, pero al revisar la tabla experiment_assignments descubres 980 clientes en control y solo 620 en tratamiento: ¿por qué ese desbalance invalida cualquier conclusión causal y cómo puedes multiplicar por cuatro la precisión de los experimentos sanos sin esperar meses por más tráfico?',
+  objectives: [
+    'Auditar Sample Ratio Mismatch (SRM) con bondad de ajuste chi-cuadrado sobre conteos por variante.',
+    'Proteger el despliegue mediante métricas guardrail operativas y financieras.',
+    'Implementar la reducción de varianza CUPED en DuckDB aprovechando el gasto pre-experimento.',
   ],
-  "sections": [
+  sections: [
     {
-      "id": "diagnostico-previo-al-analisis-prueba-chi-cuadra",
-      "heading": "Diagnóstico previo al análisis: prueba chi-cuadrado para SRM",
-      "body": "Antes de mirar si la conversión o los ingresos subieron, debes auditar si el tráfico se repartió exactamente como fue diseñado. Si configuraste una división **50% / 50%** sobre `100,000` usuarios expuestos, la fluctuación normal del azar permite ver `50,150` vs. `49,850`. Pero si observas `51,850` en Control y `48,150` en Tratamiento, una prueba Chi-cuadrado de bondad de ajuste arrojará un valor `p < 0.0001`.\nEso se denomina **Sample Ratio Mismatch (SRM)** y significa que existe un fallo técnico grave que invalida el experimento: por ejemplo, el nuevo código de la Variante B crashea en teléfonos Android antiguos antes de disparar el evento de exposición, o una redirección lenta hace que los usuarios impacientes cierren la pestaña. Como los usuarios que se pierden en B no son aleatorios, cualquier comparación de métricas está irremediablemente sesgada. **Regla de oro: si hay SRM (`p_srm < 0.001`), se descarta el análisis y DE corrige la instrumentación.**",
-      "interactive": {
-        "component": "ab-test-cuped-simulator",
-        "caption": "Simulador interactivo: Pruebas A/B, diagnóstico SRM y reducción de varianza CUPED"
-      }
+      id: 'srm-guardrails',
+      heading: 'Auditoría de integridad: Sample Ratio Mismatch y métricas guardrail',
+      body: `En producción, una diferencia estadísticamente significativa carece de validez si el mecanismo de aleatorización falló. El primer filtro obligatorio consiste en auditar el **Sample Ratio Mismatch** (SRM). Este fallo ocurre cuando la proporción observada de usuarios entre variantes se desvía de la división diseñada.
+
+En una asignación 50/50 con $N$ usuarios totales, contrastamos los conteos observados ($N_C, N_T$) frente al conteo esperado $E = 0.5 N$. Para ello calculamos el estadístico chi-cuadrado de un grado de libertad.
+
+$$\\chi^2_{\\text{SRM}} = \\frac{(N_C - 0.5N)^2}{0.5N} + \\frac{(N_T - 0.5N)^2}{0.5N}.$$
+
+Si $\\chi^2_{\\text{SRM}} > 10.83$ ($p < 0.001$), el experimento se detiene y se descarta de inmediato. En **Mercado Brisa**, el experimento \`EXP-PUSH-CART\` (\`experiment_id = 6\`) registró $980$ usuarios en control y $620$ en tratamiento sobre $N = 1{,}600$. Esto arroja $\\chi^2 = 81.00$ porque un fallo de telemetría en Android descartó sesiones del brazo tratado.
+
+Superado el filtro SRM, el despliegue exige evaluar **métricas de protección** (*guardrails*). La métrica primaria mide el objetivo directo de gasto post-asignación. Por su parte, los *guardrails* vigilan que el cambio no eleve los reembolsos ni degrade la conversión.`,
     },
     {
-      "id": "potencia-estadistica-mde-y-error-por-inspeccion-",
-      "heading": "Potencia estadística, MDE y error por inspección prematura",
-      "body": "Diseñar un experimento requiere fijar de antemano tres parámetros:\n1) Nivel de significancia (`α = 0.05`, probabilidad máxima de Falso Positivo o Error Tipo I).\n2) Potencia estadística (`1 - β = 0.80`, probabilidad de detectar un efecto real si existe, evitando el Error Tipo II).\n3) Efecto Mínimo Detectable (`MDE`, el cambio más pequeño que vale la pena para el negocio, ej. `+0.4%` en conversión).\nEl error más destructivo en equipos sin disciplina estadística es el **Peeking** (mirar el p-valor todos los días y detener el test en cuanto cruza `p < 0.05`). Con un test frecuentista de horizonte fijo, revisar diariamente durante 14 días infla tu tasa de falsos positivos del **5% a más del 26%**. Si necesitas monitorear resultados continuamente para abortar caídas graves, debes utilizar **Tests Secuenciales Siempre Válidos (mSPRT)** con fronteras ajustadas.",
-      "example": {
-        "language": "sql",
-        "code": "WITH cuped_theta AS (\n  SELECT\n    COVAR_SAMP(post_revenue_usd, pre_revenue_14d_usd)\n      / NULLIF(VAR_SAMP(pre_revenue_14d_usd), 0) AS theta,\n    AVG(pre_revenue_14d_usd) AS mean_pre_global\n  FROM exp_checkout_users\n),\nuser_adjusted AS (\n  SELECT\n    u.variant,\n    u.post_revenue_usd AS y_raw,\n    u.post_revenue_usd - t.theta * (u.pre_revenue_14d_usd - t.mean_pre_global) AS y_cuped\n  FROM exp_checkout_users u\n  CROSS JOIN cuped_theta t\n)\nSELECT\n  variant,\n  COUNT(*) AS n_exposed_users,\n  ROUND(AVG(y_cuped), 2) AS mean_cuped_usd,\n  ROUND(STDDEV_SAMP(y_raw) / SQRT(COUNT(*)), 3) AS se_raw_usd,\n  ROUND(STDDEV_SAMP(y_cuped) / SQRT(COUNT(*)), 3) AS se_cuped_usd\nFROM user_adjusted\nGROUP BY variant\nORDER BY variant;",
-        "expectedOutput": [
-          {
-            "variant": "Control (A)",
-            "n_exposed_users": "50,042 (SRM p = 0.79 OK)",
-            "mean_cuped_usd": "$24.35",
-            "se_raw_usd": "±$0.480",
-            "se_cuped_usd": "±$0.265 (-45% Error Estándar)"
-          },
-          {
-            "variant": "Tratamiento (B)",
-            "n_exposed_users": "49,958 (SRM p = 0.79 OK)",
-            "mean_cuped_usd": "$25.12 (+$0.77 Lift)",
-            "se_raw_usd": "±$0.492",
-            "se_cuped_usd": "±$0.270 (IC 95%: [+$0.24, +$1.30] · p = 0.004)"
-          }
-        ]
-      }
+      id: 'cuped-reduccion-varianza',
+      heading: 'Reducción de varianza con covariables pre-experimento (CUPED)',
+      body: `Cuando el tráfico es limitado o la métrica monetaria presenta alta dispersión, el error estándar de la diferencia cruda ($\\bar{Y}_T - \\bar{Y}_C$) resulta elevado. El método **CUPED** (*Controlled-experiment Using Pre-Experiment Data*, Deng et al., 2013) sustrae la variabilidad histórica explicada por una covariable basal $X$. Dicha covariable debe medirse estrictamente antes de la asignación aleatoria.
+
+Para cada usuario construimos la métrica ajustada restando la proyección lineal sobre $X$.
+
+$$\\hat{Y}_{\\text{CUPED}, i} = Y_i - \\theta\\,(X_i - \\bar{X}), \\qquad \\theta^* = \\frac{\\text{Cov}(Y, X)}{\\text{Var}(X)}.$$
+
+Tanto $\\bar{X}$ como $\\theta^*$ se estiman sobre la muestra combinada del experimento. Como la aleatorización garantiza que $\\mathbb{E}[\\bar{X}_T - \\bar{X}_C] = 0$, la diferencia ajustada $\\bar{Y}_{\\text{CUPED}, T} - \\bar{Y}_{\\text{CUPED}, C}$ es un estimador **insesgado** del efecto causal.
+
+La ventaja central reside en su menor varianza muestral. Si la correlación lineal entre el gasto previo $X$ y el gasto posterior $Y$ es $r_{XY}$, la varianza se contrae en un factor $(1 - r_{XY}^2)$.
+
+$$\\text{Var}(\\hat{\\Delta}_{\\text{CUPED}}) = \\text{Var}(\\hat{\\Delta}_{\\text{crudo}})\\,(1 - r_{XY}^2).$$
+
+En \`EXP-CHECKOUT-1STEP\`, donde $r_{XY} = 0.9678$, CUPED elimina el $93.7\\%$ de la varianza residual. Así reduce el error estándar a la cuarta parte.`,
+      interactive: {
+        component: 'ab-test-cuped-simulator',
+        caption: 'Ajusta la correlación pre-experimento (r) y observa cómo se estrecha la distribución muestral bajo CUPED sin desplazar la media del efecto.',
+      },
+      example: {
+        language: 'sql',
+        title: 'Auditoría SRM chi-cuadrado en los 6 experimentos de Mercado Brisa',
+        code: `WITH conteos AS (
+  SELECT
+    e.experiment_id,
+    e.experiment_code,
+    SUM(CASE WHEN a.variant = 'control' THEN 1 ELSE 0 END) AS n_control,
+    SUM(CASE WHEN a.variant = 'treatment' THEN 1 ELSE 0 END) AS n_treatment,
+    COUNT(*) AS n_total
+  FROM experiments e
+  JOIN experiment_assignments a USING (experiment_id)
+  GROUP BY 1, 2
+)
+SELECT
+  experiment_id,
+  experiment_code,
+  n_control,
+  n_treatment,
+  ROUND(
+    POWER(n_control - 0.5 * n_total, 2) / (0.5 * n_total)
+    + POWER(n_treatment - 0.5 * n_total, 2) / (0.5 * n_total),
+    2
+  ) AS chi2_srm,
+  CASE
+    WHEN POWER(n_control - 0.5 * n_total, 2) / (0.5 * n_total)
+       + POWER(n_treatment - 0.5 * n_total, 2) / (0.5 * n_total) > 10.83
+    THEN 'ALERTA_SRM'
+    ELSE 'BALANCEADO'
+  END AS estado_srm
+FROM conteos
+ORDER BY experiment_id;`,
+        expectedOutput: [
+          { experiment_id: 1, experiment_code: 'EXP-CHECKOUT-1STEP', n_control: 800, n_treatment: 800, chi2_srm: 0, estado_srm: 'BALANCEADO' },
+          { experiment_id: 2, experiment_code: 'EXP-FREE-SHIP-45', n_control: 800, n_treatment: 800, chi2_srm: 0, estado_srm: 'BALANCEADO' },
+          { experiment_id: 3, experiment_code: 'EXP-SUB-BUNDLE', n_control: 800, n_treatment: 800, chi2_srm: 0, estado_srm: 'BALANCEADO' },
+          { experiment_id: 4, experiment_code: 'EXP-QUIZ-ORIGEN', n_control: 800, n_treatment: 800, chi2_srm: 0, estado_srm: 'BALANCEADO' },
+          { experiment_id: 5, experiment_code: 'EXP-UPSELL-MOLINO', n_control: 800, n_treatment: 800, chi2_srm: 0, estado_srm: 'BALANCEADO' },
+          { experiment_id: 6, experiment_code: 'EXP-PUSH-CART', n_control: 980, n_treatment: 620, chi2_srm: 81, estado_srm: 'ALERTA_SRM' },
+        ],
+        annotation: 'Los experimentos 1 a 5 mantienen un balance 800/800 (chi2 = 0), mientras que EXP-PUSH-CART presenta chi2 = 81.00 (> 10.83) y debe invalidarse.',
+      },
     },
     {
-      "id": "reduccion-de-varianza-mediante-covariables-preex",
-      "heading": "Reducción de varianza mediante covariables preexperimentales (CUPED)",
-      "body": "En métricas continuas como `ingreso_por_usuario`, la varianza natural entre usuarios (clientes que gastan $500 vs. usuarios que gastan $5) es enorme y ensancha el Intervalo de Confianza, obligándote a esperar semanas para acumular millones de usuarios.\n**CUPED (Controlled-experiment Using Pre-Experiment Data)** aprovecha un hecho brillante: el gasto de un usuario en los **14 días previos al experimento (`X_pre`)** está fuertemente correlacionado con su gasto durante el experimento (`Y`), pero es **100% independiente del tratamiento** porque ocurrió antes de la asignación.\nCalculamos la métrica ajustada para cada usuario:\n`Y_cuped = Y - θ * (X_pre - media_global(X_pre))`, donde `θ = Cov(Y, X_pre) / Var(X_pre)`.\nComo `media(X_pre)` es estadísticamente idéntica en Control y Tratamiento gracias a la aleatorización, el estimador del efecto (`Lift`) permanece **completamente insesgado**, pero su varianza se reduce en una proporción `1 - r²` (donde `r` es la correlación entre `X_pre` e `Y`). Con `r = 0.75`, CUPED reduce la varianza un **56%**, lo que equivale a **más que duplicar el tráfico de tu empresa gratis**."
+      id: 'implementacion-sql-cuped',
+      heading: 'Implementación de CUPED con expresiones de tabla comunes (CTEs)',
+      body: `Para ejecutar CUPED directamente en DuckDB sobre la tabla \`experiment_assignments\`, estructuramos el cálculo en tres etapas mediante expresiones de tabla comunes (*CTEs*).
+
+En la primera etapa calculamos los parámetros globales del experimento sobre todos los usuarios asignados. Obtenemos la media basal $\\bar{X} = \\text{AVG}(\\text{pre\\_experiment\\_spend\\_usd})$ y la pendiente óptima $\\theta^* = \\text{COVAR\\_SAMP}(Y, X) / \\text{VAR\\_SAMP}(X)$. Es indispensable estimar $\\theta^*$ y $\\bar{X}$ agrupando solo por \`experiment_id\`, sin separar por \`variant\`. Así garantizamos que la misma transformación lineal se aplique a ambos brazos.
+
+En la segunda etapa proyectamos la métrica ajustada individual $\\hat{Y}_{\\text{CUPED}, i} = Y_i - \\theta^*(X_i - \\bar{X})$ para cada fila. Finalmente, agregamos por variante para obtener las medias ajustadas y el nuevo error estándar de Welch.
+
+$$\\text{EE}_{\\text{CUPED}} = \\sqrt{\\frac{s_{\\text{CUPED}, C}^2}{n_C} + \\frac{s_{\\text{CUPED}, T}^2}{n_T}}.$$
+
+Debemos verificar siempre que la covariable $X$ no pueda ser alterada por el tratamiento. Si $X$ incluyera compras posteriores al inicio del experimento, restar $\\theta(X - \\bar{X})$ absorbería parte del efecto causal legítimo. Ese error introduce sesgo de atenuación post-tratamiento.`,
     },
-    {
-      "id": "metricas-de-control-efecto-novedad-y-linealizaci",
-      "heading": "Métricas de control, efecto novedad y linealización de razones",
-      "body": "Ningún experimento se aprueba mirando una sola métrica aislada. Si un botón gigante aumenta los clics un `+4%` (Métrica Primaria / OEC), pero aumenta los reembolsos o la latencia del servidor un `+30%`, el cambio destruye valor. Por eso definimos **Métricas Guardia (Guardrails)**: latencia p95, tasa de errores, cancelaciones y tickets de soporte que no deben deteriorarse.\nAdemás, cuando la métrica es un ratio donde la unidad de aleatorización es el `usuario` pero el denominador son las `sesiones` (ej. ingreso por sesión), las sesiones de un mismo usuario no son independientes: DE y DA deben agregar primero a nivel de `user_id` o aplicar el **Método Delta / Linearización** para no subestimar el error estándar."
-    }
   ],
-  "workedExample": {
-    "title": "Ejemplo guiado: Pruebas A/B, diagnóstico SRM y reducción de varianza CUPED",
-    "description": "Compara el análisis ingenuo de un test A/B (que ignora SRM, error estándar y varianza pre-existente) frente al pipeline SQL con ajuste CUPED:",
-    "audit": "",
-    "steps": [
+  workedExample: {
+    title: 'Reducción de varianza CUPED en EXP-CHECKOUT-1STEP',
+    problem: 'Evalúa el experimento EXP-CHECKOUT-1STEP (experiment_id = 1) en Mercado Brisa. Primero inspecciona la dispersión cruda y la correlación pre-post por variante; luego aplica el ajuste CUPED para cuantificar cuánto disminuye la desviación estándar y el error estándar del efecto.',
+    steps: [
       {
-        "label": "Antipatrón: comparar promedios crudos con inspección temprana",
-        "explanation": "Compara el análisis ingenuo de un test A/B (que ignora SRM, error estándar y varianza pre-existente) frente al pipeline SQL con ajuste CUPED:",
-        "code": "-- PELIGROSO:\n-- 1) No revisa si los tamaños muestrales sufren Sample Ratio Mismatch (SRM)\n-- 2) No calcula el Error Estándar ni el Intervalo de Confianza al 95%\n-- 3) No ajusta por la varianza pre-experimento (ballenas desbalanceadas entre ramas)\nSELECT\n  variant,\n  AVG(post_revenue_usd) AS ingreso_promedio_crudo\nFROM exp_checkout_users\nGROUP BY variant;",
-        "expectedOutput": [
-          {
-            "variant": "Control (A)",
-            "ingreso_promedio_crudo": "$24.10 (Sin intervalo de confianza ni validación SRM)"
-          },
-          {
-            "variant": "Tratamiento (B)",
-            "ingreso_promedio_crudo": "$25.20 (Peligro. Sin CUPED el IC 95% es [-$0.18, +$1.72], cruza cero)"
-          }
-        ]
+        title: 'Paso 1: Diagnóstico de varianza cruda y correlación basal en EXP-CHECKOUT-1STEP',
+        explanation: 'Antes de ajustar, verificamos que la covariable pre_experiment_spend_usd esté balanceada entre brazos (72.93 vs 72.97 USD) y medimos su correlación lineal con post_experiment_spend_usd.',
+        rationale: 'Antes de ajustar, verificamos que la covariable pre_experiment_spend_usd esté balanceada entre brazos (72.93 vs 72.97 USD) y medimos su correlación lineal con post_experiment_spend_usd.',
+        code: `SELECT
+  variant,
+  COUNT(*) AS n_usuarios,
+  ROUND(AVG(pre_experiment_spend_usd), 2) AS media_pre_usd,
+  ROUND(AVG(post_experiment_spend_usd), 2) AS media_post_cruda,
+  ROUND(STDDEV_SAMP(post_experiment_spend_usd), 2) AS sd_cruda,
+  ROUND(CORR(post_experiment_spend_usd, pre_experiment_spend_usd), 4) AS r_pre_post
+FROM experiment_assignments
+WHERE experiment_id = 1
+GROUP BY variant
+ORDER BY variant;`,
+        output: `variant   | n_usuarios | media_pre_usd | media_post_cruda | sd_cruda | r_pre_post
+----------+------------+---------------+------------------+----------+-----------
+control   | 800        | 72.93         | 61.49            | 18.43    | 0.9678
+treatment | 800        | 72.97         | 68.40            | 18.14    | 0.9672`,
+        takeaway: 'La diferencia cruda es +6.91 USD (68.40 - 61.49), con una desviación estándar elevada (~18.3 USD) pero una correlación pre-post altísima (r = 0.9678).',
       },
       {
-        "label": "Solución óptima: auditoría de muestra y ajuste CUPED en SQL",
-        "explanation": "Compara ahora la consulta corregida y verifica cómo las filas y totales coinciden con la auditoría.",
-        "code": "WITH cuped_theta AS (\n  SELECT\n    COVAR_SAMP(post_revenue_usd, pre_revenue_14d_usd)\n      / NULLIF(VAR_SAMP(pre_revenue_14d_usd), 0) AS theta,\n    AVG(pre_revenue_14d_usd) AS mean_pre_global\n  FROM exp_checkout_users\n),\nuser_adjusted AS (\n  SELECT\n    u.variant,\n    u.post_revenue_usd AS y_raw,\n    u.post_revenue_usd - t.theta * (u.pre_revenue_14d_usd - t.mean_pre_global) AS y_cuped\n  FROM exp_checkout_users u\n  CROSS JOIN cuped_theta t\n)\nSELECT\n  variant,\n  COUNT(*) AS n_exposed_users,\n  ROUND(AVG(y_cuped), 2) AS mean_cuped_usd,\n  ROUND(STDDEV_SAMP(y_raw) / SQRT(COUNT(*)), 3) AS se_raw_usd,\n  ROUND(STDDEV_SAMP(y_cuped) / SQRT(COUNT(*)), 3) AS se_cuped_usd\nFROM user_adjusted\nGROUP BY variant\nORDER BY variant;",
-        "expectedOutput": [
-          {
-            "variant": "Control (A)",
-            "n_exposed_users": "50,042 (SRM p = 0.79 OK)",
-            "mean_cuped_usd": "$24.35",
-            "se_raw_usd": "±$0.480",
-            "se_cuped_usd": "±$0.265 (-45% Error Estándar)"
-          },
-          {
-            "variant": "Tratamiento (B)",
-            "n_exposed_users": "49,958 (SRM p = 0.79 OK)",
-            "mean_cuped_usd": "$25.12 (+$0.77 Lift)",
-            "se_raw_usd": "±$0.492",
-            "se_cuped_usd": "±$0.270 (IC 95%: [+$0.24, +$1.30] · p = 0.004)"
-          }
-        ]
-      }
-    ]
-  },
-  "checks": [
-    {
-      "id": "c1",
-      "type": "mcq",
-      "prompt": "Lanzas un experimento A/B con asignación teórica 50% Control / 50% Tratamiento sobre 200,000 usuarios. Al revisar la tabla de exposiciones observas 103,400 usuarios en Control (51.7%) y 96,600 en Tratamiento (48.3%), con un p-valor de SRM de `0.000001`. Sin embargo, la conversión de los usuarios en Tratamiento parece un +6% mayor. ¿Qué decisión debes tomar?",
-      "options": [
-        {
-          "id": "a",
-          "text": "Declarar el experimento inválido de inmediato por Sample Ratio Mismatch (SRM) y pedir a Ingeniería (DE) investigar qué bug técnico está perdiendo el 3.4% de los usuarios en Tratamiento antes de mirar cualquier métrica de conversión.",
-          "correct": true,
-          "feedback": "Exacto. Un SRM severo demuestra que faltan miles de usuarios en una rama de forma no aleatoria (por ejemplo, usuarios con conexiones lentas donde el nuevo código falló al cargar). Como solo sobrevivieron los usuarios con mejores dispositivos en Tratamiento, el +6% de conversión es un espejismo por sesgo de supervivencia."
-        },
-        {
-          "id": "b",
-          "text": "Lanzar la variante de Tratamiento a producción porque +6% es un aumento muy grande y 96,600 usuarios ya son suficientes.",
-          "correct": false,
-          "feedback": "Cuando hay SRM, los dos grupos dejaron de ser comparables. Tener muchos usuarios no corrige un sesgo de selección en la asignación."
-        },
-        {
-          "id": "c",
-          "text": "Borrar al azar 6,800 usuarios del grupo Control en SQL para que ambos grupos queden en 96,600 y dar por válido el experimento.",
-          "correct": false,
-          "feedback": "Borrar usuarios aleatorios de Control no recupera a los usuarios específicos (ej. móviles lentos o un navegador concreto) que se perdieron sistemáticamente en Tratamiento."
-        }
-      ],
-      "explanation": "Exacto. Un SRM severo demuestra que faltan miles de usuarios en una rama de forma no aleatoria (por ejemplo, usuarios con conexiones lentas donde el nuevo código falló al cargar). Como solo sobrevivieron los usuarios con mejores dispositivos en Tratamiento, el +6% de conversión es un espejismo por sesgo de supervivencia."
-    },
-    {
-      "id": "c2",
-      "type": "mcq",
-      "prompt": "Diseñas un experimento 50/50 y tras una semana observas 100 000 usuarios en Control y 96 500 en Tratamiento (p-valor de chi-cuadrado = 0.00001). Sin embargo, el ingreso por usuario en Tratamiento parece un 4 % mayor. ¿Qué decisión debes tomar?",
-      "options": [
-        {
-          "id": "a",
-          "text": "Invalidar el análisis causal, declarar alerta de SRM y buscar el bug técnico (por ejemplo, fallos de carga en navegadores lentos de la rama B).",
-          "correct": true,
-          "feedback": "Correcto: con SRM confirmado, las dos ramas ya no son comparables porque faltan selectivamente ciertos perfiles de usuarios."
-        },
-        {
-          "id": "b",
-          "text": "Ignorar la diferencia de conteos porque el ingreso por usuario divide entre N y corrige el tamaño de muestra.",
-          "correct": false,
-          "feedback": "Incorrecto: si los usuarios que se perdieron en B eran los de conexiones más lentas o menor gasto, el promedio de los que quedan queda sesgado al alza."
-        },
-        {
-          "id": "c",
-          "text": "Borrar al azar 3 500 usuarios de Control para igualar los conteos.",
-          "correct": false,
-          "feedback": "Incorrecto: eliminar usuarios al azar en Control no corrige el sesgo de selección no aleatorio que ocurrió en Tratamiento."
-        }
-      ],
-      "explanation": "Un fallo de SRM demuestra que el mecanismo de aleatorización o captura perdió sujetos de manera asimétrica, rompiendo el supuesto de independencia del experimento."
-    },
-    {
-      "id": "c3",
-      "type": "mcq",
-      "prompt": "Quieres aplicar CUPED sobre el gasto durante los 14 días del experimento ($Y$). ¿Cuál de las siguientes variables es una covariable $X$ válida?",
-      "options": [
-        {
-          "id": "a",
-          "text": "El gasto del mismo usuario durante los 14 días inmediatamente anteriores al inicio del experimento.",
-          "correct": true,
-          "feedback": "Correcto: al haberse registrado antes de asignar la variante, tiene alta correlación con Y y su media poblacional es idéntica entre ramas."
-        },
-        {
-          "id": "b",
-          "text": "El número de sesiones del usuario durante la semana del experimento.",
-          "correct": false,
-          "feedback": "Incorrecto: las sesiones durante el experimento pueden verse afectadas por la variante B; usarlas como covariable distorsiona el efecto."
-        },
-        {
-          "id": "c",
-          "text": "Un número aleatorio generado en el momento de la consulta.",
-          "correct": false,
-          "feedback": "Incorrecto: una variable con correlación r = 0 con Y produce (1 - r²) = 1 y no reduce nada la varianza."
-        }
-      ],
-      "explanation": "La eficacia de CUPED proviene de elegir la misma métrica medida en la ventana inmediata previa a la aleatorización, donde la correlación con el resultado es máxima."
-    }
-  ],
-  "practice": {
-    "type": "sql",
-    "title": "Reducción de varianza experimental con CUPED",
-    "language": "sql",
-    "prompt": "Aplica el ajuste CUPED sobre `experiment_assignments` para el experimento `experiment_id = 1`: calcula `theta` (`COVAR_SAMP(post_experiment_spend_usd, pre_experiment_spend_usd) / VAR_SAMP(pre_experiment_spend_usd)`), la métrica ajustada `y_cuped` y devuelve por `variant`: `usuarios`, `media_ajustada_usd` y `error_estandar_cuped`.",
-    "starterCode": "WITH stats_global AS (\n  SELECT\n    -- TODO: Calcula theta como COVAR_SAMP(post_experiment_spend_usd, pre_experiment_spend_usd) / NULLIF(VAR_SAMP(pre_experiment_spend_usd), 0)\n    0.0 AS theta,\n    AVG(pre_experiment_spend_usd) AS mean_pre\n  FROM experiment_assignments\n  WHERE experiment_id = 1\n),\ncuped_users AS (\n  SELECT\n    u.variant,\n    u.post_experiment_spend_usd - s.theta * (u.pre_experiment_spend_usd - s.mean_pre) AS y_cuped\n  FROM experiment_assignments u\n  CROSS JOIN stats_global s\n  WHERE u.experiment_id = 1\n)\nSELECT\n  variant,\n  COUNT(*) AS usuarios,\n  ROUND(AVG(y_cuped), 2) AS media_ajustada_usd,\n  ROUND(STDDEV_SAMP(y_cuped) / SQRT(COUNT(*)), 3) AS error_estandar_cuped\nFROM cuped_users\nGROUP BY variant\nORDER BY variant;",
-    "expected": "WITH stats_global AS (\n  SELECT\n    COVAR_SAMP(post_experiment_spend_usd, pre_experiment_spend_usd)\n      / NULLIF(VAR_SAMP(pre_experiment_spend_usd), 0) AS theta,\n    AVG(pre_experiment_spend_usd) AS mean_pre\n  FROM experiment_assignments\n  WHERE experiment_id = 1\n),\ncuped_users AS (\n  SELECT\n    u.variant,\n    u.post_experiment_spend_usd - s.theta * (u.pre_experiment_spend_usd - s.mean_pre) AS y_cuped\n  FROM experiment_assignments u\n  CROSS JOIN stats_global s\n  WHERE u.experiment_id = 1\n)\nSELECT\n  variant,\n  COUNT(*) AS usuarios,\n  ROUND(AVG(y_cuped), 2) AS media_ajustada_usd,\n  ROUND(STDDEV_SAMP(y_cuped) / SQRT(COUNT(*)), 3) AS error_estandar_cuped\nFROM cuped_users\nGROUP BY variant\nORDER BY variant;",
-    "orderMatters": true,
-    "hints": [
-      "En `stats_global`, reemplaza `0.0 AS theta` por `COVAR_SAMP(post_experiment_spend_usd, pre_experiment_spend_usd) / NULLIF(VAR_SAMP(pre_experiment_spend_usd), 0) AS theta`.",
-      "La covariable `pre_experiment_spend_usd` fue medida antes de la asignación y reduce sustancialmente el error estándar.",
-      "Mantén `ORDER BY variant` para mostrar `control` y `treatment` en orden determinista."
+        title: 'Paso 2: Transformación CUPED y contracción de la desviación estándar',
+        explanation: 'Calculamos theta = COVAR_SAMP(Y, X) / VAR_SAMP(X) sobre los 1,600 usuarios combinados (theta = 0.6551) y comparamos la dispersión antes y después del ajuste.',
+        rationale: 'Calculamos theta = COVAR_SAMP(Y, X) / VAR_SAMP(X) sobre los 1,600 usuarios combinados (theta = 0.6551) y comparamos la dispersión antes y después del ajuste.',
+        code: `WITH params AS (
+  SELECT
+    experiment_id,
+    AVG(pre_experiment_spend_usd) AS mean_x,
+    COVAR_SAMP(post_experiment_spend_usd, pre_experiment_spend_usd)
+      / VAR_SAMP(pre_experiment_spend_usd) AS theta
+  FROM experiment_assignments
+  WHERE experiment_id = 1
+  GROUP BY 1
+),
+ajustado AS (
+  SELECT
+    a.variant,
+    a.post_experiment_spend_usd AS y,
+    p.theta,
+    a.post_experiment_spend_usd - p.theta * (a.pre_experiment_spend_usd - p.mean_x) AS y_cuped
+  FROM experiment_assignments a
+  JOIN params p USING (experiment_id)
+)
+SELECT
+  variant,
+  ROUND(AVG(theta), 4) AS theta_optimo,
+  ROUND(AVG(y), 2) AS media_cruda,
+  ROUND(AVG(y_cuped), 2) AS media_cuped,
+  ROUND(STDDEV_SAMP(y), 2) AS sd_cruda,
+  ROUND(STDDEV_SAMP(y_cuped), 2) AS sd_cuped
+FROM ajustado
+GROUP BY variant
+ORDER BY variant;`,
+        output: `variant   | theta_optimo | media_cruda | media_cuped | sd_cruda | sd_cuped
+----------+--------------+-------------+-------------+----------+---------
+control   | 0.6551       | 61.49       | 61.50       | 18.43    | 4.64
+treatment | 0.6551       | 68.40       | 68.39       | 18.14    | 4.61`,
+        takeaway: 'El lift ajustado (+6.89 USD) permanece insesgado, mientras la desviación estándar por brazo cae de ~18.3 USD a ~4.6 USD (una reducción del 75 % en el error estándar).',
+      },
     ],
-    "solution": "WITH stats_global AS (\n  SELECT\n    COVAR_SAMP(post_experiment_spend_usd, pre_experiment_spend_usd)\n      / NULLIF(VAR_SAMP(pre_experiment_spend_usd), 0) AS theta,\n    AVG(pre_experiment_spend_usd) AS mean_pre\n  FROM experiment_assignments\n  WHERE experiment_id = 1\n),\ncuped_users AS (\n  SELECT\n    u.variant,\n    u.post_experiment_spend_usd - s.theta * (u.pre_experiment_spend_usd - s.mean_pre) AS y_cuped\n  FROM experiment_assignments u\n  CROSS JOIN stats_global s\n  WHERE u.experiment_id = 1\n)\nSELECT\n  variant,\n  COUNT(*) AS usuarios,\n  ROUND(AVG(y_cuped), 2) AS media_ajustada_usd,\n  ROUND(STDDEV_SAMP(y_cuped) / SQRT(COUNT(*)), 3) AS error_estandar_cuped\nFROM cuped_users\nGROUP BY variant\nORDER BY variant;",
-    "solutionExplanation": "Calcula el coeficiente `theta` pooled sobre los usuarios del experimento `experiment_id = 1` y resta `theta * (pre - mean_pre)` a `post_experiment_spend_usd`, reduciendo el error estándar sin sesgar el efecto del tratamiento."
   },
-  "roleNotes": {
-    "de": "Implementa asignación determinista sin estado mediante hashing rápido (`MurmurHash3(user_id || experiment_salt) % 10000`) para que el usuario vea siempre la misma variante en web y móvil. Registra el evento inmutable de primera exposición (`first_exposed_at`) y construye un pipeline automatizado que congela las covariables pre-experimento (`pre_14d_revenue`, `pre_14d_sessions`) estrictamente antes de ese milisegundo.",
-    "da": "Calcula el tamaño muestral requerido según la varianza histórica y el MDE antes de encender el experimento. Aplica el ajuste CUPED (`Y - θ(X - μ_X)`), calcula intervalos de confianza al 95% y aplica correcciones de pruebas múltiples (Benjamini-Hochberg / Holm) cuando hay varias ramas. Audita efectos heterogéneos por segmento (nuevos vs. recurrentes, iOS vs. Android) para descartar efectos de novedad o regresiones ocultas.",
-    "bi": "Diseña el Scorecard Oficial de Experimentación mostrando siempre el Intervalo de Confianza al 95% (`[LI, LS]`) en lugar de porcentajes puntuales engañosos. Bloquea visualmente las conclusiones en el dashboard si el experimento aún no ha alcanzado el tamaño muestral comprometido o si la alerta de SRM está activa. Presenta las Métricas Primarias junto al panel semafórico de Métricas Guardia (latencia, reembolsos, churn) para decisiones ejecutivas Go / No-Go."
-  },
-  "summary": [
-    "Si la proporción real de usuarios entre ramas difiere de la esperada (SRM), el experimento es inválido.",
-    "Detener un test en cuanto p < 0.05 por primera vez multiplica la tasa de falsos positivos.",
-    "CUPED resta la parte del resultado explicada por la métrica pre-experimento sin sesgar el efecto medio.",
-    "Reducir la varianza con una covariable correlacionada acorta la duración necesaria del experimento."
-  ],
-  "flashcards": [
+  checks: [
     {
-      "id": "fc-da3-ab-01",
-      "front": "¿Qué indica un p-valor < 0.001 en una prueba de Sample Ratio Mismatch (SRM)?",
-      "back": "Que la asignación o el registro de telemetría entre Control y Tratamiento está sesgado; las métricas del experimento no deben interpretarse."
+      id: 'c1',
+      type: 'mcq',
+      prompt: 'En un experimento 50/50 con 1,600 usuarios asignados observas 980 en control y 620 en tratamiento (chi2 = 81.0, p < 0.0001), pero la métrica primaria muestra +5.94 USD en tratamiento. ¿Cuál es la decisión correcta?',
+      options: [
+        {
+          id: 'a',
+          text: 'Desplegar el tratamiento porque el tamaño de muestra supera los 1,000 usuarios y el efecto positivo es grande.',
+          correct: false,
+          feedback: 'Incorrecto. Un tamaño muestral grande no corrige el sesgo de selección cuando falla la aleatorización.',
+        },
+        {
+          id: 'b',
+          text: 'Invalidar el experimento por Sample Ratio Mismatch (SRM) y auditar la tubería de asignación o telemetría antes de mirar efectos.',
+          correct: true,
+          feedback: 'Correcto. Un chi2 = 81.0 evidencia que los grupos dejaron de ser comparables y cualquier estimación causal está contaminada.',
+        },
+        {
+          id: 'c',
+          text: 'Aplicar CUPED sobre el experimento para corregir matemáticamente el desbalance de tamaños muestrales.',
+          correct: false,
+          feedback: 'Incorrecto. CUPED reduce varianza usando covariables pre-experimento, pero no repara un sesgo de supervivencia o telemetría no aleatorio.',
+        },
+        {
+          id: 'd',
+          text: 'Eliminar al azar 360 usuarios del grupo control para igualar ambos brazos en 620 usuarios.',
+          correct: false,
+          feedback: 'Incorrecto. Submuestrear el brazo control no elimina el mecanismo de pérdida selectiva que afectó al brazo de tratamiento.',
+        },
+      ],
+      correctOptionId: 'b',
+      explanation: 'Cuando la prueba chi-cuadrado de SRM rechaza la proporción diseñada (p < 0.001), existe pérdida selectiva o sesgo de enrutamiento que invalida la inferencia causal.',
     },
     {
-      "id": "fc-da3-ab-02",
-      "front": "¿Qué requisito debe cumplir la covariable X en CUPED para no introducir sesgo en la estimación del tratamiento?",
-      "back": "Debe medirse estrictamente ANTES de la asignación al experimento (o ser completamente independiente del tratamiento) para que E[X_B] = E[X_A]."
+      id: 'c2',
+      type: 'mcq',
+      prompt: '¿Qué requisito matemático debe cumplir la covariable X en CUPED para que el estimador ajustado conserve insesgadez respecto al efecto causal verdadero?',
+      options: [
+        {
+          id: 'a',
+          text: 'Debe medirse estrictamente antes de la asignación al experimento o ser invariante al tratamiento.',
+          correct: true,
+          feedback: 'Correcto. Si X es previa a la asignación, la aleatorización garantiza E[X_T - X_C] = 0 y el ajuste no introduce sesgo.',
+        },
+        {
+          id: 'b',
+          text: 'Debe tener distribución exactamente normal con media cero y varianza unitaria.',
+          correct: false,
+          feedback: 'Incorrecto. La insesgadez de CUPED depende de la independencia respecto a la asignación, no de la normalidad exacta de X.',
+        },
+        {
+          id: 'c',
+          text: 'Debe calcularse sumando las compras realizadas durante la primera semana posterior al inicio del experimento.',
+          correct: false,
+          feedback: 'Incorrecto. Usar datos post-asignación contamina X con el efecto del tratamiento y produce sesgo de atenuación.',
+        },
+        {
+          id: 'd',
+          text: 'Debe estimarse con una pendiente theta distinta para el grupo control y para el grupo tratamiento.',
+          correct: false,
+          feedback: 'Incorrecto. El coeficiente theta y la media basal deben ser comunes a toda la muestra para preservar una transformación lineal idéntica.',
+        },
+      ],
+      correctOptionId: 'a',
+      explanation: 'La insesgadez de CUPED descansa en que el tratamiento no afecte a la covariable X, lo que asegura que la diferencia esperada de X entre brazos sea cero.',
     },
     {
-      "id": "fc-da3-ab-03",
-      "front": "¿Cuánto se reduce la varianza de Y_cuped si la correlación entre la métrica pre y post experimento es r = 0.8?",
-      "back": "La varianza se multiplica por (1 - r²) = (1 - 0.64) = 0.36, es decir, una reducción del 64 % en la varianza (y en el tamaño muestral requerido)."
-    }
-  ],
-  "glossaryTerms": [
-    "c23-srm-ab-testing",
-    "c24-cuped-variance"
-  ],
-  "sources": [
-    {
-      "title": "Deng, Xu, Kohavi & Walker (WSDM 2013) — Improving the Sensitivity of Online Controlled Experiments by Utilizing Pre-Experiment Data (CUPED)",
-      "url": "https://exp-platform.com/Documents/2013-02-CUPED-ImprovingSensitivityOfControlledExperiments.pdf",
-      "publisher": "Microsoft Research / Experimentation Platform",
-      "accessed": "2026-10-29",
-      "supports": "Derivación matemática del estimador CUPED y factor de reducción de varianza (1 - r²)."
+      id: 'c3',
+      type: 'mcq',
+      prompt: 'Si la correlación lineal entre el gasto pre-experimento X y el gasto post-experimento Y es r = 0.80, ¿en qué porcentaje reduce CUPED la varianza del estimador de diferencia de medias?',
+      options: [
+        {
+          id: 'a',
+          text: 'En un 20 %, porque la varianza residual es proporcional a 1 - r.',
+          correct: false,
+          feedback: 'Incorrecto. El factor de contracción de varianza depende del cuadrado de la correlación (r^2), no de r lineal.',
+        },
+        {
+          id: 'b',
+          text: 'En un 64 %, porque la fracción de varianza explicada por la covariable lineal es r^2 = 0.64.',
+          correct: true,
+          feedback: 'Correcto. Como Var(Delta_CUPED) = Var(Delta_crudo) * (1 - r^2), con r = 0.80 la varianza queda en 36 % de la original, reduciéndose un 64 %.',
+        },
+        {
+          id: 'c',
+          text: 'En un 80 %, igual al valor nominal del coeficiente de correlación de Pearson.',
+          correct: false,
+          feedback: 'Incorrecto. Confundes el coeficiente de correlación lineal r = 0.80 con el coeficiente de determinación r^2 = 0.64.',
+        },
+        {
+          id: 'd',
+          text: 'No reduce la varianza a menos que r supere el umbral crítico de 0.95.',
+          correct: false,
+          feedback: 'Incorrecto. Cualquier correlación no nula reduce la varianza en proporción a r^2.',
+        },
+      ],
+      correctOptionId: 'b',
+      explanation: 'Al proyectar Y sobre X con la pendiente de mínimos cuadrados, la varianza residual se multiplica por (1 - r^2); para r = 0.80, r^2 = 0.64, logrando un 64 % de reducción de varianza.',
     },
-    {
-      "title": "Fabijan et al. (KDD 2019) — Diagnosing Sample Ratio Mismatch in Online Controlled Experiments",
-      "url": "https://exp-platform.com/srm/",
-      "publisher": "Experimentation Platform",
-      "accessed": "2026-10-29",
-      "supports": "Taxonomía de causas técnicas de Sample Ratio Mismatch y protocolo de diagnóstico con chi-cuadrado."
-    },
-    {
-      "title": "Statsig Documentation — CUPED Variance Reduction and Sequential Testing",
-      "url": "https://docs.statsig.com/stats-engine/methodologies/cuped",
-      "publisher": "Statsig",
-      "accessed": "2026-10-29",
-      "supports": "Aplicación práctica de ajuste por covariables pre-experimentales y control de falsos positivos."
-    }
   ],
-  "aiNotes": "Recalca los dos errores graves en pruebas A/B: mirar el p-valor cada mañana para detener el test cuando baja de 0.05 (peeking) y usar una covariable medida después del inicio del test en CUPED.",
-  "needsReview": true,
-  "legacyId": "l14-ab-testing-cuped",
-  "legacyOrder": 14,
-  "stageId": "stage-5",
-  "subtitle": "Control de sesgos de asignación y uso de covariables previas para reducir la varianza experimental.",
-  "goal": "Auditar la validez de un test A/B mediante Sample Ratio Mismatch (SRM), evitar falsos positivos por Peeking, proteger métricas guardia y aplicar reducción de varianza CUPED en SQL.",
-  "pipelineChallenge": {
-    "title": "Flujo de experimentación A/B con CUPED",
-    "scenario": "Ordena la secuencia correcta de pasos técnicos y estadísticos entre DE, DA y BI para ejecutar y evaluar un experimento A/B sin sesgos post-tratamiento ni falsos positivos.",
-    "steps": [
-      {
-        "id": "step-1",
-        "label": "1. Asignación determinista con MurmurHash3 y congelamiento de covariables preexperimento",
-        "role": "DE",
-        "detail": "Asignar variantes sin estado con `hash(user_id + salt)` y guardar la foto inmutable de métricas de los 14 días previos al primer evento de exposición."
-      },
-      {
-        "id": "step-2",
-        "label": "2. Auditoría automática de proporción muestral (SRM chi-cuadrado)",
-        "role": "DE",
-        "detail": "Verificar que la proporción real de usuarios expuestos en Control vs. Tratamiento no se desvíe significativamente del 50/50 esperado (`p_srm >= 0.001`)."
-      },
-      {
-        "id": "step-3",
-        "label": "3. Reducción de varianza CUPED y evaluación de intervalos de confianza",
-        "role": "DA",
-        "detail": "Aplicar `Y_cuped = Y - θ(X_pre - μ_X)` una vez alcanzado el tamaño muestral y evaluar significancia en la métrica primaria y en los Guardrails."
-      },
-      {
-        "id": "step-4",
-        "label": "4. Publicación en el tablero de experimentación para decisión ejecutiva",
-        "role": "BI",
-        "detail": "Exponer el Lift ajustado con su barra de Intervalo de Confianza al 95%, el estado verde de SRM y el cumplimiento de todas las métricas guardia."
-      }
+  practice: {
+    type: 'sql',
+    title: 'Práctica: Evaluación CUPED en los 5 experimentos válidos de Mercado Brisa',
+    prompt: 'Filtra únicamente los experimentos sin alerta SRM (chi2 < 10.83, es decir experiment_id IN (1, 2, 3, 4, 5)), calcula por experimento la pendiente theta = COVAR_SAMP(post_experiment_spend_usd, pre_experiment_spend_usd) / VAR_SAMP(pre_experiment_spend_usd) y la media global de pre_experiment_spend_usd, y devuelve exactamente las columnas: experiment_code, lift_crudo_usd, lift_cuped_usd, ee_crudo, ee_cuped y z_cuped (todas redondeadas a 2 decimales), ordenadas por experiment_id ascendente.',
+    starterCode: `WITH params AS (
+  SELECT
+    experiment_id,
+    AVG(pre_experiment_spend_usd) AS mean_x,
+    COVAR_SAMP(post_experiment_spend_usd, pre_experiment_spend_usd)
+      / VAR_SAMP(pre_experiment_spend_usd) AS theta
+  FROM experiment_assignments
+  WHERE experiment_id IN (1, 2, 3, 4, 5)
+  GROUP BY 1
+)
+-- Completa la proyección de y_cuped por usuario y agrega por experimento
+SELECT
+  e.experiment_code,
+  0.00 AS lift_crudo_usd,
+  0.00 AS lift_cuped_usd
+FROM experiments e
+WHERE e.experiment_id IN (1, 2, 3, 4, 5)
+ORDER BY e.experiment_id;`,
+    hints: [
+      'En una CTE intermedia (ajustado), une experiment_assignments con params usando experiment_id y calcula y_cuped = post_experiment_spend_usd - theta * (pre_experiment_spend_usd - mean_x).',
+      'En una CTE por_brazo agrupada por experiment_id, calcula las medias de control y treatment tanto para y como para y_cuped, y suma las varianzas muestrales divididas por el conteo de cada brazo: VAR_SAMP(...) / COUNT(...).',
+      'En el SELECT final une con experiments y calcula ROUND(mt_cruda - mc_cruda, 2) AS lift_crudo_usd, ROUND(mt_cuped - mc_cuped, 2) AS lift_cuped_usd, ROUND(SQRT(v_cruda), 2) AS ee_crudo, ROUND(SQRT(v_cuped), 2) AS ee_cuped y ROUND((mt_cuped - mc_cuped) / SQRT(v_cuped), 2) AS z_cuped.',
     ],
-    "explanation": "Si se salta el congelamiento pre-exposición o el chequeo de SRM antes de calcular el Lift, se corre el riesgo de aprobar cambios rotos técnicamente o sesgados por variables afectadas por el propio tratamiento."
+    solution: `WITH params AS (
+  SELECT
+    experiment_id,
+    AVG(pre_experiment_spend_usd) AS mean_x,
+    COVAR_SAMP(post_experiment_spend_usd, pre_experiment_spend_usd)
+      / VAR_SAMP(pre_experiment_spend_usd) AS theta
+  FROM experiment_assignments
+  WHERE experiment_id IN (1, 2, 3, 4, 5)
+  GROUP BY 1
+),
+ajustado AS (
+  SELECT
+    a.experiment_id,
+    a.variant,
+    a.post_experiment_spend_usd AS y,
+    a.post_experiment_spend_usd - p.theta * (a.pre_experiment_spend_usd - p.mean_x) AS y_cuped
+  FROM experiment_assignments a
+  JOIN params p USING (experiment_id)
+),
+por_brazo AS (
+  SELECT
+    experiment_id,
+    AVG(CASE WHEN variant = 'control' THEN y END) AS mc_cruda,
+    AVG(CASE WHEN variant = 'treatment' THEN y END) AS mt_cruda,
+    VAR_SAMP(CASE WHEN variant = 'control' THEN y END) / COUNT(CASE WHEN variant = 'control' THEN 1 END)
+      + VAR_SAMP(CASE WHEN variant = 'treatment' THEN y END) / COUNT(CASE WHEN variant = 'treatment' THEN 1 END) AS v_cruda,
+    AVG(CASE WHEN variant = 'control' THEN y_cuped END) AS mc_cuped,
+    AVG(CASE WHEN variant = 'treatment' THEN y_cuped END) AS mt_cuped,
+    VAR_SAMP(CASE WHEN variant = 'control' THEN y_cuped END) / COUNT(CASE WHEN variant = 'control' THEN 1 END)
+      + VAR_SAMP(CASE WHEN variant = 'treatment' THEN y_cuped END) / COUNT(CASE WHEN variant = 'treatment' THEN 1 END) AS v_cuped
+  FROM ajustado
+  GROUP BY 1
+)
+SELECT
+  e.experiment_code,
+  ROUND(b.mt_cruda - b.mc_cruda, 2) AS lift_crudo_usd,
+  ROUND(b.mt_cuped - b.mc_cuped, 2) AS lift_cuped_usd,
+  ROUND(SQRT(b.v_cruda), 2) AS ee_crudo,
+  ROUND(SQRT(b.v_cuped), 2) AS ee_cuped,
+  ROUND((b.mt_cuped - b.mc_cuped) / SQRT(b.v_cuped), 2) AS z_cuped
+FROM por_brazo b
+JOIN experiments e USING (experiment_id)
+ORDER BY e.experiment_id;`,
+    solutionExplanation: 'Al estimar theta y mean_x por experimento y restar la componente lineal pre-asignación, el error estándar cae de ~0.91 USD a 0.23 USD en los cinco experimentos balanceados, multiplicando por cuatro el estadístico z sin alterar la magnitud del efecto.',
+    expectedOutputTable: [
+      { experiment_code: 'EXP-CHECKOUT-1STEP', lift_crudo_usd: 6.91, lift_cuped_usd: 6.88, ee_crudo: 0.91, ee_cuped: 0.23, z_cuped: 29.77 },
+      { experiment_code: 'EXP-FREE-SHIP-45', lift_crudo_usd: 6.37, lift_cuped_usd: 6.27, ee_crudo: 0.92, ee_cuped: 0.23, z_cuped: 27.15 },
+      { experiment_code: 'EXP-SUB-BUNDLE', lift_crudo_usd: 6.61, lift_cuped_usd: 6.57, ee_crudo: 0.9, ee_cuped: 0.23, z_cuped: 28.47 },
+      { experiment_code: 'EXP-QUIZ-ORIGEN', lift_crudo_usd: 6.57, lift_cuped_usd: 6.53, ee_crudo: 0.91, ee_cuped: 0.23, z_cuped: 28.17 },
+      { experiment_code: 'EXP-UPSELL-MOLINO', lift_crudo_usd: 6.46, lift_cuped_usd: 6.63, ee_crudo: 0.9, ee_cuped: 0.23, z_cuped: 29.02 },
+    ],
   },
-  "relatedLessons": [
+  pipelineChallenge: {
+    id: 'pipeline-ab-cuped',
+    title: 'Secuencia de auditoría y análisis A/B con CUPED',
+    prompt: 'Ordena las etapas técnicas para evaluar un experimento controlado en producción sin sesgos de selección ni contaminación post-tratamiento.',
+    steps: [
+      {
+        id: 'definir-metricas',
+        text: 'Definir hipótesis, métrica primaria (OEC), métricas guardrail y tamaño muestral requerido.',
+        label: 'Definir hipótesis, métrica primaria (OEC) y guardrails',
+        role: 'Diseño experimental',
+        detail: 'Fija la diferencia mínima detectable (MDE) y los umbrales de protección antes de abrir tráfico.',
+      },
+      {
+        id: 'congelar-covariable',
+        text: 'Congelar la covariable basal pre-experimento X antes del disparo de la asignación aleatoria.',
+        label: 'Congelar covariable pre-experimento X',
+        role: 'Ingeniería de características',
+        detail: 'Garantiza que X sea estrictamente independiente de la variante asignada.',
+      },
+      {
+        id: 'auditar-srm',
+        text: 'Ejecutar la prueba chi-cuadrado de Sample Ratio Mismatch (SRM) sobre los conteos observados por brazo.',
+        label: 'Auditar Sample Ratio Mismatch (SRM)',
+        role: 'Control de calidad',
+        detail: 'Si chi2 > 10.83 (p < 0.001), se bloquea el análisis causal y se investiga la telemetría.',
+      },
+      {
+        id: 'estimar-cuped',
+        text: 'Estimar la pendiente global theta = Cov(Y, X) / Var(X) y transformar la métrica ajustada Y_CUPED.',
+        label: 'Calcular ajuste lineal CUPED',
+        role: 'Inferencia estadística',
+        detail: 'Reduce la varianza muestral en un factor (1 - r^2) manteniendo insesgado el estimador.',
+      },
+      {
+        id: 'dictamen-guardrails',
+        text: 'Contrastar el intervalo de confianza CUPED y verificar que ninguna métrica guardrail se degrade.',
+        label: 'Contrastación de hipótesis y validación de guardrails',
+        role: 'Decisión de producto',
+        detail: 'Autoriza el despliegue solo si el lift primario es significativo y los guardrails están sanos.',
+      },
+    ],
+    correctOrder: [
+      'definir-metricas',
+      'congelar-covariable',
+      'auditar-srm',
+      'estimar-cuped',
+      'dictamen-guardrails',
+    ],
+    hint: 'Recuerda que la covariable X se congela antes de asignar variantes, y el filtro SRM siempre precede a cualquier cálculo de efecto o ajuste CUPED.',
+    AccessExplanation: 'El flujo riguroso fija primero diseño y covariable previa, valida la integridad del reparto mediante SRM, aplica reducción de varianza CUPED y finalmente contrasta el efecto junto con las métricas guardrail.',
+  },
+  roleNotes: {
+    da: 'Como analista de datos, tu primera responsabilidad en un comité de experimentación es bloquear lecturas sobre pruebas con SRM activo y automatizar el ajuste CUPED en SQL para acortar ciclos de aprendizaje.',
+    ds: 'Desde ciencia de datos, puedes extender CUPED lineal hacia regresión multivariable o estimadores cross-fitted con gradient boosting (MLRATE), cuidando siempre que las predicciones se entrenen fuera de muestra.',
+    de: 'Como ingeniero de datos, debes materializar instantáneas inmutables de gasto y actividad pre-asignación por usuario; si la tabla de atributos se sobrescribe tras la asignación, CUPED introducirá sesgo causal.',
+  },
+  summary: [
+    'La prueba chi-cuadrado de Sample Ratio Mismatch verifica que el tráfico observado respete la proporción diseñada antes de leer métricas.',
+    'Las métricas guardrail protegen indicadores como reembolsos o latencia frente a efectos colaterales de una variante ganadora.',
+    'El estimador CUPED resta la proyección lineal de una covariable pre-experimento y contrae la varianza en (1 - r^2).',
+    'Para preservar la insesgadez causal, la covariable basal debe anteceder a la asignación y theta debe estimarse sobre la muestra combinada.',
+  ],
+  flashcards: [
     {
-      "id": "l6-metrics-simpson",
-      "reason": "Si un experimento no está estratificado o sufre SRM en un dispositivo, la Paradoja de Simpson puede invertir el ganador aparente."
+      id: 'f1',
+      front: '¿Cuándo se declara alerta de Sample Ratio Mismatch (SRM) en un diseño 50/50?',
+      back: 'Cuando el estadístico chi-cuadrado de bondad de ajuste supera el umbral crítico (por ejemplo chi2 > 10.83 para p < 0.001), indicando pérdida selectiva o fallo de asignación.',
     },
     {
-      "id": "l13-cohorts-retention-ltv",
-      "reason": "Las pruebas A/B sobre onboarding y precios se evalúan midiendo el impacto causal sobre las curvas de retención M1/M3 de la cohorte expuesta."
+      id: 'f2',
+      front: '¿Cuál es la fórmula de la métrica ajustada por usuario en CUPED?',
+      back: 'Y_CUPED = Y - theta * (X - media_X), donde theta = Cov(Y, X) / Var(X) se estima sobre la muestra combinada del experimento.',
     },
     {
-      "id": "l15-bi-tufte-code",
-      "reason": "Aprende a representar intervalos de confianza, metas y métricas guardia con máxima claridad visual sin ruido gráfico."
-    }
-  ]
+      id: 'f3',
+      front: '¿Por qué una covariable post-asignación invalida el ajuste CUPED?',
+      back: 'Porque si el tratamiento afecta a X, la diferencia esperada E[X_T - X_C] deja de ser cero y restar theta*(X - media_X) absorbe parte del efecto causal verdadero.',
+    },
+    {
+      id: 'f4',
+      front: '¿A cuántos usuarios de un análisis crudo equivale una muestra de 1,600 usuarios cuando r_XY = 0.9678?',
+      back: 'Como la varianza cae en (1 - r^2) = 0.0634, la precisión equivale a multiplicar el tamaño muestral efectivo por 1 / 0.0634 ≈ 15.8 veces (unos 25,200 usuarios).',
+    },
+  ],
+  glossaryTerms: [
+    'metrica-guardrail',
+    'reduccion-varianza-preexperimento',
+  ],
+  relatedLessons: [
+    'da3-experimentos-02-comparaciones-multiples-bh',
+    'da3-experimentos-03-pruebas-secuenciales-msprt',
+    'da3-experimentos-04-enfoque-bayesiano-ab',
+  ],
+  sources: [
+    {
+      title: 'Improving the Sensitivity of Online Controlled Experiments by Utilizing Pre-Experiment Data (WSDM 2013)',
+      url: 'https://exp-platform.com/Documents/2013-02-CUPED-ImprovingSensitivityOfControlledExperiments.pdf',
+      publisher: 'Microsoft Research / ACM WSDM',
+      accessed: '2026-10-29',
+      supports: 'Derivación matemática de CUPED, demostración de insesgadez y reducción de varianza por factor (1 - r^2).',
+    },
+    {
+      title: 'Trustworthy Online Controlled Experiments: A Practical Guide to A/B Testing',
+      url: 'https://experimentguide.com/',
+      publisher: 'Cambridge University Press',
+      accessed: '2026-10-29',
+      supports: 'Diagnóstico de Sample Ratio Mismatch (SRM), causas operativas de desbalance y diseño de métricas guardrail.',
+    },
+    {
+      title: 'Statsig Documentation — CUPED Variance Reduction Methodology',
+      url: 'https://docs.statsig.com/stats-engine/methodologies/cuped',
+      publisher: 'Statsig',
+      accessed: '2026-10-29',
+      supports: 'Implementación productiva del ajuste lineal pre-experimento en motores modernos de experimentación.',
+    },
+    {
+      title: 'DuckDB SQL Aggregate Functions Reference (COVAR_SAMP, VAR_SAMP, CORR)',
+      url: 'https://duckdb.org/docs/sql/functions/aggregates',
+      publisher: 'DuckDB Foundation',
+      accessed: '2026-10-29',
+      supports: 'Funciones agregadas estadísticas en SQL para calcular covarianza muestral, varianza y correlación.',
+    },
+  ],
+  aiNotes: 'Guía al estudiante para que verifique siempre primero el estadístico chi-cuadrado de SRM (EXP-PUSH-CART tiene 980 vs 620, chi2 = 81.0) antes de interpretar el lift. En la consulta CUPED, enfatiza que theta y mean_x se calculan agrupando solo por experiment_id (muestra combinada) y que pre_experiment_spend_usd es inmutable frente al tratamiento.',
 };
 
 export default lesson;

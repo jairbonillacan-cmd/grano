@@ -1,0 +1,302 @@
+[
+  {
+    "id": "metrica-guardrail",
+    "term": "Métrica de protección (Guardrail)",
+    "englishTerm": "Guardrail Metric",
+    "track": "da",
+    "definition": "Indicador operativo o de negocio que no se busca optimizar directamente en el experimento, pero que no debe degradarse más allá de un umbral tolerable. Protege contra efectos colaterales como incrementos en reembolsos, latencia del servidor o cancelaciones de suscripción al desplegar una variante ganadora en la métrica primaria.",
+    "formula": "\\Delta G = \\bar{G}_T - \\bar{G}_C \\ge -\\delta_{\\max}",
+    "sqlExample": "SELECT variant, AVG(CASE WHEN r.refund_id IS NOT NULL THEN 1.0 ELSE 0.0 END) AS tasa_reembolso FROM orders o LEFT JOIN refunds r USING (order_id) GROUP BY 1;",
+    "relatedLessons": [
+      "da3-experimentos-01-ab-testing-cuped"
+    ],
+    "relatedTerms": [
+      "sample-ratio-mismatch",
+      "cuped"
+    ],
+    "sources": [
+      {
+        "title": "Trustworthy Online Controlled Experiments (Capítulos 2 y 7: Guardrail Metrics)",
+        "url": "https://experimentguide.com/",
+        "publisher": "Cambridge University Press",
+        "accessed": "2026-10-29",
+        "supports": "Definición y taxonomía de métricas de protección operativas y de negocio."
+      }
+    ]
+  },
+  {
+    "id": "reduccion-varianza-preexperimento",
+    "term": "Reducción de varianza con covariable basal",
+    "englishTerm": "Pre-experiment Covariate Variance Reduction",
+    "track": "da",
+    "definition": "Técnica estadística que incorpora una variable medida estrictamente antes de la asignación aleatoria para sustraer la heterogeneidad histórica entre usuarios. Como la covariable basal es independiente del tratamiento, el ajuste preserva la insesgadez del estimador causal y disminuye la varianza residual en proporción directa al cuadrado de la correlación lineal.",
+    "formula": "\\text{Var}(\\hat{\\Delta}_{\\text{adj}}) = \\text{Var}(\\hat{\\Delta})(1 - r_{XY}^2)",
+    "sqlExample": "SELECT CORR(post_experiment_spend_usd, pre_experiment_spend_usd) AS r_xy FROM experiment_assignments WHERE experiment_id = 1;",
+    "relatedLessons": [
+      "da3-experimentos-01-ab-testing-cuped"
+    ],
+    "relatedTerms": [
+      "cuped",
+      "error-estandar"
+    ],
+    "sources": [
+      {
+        "title": "Improving the Sensitivity of Online Controlled Experiments by Utilizing Pre-Experiment Data (WSDM 2013)",
+        "url": "https://exp-platform.com/Documents/2013-02-CUPED-ImprovingSensitivityOfControlledExperiments.pdf",
+        "publisher": "Microsoft Research / ACM WSDM",
+        "accessed": "2026-10-29",
+        "supports": "Demostración de insesgadez y factor de reducción de varianza mediante covariables pre-experimento."
+      }
+    ]
+  },
+  {
+    "id": "tasa-error-familiar-fwer",
+    "term": "Tasa de error por familia (FWER)",
+    "englishTerm": "Family-Wise Error Rate",
+    "track": "da",
+    "definition": "Probabilidad de cometer al menos un falso positivo (error Tipo I) dentro de una colección simultánea de m pruebas de hipótesis. Cuando se evalúan múltiples métricas o cohortes sin ajuste al nivel nominal alfa, el riesgo acumulado crece exponencialmente hacia uno a medida que aumenta el número de comparaciones.",
+    "formula": "\\text{FWER} = \\Pr(V \\ge 1) = 1 - (1 - \\alpha)^m",
+    "sqlExample": "SELECT 15 AS m_pruebas, ROUND(1.0 - POWER(1.0 - 0.05, 15), 4) AS fwer_sin_ajuste;",
+    "relatedLessons": [
+      "da3-experimentos-02-comparaciones-multiples-bh"
+    ],
+    "relatedTerms": [
+      "correccion-bonferroni",
+      "false-discovery-rate"
+    ],
+    "sources": [
+      {
+        "title": "statsmodels.stats.multitest.multipletests Reference",
+        "url": "https://www.statsmodels.org/stable/generated/statsmodels.stats.multitest.multipletests.html",
+        "publisher": "Statsmodels Developers",
+        "accessed": "2026-10-29",
+        "supports": "Definición formal de la tasa de error por familia (FWER) y métodos de control."
+      }
+    ]
+  },
+  {
+    "id": "procedimiento-benjamini-hochberg",
+    "term": "Procedimiento escalonado de Benjamini-Hochberg",
+    "englishTerm": "Benjamini-Hochberg Step-Up Procedure",
+    "track": "da",
+    "definition": "Algoritmo de ordenamiento ascendente que controla la tasa esperada de descubrimientos falsos (FDR) en un nivel objetivo q para m hipótesis. Ordena los valores p de menor a mayor, identifica el mayor rango k que satisface la cota lineal y rechaza todas las hipótesis con rango menor o igual a k.",
+    "formula": "p_{(k)} \\le \\frac{k}{m}\\,q",
+    "sqlExample": "SELECT rango_k, p_valor, ROUND(0.05 * rango_k / m_total, 5) AS umbral_bh FROM pvalores ORDER BY rango_k;",
+    "relatedLessons": [
+      "da3-experimentos-02-comparaciones-multiples-bh"
+    ],
+    "relatedTerms": [
+      "false-discovery-rate",
+      "tasa-error-familiar-fwer"
+    ],
+    "sources": [
+      {
+        "title": "Controlling the False Discovery Rate: A Practical and Powerful Approach to Multiple Testing (JRSS-B 1995)",
+        "url": "https://www.math.tau.ac.il/~ybenja/MyPapers/benjamini_hochberg1995.pdf",
+        "publisher": "Royal Statistical Society",
+        "accessed": "2026-10-29",
+        "supports": "Formulación original del algoritmo step-up y demostración del control de FDR."
+      }
+    ]
+  },
+  {
+    "id": "monitoreo-continuo-peeking",
+    "term": "Monitoreo continuo sin ajuste (Peeking)",
+    "englishTerm": "Data Peeking / Optional Stopping",
+    "track": "da",
+    "definition": "Práctica de inspeccionar repetidamente los resultados acumulados de una prueba A/B de horizonte fijo y detener la captura apenas el valor p cruza el umbral nominal de 0.05. Esta regla de parada opcional aprovecha fluctuaciones aleatorias de la caminata browniana e infla severamente la tasa real de falsos positivos.",
+    "formula": "\\Pr\\!\\left(\\max_{1 \\le t \\le T} |Z_t| > 1.96 \\;\\middle|\\; H_0\\right) \\gg 0.05",
+    "sqlExample": "SELECT dia, SUM(n_dia) OVER (ORDER BY dia) AS n_acum FROM conteos_diarios;",
+    "relatedLessons": [
+      "da3-experimentos-03-pruebas-secuenciales-msprt"
+    ],
+    "relatedTerms": [
+      "prueba-secuencial-msprt",
+      "error-tipo-i"
+    ],
+    "sources": [
+      {
+        "title": "How Not To Run an A/B Test",
+        "url": "https://www.evanmiller.org/how-not-to-run-an-ab-test.html",
+        "publisher": "Evan Miller Statistical Guides",
+        "accessed": "2026-10-29",
+        "supports": "Explicación matemática de la inflación del error Tipo I por parada opcional en monitoreo continuo."
+      }
+    ]
+  },
+  {
+    "id": "prueba-secuencial-msprt",
+    "term": "Prueba secuencial de razón de verosimilitud mezclada (mSPRT)",
+    "englishTerm": "Mixture Sequential Probability Ratio Test (mSPRT)",
+    "track": "da",
+    "definition": "Método de inferencia secuencial que integra la razón de verosimilitud entre el efecto observado y cero sobre una distribución normal de tamaños de efecto con varianza de mezcla tau cuadrada. Produce una supermartingala bajo la hipótesis nula que permite detener el experimento en cualquier instante cuando supera el umbral uno sobre alfa.",
+    "formula": "\\Lambda_t = \\sqrt{\\frac{V_t}{V_t + \\tau^2}}\\,\\exp\\!\\left(\\frac{z_t^2}{2}\\cdot\\frac{\\tau^2}{V_t + \\tau^2}\\right) \\ge \\frac{1}{\\alpha}",
+    "sqlExample": "SELECT dia, ROUND(SQRT(v_t / (v_t + 25.0)) * EXP(0.5 * z_t * z_t * (25.0 / (v_t + 25.0))), 2) AS lambda_msprt FROM diario;",
+    "relatedLessons": [
+      "da3-experimentos-03-pruebas-secuenciales-msprt"
+    ],
+    "relatedTerms": [
+      "monitoreo-continuo-peeking",
+      "secuencia-confianza-siempre-valida"
+    ],
+    "sources": [
+      {
+        "title": "Peeking at A/B Tests: Why It Matters, and What to Do About It (KDD 2017 / Operations Research 2022)",
+        "url": "https://arxiv.org/abs/1512.04922",
+        "publisher": "arXiv / Operations Research",
+        "accessed": "2026-10-29",
+        "supports": "Derivación cerrada del estadístico mSPRT y valores p siempre válidos bajo monitoreo continuo."
+      }
+    ]
+  },
+  {
+    "id": "secuencia-confianza-siempre-valida",
+    "term": "Secuencia de confianza siempre válida",
+    "englishTerm": "Always-Valid Confidence Sequence",
+    "track": "da",
+    "definition": "Familia de intervalos de confianza indexados en el tiempo cuya cobertura conjunta sobre toda la trayectoria del experimento es al menos uno menos alfa. A diferencia del intervalo de horizonte fijo, garantiza inferencia válida sin importar cuándo decida el analista consultar el tablero o detener la prueba.",
+    "formula": "\\Pr\\!\\left(\\forall t \\ge 1:\\; \\Delta \\in [\\hat{\\Delta}_t \\pm r_t(\\alpha, \\tau^2)]\\right) \\ge 1 - \\alpha",
+    "sqlExample": "SELECT dia, lift_acum - radio_cs AS lim_inf, lift_acum + radio_cs AS lim_sup FROM msprt_diario;",
+    "relatedLessons": [
+      "da3-experimentos-03-pruebas-secuenciales-msprt"
+    ],
+    "relatedTerms": [
+      "prueba-secuencial-msprt",
+      "intervalo-confianza"
+    ],
+    "sources": [
+      {
+        "title": "Time-uniform, nonparametric, nonasymptotic confidence sequences (Annals of Statistics 2021)",
+        "url": "https://arxiv.org/abs/1810.08240",
+        "publisher": "Institute of Mathematical Statistics / arXiv",
+        "accessed": "2026-10-29",
+        "supports": "Fundamento teórico de las secuencias de confianza uniformes en el tiempo."
+      }
+    ]
+  },
+  {
+    "id": "distribucion-conjugada-beta-binomial",
+    "term": "Modelo conjugado Beta-Binomial",
+    "englishTerm": "Beta-Binomial Conjugate Model",
+    "track": "da",
+    "definition": "Esquema de actualización bayesiana para métricas de tasa o proporción donde una distribución a priori Beta se combina con conteos binomiales de éxitos y fracasos. La distribución posterior resultante pertenece exactamente a la misma familia Beta y suma de forma aditiva los hiperparámetros previos con la evidencia observada.",
+    "formula": "\\theta \\mid k, n \\sim \\text{Beta}(\\alpha_0 + k,\\; \\beta_0 + n - k)",
+    "sqlExample": "SELECT variant, 12 + exitos AS alpha_post, 28 + (n - exitos) AS beta_post FROM conteos;",
+    "relatedLessons": [
+      "da3-experimentos-04-enfoque-bayesiano-ab"
+    ],
+    "relatedTerms": [
+      "actualizacion-bayesiana",
+      "intervalo-credibilidad"
+    ],
+    "sources": [
+      {
+        "title": "Formulas for Bayesian A/B Testing",
+        "url": "https://www.evanmiller.org/bayesian-ab-testing.html",
+        "publisher": "Evan Miller Statistical Guides",
+        "accessed": "2026-10-29",
+        "supports": "Actualización conjugada Beta-Binomial y cálculo exacto de probabilidad de superar al control."
+      }
+    ]
+  },
+  {
+    "id": "perdida-esperada-bayesiana",
+    "term": "Pérdida esperada bayesiana",
+    "englishTerm": "Bayesian Expected Loss",
+    "track": "da",
+    "definition": "Métrica de decisión que cuantifica el costo promedio en el que se incurriría al desplegar una variante si en realidad resultara inferior a la alternativa. Integra la magnitud del deterioro potencial ponderada por la densidad posterior, equilibrando la probabilidad de equivocarse con la severidad económica del error.",
+    "formula": "\\mathcal{L}(T) = \\mathbb{E}[\\max(0, \\theta_C - \\theta_T) \\mid \\text{datos}]",
+    "sqlExample": "SELECT experiment_code, media_post_usd, sd_post_usd, prob_superar_control FROM posterior_resumen;",
+    "relatedLessons": [
+      "da3-experimentos-04-enfoque-bayesiano-ab"
+    ],
+    "relatedTerms": [
+      "distribucion-conjugada-beta-binomial",
+      "intervalo-credibilidad"
+    ],
+    "sources": [
+      {
+        "title": "Continuous Monitoring of A/B Tests without Pain: Optional Stopping in Bayesian Testing (DSAA 2016)",
+        "url": "https://arxiv.org/abs/1707.02646",
+        "publisher": "IEEE DSAA / arXiv",
+        "accessed": "2026-10-29",
+        "supports": "Reglas de decisión bayesianas basadas en probabilidades posteriores y pérdida esperada."
+      }
+    ]
+  },
+  {
+    "id": "supuesto-sutva-interferencia",
+    "term": "Supuesto SUTVA e interferencia de red",
+    "englishTerm": "Stable Unit Treatment Value Assumption (SUTVA)",
+    "track": "da",
+    "definition": "Principio de inferencia causal que exige que el resultado potencial de cualquier unidad dependa únicamente de su propia asignación y no del estado asignado a otras unidades. Se vulnera en mercados bilaterales, logística compartida o redes sociales cuando el grupo de tratamiento acapara inventario o capacidad operativa del grupo control.",
+    "formula": "Y_i(\\mathbf{Z}) = Y_i(Z_i)",
+    "sqlExample": "SELECT store_id, COUNT(order_id) AS ordenes_tienda, AVG(total_usd) AS ticket_tienda FROM orders GROUP BY 1;",
+    "relatedLessons": [
+      "da3-experimentos-05-efectos-red-interferencia-switchback"
+    ],
+    "relatedTerms": [
+      "aleatorizacion-por-conglomerados",
+      "experimento-switchback"
+    ],
+    "sources": [
+      {
+        "title": "Graph Cluster Randomization: Network Exposure to Multiple Universes (KDD 2013)",
+        "url": "https://arxiv.org/abs/1305.5565",
+        "publisher": "ACM KDD / arXiv",
+        "accessed": "2026-10-29",
+        "supports": "Formalización del sesgo por interferencia cuando se viola el supuesto SUTVA."
+      }
+    ]
+  },
+  {
+    "id": "aleatorizacion-por-conglomerados",
+    "term": "Aleatorización por conglomerados (Cluster)",
+    "englishTerm": "Cluster Randomization",
+    "track": "da",
+    "definition": "Diseño experimental en el que la asignación al tratamiento o control se aplica a grupos completos como tiendas, ciudades o almacenes en lugar de usuarios individuales. Mitiga la contaminación entre unidades cercanas, pero exige agregar las métricas al grano del conglomerado para evitar subestimar el error estándar por correlación intraclase.",
+    "formula": "\\text{DEFF} = 1 + (\\bar{m} - 1)\\,\\rho_{\\text{ICC}}",
+    "sqlExample": "SELECT brazo_cluster, COUNT(DISTINCT store_id) AS k_tiendas, STDDEV_SAMP(media_tienda) / SQRT(COUNT(*)) AS ee_cluster FROM por_tienda GROUP BY 1;",
+    "relatedLessons": [
+      "da3-experimentos-05-efectos-red-interferencia-switchback"
+    ],
+    "relatedTerms": [
+      "supuesto-sutva-interferencia",
+      "experimento-switchback"
+    ],
+    "sources": [
+      {
+        "title": "Trustworthy Online Controlled Experiments (Capítulo 22: Triggering, Cluster and Switchback)",
+        "url": "https://experimentguide.com/",
+        "publisher": "Cambridge University Press",
+        "accessed": "2026-10-29",
+        "supports": "Varianza a nivel de conglomerado y pérdida de grados de libertad efectivos."
+      }
+    ]
+  },
+  {
+    "id": "experimento-switchback",
+    "term": "Experimento de alternancia temporal (Switchback)",
+    "englishTerm": "Switchback Experiment",
+    "track": "da",
+    "definition": "Diseño experimental donde una misma unidad geográfica u operativa alterna cíclicamente entre régimen de tratamiento y régimen de control a lo largo de bloques de tiempo discretos. Permite estimar efectos causales bajo recursos compartidos y exige analizar la métrica agregada al nivel del bloque tienda-tiempo controlando el arrastre entre periodos.",
+    "formula": "\\hat{\\Delta}_{\\text{SB}} = \\frac{1}{B_T}\\sum_{b \\in T} Y_b - \\frac{1}{B_C}\\sum_{b \\in C} Y_b",
+    "sqlExample": "SELECT store_type, regimen_switchback, COUNT(*) AS n_bloques, AVG(ingreso_bloque_usd) AS media_bloque FROM bloques GROUP BY 1, 2;",
+    "relatedLessons": [
+      "da3-experimentos-05-efectos-red-interferencia-switchback"
+    ],
+    "relatedTerms": [
+      "supuesto-sutva-interferencia",
+      "aleatorizacion-por-conglomerados"
+    ],
+    "sources": [
+      {
+        "title": "Design and Analysis of Switchback Experiments (Management Science 2022)",
+        "url": "https://arxiv.org/abs/2009.00148",
+        "publisher": "INFORMS Management Science / arXiv",
+        "accessed": "2026-10-29",
+        "supports": "Diseño óptimo de bloques temporales, efectos de arrastre (carryover) e inferencia en pruebas switchback."
+      }
+    ]
+  }
+]
