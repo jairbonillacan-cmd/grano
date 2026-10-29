@@ -19,6 +19,54 @@ import lesson_15 from './bi3-dashboards/bi3-dashboards-01-bi-tufte-code.js';
 import lesson_16 from './de4-streaming/de4-streaming-01-cdc-kafka-streaming.js';
 import lesson_17 from './de4-streaming/de4-streaming-03-flink-watermarks-mv.js';
 import lesson_18 from './x4-ia-datos/x4-ia-datos-01-mcp-semantic-ai-rag.js';
+import lesson_19 from './c0-datos/c0-datos-01-tipos-dato.js';
+import lesson_20 from './c0-datos/c0-datos-02-null-vacio.js';
+import lesson_21 from './c0-datos/c0-datos-03-formatos-archivo.js';
+import lesson_22 from './c0-datos/c0-datos-04-utf8-separadores.js';
+import lesson_23 from './c0-datos/c0-datos-05-tablas-grano.js';
+import lesson_24 from './c0-herramientas/c0-herramientas-01-terminal-rutas.js';
+import lesson_25 from './c0-herramientas/c0-herramientas-02-git-commits-ramas.js';
+import lesson_26 from './c0-herramientas/c0-herramientas-03-python-inicial-uv.js';
+import lesson_27 from './c0-herramientas/c0-herramientas-04-cuadernos-jupyter-marimo.js';
+import lesson_28 from './c0-herramientas/c0-herramientas-05-trazas-error-documentacion.js';
+import lesson_29 from './c0-hojas/c0-hojas-01-tablas-referencias.js';
+import lesson_30 from './c0-hojas/c0-hojas-02-tablas-dinamicas.js';
+import lesson_31 from './c0-hojas/c0-hojas-03-buscarx-cruces.js';
+import lesson_32 from './c0-hojas/c0-hojas-04-errores-fechas-celdas.js';
+import lesson_33 from './c0-negocio/c0-negocio-01-ingreso-costo-margen.js';
+import lesson_34 from './c0-negocio/c0-negocio-02-embudos-conversion.js';
+import lesson_35 from './c0-negocio/c0-negocio-03-kpi-metrica-vanidad.js';
+import lesson_36 from './c0-negocio/c0-negocio-04-pregunta-a-decision.js';
+import lesson_37 from './c0-numeros/c0-numeros-01-media-mediana-moda.js';
+import lesson_38 from './c0-numeros/c0-numeros-02-dispersion-iqr-percentiles.js';
+import lesson_39 from './c0-numeros/c0-numeros-03-asimetria-sesgo.js';
+import lesson_40 from './c0-numeros/c0-numeros-04-proporciones-tasas-bps.js';
+import lesson_41 from './c0-numeros/c0-numeros-05-correlacion-causalidad.js';
+import lesson_42 from './c1-modelo/c1-modelo-01-claves-primarias-foraneas.js';
+import lesson_43 from './c1-modelo/c1-modelo-02-normalizacion-1fn-3fn.js';
+import lesson_44 from './c1-modelo/c1-modelo-03-integridad-huerfanos.js';
+import lesson_45 from './c1-modelo/c1-modelo-04-auditoria-calidad.js';
+import lesson_46 from './c1-modelo/c1-modelo-05-validacion-bloqueante.js';
+import lesson_47 from './c1-python/c1-python-01-polars-pandas-cow.js';
+import lesson_48 from './c1-python/c1-python-02-io-csv-json-parquet.js';
+import lesson_49 from './c1-python/c1-python-03-expresiones-vectorizadas.js';
+import lesson_50 from './c1-python/c1-python-04-limpieza-texto-fechas-tz.js';
+import lesson_51 from './c1-python/c1-python-05-cuaderno-a-script-cli.js';
+import lesson_52 from './c1-sql-base/c1-sql-base-01-select-from-where.js';
+import lesson_53 from './c1-sql-base/c1-sql-base-02-orderby-limit-distinct.js';
+import lesson_54 from './c1-sql-base/c1-sql-base-03-null-logica-coalesce.js';
+import lesson_55 from './c1-sql-base/c1-sql-base-04-groupby-having.js';
+import lesson_56 from './c1-sql-base/c1-sql-base-05-case-when-filter.js';
+import lesson_57 from './c1-sql-base/c1-sql-base-06-fechas-date-trunc.js';
+import lesson_58 from './c1-sql-base/c1-sql-base-07-count-variantes.js';
+import lesson_59 from './c1-sql-joins/c1-sql-joins-01-tipos-join.js';
+import lesson_60 from './c1-sql-joins/c1-sql-joins-03-subconsultas.js';
+import lesson_61 from './c1-sql-joins/c1-sql-joins-04-ctes-legibles.js';
+import lesson_62 from './c1-sql-joins/c1-sql-joins-05-conjuntos-union.js';
+import lesson_63 from './c1-viz/c1-viz-01-geometria-grafico.js';
+import lesson_64 from './c1-viz/c1-viz-02-ejes-escalas-cero.js';
+import lesson_65 from './c1-viz/c1-viz-03-color-accesibilidad.js';
+import lesson_66 from './c1-viz/c1-viz-04-tablas-numericas.js';
 
 export const LESSONS_V2 = [
   lesson_1,
@@ -39,6 +87,54 @@ export const LESSONS_V2 = [
   lesson_16,
   lesson_17,
   lesson_18,
+  lesson_19,
+  lesson_20,
+  lesson_21,
+  lesson_22,
+  lesson_23,
+  lesson_24,
+  lesson_25,
+  lesson_26,
+  lesson_27,
+  lesson_28,
+  lesson_29,
+  lesson_30,
+  lesson_31,
+  lesson_32,
+  lesson_33,
+  lesson_34,
+  lesson_35,
+  lesson_36,
+  lesson_37,
+  lesson_38,
+  lesson_39,
+  lesson_40,
+  lesson_41,
+  lesson_42,
+  lesson_43,
+  lesson_44,
+  lesson_45,
+  lesson_46,
+  lesson_47,
+  lesson_48,
+  lesson_49,
+  lesson_50,
+  lesson_51,
+  lesson_52,
+  lesson_53,
+  lesson_54,
+  lesson_55,
+  lesson_56,
+  lesson_57,
+  lesson_58,
+  lesson_59,
+  lesson_60,
+  lesson_61,
+  lesson_62,
+  lesson_63,
+  lesson_64,
+  lesson_65,
+  lesson_66,
 ];
 
 /**

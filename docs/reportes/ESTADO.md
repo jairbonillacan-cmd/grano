@@ -16,5 +16,16 @@
 | Fase 2 | `T11` · Tutor IA (interfaz) y funciones IA | `6a195c9b-ba39-4f83-9107-61e148fd245e` | Fusionada (`T11.md` D.3 OK) | `0fa2b7b` | Ninguno |
 | Fase 2 | `T12` · Vistas secundarias | `15c64250-d1f0-40f9-a70d-89ebe39e94c4` | Fusionada (`T12.md` D.3 OK) | `cf0821a` | Ninguno |
 | Fase 2 | `T13` · Simuladores: consolidación visual | `5abf0ffc-2240-4c04-96dc-fc85276f77be` | Fusionada (`T13.md` D.3 OK) | `cc4fb1f` | Ninguno |
-| Fase 3 | `W-*` (Ola A, Ola B, Ola C), `F1`, `E1` | En inicio (Ola A: 10 módulos `c0-*` y `c1-*`) | En curso | — | Ola A → Ola B → Ola C + `F1` + `E1` |
+| Fase 3 (Ola A) | `W-c0-herramientas` (5 lecciones) | `781f90f4-b5fb-4582-b2a9-709d447b47c6` | Fusionada (`W-c0-herramientas.md` D.3 OK) | `8781fb7` | Ninguno |
+| Fase 3 (Ola A) | `W-c0-datos` (5 lecciones) | `848f29fa-ab21-4fb9-ad45-d6dfae901a37` | Fusionada (`W-c0-datos.md` D.3 OK) | `eb01798` | Ninguno |
+| Fase 3 (Ola A) | `W-c0-hojas` (4 lecciones) | `cbbfafb1-6777-4583-adeb-db5d955aa14a` | Fusionada (`W-c0-hojas.md` D.3 OK) | `5e0d643` | Ninguno |
+| Fase 3 (Ola A) | `W-c0-numeros` (5 lecciones) | `05a141ee-ffcb-4df6-8e09-efbf98115f09` | Fusionada (`W-c0-numeros.md` D.3 OK) | `ca83f79` | Ninguno |
+| Fase 3 (Ola A) | `W-c0-negocio` (4 lecciones) | `26df6c58-8782-4a4c-a59b-317a4d62357c` | Fusionada (`W-c0-negocio.md` D.3 OK) | `be8724e` | Ninguno |
+| Fase 3 (Ola A) | `W-c1-sql-base` (7 lecciones) | `311257d2-a5ba-4c4d-a446-928bade1d67f` | Fusionada (`W-c1-sql-base.md` D.3 OK) | `b7873e7` | Ninguno |
+| Fase 3 (Ola A) | `W-c1-sql-joins` (5 lecciones) | `d93a0eec-2ae3-4f06-84f1-d13d9f9b2853` | Fusionada (`W-c1-sql-joins.md` D.3 OK) | `2417e0b` | Ninguno |
+| Fase 3 (Ola A) | `W-c1-viz` (4 lecciones) | `55e6be83-1fc2-40c5-bec5-9a21258e9de8` | Fusionada (`W-c1-viz.md` D.3 OK) | `8382734` | Ninguno |
+| Fase 3 (Ola A) | `W-c1-modelo` (5 lecciones) | `848f29fa-ab21-4fb9-ad45-d6dfae901a37` | Fusionada (`W-c1-modelo.md` D.3 OK) | `6c33c20` | Ninguno |
+| Fase 3 (Ola A) | `W-c1-python` (5 lecciones) | `a7f6c9d1-3d21-49a3-8e4f-1029384756ab` | Fusionada (`W-c1-python.md` D.3 OK) | `3e688f9` | Ninguno |
+| Fase 3 (Ola B) | `W-*` (9 módulos Nivel 2: 45 lecciones) | En lanzamiento | En curso | — | Ola B → Ola C + `F1` + `E1` |
+| Fase 3 (Ola C) | `W-*` (13 módulos Niveles 3–4: 60 lecciones), `F1`, `E1` | Pendiente (Ola B) | Pendiente | — | Espera cierre de Ola B |
 | Fase 4 | `Q1`, `Q2`, `Q3`, `FINAL` | Pendiente (Fase 3) | Pendiente | — | Espera cierre de Fase 3 |
