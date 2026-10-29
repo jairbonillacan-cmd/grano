@@ -19,9 +19,7 @@ export const GlossaryTermSchema = z.object({
         const w = countWords(val);
         return w >= 20 && w <= 60;
       },
-      (val) => ({
-        message: `glossary.definition debe tener entre 20 y 60 palabras (actual: ${countWords(val)})`,
-      })
+      { message: 'glossary.definition debe tener entre 20 y 60 palabras' }
     ),
   formula: z.string().trim().optional(),
   relatedLessons: z.array(z.string().trim().min(1)).min(1),

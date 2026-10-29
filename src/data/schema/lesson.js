@@ -41,9 +41,7 @@ export const SectionSchema = z.object({
         const w = countWords(val);
         return w >= 80 && w <= 250;
       },
-      (val) => ({
-        message: `section.body debe tener entre 80 y 250 palabras (actual: ${countWords(val)})`,
-      })
+      { message: 'section.body debe tener entre 80 y 250 palabras' }
     ),
   interactive: InteractiveBlockSchema.optional(),
   example: ExampleBlockSchema.optional(),
@@ -86,12 +84,9 @@ export const CheckSchema = z
       .string()
       .trim()
       .min(1, 'check.prompt no puede estar vacío')
-      .refine(
-        (val) => countWords(val) <= 60,
-        (val) => ({
-          message: `check.prompt debe tener como máximo 60 palabras (actual: ${countWords(val)})`,
-        })
-      ),
+      .refine((val) => countWords(val) <= 60, {
+        message: 'check.prompt debe tener como máximo 60 palabras',
+      }),
     options: z.array(CheckOptionSchema).optional(),
     items: z.array(z.string().trim().min(1)).optional(),
     correctOrder: z.array(z.string().trim().min(1)).optional(),
@@ -105,9 +100,7 @@ export const CheckSchema = z
           const w = countWords(val);
           return w >= 20 && w <= 60;
         },
-        (val) => ({
-          message: `check.explanation debe tener entre 20 y 60 palabras (actual: ${countWords(val)})`,
-        })
+        { message: 'check.explanation debe tener entre 20 y 60 palabras' }
       ),
   })
   .superRefine((check, ctx) => {
@@ -179,7 +172,8 @@ export const PracticeSchema = z.object({
     .trim()
     .min(1, 'practice.solutionExplanation no puede estar vacío'),
   blanks: z.array(z.any()).optional(),
-  expectedOutput: z.string().optional(),
+  expectedOutput: z.any().optional(),
+  expectedOutputTable: z.array(z.record(z.string(), z.any())).optional(),
   rubricCriteria: z.array(z.any()).optional(),
 });
 
@@ -192,9 +186,7 @@ const roleNoteTextSchema = (roleLabel) =>
         const w = countWords(val);
         return w >= 25 && w <= 70;
       },
-      (val) => ({
-        message: `roleNotes.${roleLabel} debe tener entre 25 y 70 palabras (actual: ${countWords(val)})`,
-      })
+      { message: `roleNotes.${roleLabel} debe tener entre 25 y 70 palabras` }
     );
 
 export const RoleNotesSchema = z.object({
@@ -258,9 +250,7 @@ export const LessonSchema = z
           const w = countWords(val);
           return w >= 40 && w <= 90;
         },
-        (val) => ({
-          message: `lesson.hook debe tener entre 40 y 90 palabras (actual: ${countWords(val)})`,
-        })
+        { message: 'lesson.hook debe tener entre 40 y 90 palabras' }
       )
       .refine((val) => /\?\s*$/.test(val), {
         message: 'lesson.hook debe terminar en signo de interrogación (?)',
@@ -293,12 +283,9 @@ export const LessonSchema = z
           .string()
           .trim()
           .min(1, 'Frase de summary vacía')
-          .refine(
-            (val) => countWords(val) <= 25,
-            (val) => ({
-              message: `Cada frase de summary debe tener como máximo 25 palabras (actual: ${countWords(val)})`,
-            })
-          )
+          .refine((val) => countWords(val) <= 25, {
+            message: 'Cada frase de summary debe tener como máximo 25 palabras',
+          })
       )
       .min(3, 'lesson.summary requiere entre 3 y 5 frases')
       .max(5, 'lesson.summary admite entre 3 y 5 frases'),
@@ -320,12 +307,9 @@ export const LessonSchema = z
       .string()
       .trim()
       .min(1, 'lesson.aiNotes no puede estar vacío')
-      .refine(
-        (val) => countWords(val) <= 80,
-        (val) => ({
-          message: `lesson.aiNotes debe tener como máximo 80 palabras (actual: ${countWords(val)})`,
-        })
-      ),
+      .refine((val) => countWords(val) <= 80, {
+        message: 'lesson.aiNotes debe tener como máximo 80 palabras',
+      }),
 
     // Metadatos opcionales de migración y compatibilidad con el reproductor actual
     needsReview: z.boolean().optional(),
@@ -335,7 +319,17 @@ export const LessonSchema = z
     subtitle: z.string().trim().optional(),
     goal: z.string().trim().optional(),
     pipelineChallenge: z.record(z.string(), z.any()).optional(),
-    relatedLessons: z.array(z.string().trim().min(1)).optional(),
+    relatedLessons: z
+      .array(
+        z.union([
+          z.string().trim().min(1),
+          z.object({
+            id: z.string().trim().min(1),
+            reason: z.string().trim().optional(),
+          }),
+        ])
+      )
+      .optional(),
   })
   .superRefine((lesson, ctx) => {
     if (!lesson.id.startsWith(`${lesson.moduleId}-`)) {
