@@ -5,7 +5,7 @@
 .roadmap-view {
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 1.75rem;
   width: 100%;
   max-width: 100%;
 }
@@ -14,21 +14,21 @@
 .roadmap-header {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 1rem;
 }
 
 .roadmap-header__top {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
+  gap: 1rem;
   flex-wrap: wrap;
 }
 
 .roadmap-header__title-group {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 0.25rem;
   min-width: 0;
 }
 
@@ -52,26 +52,26 @@
 .roadmap-header__actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.5rem;
   flex-wrap: wrap;
 }
 
 .roadmap-header__actions .ui-btn {
-  min-height: 44px;
-  min-width: 44px;
+  min-height: 2.75rem;
+  min-width: 2.75rem;
 }
 
 .roadmap-summary-bar {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 0.875rem;
 }
 
 .roadmap-summary-stats {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 0.75rem;
   flex-wrap: wrap;
 }
 
@@ -89,7 +89,7 @@
   font-weight: 600;
   color: var(--primary-deep);
   background-color: var(--primary-soft);
-  padding: 4px 10px;
+  padding: 0.25rem 0.625rem;
   border-radius: var(--r-pill);
   font-variant-numeric: tabular-nums;
 }
@@ -97,7 +97,7 @@
 .roadmap-progress-global {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 0.625rem;
 }
 
 .roadmap-progress-global__bar-wrap {
@@ -106,7 +106,7 @@
 }
 
 .roadmap-progress-global__bar-wrap .ui-progress-bar--lg {
-  height: 10px;
+  height: 0.625rem;
 }
 
 .roadmap-progress-global__ticks {
@@ -129,15 +129,15 @@
 .roadmap-progress-markers {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 6px;
+  gap: 0.375rem;
 }
 
 .roadmap-progress-marker {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 0.375rem;
   min-width: 0;
-  padding: 4px 8px;
+  padding: 0.25rem 0.5rem;
   border-radius: var(--r-sm);
   background-color: var(--surface-2);
   border: 1px solid transparent;
@@ -158,8 +158,8 @@
 }
 
 .roadmap-progress-marker__dot {
-  width: 8px;
-  height: 8px;
+  width: 0.5rem;
+  height: 0.5rem;
   border-radius: var(--r-pill);
   background-color: var(--stage);
   flex-shrink: 0;
@@ -183,10 +183,10 @@
 /* 2. Navegación sticky por etapas */
 .roadmap-stage-nav {
   position: sticky;
-  top: 56px;
+  top: 3.5rem;
   z-index: 25;
-  margin-inline: -4px;
-  padding: 10px 4px;
+  margin-inline: -0.25rem;
+  padding: 0.625rem 0.25rem;
   background-color: color-mix(in oklab, var(--bg) 92%, transparent);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border);
@@ -196,11 +196,11 @@
 .roadmap-stage-nav__scroll {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 0.375rem;
   overflow-x: auto;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
-  padding: 2px;
+  padding: 0.125rem;
 }
 
 .roadmap-stage-nav__scroll::-webkit-scrollbar {
@@ -210,10 +210,10 @@
 .roadmap-stage-nav__pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  min-height: 44px;
-  min-width: 44px;
-  padding: 0 12px;
+  gap: 0.375rem;
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+  padding: 0 0.75rem;
   border-radius: var(--r-pill);
   border: 1px solid color-mix(in oklab, var(--stage) 30%, var(--border));
   background-color: var(--surface);
@@ -253,8 +253,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 1.5rem;
+  height: 1.5rem;
   border-radius: var(--r-pill);
   background-color: var(--stage-soft);
   color: var(--stage-deep);
@@ -278,7 +278,7 @@
   font-size: var(--fs-xs);
   font-weight: 600;
   color: var(--text-2);
-  padding: 2px 7px;
+  padding: 0.125rem 0.4375rem;
   border-radius: var(--r-pill);
   background-color: var(--surface-2);
 }
@@ -292,14 +292,14 @@
 .roadmap-stages-list {
   display: flex;
   flex-direction: column;
-  gap: 40px;
+  gap: 2.5rem;
 }
 
 .roadmap-stage-block {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  scroll-margin-top: 128px;
+  gap: 1.25rem;
+  scroll-margin-top: 8rem;
 }
 
 .roadmap-stage-header {
@@ -308,9 +308,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 24px;
+  gap: 1.5rem;
   flex-wrap: wrap;
-  padding: 24px;
+  padding: 1.5rem;
   border-radius: var(--r-xl);
   border: 1px solid var(--border);
   background: var(--surface);
@@ -329,14 +329,14 @@
 .roadmap-stage-header__main {
   display: flex;
   align-items: center;
-  gap: 20px;
-  flex: 1 1 420px;
+  gap: 1.25rem;
+  flex: 1 1 26.25rem;
   min-width: 0;
 }
 
 .roadmap-stage-header__illus {
-  width: 96px;
-  height: 68px;
+  width: 6rem;
+  height: 4.25rem;
   border-radius: var(--r-md);
   background-color: var(--surface);
   border: 1px solid color-mix(in oklab, var(--stage) 28%, var(--border));
@@ -365,7 +365,7 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 6px;
+  gap: 0.375rem;
   min-width: 0;
   flex: 1;
 }
@@ -373,7 +373,7 @@
 .roadmap-stage-header__eyebrow {
   display: inline-flex;
   align-items: center;
-  padding: 3px 10px;
+  padding: 0.1875rem 0.625rem;
   border-radius: var(--r-pill);
   background-color: var(--surface);
   border: 1px solid color-mix(in oklab, var(--stage) 35%, transparent);
@@ -405,7 +405,7 @@
 .roadmap-stage-header__aside {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 1rem;
   flex-wrap: wrap;
   flex-shrink: 0;
 }
@@ -415,22 +415,22 @@
   align-items: center;
   justify-content: center;
   background-color: var(--surface);
-  padding: 6px;
+  padding: 0.375rem;
   border-radius: var(--r-pill);
   border: 1px solid color-mix(in oklab, var(--stage) 25%, var(--border));
   box-shadow: var(--shadow-1);
 }
 
 .roadmap-stage-header__badge {
-  min-width: 220px;
-  max-width: 290px;
+  min-width: 13.75rem;
+  max-width: 18.125rem;
 }
 
 /* 4. Grilla de lecciones y tarjetas con Container Queries */
 .roadmap-lessons-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(17.5rem, 1fr));
+  gap: 1rem;
 }
 
 .roadmap-lesson-card {
@@ -439,7 +439,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  min-height: 44px;
+  min-height: 2.75rem;
   border-top: 3px solid var(--stage);
 }
 
@@ -460,7 +460,7 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 18px;
+  gap: 1.125rem;
   height: 100%;
   width: 100%;
 }
@@ -468,7 +468,7 @@
 .roadmap-lesson-card__body {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0.5rem;
   min-width: 0;
 }
 
@@ -476,13 +476,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 0.5rem;
   flex-wrap: wrap;
 }
 
 .roadmap-lesson-card__num {
   font-family: var(--font-display);
-  font-size: clamp(22px, 2vw, 26px);
+  font-size: clamp(1.375rem, 2vw, 1.625rem);
   font-weight: 600;
   line-height: 1;
   letter-spacing: -0.03em;
@@ -491,7 +491,7 @@
 }
 
 .roadmap-lesson-card__title {
-  margin: 2px 0 0 0;
+  margin: 0.125rem 0 0 0;
   font-family: var(--font-display);
   font-size: var(--fs-lg);
   font-weight: 600;
@@ -512,9 +512,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 0.75rem;
   flex-wrap: wrap;
-  padding-top: 14px;
+  padding-top: 0.875rem;
   border-top: 1px solid color-mix(in oklab, var(--border) 85%, transparent);
 }
 
@@ -525,14 +525,14 @@
 .roadmap-lesson-card__meta {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 0.625rem;
   flex-wrap: wrap;
 }
 
 .roadmap-lesson-card__duration {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 0.3125rem;
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
   font-weight: 600;
@@ -544,14 +544,14 @@
 .roadmap-lesson-card__roles {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 0.375rem;
   flex-wrap: wrap;
 }
 
 .roadmap-lesson-card__status {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 0.375rem;
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
   font-weight: 600;
@@ -571,13 +571,13 @@
   color: var(--success);
 }
 
-/* Container Query: cambia el layout interno de vertical a horizontal a >= 520px */
+/* Container Query: cambia el layout interno de vertical a horizontal a >= 32.5rem */
 @container (min-width: 520px) {
   .roadmap-lesson-card__layout {
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    gap: 24px;
+    gap: 1.5rem;
   }
 
   .roadmap-lesson-card__body {
@@ -589,13 +589,13 @@
     flex-direction: column;
     align-items: flex-end;
     justify-content: center;
-    gap: 10px;
+    gap: 0.625rem;
     padding-top: 0;
-    padding-left: 20px;
+    padding-left: 1.25rem;
     border-top: none;
     border-left: 1px solid color-mix(in oklab, var(--border) 85%, transparent);
     flex-shrink: 0;
-    min-width: 176px;
+    min-width: 11rem;
   }
 }
 
@@ -606,25 +606,25 @@
   }
 
   .roadmap-stage-header {
-    padding: 18px 16px;
-    gap: 16px;
+    padding: 1.125rem 1rem;
+    gap: 1rem;
   }
 
   .roadmap-stage-header__main {
     flex-direction: column;
     align-items: flex-start;
-    gap: 14px;
+    gap: 0.875rem;
     flex-basis: 100%;
   }
 
   .roadmap-stage-header__aside {
     width: 100%;
     justify-content: space-between;
-    gap: 12px;
+    gap: 0.75rem;
   }
 
   .roadmap-stage-header__badge {
-    flex: 1 1 180px;
+    flex: 1 1 11.25rem;
     max-width: none;
     min-width: 0;
   }

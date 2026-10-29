@@ -213,13 +213,13 @@ html[data-scale="1.25"] {
 /* ALIAS TEMPORALES — eliminar en T7 */
 :root,
 [data-theme="light"] {
-  --fs-xs: 12px;
-  --fs-sm: 14px;
-  --fs-md: 16px;
-  --fs-lg: 18px;
-  --fs-xl: 22px;
-  --fs-2xl: 28px;
-  --fs-3xl: 36px;
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.875rem;
+  --fs-md: 1rem;
+  --fs-lg: 1.125rem;
+  --fs-xl: 1.375rem;
+  --fs-2xl: 1.75rem;
+  --fs-3xl: 2.25rem;
 
   --surface-2: var(--sunken);
   --border: var(--line);

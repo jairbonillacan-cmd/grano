@@ -2,43 +2,6 @@
    SIMULADORES INTERACTIVOS Y LABORATORIOS DE PRÁCTICA (FASE 2)
    ========================================================================== */
 
-/* Animaciones de estado y micro-interacciones */
-@keyframes sim-row-flash {
-  0% {
-    background-color: var(--warning-soft);
-  }
-  100% {
-    background-color: var(--surface);
-  }
-}
-
-@keyframes sim-pop {
-  0% {
-    transform: scale(1);
-  }
-  40% {
-    transform: scale(1.04);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-
-@keyframes sim-shake {
-  0%,
-  100% {
-    transform: translateX(0);
-  }
-  20%,
-  60% {
-    transform: translateX(-6px);
-  }
-  40%,
-  80% {
-    transform: translateX(6px);
-  }
-}
-
 /* ==========================================================================
    1. MARCO COMÚN DE SIMULADOR (.sim-frame)
    ========================================================================== */
@@ -50,7 +13,7 @@
   border-top: 4px solid var(--stage);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-1);
-  margin: 20px 0;
+  margin: 1.25rem 0;
   overflow: hidden;
   max-width: 100%;
 }
@@ -59,22 +22,22 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
-  padding: 18px 20px 14px 20px;
+  gap: 0.75rem;
+  padding: 1.125rem 1.25rem 0.875rem 1.25rem;
   border-bottom: 1px solid var(--border);
 }
 
 .sim-frame__title-group {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: 0.75rem;
   min-width: 0;
   flex: 1;
 }
 
 .sim-frame__stage-icon {
-  width: 38px;
-  height: 38px;
+  width: 2.375rem;
+  height: 2.375rem;
   border-radius: var(--r-md);
   background-color: var(--stage-soft);
   color: var(--stage-deep);
@@ -106,7 +69,7 @@
   font-size: var(--fs-lg);
   font-weight: 600;
   color: var(--text);
-  margin: 0 0 4px 0;
+  margin: 0 0 0.25rem 0;
   line-height: 1.3;
 }
 
@@ -118,9 +81,9 @@
 }
 
 .sim-reset-btn {
-  min-height: 44px;
-  min-width: 44px;
-  padding: 0 12px;
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+  padding: 0 0.75rem;
   flex-shrink: 0;
 }
 
@@ -130,8 +93,8 @@
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 12px;
-  padding: 12px 20px;
+  gap: 0.75rem;
+  padding: 0.75rem 1.25rem;
   background-color: var(--surface-2);
   border-bottom: 1px solid var(--border);
 }
@@ -139,7 +102,7 @@
 .sim-control-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 0.375rem;
   min-width: 0;
   max-width: 100%;
 }
@@ -155,8 +118,8 @@
   display: inline-flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 4px;
-  padding: 4px;
+  gap: 0.25rem;
+  padding: 0.25rem;
   background-color: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-md);
@@ -164,8 +127,8 @@
 }
 
 .sim-segmented__btn {
-  min-height: 38px;
-  padding: 6px 12px;
+  min-height: 2.375rem;
+  padding: 0.375rem 0.75rem;
   border-radius: var(--r-sm);
   border: 1px solid transparent;
   background-color: transparent;
@@ -176,7 +139,7 @@
   line-height: 1.25;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 0.375rem;
   cursor: pointer;
   text-align: left;
   transition:
@@ -219,18 +182,18 @@
 
 /* Cuerpo interactivo y pie compacto */
 .sim-frame__body {
-  padding: 20px;
+  padding: 1.25rem;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 1rem;
   min-width: 0;
 }
 
 .sim-frame__footer {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
   background-color: var(--surface-2);
   border-top: 1px solid var(--border);
   font-size: var(--fs-xs);
@@ -255,7 +218,7 @@
 
 @media (max-width: 680px) {
   .sim-frame__header {
-    padding: 14px 16px;
+    padding: 0.875rem 1rem;
     flex-wrap: wrap;
   }
 
@@ -268,15 +231,15 @@
   }
 
   .sim-frame__controls {
-    padding: 10px 16px;
+    padding: 0.625rem 1rem;
   }
 
   .sim-frame__body {
-    padding: 16px;
+    padding: 1rem;
   }
 
   .sim-frame__footer {
-    padding: 10px 16px;
+    padding: 0.625rem 1rem;
     flex-wrap: wrap;
   }
 
@@ -305,7 +268,7 @@
     radial-gradient(farthest-side at 100% 50%, rgb(16 24 40 / 0.14), transparent);
   background-position: left center, right center, left center, right center;
   background-repeat: no-repeat;
-  background-size: 28px 100%, 28px 100%, 12px 100%, 12px 100%;
+  background-size: 1.75rem 100%, 1.75rem 100%, 0.75rem 100%, 0.75rem 100%;
   background-attachment: local, local, scroll, scroll;
 }
 
@@ -325,7 +288,7 @@
 .sim-table td,
 .viz-table th,
 .viz-table td {
-  padding: 9px 12px;
+  padding: 0.5625rem 0.75rem;
   text-align: left;
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
@@ -377,7 +340,7 @@
 
 /* Estados semánticos de fila y destello de 900ms */
 .sim-table tbody tr.row-flash td {
-  animation: sim-row-flash 900ms var(--ease-out);
+  animation: grain-fill var(--dur-3) var(--ease-out);
 }
 
 .sim-table tbody tr.row-duplicated td,
@@ -416,7 +379,7 @@
 
 .sim-table-empty-cell {
   text-align: center !important;
-  padding: 20px 12px !important;
+  padding: 1.25rem 0.75rem !important;
   color: var(--danger);
   background-color: var(--danger-soft) !important;
   font-weight: 600;
@@ -499,10 +462,10 @@
   background-color: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: var(--r-md);
-  padding: 14px 16px;
+  padding: 0.875rem 1rem;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 0.625rem;
 }
 
 .sim-comparison-card__title {
@@ -517,20 +480,20 @@
 .sim-comparison-bars {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 0.625rem;
 }
 
 .sim-bar-row {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 0.25rem;
 }
 
 .sim-bar-header {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 8px;
+  gap: 0.5rem;
   font-size: var(--fs-xs);
   font-variant-numeric: tabular-nums;
 }
@@ -550,7 +513,7 @@
 
 .sim-bar-track {
   width: 100%;
-  height: 10px;
+  height: 0.625rem;
   background-color: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-pill);
@@ -588,8 +551,8 @@
 
 /* Barra compacta dentro de celdas de tabla (ej. BI Anti-Slop) */
 .sim-inline-bar {
-  width: 110px;
-  height: 10px;
+  width: 6.875rem;
+  height: 0.625rem;
   background-color: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: var(--r-pill);
@@ -604,14 +567,14 @@
 .viz-two-col {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: 1rem;
   min-width: 0;
 }
 
 .sim-three-col {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  gap: 0.625rem;
   min-width: 0;
 }
 
@@ -619,7 +582,7 @@
 .viz-bars-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
+  gap: 0.625rem;
   min-width: 0;
 }
 
@@ -648,11 +611,11 @@
   background-color: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-md);
-  padding: 14px;
+  padding: 0.875rem;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 0.625rem;
 }
 
 .sim-panel--soft {
@@ -664,7 +627,7 @@
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 0.5rem;
 }
 
 .sim-panel__title,
@@ -675,7 +638,7 @@
   color: var(--text-2);
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 0.375rem;
   margin: 0;
 }
 
@@ -684,11 +647,11 @@
   background-color: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-md);
-  padding: 12px 14px;
+  padding: 0.75rem 0.875rem;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 0.25rem;
 }
 
 .sim-metric-box.box-danger,
@@ -710,7 +673,7 @@
   color: var(--text-2);
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 0.375rem;
 }
 
 .sim-metric-nums,
@@ -726,10 +689,10 @@
 .viz-slider-box {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 0.375rem;
   font-size: var(--fs-xs);
   color: var(--text);
-  flex: 1 1 260px;
+  flex: 1 1 16.25rem;
   min-width: 0;
 }
 
@@ -750,7 +713,7 @@
 .viz-storage-blocks {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 0.625rem;
 }
 
 .sim-storage-lead {
@@ -762,11 +725,11 @@
 .block-strip {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0.5rem;
 }
 
 .disk-block {
-  padding: 10px 12px;
+  padding: 0.625rem 0.75rem;
   border-radius: var(--r-sm);
   border: 1px solid var(--border);
   font-family: var(--font-mono);
@@ -798,7 +761,7 @@
 .sim-track-section {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 0.375rem;
 }
 
 .sim-track-label {
@@ -808,7 +771,7 @@
 }
 
 .sim-Timeline-card {
-  padding: 10px 12px;
+  padding: 0.625rem 0.75rem;
   border-radius: var(--r-sm);
   border: 1px solid var(--border);
   background-color: var(--surface);
@@ -834,7 +797,7 @@
 .sim-Timeline-card__head {
   display: flex;
   justify-content: space-between;
-  gap: 8px;
+  gap: 0.5rem;
   font-weight: 600;
   font-size: var(--fs-sm);
   color: var(--text);
@@ -843,13 +806,13 @@
 .sim-Timeline-card__meta {
   font-size: var(--fs-xs);
   color: var(--text-2);
-  margin-top: 4px;
+  margin-top: 0.25rem;
 }
 
 /* Listas dentro de simuladores */
 .sim-list {
   margin: 0;
-  padding-left: 18px;
+  padding-left: 1.125rem;
   font-size: var(--fs-sm);
   line-height: 1.6;
   color: var(--text);
@@ -859,7 +822,7 @@
 .sim-chart-svg {
   width: 100%;
   height: auto;
-  max-height: 200px;
+  max-height: 12.5rem;
   background-color: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
@@ -869,12 +832,12 @@
 .sim-legend-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 0.5rem;
   font-size: var(--fs-xs);
 }
 
 .sim-legend-pill {
-  padding: 2px 8px;
+  padding: 0.125rem 0.5rem;
   border-radius: var(--r-sm);
   font-weight: 600;
   font-family: var(--font-mono);
@@ -900,7 +863,7 @@
 .triad-roles-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  gap: 0.75rem;
 }
 
 @media (max-width: 768px) {
@@ -913,19 +876,19 @@
   background-color: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-md);
-  padding: 14px;
+  padding: 0.875rem;
   font-size: var(--fs-xs);
 }
 
 .triad-role-card h4 {
-  margin: 8px 0 6px 0;
+  margin: 0.5rem 0 0.375rem 0;
   font-size: var(--fs-sm);
   color: var(--text);
 }
 
 .triad-role-card ul {
   margin: 0;
-  padding-left: 16px;
+  padding-left: 1rem;
   color: var(--text-2);
   line-height: 1.5;
 }
@@ -933,7 +896,7 @@
 .role-badge {
   display: inline-flex;
   align-items: center;
-  padding: 2px 8px;
+  padding: 0.125rem 0.5rem;
   border-radius: var(--r-pill);
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
@@ -962,21 +925,21 @@
 .codelab {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 1rem;
 }
 
 .codelab--pop {
-  animation: sim-pop 360ms var(--ease-out);
+  animation: view-fade var(--dur-2) var(--ease-out);
 }
 
 .codelab--shake {
-  animation: sim-shake 380ms var(--ease-out);
+  border-color: var(--bad);
 }
 
 .codelab__header {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 0.25rem;
 }
 
 .codelab__title {
@@ -1008,8 +971,8 @@
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 8px;
-  padding: 8px 14px;
+  gap: 0.5rem;
+  padding: 0.5rem 0.875rem;
   background-color: rgb(255 255 255 / 0.04);
   border-bottom: 1px solid rgb(255 255 255 / 0.1);
   font-family: var(--font-mono);
@@ -1020,19 +983,19 @@
 .codelab-editor__dots {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 0.375rem;
 }
 
 .codelab-editor__dot {
-  width: 8px;
-  height: 8px;
+  width: 0.5rem;
+  height: 0.5rem;
   border-radius: var(--r-pill);
   background-color: rgb(255 255 255 / 0.22);
 }
 
 .codelab-editor__viewport {
   overflow-x: auto;
-  padding: 12px 0;
+  padding: 0.75rem 0;
 }
 
 .codelab-lines {
@@ -1053,8 +1016,8 @@
 
 .codelab-gutter {
   display: table-cell;
-  width: 42px;
-  padding: 0 12px;
+  width: 2.625rem;
+  padding: 0 0.75rem;
   text-align: right;
   color: #6B738E;
   user-select: none;
@@ -1064,7 +1027,7 @@
 
 .codelab-code {
   display: table-cell;
-  padding: 0 16px;
+  padding: 0 1rem;
   white-space: pre;
   color: #EEF0F6;
 }
@@ -1072,8 +1035,8 @@
 .codelab-slot-pill {
   display: inline-flex;
   align-items: center;
-  padding: 1px 8px;
-  margin: 0 2px;
+  padding: 0.0625rem 0.5rem;
+  margin: 0 0.125rem;
   border-radius: 4px;
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
@@ -1094,10 +1057,10 @@
 .codelab-inputs-panel {
   background-color: rgb(255 255 255 / 0.03);
   border-top: 1px solid rgb(255 255 255 / 0.12);
-  padding: 14px;
+  padding: 0.875rem;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 0.75rem;
 }
 
 .codelab-blank-row {
@@ -1105,10 +1068,10 @@
   color: var(--text);
   border: 1.5px solid var(--border);
   border-radius: var(--r-md);
-  padding: 12px 14px;
+  padding: 0.75rem 0.875rem;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0.5rem;
   transition: border-color var(--dur-1) var(--ease-out);
 }
 
@@ -1127,7 +1090,7 @@
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 0.5rem;
   font-size: var(--fs-sm);
   color: var(--text);
 }
@@ -1140,7 +1103,7 @@
   font-size: var(--fs-xs);
   font-weight: 600;
   cursor: pointer;
-  padding: 4px 8px;
+  padding: 0.25rem 0.5rem;
   border-radius: var(--r-sm);
 }
 
@@ -1151,8 +1114,8 @@
 .codelab-code-input,
 .lab-code-input {
   width: 100%;
-  height: 44px;
-  padding: 0 12px;
+  height: 2.75rem;
+  padding: 0 0.75rem;
   border-radius: var(--r-sm);
   border: 1.5px solid var(--border);
   background-color: var(--surface);
@@ -1197,11 +1160,11 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 0.625rem;
 }
 
 .codelab-check-btn {
-  min-height: 44px;
+  min-height: 2.75rem;
 }
 
 /* ==========================================================================
@@ -1211,13 +1174,13 @@
 .pipeline-challenge {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 1rem;
 }
 
 .pipeline-challenge__header {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 0.25rem;
 }
 
 .pipeline-challenge__title {
@@ -1238,15 +1201,15 @@
 .pipeline-steps-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 0.625rem;
 }
 
 .pipeline-step-card {
   display: grid;
   grid-template-columns: auto auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
+  gap: 0.75rem;
+  padding: 0.75rem 0.875rem;
   border-radius: var(--r-md);
   border: 1.5px solid var(--border);
   background-color: var(--surface);
@@ -1279,7 +1242,7 @@
   justify-content: center;
   color: var(--text-2);
   cursor: grab;
-  padding: 4px 2px;
+  padding: 0.25rem 0.125rem;
 }
 
 .pipeline-step-handle:active {
@@ -1287,8 +1250,8 @@
 }
 
 .pipeline-step-index {
-  width: 28px;
-  height: 28px;
+  width: 1.75rem;
+  height: 1.75rem;
   border-radius: var(--r-pill);
   background-color: var(--surface-2);
   border: 1px solid var(--border);
@@ -1318,14 +1281,14 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 0.25rem;
 }
 
 .pipeline-step-title-row {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 0.5rem;
   font-size: var(--fs-sm);
   color: var(--text);
 }
@@ -1340,8 +1303,8 @@
 .pipeline-step-status {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
+  gap: 0.25rem;
+  padding: 0.125rem 0.5rem;
   border-radius: var(--r-pill);
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
@@ -1363,15 +1326,15 @@
 .pipeline-step-controls {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 0.375rem;
   flex-shrink: 0;
 }
 
 .pipeline-move-btn {
-  width: 44px;
-  height: 44px;
-  min-width: 44px;
-  min-height: 44px;
+  width: 2.75rem;
+  height: 2.75rem;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
   padding: 0;
   border-radius: var(--r-sm);
   border: 1px solid var(--border);
@@ -1407,7 +1370,7 @@
   .pipeline-step-controls {
     grid-column: 1 / -1;
     justify-content: flex-end;
-    padding-top: 6px;
+    padding-top: 0.375rem;
     border-top: 1px dashed var(--border);
   }
 }
@@ -1422,10 +1385,10 @@
   font-family: var(--font-mono);
   font-size: var(--fs-sm);
   line-height: 1.55;
-  padding: 16px;
+  padding: 1rem;
   border-radius: var(--r-md);
   overflow-x: auto;
-  margin: 12px 0;
+  margin: 0.75rem 0;
 }
 
 .viz-card {
@@ -1433,22 +1396,22 @@
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-1);
-  padding: 20px;
-  margin: 20px 0;
+  padding: 1.25rem;
+  margin: 1.25rem 0;
 }
 
 .viz-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
+  gap: 1rem;
   flex-wrap: wrap;
-  margin-bottom: 16px;
+  margin-bottom: 1rem;
 }
 
 .viz-header h2,
 .viz-header h3 {
-  margin: 0 0 6px 0;
+  margin: 0 0 0.375rem 0;
 }
 
 .viz-desc {
@@ -1459,14 +1422,14 @@
 
 .viz-toggle-group {
   display: flex;
-  gap: 8px;
+  gap: 0.5rem;
   flex-wrap: wrap;
 }
 
 .cta-primary-btn,
 .viz-toggle-btn {
-  min-height: 38px;
-  padding: 6px 12px;
+  min-height: 2.375rem;
+  padding: 0.375rem 0.75rem;
   border-radius: var(--r-sm);
   border: 1px solid var(--border);
   background-color: var(--surface);
@@ -1476,13 +1439,13 @@
   font-weight: 600;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.5rem;
   cursor: pointer;
 }
 
 .viz-result-banner,
 .editorial-feedback {
-  padding: 12px 16px;
+  padding: 0.75rem 1rem;
   border-radius: var(--r-md);
   border: 1px solid var(--border);
   border-left-width: 4px;
@@ -1504,6 +1467,6 @@
 
 .viz-banner-title {
   font-weight: 600;
-  margin-bottom: 4px;
+  margin-bottom: 0.25rem;
   font-size: var(--fs-sm);
 }

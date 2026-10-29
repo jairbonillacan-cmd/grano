@@ -5,7 +5,7 @@
 .home-view {
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 2rem;
   min-width: 0;
 }
 
@@ -20,18 +20,18 @@
 }
 
 .ui-illustration--sm {
-  width: 84px;
-  height: 56px;
+  width: 5.25rem;
+  height: 3.5rem;
 }
 
 .ui-illustration--md {
-  width: 140px;
-  height: 94px;
+  width: 8.75rem;
+  height: 5.875rem;
 }
 
 .ui-illustration--lg {
-  width: 210px;
-  height: 140px;
+  width: 13.125rem;
+  height: 8.75rem;
 }
 
 .ui-illustration-svg {
@@ -43,9 +43,9 @@
 .ui-empty-state .ui-empty-state__illus {
   width: auto;
   height: auto;
-  min-width: 56px;
-  min-height: 56px;
-  padding: 6px;
+  min-width: 3.5rem;
+  min-height: 3.5rem;
+  padding: 0.375rem;
   background-color: transparent;
 }
 
@@ -54,8 +54,8 @@
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
-  gap: 4px 16px;
-  padding: 4px 0 0;
+  gap: 0.25rem 1rem;
+  padding: 0.25rem 0 0;
 }
 
 .home-hero__title {
@@ -79,41 +79,41 @@
 .home-continue-card {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 1.25rem;
 }
 
 .home-continue-card__top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 0.75rem;
   flex-wrap: wrap;
 }
 
 .home-continue-card__chips {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.5rem;
   flex-wrap: wrap;
 }
 
 .home-continue-card__main {
   display: flex;
   align-items: flex-start;
-  gap: 20px;
+  gap: 1.25rem;
 }
 
 .home-continue-card__number {
   font-family: var(--font-mono);
-  font-size: clamp(36px, 4vw + 16px, 52px);
+  font-size: clamp(2.25rem, 4vw + 1rem, 3.25rem);
   font-weight: 600;
   line-height: 1;
   color: var(--stage);
   background-color: var(--stage-soft);
   border: 1px solid color-mix(in oklab, var(--stage) 32%, transparent);
   border-radius: var(--r-lg);
-  min-width: 76px;
-  height: 76px;
+  min-width: 4.75rem;
+  height: 4.75rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -123,7 +123,7 @@
 .home-continue-card__copy {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 0.375rem;
   min-width: 0;
   flex: 1;
 }
@@ -147,14 +147,14 @@
 .home-continue-card__progress {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0.5rem;
 }
 
 .home-continue-card__step-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 0.5rem;
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
   font-weight: 600;
@@ -165,22 +165,22 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 1rem;
   flex-wrap: wrap;
-  padding-top: 4px;
+  padding-top: 0.25rem;
 }
 
 .home-continue-card__roles {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.5rem;
   flex-wrap: wrap;
 }
 
 .home-continue-card__actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 0.625rem;
   flex-wrap: wrap;
 }
 
@@ -188,25 +188,25 @@
 .home-metrics-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
+  gap: 1rem;
 }
 
 .home-metric-card {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 12px;
+  gap: 0.75rem;
 }
 
 .home-metric-card__head {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 0.75rem;
 }
 
 .home-metric-card__icon {
-  width: 40px;
-  height: 40px;
+  width: 2.5rem;
+  height: 2.5rem;
   border-radius: var(--r-pill);
   display: inline-flex;
   align-items: center;
@@ -268,14 +268,14 @@
 .home-section {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 1rem;
 }
 
 .home-section__header {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 12px;
+  gap: 0.75rem;
   flex-wrap: wrap;
 }
 
@@ -290,7 +290,7 @@
 .home-section__subtitle {
   font-size: var(--fs-sm);
   color: var(--text-2);
-  margin: 4px 0 0 0;
+  margin: 0.25rem 0 0 0;
 }
 
 /* 4. Mapa de etapas (camino visual con línea conectora) */
@@ -298,8 +298,8 @@
   position: relative;
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 12px;
-  padding: 20px 16px;
+  gap: 0.75rem;
+  padding: 1.25rem 1rem;
   background-color: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
@@ -309,7 +309,7 @@
 .home-stage-map::before {
   content: '';
   position: absolute;
-  top: 56px;
+  top: 3.5rem;
   left: 10%;
   right: 10%;
   height: 3px;
@@ -320,9 +320,9 @@
 .home-stage-node {
   position: relative;
   z-index: 1;
-  min-height: 44px;
-  min-width: 44px;
-  padding: 8px 6px;
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+  padding: 0.5rem 0.375rem;
   border-radius: var(--r-md);
   border: 1px solid transparent;
   background-color: transparent;
@@ -332,7 +332,7 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 10px;
+  gap: 0.625rem;
   cursor: pointer;
   transition:
     background-color var(--dur-1) var(--ease-out),
@@ -343,7 +343,7 @@
 .home-stage-node:hover {
   background-color: var(--surface-2);
   border-color: var(--stage);
-  transform: translateY(-2px);
+  transform: translateY(-0.125rem);
 }
 
 .home-stage-node:focus-visible {
@@ -357,8 +357,8 @@
 }
 
 .home-stage-node__ring-wrap {
-  width: 56px;
-  height: 56px;
+  width: 3.5rem;
+  height: 3.5rem;
   border-radius: var(--r-pill);
   background-color: var(--surface);
   display: inline-flex;
@@ -382,13 +382,13 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 0.125rem;
   min-width: 0;
 }
 
 .home-stage-node__eyebrow {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 600;
   text-transform: uppercase;
   color: var(--stage-deep);
@@ -404,15 +404,15 @@
 
 .home-stage-node__status {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--text-2);
 }
 
 .home-stage-node__completed-pill {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
+  gap: 0.25rem;
+  padding: 0.125rem 0.5rem;
   border-radius: var(--r-pill);
   background-color: var(--success-soft);
   color: var(--success);
@@ -422,8 +422,8 @@
 /* 5. Repaso de hoy y 6. Diagnóstico */
 .home-actions-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(18.75rem, 1fr));
+  gap: 1.25rem;
   align-items: start;
 }
 
@@ -431,21 +431,21 @@
 .home-diagnostic-block {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 0.875rem;
   min-width: 0;
 }
 
 .home-review-card {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 0.875rem;
 }
 
 .home-review-card__top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 0.5rem;
   flex-wrap: wrap;
 }
 
@@ -474,13 +474,13 @@
 
 .home-review-card__actions,
 .home-diagnostic-card__actions {
-  padding-top: 4px;
+  padding-top: 0.25rem;
 }
 
 .home-diagnostic-card {
   display: flex;
   align-items: flex-start;
-  gap: 18px;
+  gap: 1.125rem;
 }
 
 .home-diagnostic-card__illus {
@@ -490,7 +490,7 @@
 .home-diagnostic-card__body {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 0.625rem;
   min-width: 0;
   flex: 1;
 }
@@ -498,7 +498,7 @@
 .home-diagnostic-card__chips {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.5rem;
   flex-wrap: wrap;
 }
 
@@ -506,21 +506,21 @@
 .home-badges-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+  gap: 0.875rem;
 }
 
 /* Responsive < 1024px: Mapa de etapas vertical */
 @media (max-width: 1023px) {
   .home-stage-map {
     grid-template-columns: 1fr;
-    gap: 10px;
-    padding: 16px;
+    gap: 0.625rem;
+    padding: 1rem;
   }
 
   .home-stage-map::before {
-    top: 36px;
-    bottom: 36px;
-    left: 52px;
+    top: 2.25rem;
+    bottom: 2.25rem;
+    left: 3.25rem;
     right: auto;
     width: 3px;
     height: auto;
@@ -529,8 +529,8 @@
   .home-stage-node {
     flex-direction: row;
     text-align: left;
-    padding: 8px 12px 8px 8px;
-    gap: 16px;
+    padding: 0.5rem 0.75rem 0.5rem 0.5rem;
+    gap: 1rem;
   }
 
   .home-stage-node__info {
@@ -546,7 +546,7 @@
 /* Responsive < 768px (Móvil) */
 @media (max-width: 767px) {
   .home-view {
-    gap: 24px;
+    gap: 1.5rem;
   }
 
   .home-metrics-grid {
@@ -559,13 +559,13 @@
 
   .home-continue-card__main {
     flex-direction: column;
-    gap: 12px;
+    gap: 0.75rem;
   }
 
   .home-continue-card__number {
-    min-width: 60px;
-    height: 60px;
-    font-size: 28px;
+    min-width: 3.75rem;
+    height: 3.75rem;
+    font-size: 1.75rem;
   }
 
   .home-diagnostic-card {
