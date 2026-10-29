@@ -1,0 +1,201 @@
+[
+  {
+    "id": "motor-vertipaq",
+    "term": "Motor VertiPaq (almacenamiento columnar en memoria)",
+    "englishTerm": "VertiPaq In-Memory Columnar Engine",
+    "track": "bi",
+    "definition": "Motor analítico en memoria de Power BI y Analysis Services Tabular que almacena cada columna por separado usando codificación por diccionario, compresión por longitud de racha (RLE) y empaquetado de bits. Ejemplo: `orders.store_id` comprime 18 000 filas en 14 entradas. No se confunde con DirectQuery, que traduce consultas al motor SQL externo.",
+    "formula": "SELECT COUNT(*) AS filas, COUNT(DISTINCT store_id) AS entradas_diccionario FROM orders;",
+    "relatedLessons": [
+      "bi2-modelo-semantico-01-estrella-vertipaq",
+      "bi2-modelo-semantico-05-medidas-vs-columnas-calculadas"
+    ],
+    "relatedTerms": [
+      "esquema-estrella-semantico",
+      "medida-vs-columna-calculada",
+      "c12-parquet-columnar"
+    ],
+    "sources": [
+      {
+        "title": "Microsoft Learn — Data reduction techniques for Import modeling",
+        "url": "https://learn.microsoft.com/en-us/power-bi/guidance/import-modeling-data-reduction",
+        "publisher": "Microsoft Learn",
+        "accessed": "2026-10-29",
+        "supports": "Arquitectura en memoria de VertiPaq, diccionarios por columna y técnicas de reducción de cardinalidad."
+      }
+    ]
+  },
+  {
+    "id": "esquema-estrella-semantico",
+    "term": "Esquema en estrella en el modelo semántico",
+    "englishTerm": "Star Schema in Semantic Models",
+    "track": "bi",
+    "definition": "Diseño recomendado en Power BI que separa tablas de dimensión (atributos únicos para filtrar y agrupar) y tablas de hechos (claves foráneas e importes numéricos para resumir). Ejemplo: dimensiones `products` y `stores` filtrando `order_items`. No se confunde con una tabla ancha (OBT) importada sin separar, que duplica importes de cabecera.",
+    "formula": "SELECT s.region, SUM(oi.line_total_usd) FROM order_items oi JOIN orders o USING (order_id) JOIN stores s USING (store_id) GROUP BY s.region;",
+    "relatedLessons": [
+      "bi2-modelo-semantico-01-estrella-vertipaq",
+      "bi2-modelo-semantico-02-relaciones-cardinalidad"
+    ],
+    "relatedTerms": [
+      "motor-vertipaq",
+      "cardinalidad-relaciones-bi",
+      "c06-star-vs-obt"
+    ],
+    "sources": [
+      {
+        "title": "Microsoft Learn — Understand star schema and the importance for Power BI",
+        "url": "https://learn.microsoft.com/en-us/power-bi/guidance/star-schema",
+        "publisher": "Microsoft Learn",
+        "accessed": "2026-10-29",
+        "supports": "Separación de tablas de dimensión y tablas de hechos para optimizar rendimiento y usabilidad en Power BI."
+      }
+    ]
+  },
+  {
+    "id": "cardinalidad-relaciones-bi",
+    "term": "Cardinalidad de relación (1:N, 1:1 y N:M)",
+    "englishTerm": "Model Relationship Cardinality",
+    "track": "bi",
+    "definition": "Propiedad de una relación semántica que define si la columna de enlace contiene valores únicos (lado `1`, dimensión) o repetidos (lado `N`, hechos). Ejemplo: `customers.customer_id` (`1`) hacia `orders.customer_id` (`N`). No se confunde con la dirección de filtro cruzado, que controla hacia qué tabla se propagan los filtros.",
+    "formula": "SELECT COUNT(*) = COUNT(DISTINCT customer_id) AS es_lado_uno FROM customers;",
+    "relatedLessons": [
+      "bi2-modelo-semantico-02-relaciones-cardinalidad",
+      "bi2-modelo-semantico-03-direccion-filtro-cruzado"
+    ],
+    "relatedTerms": [
+      "esquema-estrella-semantico",
+      "tabla-puente-bridge",
+      "filtro-cruzado-bidireccional"
+    ],
+    "sources": [
+      {
+        "title": "Microsoft Learn — Create and manage relationships in Power BI Desktop",
+        "url": "https://learn.microsoft.com/en-us/power-bi/transform-model/desktop-create-and-manage-relationships",
+        "publisher": "Microsoft Learn",
+        "accessed": "2026-10-29",
+        "supports": "Opciones de cardinalidad 1:N, N:1, 1:1 y muchos a muchos en modelos tabulares."
+      }
+    ]
+  },
+  {
+    "id": "tabla-puente-bridge",
+    "term": "Tabla puente (Bridge Table)",
+    "englishTerm": "Bridge Table for Many-to-Many Relationships",
+    "track": "bi",
+    "definition": "Tabla intermedia con claves únicas o pares de asociación que resuelve relaciones muchos a muchos entre dos tablas mediante dos relaciones `1:N` controladas. Ejemplo: extraer los `customer_id` únicos antes de cruzar `orders` con versiones históricas en `customer_changes`. No se confunde con una relación `N:M` directa sin dimensión común.",
+    "formula": "WITH puente_clientes AS (SELECT DISTINCT customer_id FROM customers) SELECT COUNT(*) FROM puente_clientes;",
+    "relatedLessons": [
+      "bi2-modelo-semantico-02-relaciones-cardinalidad"
+    ],
+    "relatedTerms": [
+      "cardinalidad-relaciones-bi",
+      "filtro-cruzado-bidireccional"
+    ],
+    "sources": [
+      {
+        "title": "Microsoft Learn — Many-to-many relationship guidance",
+        "url": "https://learn.microsoft.com/en-us/power-bi/guidance/relationships-many-to-many",
+        "publisher": "Microsoft Learn",
+        "accessed": "2026-10-29",
+        "supports": "Patrones con tabla puente frente a relaciones de cardinalidad muchos a muchos en Power BI."
+      }
+    ]
+  },
+  {
+    "id": "filtro-cruzado-bidireccional",
+    "term": "Dirección de filtro cruzado (única vs bidireccional)",
+    "englishTerm": "Single vs Bi-directional Cross-Filtering",
+    "track": "bi",
+    "definition": "Regla que determina cómo se propagan los filtros a través de una relación: en dirección única (`Single`) fluyen solo del lado `1` al lado `N`; en bidireccional (`Both`) regresan de los hechos a la dimensión. Ejemplo: activar `CROSSFILTER` solo dentro de una medida. No se confunde con un `INNER JOIN` permanente.",
+    "formula": "CALCULATE(DISTINCTCOUNT(customers[customer_id]), CROSSFILTER(orders[customer_id], customers[customer_id], Both))",
+    "relatedLessons": [
+      "bi2-modelo-semantico-03-direccion-filtro-cruzado"
+    ],
+    "relatedTerms": [
+      "cardinalidad-relaciones-bi",
+      "tabla-puente-bridge"
+    ],
+    "sources": [
+      {
+        "title": "Microsoft Learn — Bi-directional relationship guidance",
+        "url": "https://learn.microsoft.com/en-us/power-bi/guidance/relationships-bidirectional-filtering",
+        "publisher": "Microsoft Learn",
+        "accessed": "2026-10-29",
+        "supports": "Riesgos de ambigüedad y degradación de rendimiento al habilitar filtros bidireccionales en el modelo."
+      }
+    ]
+  },
+  {
+    "id": "tabla-fechas-marcada",
+    "term": "Tabla de fechas marcada (Mark as date table)",
+    "englishTerm": "Marked Date Table & Auto Date/Time",
+    "track": "bi",
+    "definition": "Dimensión de calendario validada en Power BI cuya columna de tipo `Date` es única, sin valores nulos y sin días faltantes entre el inicio y fin de cada año. Ejemplo: la tabla `calendar` con `calendar_date` y `fiscal_quarter`. No se confunde con `Auto date/time`, que crea tablas ocultas por cada columna de fecha.",
+    "formula": "SELECT COUNT(*) = DATEDIFF('day', MIN(calendar_date), MAX(calendar_date)) + 1 AS sin_huecos FROM calendar;",
+    "relatedLessons": [
+      "bi2-modelo-semantico-04-tablas-fechas-userelationship"
+    ],
+    "relatedTerms": [
+      "relacion-inactiva-userelationship",
+      "esquema-estrella-semantico"
+    ],
+    "sources": [
+      {
+        "title": "Microsoft Learn — Model date tables in Power BI Desktop",
+        "url": "https://learn.microsoft.com/en-us/power-bi/guidance/model-date-tables",
+        "publisher": "Microsoft Learn",
+        "accessed": "2026-10-29",
+        "supports": "Requisitos técnicos de continuidad, unicidad y tipo Date para marcar una tabla de fechas e inteligencia de tiempo."
+      }
+    ]
+  },
+  {
+    "id": "relacion-inactiva-userelationship",
+    "term": "Relación inactiva y dimensión de rol (USERELATIONSHIP)",
+    "englishTerm": "Inactive Relationship & USERELATIONSHIP",
+    "track": "bi",
+    "definition": "Enlace secundario entre dos tablas que permanece dormido por defecto para evitar rutas ambiguas y se activa puntualmente dentro de una medida DAX con `USERELATIONSHIP`. Ejemplo: conectar `calendar[calendar_date]` con `orders[order_date]` (activa) y con `refunds[refund_date]` (inactiva). No se confunde con duplicar físicamente toda la tabla de calendario por cada fecha.",
+    "formula": "CALCULATE(SUM(refunds[refund_amount_usd]), USERELATIONSHIP(calendar[calendar_date], refunds[refund_date]))",
+    "relatedLessons": [
+      "bi2-modelo-semantico-04-tablas-fechas-userelationship"
+    ],
+    "relatedTerms": [
+      "tabla-fechas-marcada",
+      "filtro-cruzado-bidireccional"
+    ],
+    "sources": [
+      {
+        "title": "Microsoft Learn — Active vs inactive relationship guidance",
+        "url": "https://learn.microsoft.com/en-us/power-bi/guidance/relationships-active-inactive",
+        "publisher": "Microsoft Learn",
+        "accessed": "2026-10-29",
+        "supports": "Restricción de una única relación activa entre dos tablas y activación dinámica con USERELATIONSHIP."
+      }
+    ]
+  },
+  {
+    "id": "medida-vs-columna-calculada",
+    "term": "Medida dinámica frente a columna calculada",
+    "englishTerm": "DAX Measure vs Calculated Column",
+    "track": "bi",
+    "definition": "Una columna calculada evalúa su fórmula fila por fila durante el refresco y consume memoria RAM en VertiPaq; una medida se evalúa en tiempo de consulta sobre el contexto filtrado sin ocupar almacenamiento. Ejemplo: calcular el margen porcentual como `DIVIDE(SUM(margen), SUM(ingreso))`. No se confunde con promediar porcentajes precalculados por fila.",
+    "formula": "SELECT ROUND(SUM(discount_usd) * 100.0 / SUM(subtotal_usd), 2) AS tasa_descuento_medida_pct FROM orders;",
+    "relatedLessons": [
+      "bi2-modelo-semantico-05-medidas-vs-columnas-calculadas"
+    ],
+    "relatedTerms": [
+      "motor-vertipaq",
+      "esquema-estrella-semantico",
+      "c09-non-additive-metrics"
+    ],
+    "sources": [
+      {
+        "title": "SQLBI — Calculated Columns and Measures in DAX",
+        "url": "https://www.sqlbi.com/articles/calculated-columns-and-measures-in-dax/",
+        "publisher": "SQLBI",
+        "accessed": "2026-10-29",
+        "supports": "Diferencia de evaluación entre tiempo de refresco (columna calculada en RAM) y tiempo de consulta (medida agregada)."
+      }
+    ]
+  }
+]
