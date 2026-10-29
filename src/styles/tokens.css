@@ -1,0 +1,202 @@
+/* Grano — tokens de diseño.
+   Un solo acento de marca (--brand), tinta neutra para la interfaz y tres colores de área
+   usados solo como marcadores pequeños. Los nombres antiguos (--primary, --text, --stage…)
+   se mantienen como capa de compatibilidad y apuntan a la paleta nueva; la tarea T1/T7 del
+   plan los renombra. Contraste verificado (WCAG 2.x): ver PLAN_GEMINI_4_ARGON.md §4.1. */
+
+:root,
+[data-theme="light"] {
+  /* Tipografía */
+  --font-display: 'Newsreader Variable', Georgia, serif;
+  --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  --fs-xs: 12px;
+  --fs-sm: 14px;
+  --fs-md: 16px;
+  --fs-lg: 18px;
+  --fs-xl: 22px;
+  --fs-2xl: 28px;
+  --fs-3xl: 36px;
+
+  /* Paleta nueva */
+  --ink: #1C1B19;
+  --ink-2: #57534E;
+  --ink-3: #78716C;
+  --sunken: #F4F4F2;
+  --line: #E7E5E1;
+  --line-strong: #D6D3CD;
+  --line-control: #928C85;
+  --brand: #C2410C;
+  --brand-soft: #FDF1EA;
+  --brand-deep: #9A3412;
+  --track-de: #2952CC;
+  --track-da: #167A52;
+  --track-bi: #7A3FC2;
+  --focus: #C2410C;
+
+  /* Compatibilidad: nombres antiguos -> paleta nueva */
+  --bg: #FAFAF9;
+  --surface: #FFFFFF;
+  --surface-2: var(--sunken);
+  --border: var(--line);
+  --text: var(--ink);
+  --text-2: var(--ink-2);
+  --primary: var(--ink);
+  --primary-deep: var(--ink);
+  --primary-soft: #EFEEEA;
+  --success: #167A52;
+  --success-soft: #E8F3EE;
+  --danger: #C2352B;
+  --danger-soft: #FBECEA;
+  --warning: #A15C00;
+  --warning-soft: #FBF1E2;
+  --code-bg: #1C1B19;
+
+  /* Las etapas ya no tienen color propio: todas usan el acento de marca */
+  --stage: var(--brand);
+  --stage-soft: var(--brand-soft);
+  --stage-deep: var(--brand-deep);
+  --stage-contrast: #FFFFFF;
+
+  /* Áreas (DE, DA, BI) */
+  --role-de: var(--track-de);
+  --role-de-deep: #1F3F9E;
+  --role-de-soft: color-mix(in oklab, var(--track-de) 8%, var(--surface));
+  --role-da: var(--track-da);
+  --role-da-deep: #0F5A3C;
+  --role-da-soft: color-mix(in oklab, var(--track-da) 8%, var(--surface));
+  --role-bi: var(--track-bi);
+  --role-bi-deep: #5B2C94;
+  --role-bi-soft: color-mix(in oklab, var(--track-bi) 8%, var(--surface));
+
+  /* Forma, profundidad y movimiento */
+  --r-sm: 4px;
+  --r-md: 6px;
+  --r-lg: 10px;
+  --r-xl: 10px;
+  --r-pill: 999px;
+
+  --shadow-1: none;
+  --shadow-2: 0 1px 2px rgb(0 0 0 / .06);
+  --shadow-pop: 0 8px 24px rgb(0 0 0 / .12), 0 1px 2px rgb(0 0 0 / .08);
+
+  --ease-out: cubic-bezier(.2, .8, .2, 1);
+  --ease-in: cubic-bezier(.4, 0, 1, 1);
+  --ease-move: cubic-bezier(.65, 0, .35, 1);
+  --dur-1: 120ms;
+  --dur-2: 180ms;
+  --dur-3: 260ms;
+  --dur-4: 420ms;
+}
+
+/* Compatibilidad: cualquier [data-stage] usa el acento de marca */
+[data-stage] {
+  --stage: var(--brand);
+  --stage-soft: var(--brand-soft);
+  --stage-deep: var(--brand-deep);
+  --stage-contrast: #FFFFFF;
+}
+
+/* Modo oscuro (sistema), salvo que se fuerce claro */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ink: #EDECE9;
+    --ink-2: #B5B1AA;
+    --ink-3: #8F8A82;
+    --sunken: #222220;
+    --line: #2E2D2A;
+    --line-strong: #3D3B37;
+    --line-control: #6B675F;
+    --brand: #F07A3E;
+    --brand-soft: #2D1D14;
+    --brand-deep: #F5A47A;
+    --track-de: #7C9BF5;
+    --track-da: #5BC79A;
+    --track-bi: #B58CF0;
+    --focus: #F07A3E;
+
+    --bg: #121211;
+    --surface: #1A1A18;
+    --primary-soft: #2A2926;
+    --success: #5BC79A;
+    --success-soft: #16261F;
+    --danger: #F07A70;
+    --danger-soft: #2E1A18;
+    --warning: #E0A345;
+    --warning-soft: #2B2112;
+    --code-bg: #0E0E0D;
+    --stage-contrast: #121211;
+
+    --role-de-deep: #A9BDF8;
+    --role-da-deep: #8ED9B8;
+    --role-bi-deep: #CDB0F5;
+    --role-de-soft: color-mix(in oklab, var(--track-de) 12%, var(--surface));
+    --role-da-soft: color-mix(in oklab, var(--track-da) 12%, var(--surface));
+    --role-bi-soft: color-mix(in oklab, var(--track-bi) 12%, var(--surface));
+
+    --shadow-2: 0 1px 2px rgb(0 0 0 / .3);
+    --shadow-pop: 0 8px 24px rgb(0 0 0 / .45), 0 1px 2px rgb(0 0 0 / .3);
+  }
+
+  :root:not([data-theme="light"]) [data-stage] {
+    --stage-contrast: #121211;
+  }
+}
+
+/* Modo oscuro explícito */
+[data-theme="dark"] {
+  --ink: #EDECE9;
+  --ink-2: #B5B1AA;
+  --ink-3: #8F8A82;
+  --sunken: #222220;
+  --line: #2E2D2A;
+  --line-strong: #3D3B37;
+  --line-control: #6B675F;
+  --brand: #F07A3E;
+  --brand-soft: #2D1D14;
+  --brand-deep: #F5A47A;
+  --track-de: #7C9BF5;
+  --track-da: #5BC79A;
+  --track-bi: #B58CF0;
+  --focus: #F07A3E;
+
+  --bg: #121211;
+  --surface: #1A1A18;
+  --primary-soft: #2A2926;
+  --success: #5BC79A;
+  --success-soft: #16261F;
+  --danger: #F07A70;
+  --danger-soft: #2E1A18;
+  --warning: #E0A345;
+  --warning-soft: #2B2112;
+  --code-bg: #0E0E0D;
+  --stage-contrast: #121211;
+
+  --role-de-deep: #A9BDF8;
+  --role-da-deep: #8ED9B8;
+  --role-bi-deep: #CDB0F5;
+  --role-de-soft: color-mix(in oklab, var(--track-de) 12%, var(--surface));
+  --role-da-soft: color-mix(in oklab, var(--track-da) 12%, var(--surface));
+  --role-bi-soft: color-mix(in oklab, var(--track-bi) 12%, var(--surface));
+
+  --shadow-2: 0 1px 2px rgb(0 0 0 / .3);
+  --shadow-pop: 0 8px 24px rgb(0 0 0 / .45), 0 1px 2px rgb(0 0 0 / .3);
+}
+
+[data-theme="dark"] [data-stage] {
+  --stage-contrast: #121211;
+}
+
+/* Tamaño de la interfaz (Ajustes → Tamaño). Se aplica con `zoom` sobre <html>; las unidades
+   de viewport de los CSS se dividen entre --zoom para que los paneles de altura completa
+   sigan ocupando toda la pantalla. "auto" reduce al 90 % en portátiles pequeños. */
+html { --zoom: 1; zoom: var(--zoom); }
+html[data-scale="0.8"] { --zoom: 0.8; }
+html[data-scale="0.9"] { --zoom: 0.9; }
+html[data-scale="1.1"] { --zoom: 1.1; }
+html[data-scale="1.25"] { --zoom: 1.25; }
+
+@media (min-width: 1024px) and (max-width: 1440px), (min-width: 1024px) and (max-height: 800px) {
+  html[data-scale="auto"] { --zoom: 0.9; }
+}

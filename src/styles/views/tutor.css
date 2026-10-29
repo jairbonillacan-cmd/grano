@@ -1,0 +1,446 @@
+/* ==========================================================================
+   TUTOR PANEL (src/components/TutorPanel.jsx)
+   ========================================================================== */
+
+.tutor-panel-slot {
+  position: fixed;
+  top: 56px;
+  right: 0;
+  bottom: 0;
+  width: 400px;
+  height: calc(100vh / var(--zoom, 1) - 56px);
+  flex-shrink: 0;
+  background-color: var(--surface);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  z-index: 38;
+}
+
+@media (min-width: 1280px) {
+  .app-shell:has(.tutor-panel-slot) .app-main {
+    padding-right: 424px;
+  }
+}
+
+.tutor-backdrop {
+  display: none;
+}
+
+.tutor-panel {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background-color: var(--surface);
+  padding: 16px;
+  gap: 12px;
+  overflow: hidden;
+}
+
+.tutor-panel__handle {
+  display: none;
+  width: 40px;
+  height: 4px;
+  border-radius: var(--r-pill);
+  background-color: var(--border);
+  margin: 0 auto 4px auto;
+  flex-shrink: 0;
+}
+
+.tutor-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.tutor-panel__title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tutor-panel__title {
+  font-family: var(--font-display);
+  font-size: var(--fs-md);
+  font-weight: 600;
+  margin: 0;
+  color: var(--text);
+}
+
+.tutor-panel__context {
+  background-color: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.tutor-panel__context-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tutor-panel__lesson-name {
+  font-size: var(--fs-sm);
+  color: var(--text);
+  line-height: 1.35;
+}
+
+.tutor-panel__step-badge {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--primary-deep);
+}
+
+.tutor-panel__engine {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+  flex-shrink: 0;
+}
+
+.tutor-panel__engine select {
+  height: 34px;
+  padding: 0 10px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+}
+
+.tutor-panel__messages {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 6px 2px;
+}
+
+.tutor-thread-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tutor-bubble {
+  max-width: 92%;
+  border-radius: var(--r-lg);
+  padding: 12px 14px;
+  font-size: var(--fs-sm);
+  line-height: 1.55;
+  box-shadow: var(--shadow-1);
+}
+
+.tutor-bubble--user {
+  align-self: flex-end;
+  background-color: var(--primary);
+  color: #FFFFFF;
+  border-bottom-right-radius: 4px;
+}
+
+[data-theme="dark"] .tutor-bubble--user {
+  color: #0F1117;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .tutor-bubble--user {
+    color: #0F1117;
+  }
+}
+
+.tutor-bubble--tutor {
+  align-self: flex-start;
+  background-color: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-bottom-left-radius: 4px;
+}
+
+.tutor-bubble--loading {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tutor-msg-card {
+  background-color: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 12px;
+  font-size: var(--fs-sm);
+}
+
+.tutor-msg-source {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--primary-deep);
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.tutor-msg-q {
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  margin: 0;
+  color: inherit;
+}
+
+.tutor-msg-a {
+  font-size: var(--fs-sm);
+  line-height: 1.55;
+  color: var(--text);
+}
+
+.tutor-msg-a > * + * {
+  margin-top: 8px;
+}
+
+.tutor-msg-a .md-p,
+.tutor-msg-a .md-heading {
+  margin-bottom: 0;
+}
+
+.tutor-msg-a .md-heading {
+  font-weight: 600;
+  margin-top: 14px;
+}
+
+.tutor-msg-a .md-list {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
+.tutor-msg-a .md-list li + li {
+  margin-top: 4px;
+}
+
+.tutor-msg-a .md-code {
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--code-bg);
+  color: #EDECE9;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.5;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+/* Indicador "Escribiendo..." con 3 puntos animados */
+.tutor-typing {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--primary-deep);
+}
+
+.tutor-typing-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tutor-typing-dots__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--r-pill);
+  background-color: var(--primary);
+  display: inline-block;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .tutor-typing-dots__dot {
+    animation: tutor-dot-bounce 1.2s ease-in-out infinite;
+  }
+
+  .tutor-typing-dots__dot:nth-child(2) {
+    animation-delay: 0.18s;
+  }
+
+  .tutor-typing-dots__dot:nth-child(3) {
+    animation-delay: 0.36s;
+  }
+
+  @keyframes tutor-dot-bounce {
+    0%,
+    80%,
+    100% {
+      transform: translateY(0);
+      opacity: 0.45;
+    }
+    40% {
+      transform: translateY(-4px);
+      opacity: 1;
+    }
+  }
+}
+
+.tutor-typing__context {
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+}
+
+/* Estado de error con Illustration name="tutor-error" */
+.tutor-error-state {
+  background-color: var(--danger-soft);
+  border: 1px solid color-mix(in oklab, var(--danger) 40%, var(--border));
+  border-radius: var(--r-md);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+}
+
+.tutor-error-state__illus {
+  width: 72px;
+  height: 50px;
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tutor-error-state__illus .ui-illustration-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.tutor-error-state__title {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--danger);
+  margin: 0;
+}
+
+.tutor-error-state__desc {
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+  margin: 0;
+}
+
+.tutor-panel__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.tutor-panel__form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.tutor-panel__input {
+  flex: 1;
+  height: 44px;
+  padding: 0 12px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+}
+
+.tutor-panel__input:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+
+.tutor-panel__send-btn {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border-radius: var(--r-md);
+  flex-shrink: 0;
+}
+
+.tutor-panel__footer-note {
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+  line-height: 1.4;
+  padding-top: 2px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 1279px) {
+  .tutor-panel-slot {
+    position: fixed;
+    top: 56px;
+    right: 0;
+    bottom: 0;
+    width: min(400px, calc(100vw / var(--zoom, 1)));
+    height: calc(100vh / var(--zoom, 1) - 56px);
+    z-index: 50;
+    box-shadow: var(--shadow-2);
+  }
+
+  .tutor-backdrop {
+    display: block;
+    position: fixed;
+    inset: 56px 0 0 0;
+    background-color: rgb(15 17 23 / 0.45);
+    z-index: 45;
+  }
+}
+
+@media (max-width: 767px) {
+  .tutor-panel-slot {
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: calc(90dvh / var(--zoom, 1));
+    max-height: calc(90dvh / var(--zoom, 1));
+    border-left: none;
+    border-top: 1px solid var(--border);
+    border-radius: var(--r-xl) var(--r-xl) 0 0;
+    z-index: 65;
+  }
+
+  .tutor-backdrop {
+    inset: 0;
+    z-index: 60;
+  }
+
+  .tutor-panel__handle {
+    display: block;
+  }
+}

@@ -1,0 +1,136 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-28T19:41:00Z",
+  "title": "Design System: DATA TRIAD STUDIO — Oct 2026",
+  "extensions": {
+    "colorMeta": {
+      "bg-ivory": {
+        "role": "neutral",
+        "displayName": "Technical Ivory Ground",
+        "canonical": "#FBF9F5",
+        "tonalRamp": ["#26241E", "#423F36", "#635E52", "#878172", "#ABA596", "#CFCAC0", "#EFECE4", "#FBF9F5"]
+      },
+      "de-blue": {
+        "role": "primary",
+        "displayName": "Cobalt Engineering Blue",
+        "canonical": "#0F62FE",
+        "tonalRamp": ["#001D6C", "#002D9C", "#0043CE", "#0F62FE", "#4589FF", "#78A9FF", "#A6C8FF", "#E8F0FE"]
+      },
+      "da-emerald": {
+        "role": "secondary",
+        "displayName": "Statistical Emerald",
+        "canonical": "#059669",
+        "tonalRamp": ["#022C22", "#064E3B", "#047857", "#059669", "#10B981", "#34D399", "#A7F3D0", "#E6F6F0"]
+      },
+      "bi-amber": {
+        "role": "tertiary",
+        "displayName": "Executive BI Amber",
+        "canonical": "#C86D00",
+        "tonalRamp": ["#451A03", "#78350F", "#92400E", "#B45309", "#C86D00", "#F59E0B", "#FCD34D", "#FEF3C7"]
+      }
+    },
+    "typographyMeta": {
+      "headline": { "displayName": "Headline", "purpose": "Títulos de estudio y encabezados de módulo." },
+      "title": { "displayName": "Title", "purpose": "Subsecciones de diagramas, paneles de gráficos y tarjetas." },
+      "body": { "displayName": "Body", "purpose": "Explicaciones técnicas de cada disciplina (65-72ch)." },
+      "label": { "displayName": "Label / Mono", "purpose": "Consola de código, ejes de gráficos y métricas tabulares." }
+    },
+    "shadows": [
+      {
+        "name": "shadow-soft",
+        "value": "0 2px 6px rgba(20, 22, 25, 0.05)",
+        "purpose": "Sombra ambiental sutil en contenedores principales sobre el fondo marfil."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out-fast",
+        "value": "150ms ease-out",
+        "purpose": "Transición rápida de estado en pestañas de lentes, píldoras y botones."
+      }
+    ],
+    "breakpoints": [
+      { "name": "tablet", "value": "1200px" },
+      { "name": "mobile", "value": "860px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Run Action Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Botón de ejecución de simulaciones y consultas en Cobalt Blue.",
+      "html": "<button class=\"ds-btn-primary\">Ejecutar</button>",
+      "css": ".ds-btn-primary { height: 28px; padding: 0 10px; border-radius: 4px; border: 1px solid #0F62FE; background: #0F62FE; color: #FFFFFF; font-family: 'Public Sans', sans-serif; font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: background-color 150ms ease-out; } .ds-btn-primary:hover { background: #0043CE; } .ds-btn-primary:focus-visible { outline: 2px solid #0F62FE; outline-offset: 2px; }"
+    },
+    {
+      "name": "Discipline Lens Pill (DE / DA / BI)",
+      "kind": "chip",
+      "refersTo": "chip-de",
+      "description": "Píldora interactiva para cambiar instantáneamente entre Ingeniería, Análisis y BI.",
+      "html": "<button class=\"ds-pill-de\">DE</button>",
+      "css": ".ds-pill-de { height: 21px; padding: 0 9px; border-radius: 999px; background: #0F62FE; color: #FFFFFF; font-family: 'Public Sans', sans-serif; font-size: 0.72rem; font-weight: 700; border: 1px solid transparent; cursor: pointer; } .ds-pill-de:hover { transform: translateY(-1px); } .ds-pill-de:focus-visible { outline: 2px solid #141619; outline-offset: 2px; }"
+    },
+    {
+      "name": "Studio Workspace Card",
+      "kind": "card",
+      "refersTo": "card-workspace",
+      "description": "Contenedor principal del estudio con borde de 1px y sombra suave.",
+      "html": "<div class=\"ds-card\">Contenido del laboratorio</div>",
+      "css": ".ds-card { border: 1px solid #DFDCD2; border-radius: 6px; background: #FFFFFF; color: #141619; padding: 12px 14px; box-shadow: 0 2px 6px rgba(20, 22, 25, 0.05); font-family: 'Public Sans', sans-serif; }"
+    },
+    {
+      "name": "Copilot Query Input",
+      "kind": "input",
+      "refersTo": "button-primary",
+      "description": "Campo de entrada conectado al puente CLI de Google AI Ultra.",
+      "html": "<div class=\"ds-input-wrap\"><input class=\"ds-input\" placeholder=\"Consulta a Google AI Ultra...\" /></div>",
+      "css": ".ds-input-wrap { display: flex; align-items: center; border: 1px solid #C8C4B7; border-radius: 5px; background: #FFFFFF; padding: 4px 10px; } .ds-input { border: none; background: transparent; font-family: 'Public Sans', sans-serif; font-size: 0.82rem; color: #141619; outline: none; width: 100%; } .ds-input-wrap:focus-within { outline: 2px solid #0F62FE; outline-offset: 2px; }"
+    },
+    {
+      "name": "360° Lens Switcher Bar",
+      "kind": "nav",
+      "refersTo": "card-workspace",
+      "description": "Barra superior para alternar la perspectiva entre Ingeniería DE, Análisis DA, BI y Flujo Unificado.",
+      "html": "<div class=\"ds-lens-bar\"><button class=\"ds-lens-tab active\">Ingeniería DE</button><button class=\"ds-lens-tab\">Análisis DA</button><button class=\"ds-lens-tab\">Business Intelligence BI</button></div>",
+      "css": ".ds-lens-bar { display: flex; gap: 6px; padding: 7px 12px; border: 1px solid #DFDCD2; border-radius: 6px; background: #F6F3EC; } .ds-lens-tab { border: 1px solid transparent; background: transparent; padding: 4px 10px; border-radius: 4px; font-family: 'Public Sans', sans-serif; font-size: 0.84rem; font-weight: 600; color: #3E434C; cursor: pointer; } .ds-lens-tab.active { background: #E8F0FE; border-color: #0F62FE; color: #003A9B; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Reactive Data Triad Studio",
+    "overview": "DATA TRIAD STUDIO une la claridad editorial de un cuaderno científico computacional con la precisión instrumental de una consola de telemetría de datos. La superficie descansa sobre papel técnico marfil mate para lectura prolongada sin fatiga visual, reservando bloques de pizarra oscura mate para terminales de código ejecutables y trazas de motores columnares.",
+    "keyCharacteristics": [
+      "Superficie de papel técnico marfil mate combinada con consolas de código en pizarra oscura.",
+      "Codificación cromática funcional estricta por disciplina (Azul Cobalto para DE, Esmeralda para DA, Ámbar para BI).",
+      "Diagramas vectoriales SVG interactivos y gráficos de alta relación dato-tinta (Tufte sparklines y barras de cohortes).",
+      "Tipografía numérica tabular obligatoria en métricas, ejes, código y latencias."
+    ],
+    "rules": [
+      {
+        "name": "The Discipline Chromatic Rule",
+        "body": "Ningún color saturado se utiliza como decoración libre: el Azul Cobalto pertenece exclusivamente a acciones primarias e Ingeniería (DE), el Esmeralda a Análisis Estadístico (DA) y el Ámbar a Business Intelligence (BI).",
+        "section": "colors"
+      },
+      {
+        "name": "The Tabular Numerals Rule",
+        "body": "Todo número que represente latencia, porcentaje de retención, bytes escaneados, número de línea o KPI financiero debe renderizarse con font-variant-numeric: tabular-nums.",
+        "section": "typography"
+      },
+      {
+        "name": "The Hairline Boundary Rule",
+        "body": "La jerarquía espacial se define con bordes de 1px y contraste tonal entre superficies; nunca mediante sombras duras desplazadas ni efectos de desenfoque de fondo.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do mantener siempre visible la relación entre Ingeniería (DE), Análisis (DA) y BI dentro de cada módulo mediante el conmutador 360° y las tarjetas de nodos relacionados.",
+      "Do aplicar font-variant-numeric: tabular-nums en todas las tablas, métricas de KPIs, ejes de gráficos y numeración de líneas de código.",
+      "Do dejar más espacio vertical por encima de cada encabezado (margin-top) que por debajo (margin-bottom)."
+    ],
+    "donts": [
+      "Don't colocar etiquetas tipo kicker o eyebrow en mayúsculas pequeñas por encima de los títulos h1, h2 o h3.",
+      "Don't usar texto con degradado, cristal esmerilado decorativo, bordes laterales gruesos (border-left > 1px) ni sombras duras sin difuminado.",
+      "Don't usar emojis Unicode en lugar de iconos vectoriales SVG de trazo consistente."
+    ]
+  }
+}

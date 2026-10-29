@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.cache/
+.impeccable/chrome-profile/
+tests/screenshots/
+docs/reportes/capturas/**/*.png
+.env.local
+*.log

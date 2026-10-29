@@ -1,0 +1,578 @@
+/* ==========================================================================
+   HOME VIEW (src/views/HomeView.jsx)
+   ========================================================================== */
+
+.home-view {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  min-width: 0;
+}
+
+/* Ilustraciones SVG del catálogo */
+.ui-illustration {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: var(--r-lg);
+}
+
+.ui-illustration--sm {
+  width: 84px;
+  height: 56px;
+}
+
+.ui-illustration--md {
+  width: 140px;
+  height: 94px;
+}
+
+.ui-illustration--lg {
+  width: 210px;
+  height: 140px;
+}
+
+.ui-illustration-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.ui-empty-state .ui-empty-state__illus {
+  width: auto;
+  height: auto;
+  min-width: 56px;
+  min-height: 56px;
+  padding: 6px;
+  background-color: transparent;
+}
+
+/* 1. Cabecera de "Hoy": una línea de estado, sin fondo ni ilustración */
+.home-hero {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  padding: 4px 0 0;
+}
+
+.home-hero__title {
+  font-family: var(--font-display);
+  font-size: var(--fs-2xl);
+  font-weight: 560;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  color: var(--text);
+  margin: 0;
+}
+
+.home-hero__status {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+  margin: 0;
+}
+
+/* 2. Tarjeta Continuar con data-stage */
+.home-continue-card {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.home-continue-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.home-continue-card__chips {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.home-continue-card__main {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.home-continue-card__number {
+  font-family: var(--font-mono);
+  font-size: clamp(36px, 4vw + 16px, 52px);
+  font-weight: 600;
+  line-height: 1;
+  color: var(--stage);
+  background-color: var(--stage-soft);
+  border: 1px solid color-mix(in oklab, var(--stage) 32%, transparent);
+  border-radius: var(--r-lg);
+  min-width: 76px;
+  height: 76px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.home-continue-card__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+
+.home-continue-card__title {
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--text);
+  margin: 0;
+}
+
+.home-continue-card__desc {
+  font-size: var(--fs-md);
+  color: var(--text-2);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.home-continue-card__progress {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.home-continue-card__step-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.home-continue-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-top: 4px;
+}
+
+.home-continue-card__roles {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.home-continue-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* 3. Métricas (3 tarjetas) */
+.home-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.home-metric-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.home-metric-card__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.home-metric-card__icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-pill);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.home-metric-card__icon--primary {
+  background-color: var(--primary-soft);
+  color: var(--primary-deep);
+}
+
+.home-metric-card__icon--success {
+  background-color: var(--success-soft);
+  color: var(--success);
+}
+
+.home-metric-card__icon--warning {
+  background-color: var(--warning-soft);
+  color: color-mix(in oklab, var(--warning) 80%, var(--text));
+}
+
+.home-metric-card__label {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-2);
+}
+
+.home-metric-card__value {
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xl);
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.home-metric-card__value--warning {
+  color: var(--warning);
+}
+
+.home-metric-card__motivate {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.home-metric-card__meta {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+}
+
+/* Secciones comunes */
+.home-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.home-section__header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.home-section__title {
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+
+.home-section__subtitle {
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+  margin: 4px 0 0 0;
+}
+
+/* 4. Mapa de etapas (camino visual con línea conectora) */
+.home-stage-map {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+  padding: 20px 16px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-1);
+}
+
+.home-stage-map::before {
+  content: '';
+  position: absolute;
+  top: 56px;
+  left: 10%;
+  right: 10%;
+  height: 3px;
+  background-color: var(--border);
+  z-index: 0;
+}
+
+.home-stage-node {
+  position: relative;
+  z-index: 1;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 8px 6px;
+  border-radius: var(--r-md);
+  border: 1px solid transparent;
+  background-color: transparent;
+  color: var(--text);
+  font-family: var(--font-sans);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  cursor: pointer;
+  transition:
+    background-color var(--dur-1) var(--ease-out),
+    border-color var(--dur-1) var(--ease-out),
+    transform var(--dur-1) var(--ease-out);
+}
+
+.home-stage-node:hover {
+  background-color: var(--surface-2);
+  border-color: var(--stage);
+  transform: translateY(-2px);
+}
+
+.home-stage-node:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.home-stage-node.is-current {
+  background-color: color-mix(in oklab, var(--stage-soft) 50%, var(--surface));
+  border-color: var(--stage);
+}
+
+.home-stage-node__ring-wrap {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--r-pill);
+  background-color: var(--surface);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.home-stage-node__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--stage-deep);
+}
+
+.home-stage-node.is-completed .home-stage-node__icon {
+  color: var(--success);
+}
+
+.home-stage-node__info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.home-stage-node__eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--stage-deep);
+}
+
+.home-stage-node__name {
+  font-family: var(--font-display);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.25;
+}
+
+.home-stage-node__status {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-2);
+}
+
+.home-stage-node__completed-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--r-pill);
+  background-color: var(--success-soft);
+  color: var(--success);
+  font-weight: 600;
+}
+
+/* 5. Repaso de hoy y 6. Diagnóstico */
+.home-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+
+.home-review-block,
+.home-diagnostic-block {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.home-review-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.home-review-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.home-review-card__roles {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+}
+
+.home-review-card__title,
+.home-diagnostic-card__title {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+
+.home-review-card__desc,
+.home-diagnostic-card__desc {
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.home-review-card__actions,
+.home-diagnostic-card__actions {
+  padding-top: 4px;
+}
+
+.home-diagnostic-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+}
+
+.home-diagnostic-card__illus {
+  flex-shrink: 0;
+}
+
+.home-diagnostic-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.home-diagnostic-card__chips {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* 7. Insignias de etapa */
+.home-badges-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+/* Responsive < 1024px: Mapa de etapas vertical */
+@media (max-width: 1023px) {
+  .home-stage-map {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 16px;
+  }
+
+  .home-stage-map::before {
+    top: 36px;
+    bottom: 36px;
+    left: 52px;
+    right: auto;
+    width: 3px;
+    height: auto;
+  }
+
+  .home-stage-node {
+    flex-direction: row;
+    text-align: left;
+    padding: 8px 12px 8px 8px;
+    gap: 16px;
+  }
+
+  .home-stage-node__info {
+    align-items: flex-start;
+    flex: 1;
+  }
+
+  .home-badges-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Responsive < 768px (Móvil) */
+@media (max-width: 767px) {
+  .home-view {
+    gap: 24px;
+  }
+
+  .home-metrics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .home-actions-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .home-continue-card__main {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .home-continue-card__number {
+    min-width: 60px;
+    height: 60px;
+    font-size: 28px;
+  }
+
+  .home-diagnostic-card {
+    flex-direction: column;
+  }
+
+  .home-badges-grid {
+    grid-template-columns: 1fr;
+  }
+}

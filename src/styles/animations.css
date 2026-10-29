@@ -1,0 +1,105 @@
+/* Micro-interacciones pedagógicas y celebraciones */
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes pop {
+    0% {
+      transform: scale(0.96);
+    }
+    50% {
+      transform: scale(1.03);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  @keyframes shake {
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    20%,
+    60% {
+      transform: translateX(-6px);
+    }
+    40%,
+    80% {
+      transform: translateX(6px);
+    }
+  }
+
+  @keyframes draw-check {
+    0% {
+      stroke-dashoffset: 36;
+      opacity: 0;
+    }
+    40% {
+      opacity: 1;
+    }
+    100% {
+      stroke-dashoffset: 0;
+      opacity: 1;
+    }
+  }
+
+  @keyframes sparkle {
+    0% {
+      transform: scale(0) rotate(0deg);
+      opacity: 0;
+    }
+    50% {
+      transform: scale(1.18) rotate(22deg);
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1) rotate(45deg);
+      opacity: 0.85;
+    }
+  }
+
+  @keyframes pulse-ring {
+    0% {
+      box-shadow: 0 0 0 0 color-mix(in oklab, var(--stage, var(--primary)) 45%, transparent);
+    }
+    70% {
+      box-shadow: 0 0 0 8px color-mix(in oklab, var(--stage, var(--primary)) 0%, transparent);
+    }
+    100% {
+      box-shadow: 0 0 0 0 transparent;
+    }
+  }
+
+  @keyframes skeleton-shimmer {
+    0% {
+      opacity: 0.55;
+    }
+    50% {
+      opacity: 0.9;
+    }
+    100% {
+      opacity: 0.55;
+    }
+  }
+
+  .anim-pop {
+    animation: pop var(--dur-2) var(--ease-out) both;
+  }
+
+  .anim-shake {
+    animation: shake var(--dur-3) var(--ease-out) both;
+  }
+
+  .anim-draw-check {
+    stroke-dasharray: 36;
+    stroke-dashoffset: 0;
+    animation: draw-check var(--dur-3) var(--ease-out) both;
+  }
+
+  .anim-sparkle {
+    animation: sparkle var(--dur-3) var(--ease-out) both;
+  }
+
+  .anim-pulse-ring {
+    animation: pulse-ring 1.8s var(--ease-out) infinite;
+  }
+}

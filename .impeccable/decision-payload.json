@@ -1,0 +1,248 @@
+{
+  "title": "Elige el Mundo Visual de tu Plataforma DE + DA + BI (Oct 2026)",
+  "question": "El dado asignó 'Cuaderno de Laboratorio Computacional & Observable Studio'. Puedes mantenerlo, elegir una alternativa, alternar Comp/Code o volver a tirar.",
+  "options": [
+    {
+      "id": "assigned",
+      "label": "Cuaderno Computacional & Observable Studio (DE · DA · BI)",
+      "kicker": "THE ROLL",
+      "lineage": "Ensayos computacionales reactivos (Bret Victor / Distill.pub / Observable Framework)",
+      "thesis": "Cada lección es un ensayo interactivo vivo con un Conmutador Tri-Lente (Ingeniería · Análisis · BI) y celdas reactivas donde el pipeline, la estadística y el dashboard se actualizan juntos.",
+      "palette": [
+        "#FBF9F5",
+        "#141619",
+        "#0F62FE",
+        "#D97706",
+        "#059669"
+      ],
+      "materials": [
+        "papel técnico marfil mate #FBF9F5",
+        "consolas de telemetría pizarra #141619",
+        "código de color por disciplina (Azul DE · Esmeralda DA · Ámbar BI)"
+      ],
+      "viewport": "Navegación curricular con mapa de conexiones, lección central con conmutador en vivo DE↔DA↔BI, simulador/gráficos interactivos y panel lateral de consultas Google AI Ultra.",
+      "risk": "Exige una jerarquía tipográfica impecable para que las tres perspectivas convivan sin saturar la pantalla.",
+      "raised": [
+        {
+          "from": "challenger-star-atlas",
+          "raise": "Grafo de conocimientos y nodos relacionados escalados por magnitud para saltar entre temas de DE, DA y BI."
+        },
+        {
+          "from": "challenger-zoo-map",
+          "raise": "Geometría SVG compartida que sincroniza el diagrama de arquitectura con las métricas del dashboard BI."
+        },
+        {
+          "from": "challenger-doujin-catalog",
+          "raise": " Estado de dominio persistente por disciplina (DE/DA/BI) en cada módulo."
+        },
+        {
+          "from": "challenger-warm-consumer",
+          "raise": "Acentos cromáticos funcionales estrictamente ligados a los controles interactivos y la lente activa."
+        }
+      ],
+      "wireframe": {
+        "cols": 12,
+        "rows": 10,
+        "regions": [
+          { "label": "Currículo + Mapa DE/DA/BI", "x": 0, "y": 0, "w": 2, "h": 10, "accent": false },
+          { "label": "Lección + Conmutador Lente (DE ↔ DA ↔ BI) + Nodos Relacionados", "x": 2, "y": 0, "w": 7, "h": 5, "accent": true },
+          { "label": "Simulador Interactivo, Charts Estadísticos & Dashboard BI", "x": 2, "y": 5, "w": 7, "h": 5, "accent": false },
+          { "label": "Copiloto Google AI Ultra (Contextual)", "x": 9, "y": 0, "w": 3, "h": 10, "accent": true }
+        ]
+      }
+    },
+    {
+      "id": "model-pick",
+      "label": "Manual de Especificación Stripe Press & Consola de Telemetría",
+      "kicker": "IMPECCABLE’S PICK",
+      "lineage": "Manuales de ingeniería de sistemas O'Reilly / Stripe Press + Observabilidad Analítica",
+      "thesis": "Tratado editorial de alta precisión donde cada capítulo presenta la especificación de ingeniería (DE), el modelo matemático/estadístico (DA) y el cuadro de mando ejecutivo (BI).",
+      "palette": [
+        "#F6F4EE",
+        "#111315",
+        "#E11D48",
+        "#0284C7",
+        "#1E293B"
+      ],
+      "materials": [
+        "tipografía tabular de ingeniería",
+        "esquemas técnicos con cotas",
+        "paneles de instrumentación"
+      ],
+      "viewport": "Cabecera de especificación con matriz de relaciones DE/DA/BI, diagrama interactivo y banco de pruebas con Google AI Ultra.",
+      "risk": "Es la dirección más familiar dentro de las plataformas de documentación técnica de élite.",
+      "wireframe": {
+        "cols": 12,
+        "rows": 10,
+        "regions": [
+          { "label": "Barra de Especificación DE·DA·BI + Estado AI Ultra", "x": 0, "y": 0, "w": 12, "h": 1, "accent": false },
+          { "label": "Índice Modular", "x": 0, "y": 1, "w": 3, "h": 9, "accent": false },
+          { "label": "Diagrama + Lección Multi-Lente", "x": 3, "y": 1, "w": 5, "h": 9, "accent": true },
+          { "label": "Simulador + Consultas IA Ultra", "x": 8, "y": 1, "w": 4, "h": 9, "accent": true }
+        ]
+      }
+    },
+    {
+      "id": "challenger-acetate-manual",
+      "label": "Manual con Pestañas Troqueladas y Láminas de Acetato (Capas DE/DA/BI)",
+      "verdict": "competitive",
+      "lineage": "Manuales de referencia con riel escalonado de pestañas y hojas de acetato superpuestas",
+      "thesis": "Las tres disciplinas funcionan como láminas de acetato superpuestas sobre el mismo caso: la base es el almacenamiento (DE), la primera lámina es el análisis (DA) y la superior es el dashboard (BI).",
+      "palette": [
+        "#F7F6F2",
+        "#D95D24",
+        "#EAB308",
+        "#0D9488",
+        "#1E3A8A"
+      ],
+      "materials": [
+        "acetato lechoso perforado",
+        "cartulina divisoria por módulo",
+        "sombra dura de 1mm"
+      ],
+      "viewport": "Manual abierto con riel escalonado de pestañas en el borde derecho y controles para plegar/desplegar las capas de acetato DE, DA y BI.",
+      "case": "Metáfora física extraordinaria para superponer Ingeniería, Análisis y BI sobre una misma arquitectura.",
+      "risk": "Las transiciones mecánicas de 90ms y la estética de archivo físico son muy distintivas y menos convencionales.",
+      "hero": "https://impeccable.style/worlds/cards/rw-manual-acetate-tab-board-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/rw-manual-acetate-tab-board.webp"
+    },
+    {
+      "id": "challenger-split-flap",
+      "label": "Tablero Split-Flap de Telemetría y Sala de Control Analítico",
+      "verdict": "competitive",
+      "lineage": "Tableros electromecánicos de terminales y centros de control de operaciones",
+      "thesis": "Toda la plataforma opera como una sala de control en tiempo real donde los pipelines, tests estadísticos y KPIs de BI giran en celdas mecánicas sincronizadas.",
+      "palette": [
+        "#141517",
+        "#F8FAFC",
+        "#F59E0B",
+        "#EF4444",
+        "#94A3B8"
+      ],
+      "materials": [
+        "celdas negro mate con caracteres blancos",
+        "marco de acero cepillado",
+        "lámparas ámbar de estado"
+      ],
+      "viewport": "Matriz operativa de pipelines, métricas de negocio y terminal directa a Google AI Ultra.",
+      "case": "Excelente para telemetría en vivo y KPIs operativos, aunque menos descansado para lectura extensa de teoría.",
+      "risk": "El fondo oscuro constante de sala de control puede resultar intenso en sesiones largas de estudio.",
+      "hero": "https://impeccable.style/worlds/cards/signals-instruments-split-flap-concourse-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/signals-instruments-split-flap-concourse.webp"
+    },
+    {
+      "id": "challenger-star-atlas",
+      "label": "Atlas Celeste de Coordenadas",
+      "verdict": "declined",
+      "lineage": "Cartas astronómicas nocturnas",
+      "thesis": "Nodos de datos como constelaciones graduadas por magnitud.",
+      "palette": [
+        "#0B132B",
+        "#F8F9FA",
+        "#EF4444"
+      ],
+      "materials": [
+        "azul noche profundo",
+        "tinta blanca tiza"
+      ],
+      "viewport": "Mapa estelar de conceptos.",
+      "case": "Poco adecuado para tablas SQL y gráficos de Business Intelligence.",
+      "risk": "Demasiado abstracto.",
+      "kept": "Grafo de nodos relacionados escalados por relevancia entre DE, DA y BI.",
+      "hero": "https://impeccable.style/worlds/cards/notation-diagram-systems-star-atlas-hero.webp"
+    },
+    {
+      "id": "challenger-zoo-map",
+      "label": "Mapa Guía de Lóbulos Orgánicos",
+      "verdict": "declined",
+      "lineage": "Mapas plegables de parques",
+      "thesis": "Áreas temáticas como lóbulos de color plano.",
+      "palette": [
+        "#F5F1E4",
+        "#8ED462",
+        "#FF705D",
+        "#2C2E2A"
+      ],
+      "materials": [
+        "color plano sin grano",
+        "cápsulas de señalización"
+      ],
+      "viewport": "Mapa orgánico de temas.",
+      "case": "Choca con la estructura rigurosa de tablas, esquemas y dashboards analíticos.",
+      "risk": "Estética infantil para ingeniería.",
+      "kept": "Geometría SVG compartida que sincroniza el diagrama con los datos del texto.",
+      "hero": "https://impeccable.style/worlds/cards/aww2-zoo-gardens-guide-map-hero.webp"
+    },
+    {
+      "id": "challenger-doujin-catalog",
+      "label": "Catálogo Reticular en Papel Prensa",
+      "verdict": "declined",
+      "lineage": "Catálogos densos de celdas numeradas",
+      "thesis": "Micro-celdas numeradas conectadas a un mapa general.",
+      "palette": [
+        "#ECEAE4",
+        "#18181B",
+        "#2563EB"
+      ],
+      "materials": [
+        "papel prensa",
+        "marcas manuales"
+      ],
+      "viewport": "Cuadrícula masiva de miniaturas.",
+      "case": "No deja espacio para simuladores complejos ni dashboards interactivos.",
+      "risk": "Fragmentación excesiva.",
+      "kept": "Marcado persistente de progreso y rutas conectadas entre disciplinas.",
+      "hero": "https://impeccable.style/worlds/cards/pop-culture-shelf-doujin-event-catalog-hero.webp"
+    },
+    {
+      "id": "challenger-warm-consumer",
+      "label": "Superficie Cálida de App de Consumo",
+      "verdict": "declined",
+      "lineage": "Apps móviles de consumo con tarjetas redondeadas",
+      "thesis": "Columna simple de tarjetas amigables.",
+      "palette": [
+        "#FAF6F0",
+        "#FFFFFF",
+        "#FF5A36",
+        "#1F2937"
+      ],
+      "materials": [
+        "tarjetas blancas suaves",
+        "fondo crema"
+      ],
+      "viewport": "Tarjetas apiladas con barra inferior.",
+      "case": "Insuficiente densidad informativa para comparar pipelines, código SQL y dashboards BI.",
+      "risk": "Demasiado básico.",
+      "kept": "Uso estricto del color de acento para controles accionables.",
+      "hero": "https://impeccable.style/worlds/cards/digital-design-canon-warm-consumer-app-surface-hero.webp"
+    }
+  ],
+  "reroll": {
+    "registers": [
+      "safer",
+      "bolder"
+    ]
+  },
+  "buildPath": {
+    "value": "code",
+    "toggle": true
+  },
+  "canon": true,
+  "canonCard": {
+    "label": "Estándar de la Categoría (Plataforma Dev Moderna)",
+    "thesis": "Interfaz clásica de academia interactiva de datos con paneles oscuros/claros estándar.",
+    "palette": [
+      "#0F172A",
+      "#F8FAFC",
+      "#3B82F6",
+      "#10B981"
+    ],
+    "materials": [
+      "grid de 3 columnas",
+      "tarjetas estándar"
+    ],
+    "viewport": "Sidebar de lecciones, panel central de contenido y chat lateral.",
+    "risk": "Indistinguible de otras plataformas de cursos online."
+  },
+  "steer": true
+}

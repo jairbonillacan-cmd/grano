@@ -1,0 +1,631 @@
+/* ==========================================================================
+   ROADMAP VIEW (src/views/RoadmapView.jsx)
+   ========================================================================== */
+
+.roadmap-view {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* 1. Cabecera global y barra de progreso con 6 marcadores */
+.roadmap-header {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.roadmap-header__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.roadmap-header__title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.roadmap-header__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-2xl);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  line-height: 1.15;
+}
+
+.roadmap-header__subtitle {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+  line-height: 1.45;
+}
+
+.roadmap-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.roadmap-header__actions .ui-btn {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.roadmap-summary-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.roadmap-summary-stats {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.roadmap-summary-stats__text {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.roadmap-summary-stats__pct {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--primary-deep);
+  background-color: var(--primary-soft);
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+  font-variant-numeric: tabular-nums;
+}
+
+.roadmap-progress-global {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.roadmap-progress-global__bar-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.roadmap-progress-global__bar-wrap .ui-progress-bar--lg {
+  height: 10px;
+}
+
+.roadmap-progress-global__ticks {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  pointer-events: none;
+}
+
+.roadmap-progress-global__tick {
+  height: 100%;
+  border-right: 2px solid var(--surface);
+}
+
+.roadmap-progress-global__tick:last-child {
+  border-right: none;
+}
+
+.roadmap-progress-markers {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.roadmap-progress-marker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 4px 8px;
+  border-radius: var(--r-sm);
+  background-color: var(--surface-2);
+  border: 1px solid transparent;
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+}
+
+.roadmap-progress-marker.is-partial {
+  border-color: color-mix(in oklab, var(--stage) 40%, var(--border));
+  background-color: color-mix(in oklab, var(--stage-soft) 45%, var(--surface));
+  color: var(--text);
+}
+
+.roadmap-progress-marker.is-done {
+  border-color: color-mix(in oklab, var(--stage) 55%, var(--border));
+  background-color: var(--stage-soft);
+  color: var(--stage-deep);
+}
+
+.roadmap-progress-marker__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--r-pill);
+  background-color: var(--stage);
+  flex-shrink: 0;
+}
+
+.roadmap-progress-marker__code {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--stage-deep);
+  flex-shrink: 0;
+}
+
+.roadmap-progress-marker__name {
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  color: var(--text-2);
+  line-height: 1.25;
+}
+
+/* 2. Navegación sticky por etapas */
+.roadmap-stage-nav {
+  position: sticky;
+  top: 56px;
+  z-index: 25;
+  margin-inline: -4px;
+  padding: 10px 4px;
+  background-color: color-mix(in oklab, var(--bg) 92%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+  max-width: 100%;
+}
+
+.roadmap-stage-nav__scroll {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  padding: 2px;
+}
+
+.roadmap-stage-nav__scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.roadmap-stage-nav__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 12px;
+  border-radius: var(--r-pill);
+  border: 1px solid color-mix(in oklab, var(--stage) 30%, var(--border));
+  background-color: var(--surface);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  white-space: nowrap;
+  transition:
+    background-color var(--dur-1) var(--ease-out),
+    border-color var(--dur-1) var(--ease-out),
+    color var(--dur-1) var(--ease-out),
+    box-shadow var(--dur-1) var(--ease-out),
+    transform var(--dur-1) var(--ease-out);
+}
+
+.roadmap-stage-nav__pill:hover {
+  border-color: var(--stage);
+  background-color: color-mix(in oklab, var(--stage-soft) 55%, var(--surface));
+}
+
+.roadmap-stage-nav__pill:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.roadmap-stage-nav__pill.is-active {
+  background-color: var(--stage-soft);
+  border-color: var(--stage);
+  color: var(--stage-deep);
+  box-shadow: 0 0 0 1px var(--stage);
+}
+
+.roadmap-stage-nav__num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--r-pill);
+  background-color: var(--stage-soft);
+  color: var(--stage-deep);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.roadmap-stage-nav__pill.is-active .roadmap-stage-nav__num {
+  background-color: var(--stage);
+  color: var(--stage-contrast, #141824);
+}
+
+.roadmap-stage-nav__label {
+  font-weight: 600;
+}
+
+.roadmap-stage-nav__count {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--text-2);
+  padding: 2px 7px;
+  border-radius: var(--r-pill);
+  background-color: var(--surface-2);
+}
+
+.roadmap-stage-nav__pill.is-active .roadmap-stage-nav__count {
+  background-color: var(--surface);
+  color: var(--stage-deep);
+}
+
+/* 3. Bloques y cabeceras de etapa */
+.roadmap-stages-list {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+.roadmap-stage-block {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  scroll-margin-top: 128px;
+}
+
+.roadmap-stage-header {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+  padding: 24px;
+  border-radius: var(--r-xl);
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.roadmap-stage-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--stage);
+}
+
+.roadmap-stage-header__main {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex: 1 1 420px;
+  min-width: 0;
+}
+
+.roadmap-stage-header__illus {
+  width: 96px;
+  height: 68px;
+  border-radius: var(--r-md);
+  background-color: var(--surface);
+  border: 1px solid color-mix(in oklab, var(--stage) 28%, var(--border));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.roadmap-stage-header__illus .ui-illustration {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.roadmap-stage-header__illus .ui-illustration-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.roadmap-stage-header__copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+
+.roadmap-stage-header__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: var(--r-pill);
+  background-color: var(--surface);
+  border: 1px solid color-mix(in oklab, var(--stage) 35%, transparent);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--stage-deep);
+}
+
+.roadmap-stage-header__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.22;
+}
+
+.roadmap-stage-header__desc {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+  line-height: 1.5;
+  max-width: 64ch;
+}
+
+.roadmap-stage-header__aside {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.roadmap-stage-header__ring {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--surface);
+  padding: 6px;
+  border-radius: var(--r-pill);
+  border: 1px solid color-mix(in oklab, var(--stage) 25%, var(--border));
+  box-shadow: var(--shadow-1);
+}
+
+.roadmap-stage-header__badge {
+  min-width: 220px;
+  max-width: 290px;
+}
+
+/* 4. Grilla de lecciones y tarjetas con Container Queries */
+.roadmap-lessons-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.roadmap-lesson-card {
+  container-type: inline-size;
+  container-name: lesson-card;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 44px;
+  border-top: 3px solid var(--stage);
+}
+
+.roadmap-lesson-card.is-completed {
+  background-color: var(--stage-soft);
+  border-color: color-mix(in oklab, var(--stage) 42%, var(--border));
+  border-top-color: var(--stage);
+}
+
+.roadmap-lesson-card.is-recommended {
+  border: 2px solid var(--primary);
+  box-shadow:
+    0 0 0 3px var(--primary-soft),
+    var(--shadow-1);
+}
+
+.roadmap-lesson-card__layout {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 18px;
+  height: 100%;
+  width: 100%;
+}
+
+.roadmap-lesson-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.roadmap-lesson-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.roadmap-lesson-card__num {
+  font-family: var(--font-display);
+  font-size: clamp(22px, 2vw, 26px);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--stage);
+  font-variant-numeric: tabular-nums;
+}
+
+.roadmap-lesson-card__title {
+  margin: 2px 0 0 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.3;
+}
+
+.roadmap-lesson-card__sub {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+  line-height: 1.55;
+  overflow: visible;
+  display: block;
+}
+
+.roadmap-lesson-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-top: 14px;
+  border-top: 1px solid color-mix(in oklab, var(--border) 85%, transparent);
+}
+
+.roadmap-lesson-card.is-completed .roadmap-lesson-card__footer {
+  border-top-color: color-mix(in oklab, var(--stage) 25%, var(--border));
+}
+
+.roadmap-lesson-card__meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.roadmap-lesson-card__duration {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.roadmap-lesson-card__roles {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.roadmap-lesson-card__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.roadmap-lesson-card__status.is-pending {
+  color: var(--text-2);
+}
+
+.roadmap-lesson-card__status.is-progress {
+  color: var(--stage-deep);
+}
+
+.roadmap-lesson-card__status.is-done {
+  color: var(--success);
+}
+
+/* Container Query: cambia el layout interno de vertical a horizontal a >= 520px */
+@container (min-width: 520px) {
+  .roadmap-lesson-card__layout {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+  }
+
+  .roadmap-lesson-card__body {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .roadmap-lesson-card__footer {
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 10px;
+    padding-top: 0;
+    padding-left: 20px;
+    border-top: none;
+    border-left: 1px solid color-mix(in oklab, var(--border) 85%, transparent);
+    flex-shrink: 0;
+    min-width: 176px;
+  }
+}
+
+/* Adaptación responsiva en móvil (360px / 390px) */
+@media (max-width: 767px) {
+  .roadmap-progress-markers {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .roadmap-stage-header {
+    padding: 18px 16px;
+    gap: 16px;
+  }
+
+  .roadmap-stage-header__main {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+    flex-basis: 100%;
+  }
+
+  .roadmap-stage-header__aside {
+    width: 100%;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .roadmap-stage-header__badge {
+    flex: 1 1 180px;
+    max-width: none;
+    min-width: 0;
+  }
+}

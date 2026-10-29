@@ -1,0 +1,1509 @@
+/* ==========================================================================
+   SIMULADORES INTERACTIVOS Y LABORATORIOS DE PRÁCTICA (FASE 2)
+   ========================================================================== */
+
+/* Animaciones de estado y micro-interacciones */
+@keyframes sim-row-flash {
+  0% {
+    background-color: var(--warning-soft);
+  }
+  100% {
+    background-color: var(--surface);
+  }
+}
+
+@keyframes sim-pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.04);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes sim-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20%,
+  60% {
+    transform: translateX(-6px);
+  }
+  40%,
+  80% {
+    transform: translateX(6px);
+  }
+}
+
+/* ==========================================================================
+   1. MARCO COMÚN DE SIMULADOR (.sim-frame)
+   ========================================================================== */
+
+.sim-frame {
+  position: relative;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-top: 4px solid var(--stage);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-1);
+  margin: 20px 0;
+  overflow: hidden;
+  max-width: 100%;
+}
+
+.sim-frame__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px 14px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sim-frame__title-group {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+  flex: 1;
+}
+
+.sim-frame__stage-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--r-md);
+  background-color: var(--stage-soft);
+  color: var(--stage-deep);
+  border: 1px solid color-mix(in oklab, var(--stage) 30%, transparent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.sim-frame__headings {
+  min-width: 0;
+  flex: 1;
+}
+
+.sim-frame__kicker {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--stage-deep);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 2px;
+}
+
+.sim-frame__title {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  color: var(--text);
+  margin: 0 0 4px 0;
+  line-height: 1.3;
+}
+
+.sim-frame__desc {
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.sim-reset-btn {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 12px;
+  flex-shrink: 0;
+}
+
+/* Zona de controles y Segmented Control (.sim-segmented) */
+.sim-frame__controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px 20px;
+  background-color: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.sim-control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.sim-control-label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.sim-segmented {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  max-width: 100%;
+}
+
+.sim-segmented__btn {
+  min-height: 38px;
+  padding: 6px 12px;
+  border-radius: var(--r-sm);
+  border: 1px solid transparent;
+  background-color: transparent;
+  color: var(--text-2);
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  line-height: 1.25;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    background-color var(--dur-1) var(--ease-out),
+    color var(--dur-1) var(--ease-out),
+    border-color var(--dur-1) var(--ease-out),
+    box-shadow var(--dur-1) var(--ease-out);
+}
+
+.sim-segmented__btn:hover:not(:disabled) {
+  color: var(--text);
+  background-color: var(--surface-2);
+}
+
+.sim-segmented__btn:focus-visible {
+  outline: 2px solid var(--stage);
+  outline-offset: 2px;
+}
+
+.sim-segmented__btn--active {
+  background-color: var(--stage-soft);
+  color: var(--stage-deep);
+  border-color: color-mix(in oklab, var(--stage) 45%, transparent);
+  box-shadow: var(--shadow-1);
+}
+
+.sim-segmented__btn--active-danger {
+  background-color: var(--danger-soft);
+  color: var(--danger);
+  border-color: color-mix(in oklab, var(--danger) 42%, transparent);
+  box-shadow: var(--shadow-1);
+}
+
+.sim-segmented__btn--active-success {
+  background-color: var(--stage-soft);
+  color: var(--stage-deep);
+  border-color: var(--stage);
+  box-shadow: var(--shadow-1);
+}
+
+/* Cuerpo interactivo y pie compacto */
+.sim-frame__body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.sim-frame__footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background-color: var(--surface-2);
+  border-top: 1px solid var(--border);
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+  line-height: 1.4;
+}
+
+.sim-frame__footer-label {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--stage-deep);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.sim-frame__footer-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 680px) {
+  .sim-frame__header {
+    padding: 14px 16px;
+    flex-wrap: wrap;
+  }
+
+  .sim-frame__title-group {
+    flex: 1 1 100%;
+  }
+
+  .sim-reset-btn {
+    margin-left: auto;
+  }
+
+  .sim-frame__controls {
+    padding: 10px 16px;
+  }
+
+  .sim-frame__body {
+    padding: 16px;
+  }
+
+  .sim-frame__footer {
+    padding: 10px 16px;
+    flex-wrap: wrap;
+  }
+
+  .sim-frame__footer-text {
+    white-space: normal;
+  }
+}
+
+/* ==========================================================================
+   2. TABLAS DE SIMULADORES (.sim-table-scroll + .sim-table)
+   ========================================================================== */
+
+.sim-table-scroll {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background-color: var(--surface);
+  /* Sombra lateral indicadora de scroll horizontal */
+  background-image:
+    linear-gradient(to right, var(--surface) 30%, transparent),
+    linear-gradient(to left, var(--surface) 30%, transparent),
+    radial-gradient(farthest-side at 0 50%, rgb(16 24 40 / 0.14), transparent),
+    radial-gradient(farthest-side at 100% 50%, rgb(16 24 40 / 0.14), transparent);
+  background-position: left center, right center, left center, right center;
+  background-repeat: no-repeat;
+  background-size: 28px 100%, 28px 100%, 12px 100%, 12px 100%;
+  background-attachment: local, local, scroll, scroll;
+}
+
+.sim-table,
+.viz-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+  background-color: transparent;
+  margin: 0;
+}
+
+.sim-table th,
+.sim-table td,
+.viz-table th,
+.viz-table td {
+  padding: 9px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.sim-table tbody tr:last-child td,
+.viz-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.sim-table thead th,
+.viz-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background-color: var(--surface-2);
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+/* Primera columna sticky a la izquierda */
+.sim-table th:first-child,
+.sim-table td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background-color: var(--surface);
+  border-right: 1px solid var(--border);
+}
+
+.sim-table thead th:first-child {
+  z-index: 4;
+  background-color: var(--surface-2);
+}
+
+/* Números alineados a la derecha en fuente mono */
+.sim-table th.num,
+.sim-table td.num,
+.viz-table th.num,
+.viz-table td.num {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Estados semánticos de fila y destello de 900ms */
+.sim-table tbody tr.row-flash td {
+  animation: sim-row-flash 900ms var(--ease-out);
+}
+
+.sim-table tbody tr.row-duplicated td,
+.sim-table tbody tr.row-danger td,
+.viz-table tbody tr.row-duplicated td {
+  background-color: var(--danger-soft);
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.sim-table tbody tr.row-valid td,
+.sim-table tbody tr.row-optimal td,
+.viz-table tbody tr.row-valid td {
+  background-color: var(--success-soft);
+  color: var(--success);
+  font-weight: 600;
+}
+
+.sim-table tbody tr.row-selected td {
+  background-color: var(--stage-soft);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.sim-table tbody tr.row-muted-highlight td {
+  background-color: var(--surface-2);
+}
+
+.sim-table tbody tr.row-clickable {
+  cursor: pointer;
+}
+
+.sim-table tbody tr.row-clickable:hover td {
+  background-color: color-mix(in oklab, var(--stage-soft) 55%, var(--surface));
+}
+
+.sim-table-empty-cell {
+  text-align: center !important;
+  padding: 20px 12px !important;
+  color: var(--danger);
+  background-color: var(--danger-soft) !important;
+  font-weight: 600;
+}
+
+/* Celdas de matriz de retención (SimulatorsPackB) */
+.sim-cell-m0 {
+  background-color: var(--surface-2) !important;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.sim-cell-pending {
+  background-color: var(--surface-2) !important;
+  color: var(--text-2);
+  font-style: italic;
+}
+
+.sim-cell-solid {
+  background-color: var(--success-soft) !important;
+  color: var(--success);
+  font-weight: 600;
+}
+
+.sim-cell-stable {
+  background-color: color-mix(in oklab, var(--success-soft) 65%, var(--surface)) !important;
+  color: var(--success);
+  font-weight: 600;
+}
+
+.sim-cell-warn {
+  background-color: var(--warning-soft) !important;
+  color: color-mix(in oklab, var(--warning) 75%, var(--text));
+  font-weight: 600;
+}
+
+.sim-cell-critical {
+  background-color: var(--danger-soft) !important;
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.sim-text-success {
+  color: var(--success);
+  font-weight: 600;
+}
+
+.sim-text-danger {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.sim-text-primary {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.sim-text-muted {
+  color: var(--text-2);
+  font-weight: 600;
+}
+
+.sim-subnote {
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+  font-weight: 400;
+  margin-top: 2px;
+}
+
+.sim-subnote--danger {
+  color: var(--danger);
+}
+
+/* ==========================================================================
+   3. BARRAS COMPARATIVAS Y RESULTADOS NUMÉRICOS
+   ========================================================================== */
+
+.sim-comparison-card {
+  background-color: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sim-comparison-card__title {
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.sim-comparison-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sim-bar-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sim-bar-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.sim-bar-label {
+  font-weight: 600;
+  color: var(--text);
+  min-width: 0;
+}
+
+.sim-bar-value {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.sim-bar-track {
+  width: 100%;
+  height: 10px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  overflow: hidden;
+}
+
+.sim-bar-fill {
+  width: var(--bar-pct, 0%);
+  height: 100%;
+  border-radius: var(--r-pill);
+  transition:
+    width var(--dur-3) var(--ease-out),
+    background-color var(--dur-2) var(--ease-out);
+}
+
+.sim-bar-fill--danger {
+  background-color: var(--danger);
+}
+
+.sim-bar-fill--success {
+  background-color: var(--success);
+}
+
+.sim-bar-fill--stage {
+  background-color: var(--stage);
+}
+
+.sim-bar-fill--warning {
+  background-color: var(--warning);
+}
+
+.sim-bar-fill--neutral {
+  background-color: var(--text-2);
+}
+
+/* Barra compacta dentro de celdas de tabla (ej. BI Anti-Slop) */
+.sim-inline-bar {
+  width: 110px;
+  height: 10px;
+  background-color: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  overflow: hidden;
+}
+
+/* ==========================================================================
+   LAYOUTS INTERNOS DE SIMULADORES (GRIDS, SLIDERS, TIMELINES, DISK BLOCKS)
+   ========================================================================== */
+
+.sim-two-col,
+.viz-two-col {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  min-width: 0;
+}
+
+.sim-three-col {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  min-width: 0;
+}
+
+.sim-four-col,
+.viz-bars-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  min-width: 0;
+}
+
+@media (max-width: 860px) {
+  .sim-two-col,
+  .viz-two-col {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sim-four-col,
+  .viz-bars-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .sim-three-col,
+  .sim-four-col,
+  .viz-bars-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.sim-panel,
+.viz-mini-table-box {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 14px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sim-panel--soft {
+  background-color: var(--surface-2);
+}
+
+.sim-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sim-panel__title,
+.viz-table-label {
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--text-2);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+
+.sim-metric-box,
+.viz-metric-box {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 12px 14px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sim-metric-box.box-danger,
+.viz-metric-box.box-danger {
+  background-color: var(--danger-soft);
+  border-color: color-mix(in oklab, var(--danger) 35%, var(--border));
+}
+
+.sim-metric-box.box-ok,
+.viz-metric-box.box-ok {
+  background-color: var(--success-soft);
+  border-color: color-mix(in oklab, var(--success) 35%, var(--border));
+}
+
+.sim-metric-title,
+.viz-metric-title {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--text-2);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sim-metric-nums,
+.viz-metric-nums {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Sliders interactivos */
+.sim-slider-box,
+.viz-slider-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: var(--fs-xs);
+  color: var(--text);
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.sim-slider-box input[type='range'],
+.viz-slider-box input[type='range'] {
+  width: 100%;
+  accent-color: var(--stage);
+  cursor: pointer;
+}
+
+.sim-slider-caption {
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+}
+
+/* Bloques de disco / memoria */
+.sim-storage-blocks,
+.viz-storage-blocks {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sim-storage-lead {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--text);
+}
+
+.block-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.disk-block {
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  line-height: 1.4;
+}
+
+.disk-block.scanned-bad {
+  background-color: var(--danger-soft);
+  border-color: color-mix(in oklab, var(--danger) 40%, var(--border));
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.disk-block.scanned-good {
+  background-color: var(--success-soft);
+  border-color: color-mix(in oklab, var(--success) 40%, var(--border));
+  color: var(--success);
+  font-weight: 600;
+}
+
+.disk-block.pruned {
+  background-color: var(--surface-2);
+  border-style: dashed;
+  color: var(--text-2);
+}
+
+/* Tarjetas de pista temporal (ASOF JOIN) */
+.sim-track-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sim-track-label {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.sim-Timeline-card {
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  transition:
+    background-color var(--dur-1) var(--ease-out),
+    border-color var(--dur-1) var(--ease-out);
+}
+
+.sim-Timeline-card--clickable {
+  cursor: pointer;
+}
+
+.sim-Timeline-card--matched {
+  border: 2px solid var(--stage);
+  background-color: var(--stage-soft);
+}
+
+.sim-Timeline-card--danger {
+  border: 2px solid var(--danger);
+  background-color: var(--danger-soft);
+}
+
+.sim-Timeline-card__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  color: var(--text);
+}
+
+.sim-Timeline-card__meta {
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+  margin-top: 4px;
+}
+
+/* Listas dentro de simuladores */
+.sim-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: var(--fs-sm);
+  line-height: 1.6;
+  color: var(--text);
+}
+
+/* SVG Curva de Supervivencia */
+.sim-chart-svg {
+  width: 100%;
+  height: auto;
+  max-height: 200px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  display: block;
+}
+
+.sim-legend-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: var(--fs-xs);
+}
+
+.sim-legend-pill {
+  padding: 2px 8px;
+  border-radius: var(--r-sm);
+  font-weight: 600;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+}
+
+.sim-legend-pill--solid {
+  background-color: var(--success-soft);
+  color: var(--success);
+}
+
+.sim-legend-pill--warn {
+  background-color: var(--warning-soft);
+  color: color-mix(in oklab, var(--warning) 75%, var(--text));
+}
+
+.sim-legend-pill--danger {
+  background-color: var(--danger-soft);
+  color: var(--danger);
+}
+
+/* Roles triad en CohortRetentionSim */
+.triad-roles-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 768px) {
+  .triad-roles-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.triad-role-card {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 14px;
+  font-size: var(--fs-xs);
+}
+
+.triad-role-card h4 {
+  margin: 8px 0 6px 0;
+  font-size: var(--fs-sm);
+  color: var(--text);
+}
+
+.triad-role-card ul {
+  margin: 0;
+  padding-left: 16px;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--r-pill);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+
+.role-badge.DE {
+  background-color: var(--role-de-soft);
+  color: var(--role-de-deep);
+}
+
+.role-badge.DA {
+  background-color: var(--role-da-soft);
+  color: var(--role-da-deep);
+}
+
+.role-badge.BI {
+  background-color: var(--role-bi-soft);
+  color: var(--role-bi-deep);
+}
+
+/* ==========================================================================
+   4. AUTHENTIC CODE LAB (.codelab)
+   ========================================================================== */
+
+.codelab {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.codelab--pop {
+  animation: sim-pop 360ms var(--ease-out);
+}
+
+.codelab--shake {
+  animation: sim-shake 380ms var(--ease-out);
+}
+
+.codelab__header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.codelab__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.codelab__desc {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+  line-height: 1.55;
+}
+
+.codelab-editor {
+  background-color: var(--code-bg);
+  color: #EEF0F6;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  box-shadow: var(--shadow-1);
+}
+
+.codelab-editor__topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 14px;
+  background-color: rgb(255 255 255 / 0.04);
+  border-bottom: 1px solid rgb(255 255 255 / 0.1);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: #A3AAC0;
+}
+
+.codelab-editor__dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.codelab-editor__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--r-pill);
+  background-color: rgb(255 255 255 / 0.22);
+}
+
+.codelab-editor__viewport {
+  overflow-x: auto;
+  padding: 12px 0;
+}
+
+.codelab-lines {
+  display: table;
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  line-height: 1.65;
+}
+
+.codelab-line {
+  display: table-row;
+}
+
+.codelab-line:hover {
+  background-color: rgb(255 255 255 / 0.03);
+}
+
+.codelab-gutter {
+  display: table-cell;
+  width: 42px;
+  padding: 0 12px;
+  text-align: right;
+  color: #6B738E;
+  user-select: none;
+  font-variant-numeric: tabular-nums;
+  border-right: 1px solid rgb(255 255 255 / 0.08);
+}
+
+.codelab-code {
+  display: table-cell;
+  padding: 0 16px;
+  white-space: pre;
+  color: #EEF0F6;
+}
+
+.codelab-slot-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  margin: 0 2px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  background-color: rgb(139 140 255 / 0.2);
+  color: #B4B5FF;
+  border: 1px dashed #8B8CFF;
+}
+
+.codelab-slot-pill--filled {
+  border-style: solid;
+  background-color: rgb(61 214 140 / 0.2);
+  color: #6EE7B7;
+  border-color: #3DD68C;
+}
+
+/* Inputs integrados de alto contraste en el editor */
+.codelab-inputs-panel {
+  background-color: rgb(255 255 255 / 0.03);
+  border-top: 1px solid rgb(255 255 255 / 0.12);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.codelab-blank-row {
+  background-color: var(--surface);
+  color: var(--text);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: border-color var(--dur-1) var(--ease-out);
+}
+
+.codelab-blank-row--valid {
+  border-color: var(--success);
+  background-color: var(--success-soft);
+}
+
+.codelab-blank-row--err {
+  border-color: var(--danger);
+  background-color: var(--danger-soft);
+}
+
+.codelab-blank-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: var(--fs-sm);
+  color: var(--text);
+}
+
+.codelab-hint-btn {
+  background: transparent;
+  border: none;
+  color: var(--primary);
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--r-sm);
+}
+
+.codelab-hint-btn:hover {
+  background-color: var(--primary-soft);
+}
+
+.codelab-code-input,
+.lab-code-input {
+  width: 100%;
+  height: 44px;
+  padding: 0 12px;
+  border-radius: var(--r-sm);
+  border: 1.5px solid var(--border);
+  background-color: var(--surface);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text);
+  transition:
+    border-color var(--dur-1) var(--ease-out),
+    box-shadow var(--dur-1) var(--ease-out);
+}
+
+.codelab-code-input:focus-visible,
+.lab-code-input:focus-visible {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+
+.codelab-code-input.is-ok,
+.lab-code-input.is-ok {
+  border-color: var(--success);
+  background-color: var(--surface);
+}
+
+.codelab-code-input.is-err,
+.lab-code-input.is-err {
+  border-color: var(--danger);
+  background-color: var(--surface);
+}
+
+.codelab-hint-text,
+.lab-hint-text {
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+  margin: 0;
+  line-height: 1.45;
+}
+
+.codelab-actions,
+.editorial-actions-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.codelab-check-btn {
+  min-height: 44px;
+}
+
+/* ==========================================================================
+   5. PIPELINE ORDER CHALLENGE (.pipeline-challenge)
+   ========================================================================== */
+
+.pipeline-challenge {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pipeline-challenge__header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pipeline-challenge__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.pipeline-challenge__desc {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+  line-height: 1.55;
+}
+
+.pipeline-steps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pipeline-step-card {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  border: 1.5px solid var(--border);
+  background-color: var(--surface);
+  box-shadow: var(--shadow-1);
+  transition:
+    border-color var(--dur-1) var(--ease-out),
+    background-color var(--dur-1) var(--ease-out),
+    transform var(--dur-1) var(--ease-out);
+}
+
+.pipeline-step-card--dragging {
+  opacity: 0.65;
+  border-style: dashed;
+  border-color: var(--stage);
+}
+
+.pipeline-step-card.is-ok {
+  border-color: var(--success);
+  background-color: var(--success-soft);
+}
+
+.pipeline-step-card.is-err {
+  border-color: var(--danger);
+  background-color: var(--danger-soft);
+}
+
+.pipeline-step-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-2);
+  cursor: grab;
+  padding: 4px 2px;
+}
+
+.pipeline-step-handle:active {
+  cursor: grabbing;
+}
+
+.pipeline-step-index {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r-pill);
+  background-color: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pipeline-step-card.is-ok .pipeline-step-index {
+  background-color: var(--success);
+  border-color: var(--success);
+  color: #FFFFFF;
+}
+
+.pipeline-step-card.is-err .pipeline-step-index {
+  background-color: var(--danger);
+  border-color: var(--danger);
+  color: #FFFFFF;
+}
+
+.pipeline-step-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pipeline-step-title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: var(--fs-sm);
+  color: var(--text);
+}
+
+.pipeline-step-detail {
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+  margin: 0;
+  line-height: 1.45;
+}
+
+.pipeline-step-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--r-pill);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+
+.pipeline-step-status--valid {
+  background-color: var(--surface);
+  color: var(--success);
+  border: 1px solid color-mix(in oklab, var(--success) 40%, transparent);
+}
+
+.pipeline-step-status--err {
+  background-color: var(--surface);
+  color: var(--danger);
+  border: 1px solid color-mix(in oklab, var(--danger) 40%, transparent);
+}
+
+.pipeline-step-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.pipeline-move-btn {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--fs-md);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition:
+    background-color var(--dur-1) var(--ease-out),
+    border-color var(--dur-1) var(--ease-out);
+}
+
+.pipeline-move-btn:hover:not(:disabled) {
+  background-color: var(--surface-2);
+  border-color: var(--text-2);
+}
+
+.pipeline-move-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+@media (max-width: 540px) {
+  .pipeline-step-card {
+    grid-template-columns: auto auto minmax(0, 1fr);
+  }
+
+  .pipeline-step-controls {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+    padding-top: 6px;
+    border-top: 1px dashed var(--border);
+  }
+}
+
+/* ==========================================================================
+   CLASES DE COMPATIBILIDAD (USADAS EN OTROS COMPONENTES DE LECCIÓN)
+   ========================================================================== */
+
+.code-block-dark {
+  background-color: var(--code-bg);
+  color: #EEF0F6;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  line-height: 1.55;
+  padding: 16px;
+  border-radius: var(--r-md);
+  overflow-x: auto;
+  margin: 12px 0;
+}
+
+.viz-card {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-1);
+  padding: 20px;
+  margin: 20px 0;
+}
+
+.viz-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.viz-header h2,
+.viz-header h3 {
+  margin: 0 0 6px 0;
+}
+
+.viz-desc {
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+  margin: 0;
+}
+
+.viz-toggle-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cta-primary-btn,
+.viz-toggle-btn {
+  min-height: 38px;
+  padding: 6px 12px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.viz-result-banner,
+.editorial-feedback {
+  padding: 12px 16px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  border-left-width: 4px;
+  background-color: var(--surface);
+  font-size: var(--fs-sm);
+}
+
+.viz-result-banner.danger,
+.editorial-feedback.err {
+  border-left-color: var(--danger);
+  background-color: var(--danger-soft);
+}
+
+.viz-result-banner.success,
+.editorial-feedback.ok {
+  border-left-color: var(--success);
+  background-color: var(--success-soft);
+}
+
+.viz-banner-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+  font-size: var(--fs-sm);
+}

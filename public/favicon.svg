@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 26" fill="none">
+  <style>
+    .c { stroke: #78716C; }
+    @media (prefers-color-scheme: dark) { .c { stroke: #B5B1AA; } }
+  </style>
+  <g stroke-width="1.4">
+    <rect class="c" x="2.5" y="2.5" width="5" height="5" rx="1"/>
+    <rect class="c" x="10.5" y="2.5" width="5" height="5" rx="1"/>
+    <rect class="c" x="18.5" y="2.5" width="5" height="5" rx="1"/>
+    <rect class="c" x="2.5" y="10.5" width="5" height="5" rx="1"/>
+    <rect class="c" x="10.5" y="10.5" width="5" height="5" rx="1"/>
+    <rect x="18.5" y="10.5" width="5" height="5" rx="1" fill="#C2410C" stroke="#C2410C"/>
+    <rect class="c" x="2.5" y="18.5" width="5" height="5" rx="1"/>
+    <rect class="c" x="10.5" y="18.5" width="5" height="5" rx="1"/>
+    <rect class="c" x="18.5" y="18.5" width="5" height="5" rx="1"/>
+  </g>
+</svg>
