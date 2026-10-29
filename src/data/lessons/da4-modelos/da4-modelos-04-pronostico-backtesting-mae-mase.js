@@ -649,3 +649,5 @@ ORDER BY mase_media_4s ASC;`,
   aiNotes:
     'Revisa con especial cuidado que el estudiante use ROWS BETWEEN 4 PRECEDING AND 1 PRECEDING en el promedio móvil y que filtre WHERE semanas_previas = 4 antes de agrupar. Recuérdale excluir el SKU de prueba negativo con p.list_price_usd > 0.',
 };
+
+export default lesson;

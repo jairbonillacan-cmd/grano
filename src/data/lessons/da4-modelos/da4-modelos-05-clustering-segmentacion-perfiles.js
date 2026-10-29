@@ -523,3 +523,5 @@ ORDER BY media_gasto_usd DESC;`,
   aiNotes:
     'Asegúrate de que el estudiante utilice STDDEV_SAMP(...) OVER () al calcular z_recencia, z_frecuencia y z_gasto, y que respete el orden de las condiciones del CASE WHEN para clasificar los 2,292 clientes con pedidos completados.',
 };
+
+export default lesson;

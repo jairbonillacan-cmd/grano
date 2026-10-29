@@ -696,3 +696,5 @@ LIMIT 10;`,
   aiNotes:
     'Verifica que el estudiante distinga entre media móvil retrospectiva (6 PRECEDING AND CURRENT ROW) y media móvil centrada (3 PRECEDING AND 3 FOLLOWING). Si el resultado no coincide, revisa que haya filtrado c.year = 2024 y o.status = \'completed\' dentro de la condición del LEFT JOIN.',
 };
+
+export default lesson;

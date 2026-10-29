@@ -559,3 +559,5 @@ ORDER BY experiment_id, variant;`,
   aiNotes:
     'Guía al estudiante a verificar primero qué variable actúa como respuesta y cuál como predictor antes de escribir REGR_SLOPE(y, x). Si confunde correlación con pendiente o ignora el diagnóstico de residuos, pídele comparar las unidades de REGR_SLOPE frente a REGR_R2 y calcular el VIF a partir de CORR.',
 };
+
+export default lesson;

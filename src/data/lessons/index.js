@@ -107,6 +107,57 @@ import lesson_100 from './de2-pipelines/de2-pipelines-03-cargas-incrementales-me
 import lesson_101 from './de2-pipelines/de2-pipelines-04-ingesta-apis-http.js';
 import lesson_102 from './de2-pipelines/de2-pipelines-05-orquestacion-airflow-dagster.js';
 import lesson_103 from './de2-pipelines/de2-pipelines-06-contenedores-docker-compose.js';
+import lesson_104 from './bi3-dashboards/bi3-dashboards-02-jerarquia-visual-reticula-10s.js';
+import lesson_105 from './bi3-dashboards/bi3-dashboards-03-color-contraste-wcag-daltonismo.js';
+import lesson_106 from './bi3-dashboards/bi3-dashboards-04-interaccion-filtros-drill-tooltips.js';
+import lesson_107 from './bi3-dashboards/bi3-dashboards-05-tablero-ejecutivo-vs-operativo.js';
+import lesson_108 from './bi3-gobierno/bi3-gobierno-01-capa-semantica-metricflow-cube.js';
+import lesson_109 from './bi3-gobierno/bi3-gobierno-02-rls-estatica-dinamica-columnas.js';
+import lesson_110 from './bi3-gobierno/bi3-gobierno-03-certificacion-metricas-obsolescencia.js';
+import lesson_111 from './bi3-gobierno/bi3-gobierno-04-import-directquery-direct-lake.js';
+import lesson_112 from './bi3-gobierno/bi3-gobierno-05-equivalencia-lookml-tableau-pbi.js';
+import lesson_113 from './da3-experimentos/da3-experimentos-02-comparaciones-multiples-bh.js';
+import lesson_114 from './da3-experimentos/da3-experimentos-03-pruebas-secuenciales-msprt.js';
+import lesson_115 from './da3-experimentos/da3-experimentos-04-enfoque-bayesiano-ab.js';
+import lesson_116 from './da3-experimentos/da3-experimentos-05-efectos-red-interferencia-switchback.js';
+import lesson_117 from './da3-producto/da3-producto-01-embudos-conversion-ventana.js';
+import lesson_118 from './da3-producto/da3-producto-03-segmentacion-conductual-rfm.js';
+import lesson_119 from './da3-producto/da3-producto-04-atribucion-marketing-incrementalidad.js';
+import lesson_120 from './de3-lakehouse/de3-lakehouse-02-delta-lake-uniform.js';
+import lesson_121 from './de3-lakehouse/de3-lakehouse-03-catalogos-polaris-unity.js';
+import lesson_122 from './de3-lakehouse/de3-lakehouse-04-costos-bigquery-snowflake-databricks.js';
+import lesson_123 from './de3-transformacion/de3-transformacion-02-tests-unitarios-auditorias-dag.js';
+import lesson_124 from './de3-transformacion/de3-transformacion-04-observabilidad-openlineage.js';
+import lesson_125 from './bi4-operacion/bi4-operacion-01-bi-como-codigo-evidence-observable-rill.js';
+import lesson_126 from './bi4-operacion/bi4-operacion-02-pbip-tmdl-versionado-git.js';
+import lesson_127 from './bi4-operacion/bi4-operacion-03-cicd-pruebas-promocion-entornos.js';
+import lesson_128 from './bi4-operacion/bi4-operacion-04-telemetria-adopcion-retiro-tableros.js';
+import lesson_129 from './bi4-operacion/bi4-operacion-05-genbi-auditable-sinonimos-mcp.js';
+import lesson_130 from './da4-causalidad/da4-causalidad-01-diferencias-en-diferencias-did.js';
+import lesson_131 from './da4-causalidad/da4-causalidad-02-regresion-discontinua-rdd.js';
+import lesson_132 from './da4-causalidad/da4-causalidad-03-control-sintetico-emparejamiento.js';
+import lesson_133 from './da4-causalidad/da4-causalidad-04-memo-analitico-supuestos.js';
+import lesson_134 from './da4-causalidad/da4-causalidad-05-presentacion-direccion-decisiones.js';
+import lesson_135 from './da4-modelos/da4-modelos-01-regresion-lineal-multiple.js';
+import lesson_136 from './da4-modelos/da4-modelos-02-regresion-logistica-calibracion.js';
+import lesson_137 from './da4-modelos/da4-modelos-03-series-temporales-descomposicion.js';
+import lesson_138 from './da4-modelos/da4-modelos-04-pronostico-backtesting-mae-mase.js';
+import lesson_139 from './da4-modelos/da4-modelos-05-clustering-segmentacion-perfiles.js';
+import lesson_140 from './de4-plataforma/de4-plataforma-01-spark-4-shuffles-skew-ansi.js';
+import lesson_141 from './de4-plataforma/de4-plataforma-02-arquitectura-integral-plataforma.js';
+import lesson_142 from './de4-plataforma/de4-plataforma-03-seguridad-pii-enmascaramiento.js';
+import lesson_143 from './de4-plataforma/de4-plataforma-04-iac-terraform-cicd-datos.js';
+import lesson_144 from './de4-plataforma/de4-plataforma-05-finops-atribucion-retencion.js';
+import lesson_145 from './de4-plataforma/de4-plataforma-06-entrevista-system-design-de.js';
+import lesson_146 from './de4-streaming/de4-streaming-02-kafka-kraft-tiered-storage.js';
+import lesson_147 from './de4-streaming/de4-streaming-04-entrega-at-least-once-exactly-once.js';
+import lesson_148 from './de4-streaming/de4-streaming-05-vistas-materializadas-streaming-olap.js';
+import lesson_149 from './x4-carrera/x4-carrera-01-portafolio-publico-de-da-bi.js';
+import lesson_150 from './x4-carrera/x4-carrera-02-entrevista-tecnica-sql-caso-arquitectura.js';
+import lesson_151 from './x4-carrera/x4-carrera-03-explicar-proyecto-2-minutos.js';
+import lesson_152 from './x4-ia-datos/x4-ia-datos-02-text-to-sql-capa-semantica.js';
+import lesson_153 from './x4-ia-datos/x4-ia-datos-03-rag-hibrido-bm25-hnsw-rrf.js';
+import lesson_154 from './x4-ia-datos/x4-ia-datos-04-golden-evals-barreras-ast-sqlglot.js';
 
 export const LESSONS_V2 = [
   lesson_1,
@@ -212,6 +263,57 @@ export const LESSONS_V2 = [
   lesson_101,
   lesson_102,
   lesson_103,
+  lesson_104,
+  lesson_105,
+  lesson_106,
+  lesson_107,
+  lesson_108,
+  lesson_109,
+  lesson_110,
+  lesson_111,
+  lesson_112,
+  lesson_113,
+  lesson_114,
+  lesson_115,
+  lesson_116,
+  lesson_117,
+  lesson_118,
+  lesson_119,
+  lesson_120,
+  lesson_121,
+  lesson_122,
+  lesson_123,
+  lesson_124,
+  lesson_125,
+  lesson_126,
+  lesson_127,
+  lesson_128,
+  lesson_129,
+  lesson_130,
+  lesson_131,
+  lesson_132,
+  lesson_133,
+  lesson_134,
+  lesson_135,
+  lesson_136,
+  lesson_137,
+  lesson_138,
+  lesson_139,
+  lesson_140,
+  lesson_141,
+  lesson_142,
+  lesson_143,
+  lesson_144,
+  lesson_145,
+  lesson_146,
+  lesson_147,
+  lesson_148,
+  lesson_149,
+  lesson_150,
+  lesson_151,
+  lesson_152,
+  lesson_153,
+  lesson_154,
 ];
 
 /**

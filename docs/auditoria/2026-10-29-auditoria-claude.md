@@ -130,3 +130,22 @@ Queda pendiente, a propósito:
 - `docs/reportes/W-bi2-metricas.md`, que es el registro histórico de Gemini.
 
 `check:sql` todavía marca 12 bloques de lecciones antiguas que la Ola C está reescribiendo (da3, de3-transformacion-03, de4 y x4). Usan tablas que no existen en Mercado Brisa, como `gold.subscriptions`, `silver.orders_current`, `ad_impressions` o `exp_checkout_users`.
+
+## Ola C fusionada sin revisar (29-oct-2026, 17:30)
+
+Por decisión del usuario, las 13 ramas `agente/W-*` de la Ola C (bi3, bi4, da3, da4, de3, de4, x4) se fusionaron en `main` tal como Gemini las dejó, **sin reporte D.3 ni revisión**.
+
+En el proceso hubo dos cambios técnicos:
+- `index.js` se regeneró con `scripts/sync-lessons-index.mjs` y ahora tiene 154 lecciones. La plantilla del script ya conserva `MODULES_BY_ID` y `getTrackPath`.
+- Se agregó `export default lesson;` a las 5 lecciones de `da4-modelos`, que rompían el build.
+
+Estado al fusionar:
+- `npm test` 65 de 65 · `vite build` OK · `check:catalog` OK · `check:contrast` OK.
+- `check:content`: **14 lecciones con errores**. Faltan `tracks` (11), `minutes` (7) y `contentVersion` (4); hay un `tracks` con un valor inválido (2) y un prerrequisito `da2-inferencia` escrito sin el ID de lección (2).
+- `check:sql`: **21 bloques** con problemas.
+  - 5 prácticas de de4-streaming no compilan.
+  - Hay cifras que no coinciden en da3-producto-01/03, da4-modelos-03, de4-plataforma-01/02/03, x4-carrera-02 y x4-ia-datos-01/02/03.
+  - Las de x4-ia-datos esperan `order_id` 1 y 8, que no existen: los IDs empiezan en 10001.
+- `check:copy`: 130 hallazgos.
+
+Siguiente paso recomendado: arreglar los 14 errores de esquema (son mecánicos), volver a ejecutar en DuckDB los 21 bloques y reemplazar su `expectedOutput`, y después hacer la pasada E1/F1 del plan.

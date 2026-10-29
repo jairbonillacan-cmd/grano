@@ -540,3 +540,5 @@ ORDER BY odds_ratio_vs_mobile DESC;`,
   aiNotes:
     'Insiste en distinguir tres escalas: probabilidad p en [0, 1], momios p / (1 - p) en [0, infinito) y log-momios ln(momios) en (-infinito, infinito). En el ejercicio SQL, verifica que el estudiante preagregue SELECT DISTINCT order_id FROM refunds antes del LEFT JOIN.',
 };
+
+export default lesson;
