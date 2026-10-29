@@ -1,73 +1,45 @@
-import React from 'react';
-import {
-  Database,
-  Layers,
-  Cpu,
-  Workflow,
-  BarChart3,
-  Sparkles,
-  Lock,
-  CheckCircle2,
-} from 'lucide-react';
-import { getStageTheme, getStageNumber } from './stageTheme.js';
+// Etiqueta heredada para compatibilidad de vistas en migración; expone contenido textual sin capturar foco.
+// @deprecated Usar Chip o texto tabular en su lugar; se eliminará cuando T12/T13 migren sus vistas.
+import React from 'react'
+import { resolveStageToken } from './stageTheme.js'
 
-const STAGE_ICON_MAP = {
-  Database,
-  Layers,
-  Cpu,
-  Workflow,
-  BarChart3,
-  Sparkles,
-};
-
+/**
+ * @deprecated Componente heredado. Preferir `Chip` o contadores tabulares planos (`--font-mono`).
+ */
 export function Badge({
-  stage = 1,
-  unlocked = false,
-  title,
-  subtitle,
+  variant = 'neutral',
+  stage,
+  size = 'md',
+  icon: Icon,
+  pulse = false,
+  children,
   className = '',
+  style,
   ...rest
 }) {
-  const stageNum = getStageNumber(stage);
-  const meta = getStageTheme(stageNum);
-  const StageIcon = STAGE_ICON_MAP[meta.iconName] || Database;
-
-  const displayTitle = title || `Etapa ${stageNum} · ${meta.shortName}`;
-  const displaySubtitle = subtitle || meta.name;
-
+  const stageVar = stage !== undefined ? resolveStageToken(stage) : null
   const classes = [
     'ui-badge',
-    unlocked ? 'ui-badge--unlocked' : 'ui-badge--locked',
+    `ui-badge--${variant}`,
+    `ui-badge--${size}`,
+    pulse ? 'is-pulse' : '',
     className,
   ]
     .filter(Boolean)
-    .join(' ');
+    .join(' ')
+
+  const mergedStyle = stageVar ? { '--stage-color': stageVar, ...style } : style
 
   return (
-    <div
-      className={classes}
-      data-stage={stageNum}
-      aria-label={`${displayTitle} (${unlocked ? 'Desbloqueada' : 'Bloqueada'})`}
-      {...rest}
-    >
-      <div className="ui-badge__emblem" aria-hidden="true">
-        {unlocked ? <StageIcon size={22} /> : <Lock size={18} />}
-      </div>
-      <div className="ui-badge__body">
-        <div className="ui-badge__header">
-          <span className="ui-badge__eyebrow tabular">ETAPA 0{stageNum}</span>
-          {unlocked && (
-            <span className="ui-badge__status">
-              <CheckCircle2 size={13} aria-hidden="true" />
-              <span>Logro</span>
-            </span>
-          )}
-        </div>
-        <div className="ui-badge__title">{displayTitle}</div>
-        {displaySubtitle && <div className="ui-badge__subtitle">{displaySubtitle}</div>}
-      </div>
-    </div>
-  );
+    <span className={classes} style={mergedStyle} {...rest}>
+      {Icon ? (
+        <span className="ui-badge__icon" aria-hidden="true">
+          <Icon size={size === 'sm' ? 12 : size === 'lg' ? 16 : 14} strokeWidth={1.75} />
+        </span>
+      ) : null}
+      <span className="ui-badge__label">{children}</span>
+    </span>
+  )
 }
 
-export default Badge;
+export default Badge

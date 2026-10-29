@@ -1,76 +1,84 @@
-import React from 'react';
-import { BrandMark, BrandLogo } from '../../assets/brand/BrandMark.jsx';
-import { STAGE_ILLUSTRATIONS } from '../../assets/illustrations/StageIllustrations.jsx';
-import { STATE_ILLUSTRATIONS } from '../../assets/illustrations/StateIllustrations.jsx';
-import { mountUiShowcaseIllustrationsIfActive } from '../../assets/illustrations/UiIllustrationsMount.jsx';
+// Ilustración técnica SVG de 1 trazo en gris (--ink-3) para estados vacíos explícitos; aria-hidden por defecto.
+// Reexporta BrandLogo y BrandMark para compatibilidad con AppShell y vistas existentes.
+import React from 'react'
+import { BrandMark, BrandLogo } from '../../assets/brand/BrandMark.jsx'
 
-if (typeof window !== 'undefined') {
-  mountUiShowcaseIllustrationsIfActive();
-}
-
-function resolveStageNumber(stage, name) {
-  if (typeof stage === 'number' && stage >= 1 && stage <= 6) {
-    return stage;
-  }
-  if (typeof stage === 'string') {
-    const match = stage.match(/([1-6])/);
-    if (match) return Number(match[1]);
-  }
-  if (typeof name === 'number' && name >= 1 && name <= 6) {
-    return name;
-  }
-  if (typeof name === 'string' && name.startsWith('stage-')) {
-    const parsed = Number(name.split('-')[1]);
-    if (parsed >= 1 && parsed <= 6) return parsed;
-  }
-  return undefined;
-}
-
-function resolveIllustrationKey(name, resolvedStage) {
-  if (typeof name === 'string' && STATE_ILLUSTRATIONS[name]) {
-    return name;
-  }
-  if (typeof name === 'string' && STAGE_ILLUSTRATIONS[name]) {
-    return name;
-  }
-  if (typeof name === 'number' && STAGE_ILLUSTRATIONS[name]) {
-    return `stage-${name}`;
-  }
-  if (resolvedStage && STAGE_ILLUSTRATIONS[resolvedStage]) {
-    return `stage-${resolvedStage}`;
-  }
-  return 'stage-1';
+const SCENES = {
+  search: () => (
+    <g fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="14" y="18" width="52" height="36" rx="4" />
+      <line x1="22" y1="28" x2="50" y2="28" />
+      <line x1="22" y1="36" x2="42" y2="36" />
+      <circle cx="58" cy="48" r="10" />
+      <line x1="65" y1="55" x2="74" y2="64" />
+    </g>
+  ),
+  completed: () => (
+    <g fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="44" cy="40" r="22" />
+      <path d="M34 40.5L41 47.5L55 33.5" />
+    </g>
+  ),
+  data: () => (
+    <g fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <ellipse cx="44" cy="24" rx="20" ry="6" />
+      <path d="M24 24v16c0 3.3 9 6 20 6s20-2.7 20-6V24" />
+      <path d="M24 40v16c0 3.3 9 6 20 6s20-2.7 20-6V40" />
+    </g>
+  ),
+  pipeline: () => (
+    <g fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="12" y="30" width="16" height="16" rx="3" />
+      <rect x="36" y="30" width="16" height="16" rx="3" />
+      <rect x="60" y="30" width="16" height="16" rx="3" />
+      <line x1="28" y1="38" x2="36" y2="38" />
+      <line x1="52" y1="38" x2="60" y2="38" />
+    </g>
+  ),
+  tutor: () => (
+    <g fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 22h52a4 4 0 0 1 4 4v24a4 4 0 0 1-4 4H34l-12 10V54h-4a4 4 0 0 1-4-4V26a4 4 0 0 1 4-4Z" />
+      <line x1="28" y1="34" x2="60" y2="34" />
+      <line x1="28" y1="42" x2="48" y2="42" />
+    </g>
+  ),
+  empty: () => (
+    <g fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="18" y="20" width="52" height="40" rx="4" strokeDasharray="4 4" />
+      <line x1="32" y1="36" x2="56" y2="36" />
+      <line x1="36" y1="44" x2="52" y2="44" />
+    </g>
+  ),
 }
 
 export function Illustration({
-  name,
-  stage,
-  size = 'md',
+  name = 'empty',
+  size = 64,
+  title,
   className = '',
-  'aria-hidden': ariaHiddenProp = 'true',
   ...rest
 }) {
-  const resolvedStage = resolveStageNumber(stage, name);
-  const resolvedKey = resolveIllustrationKey(name, resolvedStage);
-  const SvgComponent =
-    STATE_ILLUSTRATIONS[resolvedKey] ||
-    STAGE_ILLUSTRATIONS[resolvedKey] ||
-    STAGE_ILLUSTRATIONS['stage-1'];
-
-  const safeSize = size === 'sm' || size === 'lg' ? size : 'md';
+  const Scene = SCENES[name] || SCENES.empty
+  const numericSize =
+    typeof size === 'number' ? size : size === 'sm' ? 48 : size === 'lg' ? 80 : 64
+  const classes = ['ui-illustration', className].filter(Boolean).join(' ')
 
   return (
-    <div
-      className={`ui-illustration ui-illustration--${safeSize} ${className}`.trim()}
-      data-stage={resolvedStage}
-      data-illustration={resolvedKey}
-      aria-hidden={ariaHiddenProp}
+    <svg
+      className={classes}
+      width={numericSize}
+      height={Math.round(numericSize * 0.82)}
+      viewBox="0 0 88 76"
+      role={title ? 'img' : 'presentation'}
+      aria-hidden={title ? undefined : 'true'}
+      aria-label={title || undefined}
       {...rest}
     >
-      <SvgComponent className="ui-illustration-svg" />
-    </div>
-  );
+      {title ? <title>{title}</title> : null}
+      <Scene />
+    </svg>
+  )
 }
 
-export { BrandLogo, BrandMark };
-export default Illustration;
+export { BrandLogo, BrandMark }
+export default Illustration

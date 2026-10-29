@@ -1,111 +1,94 @@
-import React from 'react';
-import { getStageNumber } from './stageTheme.js';
+// Anillo de progreso circular heredado con role="progressbar" y atributos aria-valuenow/aria-valuemin/aria-valuemax.
+// @deprecated Usar ProgressBar (2px/4px) o fracción tabular en su lugar; sin destellos decorativos.
+import React from 'react'
+import { resolveStageToken } from './stageTheme.js'
 
-const VALID_TONES = ['primary', 'stage', 'success', 'warning', 'danger'];
-
+/**
+ * @deprecated Componente heredado. Preferir `ProgressBar` o fracción tabular (`12 / 18 · 67%`).
+ */
 export function ProgressRing({
-  size = 40,
   value = 0,
-  label,
-  tone = 'primary',
+  max = 100,
+  size = 56,
+  strokeWidth = 4,
+  tone = 'brand',
   stage,
-  celebrate = false,
-  ariaLabel,
+  label,
+  sublabel,
+  showValue = true,
   className = '',
   children,
-  ...rest
 }) {
-  const numericSize = Number.isFinite(Number(size)) && Number(size) >= 24 ? Number(size) : 40;
-  const strokeWidth = numericSize >= 60 ? 5 : 4;
-  const radius = (numericSize - strokeWidth * 2) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const clamped = Math.min(
-    100,
-    Math.max(0, Number.isFinite(Number(value)) ? Math.round(Number(value)) : 0)
-  );
-  const offset = circumference - (clamped / 100) * circumference;
-  const safeTone = VALID_TONES.includes(tone) ? tone : stage ? 'stage' : 'primary';
-  const stageAttr = stage ? getStageNumber(stage) : undefined;
+  const safeMax = max > 0 ? max : 100
+  const pct = Math.max(0, Math.min(100, (value / safeMax) * 100))
+  const radius = (size - strokeWidth) / 2
+  const circumference = 2 * Math.PI * radius
+  const dashOffset = circumference - (pct / 100) * circumference
+  const stageVar = stage !== undefined ? resolveStageToken(stage) : null
+  const resolvedTone = tone === 'stage' ? 'brand' : tone
 
   const classes = [
     'ui-progress-ring',
-    celebrate ? 'ui-progress-ring--celebrate' : '',
+    `ui-progress-ring--${resolvedTone}`,
+    pct >= 100 ? 'is-complete' : '',
     className,
   ]
     .filter(Boolean)
-    .join(' ');
+    .join(' ')
 
-  const centerContent = children !== undefined && children !== null ? children : label;
+  const style = {
+    width: `${size}px`,
+    height: `${size}px`,
+    ...(stageVar ? { '--stage-color': stageVar } : {}),
+  }
 
   return (
     <div
-      role="progressbar"
-      aria-valuenow={clamped}
-      aria-valuemin={0}
-      aria-valuemax={100}
-      aria-label={
-        ariaLabel ||
-        (typeof label === 'string' ? `Progreso ${label}` : `Progreso ${clamped}%`)
-      }
-      data-stage={stageAttr}
       className={classes}
-      {...rest}
+      style={style}
+      role="progressbar"
+      aria-valuenow={Math.round(value)}
+      aria-valuemin={0}
+      aria-valuemax={safeMax}
+      aria-label={label || 'Progreso'}
     >
       <svg
-        width={numericSize}
-        height={numericSize}
-        viewBox={`0 0 ${numericSize} ${numericSize}`}
         className="ui-progress-ring__svg"
-        aria-hidden="true"
+        width={size}
+        height={size}
+        viewBox={`0 0 ${size} ${size}`}
       >
         <circle
           className="ui-progress-ring__track"
-          cx={numericSize / 2}
-          cy={numericSize / 2}
+          cx={size / 2}
+          cy={size / 2}
           r={radius}
           strokeWidth={strokeWidth}
         />
         <circle
-          className={`ui-progress-ring__indicator ui-progress-ring__indicator--${safeTone}`}
-          cx={numericSize / 2}
-          cy={numericSize / 2}
+          className="ui-progress-ring__fill"
+          cx={size / 2}
+          cy={size / 2}
           r={radius}
           strokeWidth={strokeWidth}
           strokeDasharray={circumference}
-          strokeDashoffset={offset}
+          strokeDashoffset={dashOffset}
         />
       </svg>
-
-      {celebrate ? (
-        <span className="ui-progress-ring__celebration" aria-hidden="true">
-          <svg
-            width={Math.round(numericSize * 0.45)}
-            height={Math.round(numericSize * 0.45)}
-            viewBox="0 0 24 24"
-            fill="none"
-            className="ui-progress-ring__check"
-          >
-            <path
-              d="M5 13l4 4L19 7"
-              stroke="currentColor"
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="anim-draw-check"
-            />
-          </svg>
-          <span className="ui-progress-ring__sparkle ui-progress-ring__sparkle--1 anim-sparkle" />
-          <span className="ui-progress-ring__sparkle ui-progress-ring__sparkle--2 anim-sparkle" />
-          <span className="ui-progress-ring__sparkle ui-progress-ring__sparkle--3 anim-sparkle" />
-        </span>
-      ) : (
-        centerContent !== undefined &&
-        centerContent !== null && (
-          <span className="ui-progress-ring__label tabular">{centerContent}</span>
-        )
-      )}
+      <div className="ui-progress-ring__center">
+        {children !== undefined ? (
+          children
+        ) : showValue ? (
+          <>
+            <span className="ui-progress-ring__value">{Math.round(pct)}%</span>
+            {sublabel ? (
+              <span className="ui-progress-ring__sublabel">{sublabel}</span>
+            ) : null}
+          </>
+        ) : null}
+      </div>
     </div>
-  );
+  )
 }
 
-export default ProgressRing;
+export default ProgressRing

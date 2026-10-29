@@ -1,59 +1,51 @@
-import React from 'react';
-import { Layers } from 'lucide-react';
-import { Button } from './Button.jsx';
+// Estado vacío sobrio: sin ilustración por defecto (solo se muestra si se pasa explícitamente illustration).
+// Texto explicativo conciso de 1 frase en --ink-2 y acción primaria o secundaria opcional.
+import React from 'react'
+import Illustration from './Illustration.jsx'
 
 export function EmptyState({
-  illustration,
+  illustration = null,
+  icon: Icon = null,
   title,
   description,
   action,
+  secondaryAction,
+  compact = false,
   className = '',
-  ...rest
 }) {
-  const classes = `ui-empty-state ${className}`.trim();
-
-  const renderIllustration = () => {
-    if (illustration === false) return null;
-    if (React.isValidElement(illustration)) {
-      return <div className="ui-empty-state__illus">{illustration}</div>;
-    }
-    if (typeof illustration === 'function' || typeof illustration === 'object') {
-      const IllusIcon = illustration;
-      return (
-        <div className="ui-empty-state__illus" aria-hidden="true">
-          <IllusIcon size={28} />
-        </div>
-      );
-    }
-    return (
-      <div className="ui-empty-state__illus" aria-hidden="true">
-        <Layers size={28} />
-      </div>
-    );
-  };
+  const classes = [
+    'ui-empty',
+    compact ? 'ui-empty--compact' : '',
+    className,
+  ]
+    .filter(Boolean)
+    .join(' ')
 
   return (
-    <div className={classes} role="status" {...rest}>
-      {renderIllustration()}
-      {title && <h3 className="ui-empty-state__title">{title}</h3>}
-      {description && <p className="ui-empty-state__desc">{description}</p>}
-      {action && (
-        <div className="ui-empty-state__action">
-          {React.isValidElement(action) ? (
-            action
-          ) : typeof action === 'object' && action.label ? (
-            <Button
-              variant={action.variant || 'primary'}
-              size={action.size || 'md'}
-              onClick={action.onClick}
-            >
-              {action.label}
-            </Button>
-          ) : null}
+    <div className={classes} role="status">
+      {Icon ? (
+        <div className="ui-empty__visual" aria-hidden="true">
+          <Icon size={20} strokeWidth={1.5} />
         </div>
-      )}
+      ) : illustration ? (
+        <div className="ui-empty__visual" aria-hidden="true">
+          {typeof illustration === 'string' ? (
+            <Illustration name={illustration} size={compact ? 48 : 64} />
+          ) : (
+            illustration
+          )}
+        </div>
+      ) : null}
+      {title ? <h3 className="ui-empty__title">{title}</h3> : null}
+      {description ? <p className="ui-empty__description">{description}</p> : null}
+      {action || secondaryAction ? (
+        <div className="ui-empty__actions">
+          {action}
+          {secondaryAction}
+        </div>
+      ) : null}
     </div>
-  );
+  )
 }
 
-export default EmptyState;
+export default EmptyState
