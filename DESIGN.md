@@ -1,152 +1,135 @@
----
-name: Manual de Datos — Atelier Técnico de Datos
-description: Sistema de diseño e-learning interactivo para Ingeniería de Datos (DE), Análisis Estadístico (DA) y Business Intelligence (BI) en 18 lecciones y 6 etapas cromáticas.
-colors:
-  bg: "#F6F7FB"
-  surface: "#FFFFFF"
-  surface-2: "#EFF1F7"
-  border: "#E2E5EE"
-  text: "#141824"
-  text-2: "#586079"
-  primary: "#4C4DFF"
-  primary-deep: "#3434D6"
-  primary-soft: "#ECEBFF"
-  success: "#12A150"
-  success-soft: "#E3F8EC"
-  danger: "#E5484D"
-  danger-soft: "#FEECEC"
-  warning: "#F5A300"
-  warning-soft: "#FFF6DC"
-  code-bg: "#121521"
-  dark-bg: "#0F1117"
-  dark-surface: "#171A23"
-  dark-surface-2: "#1F2330"
-  dark-border: "#2A2F3D"
-  dark-text: "#EEF0F6"
-  dark-text-2: "#A3AAC0"
-  dark-primary: "#8B8CFF"
-  dark-primary-deep: "#B4B5FF"
-  dark-primary-soft: "#23234A"
-  dark-success: "#3DD68C"
-  dark-success-soft: "#12301F"
-  dark-danger: "#FF6369"
-  dark-danger-soft: "#3B1618"
-  dark-warning: "#FFC53D"
-  dark-warning-soft: "#3A2A05"
-  dark-code-bg: "#0B0D14"
-typography:
-  fontDisplay: "'Plus Jakarta Sans', 'Inter', system-ui, sans-serif"
-  fontSans: "'Inter', system-ui, sans-serif"
-  fontMono: "'JetBrains Mono', monospace"
-  scale:
-    xs: "12px"
-    sm: "14px"
-    md: "16px"
-    lg: "clamp(17px, 1.1vw + 13px, 18px)"
-    xl: "clamp(20px, 1.4vw + 14px, 24px)"
-    2xl: "clamp(24px, 2vw + 16px, 32px)"
-    3xl: "clamp(30px, 3vw + 18px, 44px)"
-borderRadius:
-  sm: "8px"
-  md: "12px"
-  lg: "16px"
-  xl: "24px"
-  pill: "999px"
----
+# Grano — Sistema de diseño
 
-# Manual de Datos — Sistema de Diseño (Fase 1 · Atelier Técnico)
+Referencia técnica de marca, tokens, tipografía, controles, densidad, movimiento y layout de **Grano** (*Escuela de datos*). Definido en `src/styles/tokens.css` y `src/styles/reset.css`.
 
-## 1. Tipografía y Escala Fluida (`clamp()`)
+## 1. Marca y personalidad
 
-Se cargan tres familias desde Google Fonts con `preconnect` y `display=swap`:
-- **`--font-display`**: `'Plus Jakarta Sans', 'Inter', system-ui, sans-serif` (pesos `700`, `800`) para titulares, cabeceras de etapa y métricas destacadas.
-- **`--font-sans`**: `'Inter', system-ui, sans-serif` (pesos `400`, `500`, `600`) para cuerpo de lectura técnica (`65ch`), controles interactivos y opciones de evaluación.
-- **`--font-mono`**: `'JetBrains Mono', monospace` (pesos `400`, `600`) con `font-variant-numeric: tabular-nums` para consultas SQL, identificadores de esquema, contadores, `Chip` y `Kbd`.
-
-| Token | Valor | Uso Principal |
-| :--- | :--- | :--- |
-| `--fs-xs` | `12px` | `Chip`, `Kbd`, `ProgressRing`, metadatos y celdas técnicas |
-| `--fs-sm` | `14px` | Botones (`sm`/`md`), navegación, `<pre>`, `Callout` y formularios |
-| `--fs-md` | `16px` | Cuerpo de lectura técnica (`line-height: 1.65`) y `AnswerOption` (`500`) |
-| `--fs-lg` | `clamp(17px, 1.1vw + 13px, 18px)` | Títulos de tarjeta (`h3`), marca superior y subtítulos de lección |
-| `--fs-xl` | `clamp(20px, 1.4vw + 14px, 24px)` | Encabezados de sección (`h2`) y tarjeta activa de continuación |
-| `--fs-2xl` | `clamp(24px, 2vw + 16px, 32px)` | Títulos de vista (`h1`) y valores de métricas principales |
-| `--fs-3xl` | `clamp(30px, 3vw + 18px, 44px)` | Titular hero en `HomeView` |
+- **Nombre:** Grano (*Escuela de datos*). Línea descriptiva en onboarding y `<meta name="description">`: *De la primera fila al tablero.*
+- **Título de documento (`<title>`):** `Grano` fuera de lección; `<Lección> · Grano` dentro de una lección.
+- **Logotipo (`src/assets/brand/BrandMark.jsx`, `public/favicon.svg`):** cuadrícula de 3×3 celdas cuadradas con separación de 1 unidad. Ocho celdas en trazo (`--ink-3`) y una celda rellena con `--brand` en la fila 2, columna 3. Wordmark `"grano"` en minúsculas, fuente de interfaz, peso 600, `letter-spacing: -0.01em`.
+- **Criterio visual:** aspecto de cuaderno de laboratorio ordenado. Un solo acento de marca (`--brand`), superficies neutras separadas por bordes de 1 px (`--line`), sin degradados decorativos, sin brillo y sin sombras de color.
 
 ---
 
-## 2. Tokens de Color Base y Verificación de Contraste WCAG 2.2 AA
+## 2. Paleta de color y contraste WCAG 2.x
 
-Definidos en `src/styles/tokens.css` para Modo Claro (`:root`, `[data-theme="light"]`) y Modo Oscuro (`@media (prefers-color-scheme: dark)` cuando `:root:not([data-theme="light"])` y `[data-theme="dark"]`). Cero alias heredados.
+Tres colores de área (`--track-de`, `--track-da`, `--track-bi`) se usan únicamente como marcadores pequeños (punto de 6–8 px, borde izquierdo de 2 px o icono), nunca como fondo de bloque grande. Las etapas antiguas no tienen color propio.
 
-| Par de Contraste | Modo Claro (Hex) | Ratio Claro | Modo Oscuro (Hex) | Ratio Oscuro | Nivel WCAG 2.2 |
+| Token | Modo claro (`:root`, `[data-theme="light"]`) | Modo oscuro (`[data-theme="dark"]`) | Uso |
+| :--- | :--- | :--- | :--- |
+| `--bg` | `#FAFAF9` | `#121211` | Fondo general de la aplicación |
+| `--surface` | `#FFFFFF` | `#1A1A18` | Paneles, tarjetas y superficies elevadas |
+| `--sunken` | `#F4F4F2` | `#222220` | Bloques hundidos: `code` inline, filas alternas, controles |
+| `--line` | `#E7E5E1` | `#2E2D2A` | Bordes divisorios de 1 px |
+| `--line-strong` | `#D6D3CD` | `#3D3B37` | Separadores de estructura (no de controles) |
+| `--line-control` | `#928C85` | `#6B675F` | Bordes de inputs, casillas y botón `secondary` (≥ 3.0:1) |
+| `--ink` | `#1C1B19` | `#EDECE9` | Texto principal y fondo del botón primario |
+| `--ink-2` | `#57534E` | `#B5B1AA` | Texto secundario |
+| `--ink-3` | `#78716C` | `#8F8A82` | Metadatos y texto guía en campos (≥ 4.5:1 sobre `--surface` y `--bg`) |
+| `--brand` | `#C2410C` | `#F07A3E` | Acento de marca: celda del logo, progreso, foco, enlace activo |
+| `--brand-soft` | `#FDF1EA` | `#2D1D14` | Fondo de selección de texto y del paso activo |
+| `--brand-deep` | `#9A3412` | `#F5A47A` | Variante intensa de marca |
+| `--track-de` | `#2952CC` | `#7C9BF5` | Marcador de Ingeniería de Datos |
+| `--track-da` | `#167A52` | `#5BC79A` | Marcador de Análisis de Datos |
+| `--track-bi` | `#7A3FC2` | `#B58CF0` | Marcador de Business Intelligence |
+| `--ok` | `#167A52` | `#5BC79A` | Estado correcto (siempre acompañado de icono) |
+| `--bad` | `#C2352B` | `#F07A70` | Estado de error o acción destructiva |
+| `--warn` | `#A15C00` | `#E0A345` | Estado de aviso |
+| `--code-bg` | `#1C1B19` | `#1C1B19` | Fondo de bloques `<pre>` (idéntico en ambos temas) |
+| `--focus` | `#C2410C` | `#F07A3E` | Anillo `:focus-visible` de 2 px con `outline-offset: 2px` |
+
+Verificación automática: `node scripts/check-contrast.mjs` comprueba 42 pares (21 en claro y 21 en oscuro) y exige ≥ 4.5:1 para texto normal y ≥ 3.0:1 para `--line-control` y marcadores de área.
+
+---
+
+## 3. Tipografía autoalojada y escala en `rem`
+
+Cargada localmente en `src/styles/fonts.css` mediante paquetes `@fontsource` con `unicode-range` (sin peticiones a servidores externos):
+
+| Token | Familia | Paquete | Pesos cargados | Uso |
+| :--- | :--- | :--- | :--- | :--- |
+| `--font-sans` | `IBM Plex Sans` | `@fontsource/ibm-plex-sans` | 400, 500, 600 | Interfaz y cuerpo de lectura |
+| `--font-mono` | `IBM Plex Mono` | `@fontsource/ibm-plex-mono` | 400, 500 | Código, tablas de datos, números y atajos |
+| `--font-display` | `Newsreader Variable` | `@fontsource-variable/newsreader` | `opsz` (500–600) | Títulos de lección, sección y módulo (`h1`, `h2`) |
+
+### Escala tipográfica (base 16 px)
+
+| Token | Valor (`rem`) | Equivalente a 16 px | Uso |
+| :--- | :--- | :--- | :--- |
+| `--fs-1` | `0.75rem` | 12 px | Metadatos, chips, atajos de teclado, `code` inline |
+| `--fs-2` | `0.8125rem` | 13 px | Botones pequeños (`sm`), tablas densas |
+| `--fs-3` | `0.875rem` | 14 px | Interfaz general, botones `md`/`lg`, bloques `<pre>` |
+| `--fs-4` | `1rem` | 16 px | Lectura de lección y subtítulos `h4` |
+| `--fs-5` | `1.125rem` | 18 px | Subtítulos `h3` |
+| `--fs-6` | `1.375rem` | 22 px | Título de sección `h2` (Newsreader) |
+| `--fs-7` | `1.75rem` | 28 px | Título de lección `h1` (Newsreader) |
+| `--fs-8` | `2.25rem` | 36 px | Título de bienvenida en onboarding |
+
+- **Lectura:** `line-height: 1.6` (`--lh-reading`), ancho máximo `68ch`.
+- **Interfaz:** `line-height: 1.4` (`--lh-ui`).
+- **Números:** `font-variant-numeric: tabular-nums` en `.tabular`, `code`, `pre`, `table` y `kbd`.
+- Prohibido usar `clamp()` con unidades `vw` para texto de interfaz.
+
+---
+
+## 4. Espaciado, radios y profundidad
+
+- **Espaciado (`rem`):** `--sp-1: 0.25rem` (4 px), `--sp-2: 0.5rem` (8 px), `--sp-3: 0.75rem` (12 px), `--sp-4: 1rem` (16 px), `--sp-5: 1.25rem` (20 px), `--sp-6: 1.5rem` (24 px), `--sp-8: 2rem` (32 px), `--sp-10: 2.5rem` (40 px), `--sp-12: 3rem` (48 px), `--sp-16: 4rem` (64 px).
+- **Radios:** `--r-1: 4px` (chips, inputs, `code`), `--r-2: 6px` (botones, bloques `<pre>`), `--r-3: 10px` (tarjetas y paneles).
+- **Sombras:** únicamente `--shadow-pop` para menús desplegables, popovers y paneles superpuestos. Las tarjetas no llevan sombra.
+- **Iconos:** `lucide-react`, 16 px en controles de interfaz y 14 px en chips, `stroke-width: 1.75`.
+
+---
+
+## 5. Botones y controles
+
+| Variante | Fondo | Texto | Borde | Hover | Uso |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| `--text` sobre `--bg` | `#141824` / `#F6F7FB` | **16.4 : 1** | `#EEF0F6` / `#0F1117` | **16.8 : 1** | AAA (>= 7:1) |
-| `--text` sobre `--surface` | `#141824` / `#FFFFFF` | **17.7 : 1** | `#EEF0F6` / `#171A23` | **15.2 : 1** | AAA (>= 7:1) |
-| `--text-2` sobre `--surface` | `#586079` / `#FFFFFF` | **6.1 : 1** | `#A3AAC0` / `#171A23` | **7.4 : 1** | AA / AAA (>= 4.5:1) |
-| `--text-2` sobre `--surface-2` | `#586079` / `#EFF1F7` | **5.4 : 1** | `#A3AAC0` / `#1F2330` | **6.5 : 1** | AA (>= 4.5:1) |
-| `--primary` / `--primary-deep` sobre `--primary-soft` | `#3434D6` / `#ECEBFF` | **7.8 : 1** | `#B4B5FF` / `#23234A` | **7.6 : 1** | AAA (>= 7:1) |
-| Botón primario (texto sobre `--primary`) | `#FFFFFF` / `#4C4DFF` | **5.4 : 1** | `#0F1117` / `#8B8CFF` | **7.3 : 1** | AA / AAA (>= 4.5:1) |
-| `--success` sobre `--success-soft` | `#12A150` / `#E3F8EC` | **4.6 : 1** | `#3DD68C` / `#12301F` | **7.9 : 1** | AA / AAA (>= 4.5:1) |
-| `--danger` sobre `--danger-soft` | `#E5484D` / `#FEECEC` | **4.5 : 1** | `#FF6369` / `#3B1618` | **5.8 : 1** | AA (>= 4.5:1) |
+| `primary` | `--ink` | `--surface` | — | `color-mix` 8 % más claro | Acción principal única por vista |
+| `secondary` | `--surface` | `--ink` | 1 px `--line-control` | Fondo `--sunken` | Acciones secundarias |
+| `ghost` | Transparente | `--ink-2` | — | Fondo `--sunken`, texto `--ink` | Barras de herramientas |
+| `danger` | `--surface` | `--bad` | 1 px `--bad` al 40 % | Fondo `--bad` al 8 % | Reiniciar progreso o borrar datos |
+| `link` | Transparente | `--ink` | Subrayado 1 px `--line-strong` | Subrayado `--brand` | Enlaces dentro de texto |
+
+- **Alturas:** `sm` 28 px (`--fs-2`), `md` 34 px (`--fs-3`), `lg` 40 px (`--fs-3`, peso 600). En puntero táctil (`pointer: coarse`), mínimo 44 px.
+- **Estados:** `:hover`, `:active` (`transform: translateY(0.5px)`), `:focus-visible` (anillo `--focus`), `[disabled]` (opacidad `0.45`, `cursor: not-allowed`), `[aria-busy="true"]` (spinner de 14 px que reemplaza al icono conservando el ancho).
+- **Chips:** 22 px de alto, `--fs-1`, fuente mono, borde 1 px `--line`, fondo `--sunken`. Chip de área: punto de 6 px en `--track-*` + etiqueta.
+- **Inputs y `textarea`:** 34 px de alto, borde `--line-control`, anillo `--focus`, texto guía `--ink-3`.
+- **Segmented control:** contenedor `--sunken`, opción activa `--surface` con borde `--line` e indicador deslizante con `transform`.
 
 ---
 
-## 3. Identidad Cromática por Etapa (`[data-stage="1".."6"]`) y Contraste AA
+## 6. Densidad y escala
 
-Cada etapa define `--stage`, `--stage-soft`, `--stage-deep` y `--stage-contrast`. En modo oscuro, `--stage-soft` se mezcla al `18%` en `oklab` con `--surface` y `--stage-deep` se aclara al `75%` con `#FFFFFF` para garantizar lectura nítida.
-
-| Etapa | Dominio (`shortName`) | `--stage` | Claro: `--stage-deep` sobre `--stage-soft` | Ratio Claro | Oscuro: `--stage-deep` sobre `--stage-soft` | Ratio Oscuro | Estado |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Etapa 1** | `SQL` | `#FF6B4A` | `#B4381C` sobre `#FFEDE7` | **5.8 : 1** | `#FFA18C` sobre `#3E2625` | **6.4 : 1** | AA Verificado |
-| **Etapa 2** | `Modelado` | `#F2A516` | `#8A5300` sobre `#FFF4DA` | **6.2 : 1** | `#F9C672` sobre `#3B2D1E` | **7.5 : 1** | AA Verificado |
-| **Etapa 3** | `Columnar` | `#1DB371` | `#0B6B40` sobre `#E1F7EB` | **6.1 : 1** | `#7CE2B2` sobre `#18312D` | **7.8 : 1** | AA Verificado |
-| **Etapa 4** | `Lakehouse` | `#16A8B8` | `#0A6370` sobre `#DFF5F7` | **6.4 : 1** | `#79DCE7` sobre `#173038` | **7.6 : 1** | AA Verificado |
-| **Etapa 5** | `Estadística y BI` | `#3C7BFF` | `#1D47B3` sobre `#E5EDFF` | **7.1 : 1** | `#8CB1FF` sobre `#1D2842` | **6.9 : 1** | AA Verificado |
-| **Etapa 6** | `Streaming e IA` | `#8A5CFF` | `#5127C7` sobre `#EFE9FF` | **7.3 : 1** | `#B99DFF` sobre `#292342` | **6.8 : 1** | AA Verificado |
-
-### Roles Técnicos (`DE`, `DA`, `BI`)
-- **`DE` (Ingeniería de datos)**: `--role-de: #2F6BFF`, `--role-de-deep: #1D47B3`, ícono `Database` (`14px`).
-- **`DA` (Análisis de datos)**: `--role-da: #0FA968`, `--role-da-deep: #08663E`, ícono `Sigma` (`14px`).
-- **`BI` (Business Intelligence)**: `--role-bi: #F08A24`, `--role-bi-deep: #9A4E06`, ícono `LayoutDashboard` (`14px`).
+- **Escala (`data-scale` en `<html>`):** `0.9` (90 %), `1` (100 %), `1.1` (110 %), `1.25` (125 %) y `auto` (90 % entre 1024–1440 px de ancho o altura ≤ 800 px). Actualiza `--ui-scale` (y `--zoom` mientras conviven las vistas heredadas). Atajos: `Ctrl +`, `Ctrl -` y `Ctrl 0`.
+- **Densidad (`data-density`):** `comfortable`, `compact` o `auto` (activa compacta en `@media (max-height: 800px), (max-width: 1366px)`). El modo compacto multiplica `--sp-*` por `0.75`, reduce la barra superior de 52 a 44 px (`--topbar-h: 2.75rem`), los botones `md` de 34 a 30 px (`--btn-h-md: 1.875rem`) y `--lh-reading` de `1.6` a `1.5`.
 
 ---
 
-## 4. Arquitectura CSS Modular (`src/styles/`)
+## 7. Movimiento
 
-Importada en orden estricto desde `src/styles.css`:
-1. `src/styles/tokens.css` — Variables CSS de tipografía, color, etapas, roles, radios, sombras y tiempos.
-2. `src/styles/reset.css` — Reset box-sizing, selección, scrollbars, jerarquía tipográfica y `.tabular`.
-3. `src/styles/layout.css` — Primitivas `.l-container`, `.l-stack`, `.l-cluster`, `.l-grid`, `.l-sidebar`, `.l-switcher`.
-4. `src/styles/components.css` — Estilos de los 16 componentes de `src/components/ui/` + `UiShowcase`.
-5. `src/styles/animations.css` — Keyframes `pop`, `shake`, `draw-check`, `sparkle`, `pulse-ring` protegidos por `@media (prefers-reduced-motion: no-preference)`.
-6. `src/styles/views/shell.css` — `AppShell`, barra superior, barra lateral colapsable y buscador `Ctrl+K`.
-7. `src/styles/views/home.css` — Vista de inicio y métricas.
-8. `src/styles/views/roadmap.css` — Mapa de aprendizaje de 6 etapas.
-9. `src/styles/views/lesson.css` — Reproductor de lecciones.
-10. `src/styles/views/simulators.css` — Simuladores interactivos, tablas de diferencias y laboratorios SQL.
-11. `src/styles/views/secondary.css` — Repaso Leitner, Glosario, Proyectos Capstone y Analítica.
-12. `src/styles/views/tutor.css` — Panel contextual del Tutor IA.
+| Token | Valor | Uso |
+| :--- | :--- | :--- |
+| `--dur-1` | `120ms` | Hover, pulsado, cambio de color |
+| `--dur-2` | `180ms` | Aparición de menús, tooltips y chips |
+| `--dur-3` | `260ms` | Paneles laterales y transición entre vistas |
+| `--dur-4` | `420ms` | Llenado de barras de progreso |
+| `--ease-out` | `cubic-bezier(.2, .8, .2, 1)` | Entradas |
+| `--ease-in` | `cubic-bezier(.4, 0, 1, 1)` | Salidas |
+| `--ease-move` | `cubic-bezier(.65, 0, .35, 1)` | Desplazamiento de indicadores en pestañas y segmented controls |
+
+Con `@media (prefers-reduced-motion: reduce)`, las duraciones se reducen a `0.01ms` y las barras de progreso cambian sin transición.
 
 ---
 
-## 5. Catálogo de Componentes (`src/components/ui/`)
+## 8. Layout por anchura
 
-1. **`stageTheme.js`**: Exporta `STAGE_THEMES`, `ROLE_THEMES`, `getStageNumber(stageOrLesson)`, `getStageTheme(stageOrLesson)` y `getRoleMeta(roleKey)`.
-2. **`Button.jsx`**: Variantes `primary` (`44px`, `40px` en `sm`, sombra presionable `0 2px 0 var(--primary-deep)`), `secondary`, `ghost`, `success`, `danger`, `stage`; tamaños `sm`, `md`, `lg`; props `icon`, `iconRight` y `fullWidth`.
-3. **`ProgressBar.jsx`**: Animada mediante `--value`, grosores `sm` (4px), `md` (8px), `lg` (10px) y tonos `primary`, `stage`, `success`, `warning`, `danger`.
-4. **`ProgressRing.jsx`**: Anillo SVG circular con slot central (`children` o `label`), soporte `data-stage` y modo `celebrate` (check trazado + chispas CSS).
-5. **`Chip.jsx`**: Variantes `neutral`, `primary`, `stage`, `role` (`DE` / `DA` / `BI` con ícono automático de `14px`), `success`, `warning`, `danger`.
-6. **`Card.jsx`**: Con `container-type: inline-size`, `interactive` (hover `translateY(-2px)` + `--shadow-2`), `stage` y `accentTop` (franja superior en color `--stage`).
-7. **`Stepper.jsx`**: Soporta `variant="full"` y `variant="compact"` (7 puntos donde el paso activo es una píldora alargada en `--stage`, sin desborde en móvil `390px`).
-8. **`Callout.jsx`**: Tonos `info`, `success`, `danger`, `warning`, `stage` con ícono contextual y título.
-9. **`EmptyState.jsx`**: Slot de ilustración (`illustration`), título, descripción y acción.
-10. **`Kbd.jsx`**: Indicador de atajo de teclado con relieve físico.
-11. **`Badge.jsx`**: Medalla de logro por etapa (`stage={1..6}`, `unlocked`, `title`, `subtitle`).
-12. **`Sheet.jsx`**: Panel deslizable lateral en escritorio e inferior en móvil con cierre por `Esc` y backdrop.
-13. **`Tabs.jsx`**: Pestañas accesibles con navegación por flechas y variantes `pills`, `underline` y `segmented`.
-14. **`Tooltip.jsx`**: Tooltip CSS accesible por `:hover` y `:focus-within`.
-15. **`Skeleton.jsx`**: Bloques de carga sutiles (`text`, `title`, `block`, `card`, `circle`).
-16. **`Toast.jsx`**: Banner o notificación flotante con acción y botón de cierre.
-17. **`AnswerOption.jsx`**: Opción de quiz/diagnóstico (`16px` peso `500`, objetivo táctil `>= 44px`, letra `A/B/C/D`, estados `idle`, `selected`, `correct` con `pop`, `incorrect` con `shake`, `disabled`).
-18. **`UiShowcase.jsx`**: Catálogo interactivo en vivo accesible mediante `?ui=1`.
+| Ancho de ventana | Navegación | Temario de lección | Tutor IA |
+| :--- | :--- | :--- | :--- |
+| `≥ 1600 px` | Lateral 232 px (colapsable a 56 px) | Columna visible de 260 px | Columna fija de 380 px; la lectura nunca baja de 640 px |
+| `1280–1599 px` | Rail lateral de 56 px | Cajón abrible con botón "Temario" o tecla `T` | Panel superpuesto de 400 px con `--shadow-pop` |
+| `1024–1279 px` | Rail lateral de 56 px | Cajón lateral | Panel superpuesto de 360 px |
+| `< 1024 px` | Barra inferior de 5 ítems | Hoja inferior | Hoja inferior a pantalla completa |
+
+- Lectura centrada a `max-width: 68ch`; simuladores hasta `min(100%, 960px)` con `container-type: inline-size`.
+- La cabecera de lección muestra un único indicador de progreso (barra de 2 px + contador de sección).

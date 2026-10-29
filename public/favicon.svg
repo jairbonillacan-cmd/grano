@@ -1,9 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 26" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 26" fill="none" shape-rendering="geometricPrecision">
   <style>
     .c { stroke: #78716C; }
     @media (prefers-color-scheme: dark) { .c { stroke: #B5B1AA; } }
   </style>
-  <g stroke-width="1.4">
+  <g stroke-width="1.5">
     <rect class="c" x="2.5" y="2.5" width="5" height="5" rx="1"/>
     <rect class="c" x="10.5" y="2.5" width="5" height="5" rx="1"/>
     <rect class="c" x="18.5" y="2.5" width="5" height="5" rx="1"/>
