@@ -8,6 +8,8 @@
     "dev": "vite --port 5174 --host 127.0.0.1",
     "build": "vite build",
     "preview": "vite preview --port 4173 --host 127.0.0.1",
+    "start": "vite build && node server/index.js",
+    "ai:check": "node server/ai/check.js",
     "check:catalog": "node scripts/check-catalog.mjs",
     "shots": "node scripts/shots.mjs"
   },

@@ -1,9 +1,9 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { googleAiUltraBridgePlugin } from './server/aiUltraBridge.js';
+import { granoAiPlugin } from './server/ai/routes.js';
 
 export default defineConfig({
-  plugins: [react(), googleAiUltraBridgePlugin()],
+  plugins: [react(), granoAiPlugin()],
   server: {
     port: 5174,
     host: '127.0.0.1',
