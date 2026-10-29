@@ -93,14 +93,14 @@ Archivos leídos antes de iniciar la edición y hallazgo concreto extraído de c
 
 | Criterio (0–4) | L01 (`window-functions`) | L02 (`asof-lateral-ctes`) | L03 (`zonas-horarias-date-spine`) | L04 (`explain-analyze`) | Justificación verificable |
 | :--- | :---: | :---: | :---: | :---: | :--- |
-| 1. Claridad para quien empieza | 4 | 4 | 4 | 4 | Hooks anclados en problemas concretos, progresión gradual desde `c1-sql-joins` y frases cortas (`< 20` palabras/frase). |
-| 2. Rigor técnico actual (2024–2026) | 4 | 4 | 4 | 4 | Cubre `QUALIFY`, `WINDOW`, `ROWS` vs `RANGE`, `ASOF LEFT JOIN`, `LEFT JOIN LATERAL`, zonas horarias ICU, `Date Spine` y `EXPLAIN ANALYZE` con *Dynamic Filters* en DuckDB 1.2 y PostgreSQL 17. |
-| 3. Anclaje en Mercado Brisa | 4 | 4 | 4 | 4 | Todas las cifras provienen de consultas reales sobre `orders`, `order_items`, `payments`, `events`, `customer_changes`, `products`, `stores` y `calendar`. |
-| 4. Calidad del ejemplo guiado | 4 | 4 | 4 | 4 | Cada `workedExample` contrasta el antipatrón cuantificado con la solución verificada y su auditoría numérica. |
-| 5. Calidad de las comprobaciones | 4 | 4 | 4 | 4 | 3 `checks` por lección basados en errores frecuentes de producción con `feedback` específico en cada opción. |
-| 6. Calidad de la práctica | 4 | 4 | 4 | 4 | 4 prácticas `sql` reales en DuckDB donde `starterCode` falla por un defecto instructivo y `solution` pasa al 100 %. |
-| 7. Calidad de las fuentes | 4 | 4 | 4 | 4 | 16 URLs oficiales verificadas con HTTP 200 (DuckDB, PostgreSQL 17, Snowflake y dbt Labs). |
-| 8. Limpieza de copy y tono | 4 | 4 | 4 | 4 | `0` hallazgos en `check-copy.mjs`, sin muletillas de IA, sin emojis, sin `¡` y sin negritas excesivas. |
+| 1. Objetivo claro | 4 | 4 | 4 | 4 | 3 objetivos en infinitivo (`<= 140` caracteres) por lección, medibles con los `checks` y la práctica SQL. |
+| 2. Progresión | 4 | 4 | 4 | 4 | Secuencia continua desde `c1-sql-joins` pasando por ventanas, cruces punto en el tiempo, husos horarios/espinas y planes físicos. |
+| 3. Ejemplo concreto | 4 | 4 | 4 | 4 | Cada `workedExample` y ejemplo de sección usa tablas y cifras reales verificadas en DuckDB sobre Mercado Brisa. |
+| 4. Error típico | 4 | 4 | 4 | 4 | Se diagnostican `WHERE ROW_NUMBER() = 1`, `ROWS` vs `RANGE`, desigualdad invertida en `ASOF`, `WHERE` externo tras `LEFT JOIN`, `AVG()` sin `COALESCE` y predicados no SARGables. |
+| 5. Práctica | 4 | 4 | 4 | 4 | 4 prácticas `sql` ejecutables en DuckDB-Wasm donde `starterCode` falla con diagnóstico claro y `solution` pasa al 100 %. |
+| 6. Brevedad | 4 | 4 | 4 | 4 | 1115–1230 palabras visibles por lección, secciones de 80–250 palabras y media de frase `< 20` palabras (`<= 22`). |
+| 7. Precisión | 4 | 4 | 4 | 4 | Semántica exacta de DuckDB 1.2 y PostgreSQL 17 respaldada por 16 fuentes oficiales verificadas con HTTP 200. |
+| 8. Tono | 4 | 4 | 4 | 4 | `0` hallazgos en `check-copy.mjs`: español directo de tú, sin muletillas de IA, sin emojis, sin `¡` y sin negritas excesivas. |
 | **Total** | **32/32** | **32/32** | **32/32** | **32/32** | **Todas `>= 26/32` y ningún criterio `< 3`.** |
 
 ---
