@@ -1,0 +1,246 @@
+[
+  {
+    "id": "modelo-incremental-ventana",
+    "term": "Modelo incremental con ventana deslizante (Incremental Lookback Window)",
+    "englishTerm": "Incremental Lookback Window",
+    "track": "de",
+    "definition": "Estrategia de materialización incremental que reprocesa un intervalo temporal reciente mediante operaciones idempotentes para absorber eventos tardíos sin recalcular toda la tabla histórica.",
+    "formula": "WHERE event_ts >= (SELECT MAX(event_ts) - INTERVAL '3 days' FROM {{ this }})",
+    "relatedLessons": [
+      "de3-transformacion-01-dbt-sqlmesh-dag",
+      "de3-transformacion-02-tests-unitarios-auditorias-dag"
+    ],
+    "relatedTerms": [
+      "entorno-virtual-datos",
+      "grafo-linaje-declarativo"
+    ],
+    "sources": [
+      {
+        "title": "dbt Labs — About incremental models",
+        "url": "https://docs.getdbt.com/docs/build/incremental-models",
+        "publisher": "dbt Labs",
+        "accessed": "2026-10-29",
+        "supports": "Estrategias incrementales, claves únicas y ventanas deslizantes para eventos tardíos."
+      }
+    ]
+  },
+  {
+    "id": "entorno-virtual-datos",
+    "term": "Entorno virtual de datos (Virtual Data Environment)",
+    "englishTerm": "Virtual Data Environment",
+    "track": "de",
+    "definition": "Arquitectura popularizada por SQLMesh donde cada rama apunta mediante vistas ligeras a tablas físicas inmutables identificadas por la huella semántica de su código.",
+    "formula": "CREATE OR REPLACE VIEW prod.fct_payments AS SELECT * FROM sqlmesh__fct_payments__<semantic_hash>",
+    "relatedLessons": [
+      "de3-transformacion-01-dbt-sqlmesh-dag"
+    ],
+    "relatedTerms": [
+      "modelo-incremental-ventana",
+      "grafo-linaje-declarativo"
+    ],
+    "sources": [
+      {
+        "title": "SQLMesh — Virtual Data Environments",
+        "url": "https://sqlmesh.readthedocs.io/en/stable/concepts/environments/",
+        "publisher": "Tobiko Data",
+        "accessed": "2026-10-29",
+        "supports": "Promoción instantánea de entornos mediante vistas y huellas de árbol sintáctico."
+      }
+    ]
+  },
+  {
+    "id": "grafo-linaje-declarativo",
+    "term": "Grafo de linaje declarativo (Declarative Lineage DAG)",
+    "englishTerm": "Declarative Lineage DAG",
+    "track": "de",
+    "definition": "Grafo acíclico dirigido inferido automáticamente al compilar referencias entre modelos SQL o analizar el árbol sintáctico, garantizando un orden de ejecución topológico determinista.",
+    "formula": "SELECT * FROM {{ ref('stg_payments') }} JOIN {{ source('raw', 'orders') }}",
+    "relatedLessons": [
+      "de3-transformacion-01-dbt-sqlmesh-dag",
+      "de3-transformacion-04-observabilidad-openlineage"
+    ],
+    "relatedTerms": [
+      "entorno-virtual-datos",
+      "linaje-columna-openlineage"
+    ],
+    "sources": [
+      {
+        "title": "dbt Labs — About ref function",
+        "url": "https://docs.getdbt.com/reference/dbt-jinja-functions/ref",
+        "publisher": "dbt Labs",
+        "accessed": "2026-10-29",
+        "supports": "Construcción automática del grafo de dependencias mediante la función ref."
+      }
+    ]
+  },
+  {
+    "id": "prueba-unitaria-sql",
+    "term": "Prueba unitaria SQL (SQL Unit Test)",
+    "englishTerm": "SQL Unit Test",
+    "track": "de",
+    "definition": "Verificación determinista de la lógica de una consulta que inyecta filas sintéticas fijas mediante expresiones tabulares comunes y compara el resultado antes de materializar.",
+    "formula": "WITH mock_input AS (VALUES (...)), actual AS (...), diff AS (SELECT * FROM actual EXCEPT SELECT * FROM expected)",
+    "relatedLessons": [
+      "de3-transformacion-02-tests-unitarios-auditorias-dag"
+    ],
+    "relatedTerms": [
+      "auditoria-bloqueante-wap",
+      "prueba-singular-datos"
+    ],
+    "sources": [
+      {
+        "title": "dbt Labs — Unit tests",
+        "url": "https://docs.getdbt.com/docs/build/unit-tests",
+        "publisher": "dbt Labs",
+        "accessed": "2026-10-29",
+        "supports": "Pruebas unitarias de lógica SQL con entradas simuladas antes de materializar tablas."
+      }
+    ]
+  },
+  {
+    "id": "auditoria-bloqueante-wap",
+    "term": "Auditoría bloqueante WAP (Blocking Write-Audit-Publish Audit)",
+    "englishTerm": "Blocking WAP Audit",
+    "track": "de",
+    "definition": "Regla de calidad evaluada sobre una tabla intermedia aislada que aborta la publicación hacia producción si la consulta de validación devuelve cualquier fila anómala.",
+    "formula": "AUDIT (name assert_positive_price, blocking true); SELECT * FROM @this_model WHERE list_price_usd <= 0;",
+    "relatedLessons": [
+      "de3-transformacion-02-tests-unitarios-auditorias-dag",
+      "de3-transformacion-01-dbt-sqlmesh-dag"
+    ],
+    "relatedTerms": [
+      "prueba-unitaria-sql",
+      "prueba-singular-datos"
+    ],
+    "sources": [
+      {
+        "title": "SQLMesh — Audits",
+        "url": "https://sqlmesh.readthedocs.io/en/stable/concepts/audits/",
+        "publisher": "Tobiko Data",
+        "accessed": "2026-10-29",
+        "supports": "Auditorías bloqueantes y no bloqueantes dentro del ciclo Write-Audit-Publish."
+      }
+    ]
+  },
+  {
+    "id": "prueba-singular-datos",
+    "term": "Prueba singular de datos (Singular Data Test)",
+    "englishTerm": "Singular Data Test",
+    "track": "de",
+    "definition": "Consulta SQL específica de dominio que busca contraejemplos de una regla de negocio entre múltiples tablas y aprueba únicamente cuando devuelve cero registros.",
+    "formula": "SELECT r.order_id FROM refunds r JOIN orders o USING (order_id) WHERE o.status = 'cancelled'",
+    "relatedLessons": [
+      "de3-transformacion-02-tests-unitarios-auditorias-dag"
+    ],
+    "relatedTerms": [
+      "auditoria-bloqueante-wap",
+      "prueba-unitaria-sql"
+    ],
+    "sources": [
+      {
+        "title": "dbt Labs — Add data tests to your DAG",
+        "url": "https://docs.getdbt.com/docs/build/data-tests",
+        "publisher": "dbt Labs",
+        "accessed": "2026-10-29",
+        "supports": "Pruebas de datos genéricas y singulares orientadas a detectar filas que violan invariantes."
+      }
+    ]
+  },
+  {
+    "id": "contrato-datos-odcs",
+    "term": "Contrato de datos ejecutable (Open Data Contract Standard)",
+    "englishTerm": "Executable Data Contract (ODCS v3)",
+    "track": "de",
+    "definition": "Acuerdo técnico ejecutable entre productores y consumidores que especifica esquema físico, tipos exactos, restricciones de nulidad, reglas de calidad y acuerdos de servicio.",
+    "formula": "apiVersion: v3.0.2 | kind: DataContract | contract: { enforced: true }",
+    "relatedLessons": [
+      "de3-transformacion-03-contracts-semantic-layer"
+    ],
+    "relatedTerms": [
+      "capa-semantica-metricas",
+      "auditoria-bloqueante-wap"
+    ],
+    "sources": [
+      {
+        "title": "Bitol — Open Data Contract Standard (ODCS)",
+        "url": "https://bitol-io.github.io/open-data-contract-standard/latest/",
+        "publisher": "Bitol / Linux Foundation AI & Data",
+        "accessed": "2026-10-29",
+        "supports": "Especificación estándar ODCS v3 para contratos de datos ejecutables."
+      }
+    ]
+  },
+  {
+    "id": "capa-semantica-metricas",
+    "term": "Capa semántica de métricas (Semantic Layer)",
+    "englishTerm": "Semantic Layer",
+    "track": "bi",
+    "definition": "Capa intermedia que centraliza entidades, dimensiones y fórmulas de métricas de negocio para traducir peticiones analíticas en consultas SQL consistentes sin multiplicar filas.",
+    "formula": "net_retention_pct = 100.0 * SUM(net_revenue_usd) / NULLIF(SUM(gross_revenue_usd), 0)",
+    "relatedLessons": [
+      "de3-transformacion-03-contracts-semantic-layer"
+    ],
+    "relatedTerms": [
+      "contrato-datos-odcs",
+      "grafo-linaje-declarativo"
+    ],
+    "sources": [
+      {
+        "title": "dbt Labs — Semantic models & MetricFlow",
+        "url": "https://docs.getdbt.com/docs/build/semantic-models",
+        "publisher": "dbt Labs",
+        "accessed": "2026-10-29",
+        "supports": "Definición declarativa de entidades, dimensiones y métricas gobernadas."
+      }
+    ]
+  },
+  {
+    "id": "observabilidad-cuatro-pilares",
+    "term": "Observabilidad de datos (Data Observability)",
+    "englishTerm": "Data Observability",
+    "track": "de",
+    "definition": "Monitoreo continuo de la salud de los activos analíticos mediante telemetría automatizada sobre cuatro pilares fundamentales: frescura, volumen, distribución estadística y cambios estructurales.",
+    "formula": "freshness_lag_hours = EXTRACT(EPOCH FROM (NOW() - MAX(event_ts))) / 3600.0",
+    "relatedLessons": [
+      "de3-transformacion-04-observabilidad-openlineage"
+    ],
+    "relatedTerms": [
+      "linaje-columna-openlineage",
+      "auditoria-bloqueante-wap"
+    ],
+    "sources": [
+      {
+        "title": "OpenLineage — Data Quality Metrics Facet",
+        "url": "https://openlineage.io/docs/spec/facets/dataset-facets/data_quality_metrics",
+        "publisher": "Linux Foundation AI & Data",
+        "accessed": "2026-10-29",
+        "supports": "Métricas estandarizadas de volumen, nulidad y distribución por dataset y columna."
+      }
+    ]
+  },
+  {
+    "id": "linaje-columna-openlineage",
+    "term": "Linaje a nivel de columna (Column-Level Lineage)",
+    "englishTerm": "Column-Level Lineage (OpenLineage)",
+    "track": "de",
+    "definition": "Trazabilidad fina especificada en OpenLineage que vincula cada atributo de salida con las columnas origen y el tipo de transformación directa o indirecta.",
+    "formula": "facets.columnLineage.fields.<output_col>.inputFields = [{ namespace, name, field }]",
+    "relatedLessons": [
+      "de3-transformacion-04-observabilidad-openlineage",
+      "de3-transformacion-01-dbt-sqlmesh-dag"
+    ],
+    "relatedTerms": [
+      "observabilidad-cuatro-pilares",
+      "grafo-linaje-declarativo"
+    ],
+    "sources": [
+      {
+        "title": "OpenLineage — Column Lineage Dataset Facet",
+        "url": "https://openlineage.io/docs/spec/facets/dataset-facets/column_lineage_facet",
+        "publisher": "Linux Foundation AI & Data",
+        "accessed": "2026-10-29",
+        "supports": "Especificación de linaje a nivel de columna e impacto de transformaciones."
+      }
+    ]
+  }
+]
