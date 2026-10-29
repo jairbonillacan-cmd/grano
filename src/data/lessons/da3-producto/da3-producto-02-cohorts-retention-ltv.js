@@ -1,332 +1,501 @@
-// Lección migrada al esquema v2 mediante scripts/migrate-legacy.mjs
 const lesson = {
-  "id": "da3-producto-02-cohorts-retention-ltv",
-  "moduleId": "da3-producto",
-  "tracks": [
-    "da"
+  id: 'da3-producto-02-cohorts-retention-ltv',
+  moduleId: 'da3-producto',
+  tracks: ['da'],
+  level: 3,
+  order: 2,
+  minutes: 30,
+  contentVersion: 2,
+  needsReview: false,
+  prerequisites: ['da3-producto-01-embudos-conversion-ventana'],
+  legacyId: 'l13-cohorts-retention-ltv',
+  legacyOrder: 13,
+  title: 'Cohortes de retención, supervivencia y LTV con margen',
+  subtitle:
+    'Matrices triangulares sin sesgo de censura y cálculo del valor de vida ajustado por margen.',
+  hook: 'El equipo comercial de Mercado Brisa propone pagar hasta 1.500 USD por captar cada nueva cafetería B2B porque su gasto histórico medio roza los 2.825 USD. Además, un informe trimestral afirma que las cohortes recientes retienen menos clientes cuando apenas llevan unas semanas activas. ¿Por qué ambas conclusiones destruirían la rentabilidad del negocio, y cómo corregir tanto el sesgo de censura como la inflación del LTV bruto?',
+  objectives: [
+    'Construir matrices triangulares de retención por cohorte de primera compra empleando edades relativas en trimestres.',
+    'Prevenir el sesgo de censura por la derecha diferenciando periodos futuros no observados de caídas reales de actividad.',
+    'Calcular el LTV neto en DuckDB descontando el coste unitario de producto y las devoluciones procesadas sin fan-out 1:N.',
+    'Vincular la retención y el margen neto realizado con el techo sostenible de coste de adquisición de clientes (CAC).',
   ],
-  "level": 3,
-  "order": 2,
-  "title": "Cohortes de retención, supervivencia y LTV con margen",
-  "minutes": 30,
-  "prerequisites": [
-    "da3-producto-01"
-  ],
-  "contentVersion": 1,
-  "hook": "En Mercado Brisa (empresa ficticia), la dirección celebra que el total de clientes activos crece un 12 % mensual. Sin embargo, al separar a los clientes según su mes de primera compra (cohorte de adquisición), descubres que quienes entraron hace un año seguían comprando al tercer mes en un 68 %, mientras que las cohortes recientes caen al 39 % al tercer mes. El gasto publicitario estaba ocultando un deterioro del producto. ¿Cómo construyes una matriz de retención sin sesgo por censura y calculas el LTV con margen bruto?",
-  "objectives": [
-    "Construir una tabla triangular de retención por cohorte de adquisición en SQL usando DATE_TRUNC y DATE_DIFF.",
-    "Excluir las celdas con censura por la derecha (cohortes recientes que aún no cumplen N meses de vida).",
-    "Calcular la razón LTV:CAC y el mes de recuperación (payback) multiplicando ingresos por el margen bruto real."
-  ],
-  "sections": [
-    {
-      "id": "sesgo-de-los-promedios-globales-y-definicion-de-",
-      "heading": "Sesgo de los promedios globales y definición de una cohorte",
-      "body": "Analizar la base total de usuarios como una masa uniforme mezcla clientes veteranos de hace 3 años (que ya superaron la curva de aprendizaje y rara vez cancelan) con miles de usuarios recién llegados hoy (donde ocurre el 70% de la deserción temprana). Cuando el marketing acelera, el influjo masivo de usuarios nuevos en el Mes 0 oculta el deterioro del producto.\nUna cohorte agrupa usuarios que comparten un evento fundacional en la misma ventana temporal (por ejemplo, el mes de su primera compra o activación: `cohort_month = DATE_TRUNC('month', MIN(event_ts))`). A partir de ese instante, medimos su ciclo de vida relativo en períodos `M0, M1, M2, ..., Mn` usando `DATE_DIFF('month', cohort_month, activity_month)`.",
-      "interactive": {
-        "component": "cohort-retention-sim",
-        "caption": "Simulador interactivo: Cohortes de retención, supervivencia y LTV con margen"
-      }
-    },
-    {
-      "id": "retencion-de-clientes-frente-a-retencion-neta-de",
-      "heading": "Retención de clientes frente a retención neta de ingresos (NRR)",
-      "body": "En negocios de suscripción, pagos o comercio recurrente, debes separar dos curvas complementarias en cada cohorte:\n- Retención de Usuarios (Logo Retention): porcentaje de clientes originales de la cohorte que siguen activos en el mes `k` (`active_users_k / cohort_size_m0`). Nunca puede superar el 100%.\n- Retención Neta de Dólares (Net Revenue Retention - NRR): porcentaje de los ingresos iniciales de la cohorte que se conservan en el mes `k`, incluyendo expansiones (upgrades, cross-sell) y restando contracciones (downgrades) y cancelaciones (`revenue_k / revenue_m0`).\nCuando una plataforma logra que los clientes que permanecen expandan su consumo más rápido que lo perdido por quienes se van, la curva de NRR supera el 100% (ej. 115%) y dibuja una \"Curva de la Sonrisa\" (Flattening & Smiling Curve), señal inequívoca de Product-Market Fit.",
-      "example": {
-        "language": "sql",
-        "code": "WITH user_cohort AS (\n  SELECT\n    customer_id,\n    DATE_TRUNC('month', MIN(activity_month)) AS cohort_month\n  FROM gold.fct_monthly_subscriptions\n  GROUP BY customer_id\n),\ncohort_activity AS (\n  SELECT\n    c.cohort_month,\n    DATE_DIFF('month', c.cohort_month, s.activity_month) AS month_number,\n    COUNT(DISTINCT s.customer_id) AS active_users,\n    SUM(s.mrr_usd) AS cohort_mrr_usd,\n    SUM(s.mrr_usd * s.gross_margin_pct) AS cohort_gross_profit_usd\n  FROM user_cohort c\n  JOIN gold.fct_monthly_subscriptions s ON c.customer_id = s.customer_id\n  GROUP BY c.cohort_month, month_number\n)\nSELECT\n  cohort_month,\n  month_number,\n  active_users,\n  ROUND(100.0 * active_users / FIRST_VALUE(active_users) OVER (\n    PARTITION BY cohort_month ORDER BY month_number\n  ), 1) AS logo_retention_pct,\n  ROUND(100.0 * cohort_mrr_usd / FIRST_VALUE(cohort_mrr_usd) OVER (\n    PARTITION BY cohort_month ORDER BY month_number\n  ), 1) AS nrr_pct,\n  ROUND(SUM(cohort_gross_profit_usd) OVER (\n    PARTITION BY cohort_month ORDER BY month_number\n  ) / FIRST_VALUE(active_users) OVER (\n    PARTITION BY cohort_month ORDER BY month_number\n  ), 2) AS cumulative_ltv_margin_usd\nFROM cohort_activity\nORDER BY cohort_month, month_number;",
-        "expectedOutput": [
-          {
-            "cohort_month": "2026-07-01",
-            "month_number": 0,
-            "active_users": 1000,
-            "logo_retention_pct": "100.0%",
-            "nrr_pct": "100.0%",
-            "cumulative_ltv_margin_usd": "$38.00"
-          },
-          {
-            "cohort_month": "2026-07-01",
-            "month_number": 1,
-            "active_users": 820,
-            "logo_retention_pct": "82.0%",
-            "nrr_pct": "96.4%",
-            "cumulative_ltv_margin_usd": "$74.63"
-          },
-          {
-            "cohort_month": "2026-07-01",
-            "month_number": 3,
-            "active_users": 710,
-            "logo_retention_pct": "71.0%",
-            "nrr_pct": "108.5% (Expansión)",
-            "cumulative_ltv_margin_usd": "$152.40"
-          }
-        ]
-      }
-    },
-    {
-      "id": "analisis-de-supervivencia-y-datos-censurados-por",
-      "heading": "Análisis de supervivencia y datos censurados por la derecha",
-      "body": "Un error clásico al calcular la vida media de un cliente en SQL es ejecutar `AVG(dias_activo) WHERE status = 'CANCELLED'`. Ese filtro comete sesgo de selección severo porque ignora precisamente a tus mejores clientes: los que siguen vivos hoy.\nEn estadística aplicada (estimador de Kaplan-Meier), los clientes que entraron hace 2 meses y siguen activos son observaciones \"censuradas por la derecha\" (Right-Censored): sabemos que sobrevivieron al menos 60 días, pero aún no conocemos su duración final. Por eso en la matriz triangular de cohortes nunca debes rellenar con `0%` los meses futuros que una cohorte joven aún no ha vivido; deben quedar como `NULL` para no hundir artificialmente el promedio de `M6` o `M12`."
-    },
-    {
-      "id": "calculo-de-ltv-con-margen-bruto-cac-y-recuperaci",
-      "heading": "Cálculo de LTV con margen bruto, CAC y recuperación",
-      "body": "Un error financiero frecuente en BI y marketing es calcular el Valor de Vida del Cliente (LTV) sobre ingresos brutos (`ARPU / Churn`). Si un cliente genera $100 de ingresos pero atenderlo cuesta $40 en servidores, pasarelas de pago y soporte (Margen Bruto = 60%), el dinero real que contribuye a recuperar su Costo de Adquisición (CAC) es solo $60.\nLa fórmula honesta integra el margen bruto (`Gross Margin %`) sobre el área bajo la curva de retención acumulada en un horizonte acotado (ej. LTV a 12 o 24 meses) y vigila el CAC Payback Period (cuántos meses tarda el margen bruto acumulado de la cohorte en igualar el CAC invertido). Un ratio `LTV:CAC >= 3.0x` con un `Payback < 12 meses` distingue el crecimiento rentable del crecimiento subsidiado."
-    }
-  ],
-  "workedExample": {
-    "title": "Ejemplo guiado: Cohortes de retención, supervivencia y LTV con margen",
-    "description": "Compara el cálculo erróneo de vida media (que sufre sesgo de supervivencia y olvida el margen bruto) frente a una matriz SQL de cohortes y LTV acumulado real:",
-    "audit": "",
-    "steps": [
+  visualizer: 'cohort',
+  pipelineChallenge: {
+    title: 'Pipeline de cohortes y LTV neto sin fugas de grano ni censura',
+    prompt:
+      'Ordena las etapas del pipeline analítico para estimar retención por cohorte y LTV ajustado por margen en Mercado Brisa:',
+    steps: [
       {
-        "label": "Antipatrón: deserción global y LTV sobre usuarios cancelados",
-        "explanation": "Compara el cálculo erróneo de vida media (que sufre sesgo de supervivencia y olvida el margen bruto) frente a una matriz SQL de cohortes y LTV acumulado real:",
-        "code": "-- ERROR COMÚN:\n-- 1) Calcula vida media solo sobre usuarios que YA cancelaron (ignora a los mejores clientes activos)\n-- 2) Usa ingreso bruto sin descontar costo de ventas (COGS / Margen Bruto)\n-- 3) Mezcla todas las cohortes en un único promedio engañoso\nSELECT\n  AVG(DATE_DIFF('month', signup_date, cancelled_date)) AS meses_vida_sesgados,\n  AVG(monthly_revenue_usd) * AVG(DATE_DIFF('month', signup_date, cancelled_date)) AS ltv_bruto_falso\nFROM subscriptions\nWHERE status = 'CANCELLED';",
-        "expectedOutput": [
-          {
-            "meses_vida_sesgados": "2.4 meses (Subestimado: ignora clientes activos de 24+ meses)",
-            "ltv_bruto_falso": "$120.00 (Sin descontar 35% de costos directos ni censura)"
-          }
-        ]
+        id: 'step-cohort-origin',
+        text: 'Identificar la fecha o trimestre de primera compra completada (cohort_qtr) por cada customer_id.',
       },
       {
-        "label": "Solución óptima: matriz de cohortes y LTV con margen bruto",
-        "explanation": "Compara ahora la consulta corregida y verifica cómo las filas y totales coinciden con la auditoría.",
-        "code": "WITH user_cohort AS (\n  SELECT\n    customer_id,\n    DATE_TRUNC('month', MIN(activity_month)) AS cohort_month\n  FROM gold.fct_monthly_subscriptions\n  GROUP BY customer_id\n),\ncohort_activity AS (\n  SELECT\n    c.cohort_month,\n    DATE_DIFF('month', c.cohort_month, s.activity_month) AS month_number,\n    COUNT(DISTINCT s.customer_id) AS active_users,\n    SUM(s.mrr_usd) AS cohort_mrr_usd,\n    SUM(s.mrr_usd * s.gross_margin_pct) AS cohort_gross_profit_usd\n  FROM user_cohort c\n  JOIN gold.fct_monthly_subscriptions s ON c.customer_id = s.customer_id\n  GROUP BY c.cohort_month, month_number\n)\nSELECT\n  cohort_month,\n  month_number,\n  active_users,\n  ROUND(100.0 * active_users / FIRST_VALUE(active_users) OVER (\n    PARTITION BY cohort_month ORDER BY month_number\n  ), 1) AS logo_retention_pct,\n  ROUND(100.0 * cohort_mrr_usd / FIRST_VALUE(cohort_mrr_usd) OVER (\n    PARTITION BY cohort_month ORDER BY month_number\n  ), 1) AS nrr_pct,\n  ROUND(SUM(cohort_gross_profit_usd) OVER (\n    PARTITION BY cohort_month ORDER BY month_number\n  ) / FIRST_VALUE(active_users) OVER (\n    PARTITION BY cohort_month ORDER BY month_number\n  ), 2) AS cumulative_ltv_margin_usd\nFROM cohort_activity\nORDER BY cohort_month, month_number;",
-        "expectedOutput": [
-          {
-            "cohort_month": "2026-07-01",
-            "month_number": 0,
-            "active_users": 1000,
-            "logo_retention_pct": "100.0%",
-            "nrr_pct": "100.0%",
-            "cumulative_ltv_margin_usd": "$38.00"
-          },
-          {
-            "cohort_month": "2026-07-01",
-            "month_number": 1,
-            "active_users": 820,
-            "logo_retention_pct": "82.0%",
-            "nrr_pct": "96.4%",
-            "cumulative_ltv_margin_usd": "$74.63"
-          },
-          {
-            "cohort_month": "2026-07-01",
-            "month_number": 3,
-            "active_users": 710,
-            "logo_retention_pct": "71.0%",
-            "nrr_pct": "108.5% (Expansión)",
-            "cumulative_ltv_margin_usd": "$152.40"
-          }
-        ]
-      }
-    ]
-  },
-  "checks": [
-    {
-      "id": "c1",
-      "type": "mcq",
-      "prompt": "Al construir una tabla de retención de cohortes en producción, un analista rellena con `0%` los meses `M3`, `M4` y `M5` de la cohorte adquirida en septiembre de 2026 (que solo lleva 1 mes de vida) y luego calcula el promedio de retención `M3` de todo el año. ¿Qué error estadístico acaba de cometer?",
-      "options": [
-        {
-          "id": "a",
-          "text": "Ignoró la censura por la derecha (Right-Censoring): trató períodos futuros que la cohorte de septiembre aún no ha vivido como si el 100% de sus usuarios hubieran cancelado, desplomando artificialmente el promedio de M3.",
-          "correct": true,
-          "feedback": "Exacto. Una cohorte nacida hace 1 mes está censurada por la derecha a partir de M2: aún no ha llegado al tercer mes. Esas celdas deben ser `NULL` (nunca `0%`) para que `AVG()` solo promedie cohortes que realmente cumplieron 3 meses de antigüedad."
-        },
-        {
-          "id": "b",
-          "text": "Ninguno; en SQL siempre hay que reemplazar todos los `NULL` por `0` en cualquier tabla.",
-          "correct": false,
-          "feedback": "Reemplazar un `NULL` que significa \"evento futuro aún no observado\" por `0` destruye la media estadística de las columnas derechas de la matriz triangular."
-        },
-        {
-          "id": "c",
-          "text": "Debería haber rellenado los meses futuros con `100%` en lugar de `0%`.",
-          "correct": false,
-          "feedback": "Rellenar con `100%` inflaría falsamente la retención; la única representación matemáticamente honesta de un período futuro no transcurrido es `NULL`."
-        }
-      ],
-      "explanation": "Exacto. Una cohorte nacida hace 1 mes está censurada por la derecha a partir de M2: aún no ha llegado al tercer mes. Esas celdas deben ser `NULL` (nunca `0%`) para que `AVG()` solo promedie cohortes que realmente cumplieron 3 meses de antigüedad."
-    },
-    {
-      "id": "c2",
-      "type": "mcq",
-      "prompt": "Hoy es `2026-10-15`. Quieres calcular en SQL la retención media al mes 3 (`period_n = 3`) de todas las cohortes mensuales del año. ¿Qué condición `WHERE` evita el sesgo por censura de las cohortes de agosto, septiembre y octubre?",
-      "options": [
-        {
-          "id": "a",
-          "text": "WHERE cohort_month + INTERVAL '3 months' <= DATE_TRUNC('month', CURRENT_DATE)",
-          "correct": true,
-          "feedback": "Correcto: evalúa únicamente las cohortes que ya tuvieron al menos 3 meses completos de calendario para demostrar si retenían o no."
-        },
-        {
-          "id": "b",
-          "text": "Usar COALESCE(retained_users, 0) para todas las cohortes hasta octubre incluido.",
-          "correct": false,
-          "feedback": "Incorrecto: imputar 0 a meses que todavía no han ocurrido en el calendario distorsiona la media hacia abajo."
-        },
-        {
-          "id": "c",
-          "text": "Multiplicar por 2 las cohortes recientes para compensar.",
-          "correct": false,
-          "feedback": "Incorrecto: un factor arbitrario carece de validez estadística."
-        }
-      ],
-      "explanation": "En análisis de cohortes y supervivencia, una cohorte solo entra en el denominador del periodo k si ha transcurrido al menos el tiempo k desde su inicio."
-    },
-    {
-      "id": "c3",
-      "type": "predict-output",
-      "prompt": "En Mercado Brisa, un cliente promedio genera 200 USD de compras acumuladas en 24 meses, el margen bruto después de costo de mercancía y reparto es del 30 %, y el costo de adquisición (CAC) fue de 30 USD. ¿Cuál es la razón `LTV / CAC` real?",
-      "options": [
-        {
-          "id": "a",
-          "text": "2.0x (LTV con margen = 200 × 0.30 = 60 USD; dividido entre CAC de 30 USD = 2.0).",
-          "correct": true,
-          "feedback": "Correcto: el LTV económico es el margen bruto acumulado (60 USD), lo que arroja una relación de 2.0 veces el CAC."
-        },
-        {
-          "id": "b",
-          "text": "6.67x (dividiendo los 200 USD de venta bruta entre los 30 USD de CAC).",
-          "correct": false,
-          "feedback": "Incorrecto: ignora que el 70 % de los 200 USD se destina a pagar los productos y la logística."
-        },
-        {
-          "id": "c",
-          "text": "0.5x (dividiendo CAC entre LTV).",
-          "correct": false,
-          "feedback": "Incorrecto: invierte el numerador y el denominador de la razón LTV:CAC."
-        }
-      ],
-      "explanation": "El costo de adquisición se paga con el margen de contribución que deja el cliente tras cubrir el costo de los bienes vendidos y el envío."
-    }
-  ],
-  "practice": {
-    "type": "sql",
-    "title": "Matriz de cohortes y retención sobre Mercado Brisa",
-    "language": "sql",
-    "prompt": "Calcula para la cohorte de clientes dados de alta en enero de 2023 (`DATE_TRUNC('month', c.signup_date) = DATE '2023-01-01'`) su evolución en los primeros 6 meses (`month_number BETWEEN 0 AND 5`): `cohort_month`, `month_number`, `active_customers`, `cohort_revenue_usd` y `logo_retention_pct` respecto al mes `0`.",
-    "starterCode": "WITH cohort_activity AS (\n  SELECT\n    DATE_TRUNC('month', c.signup_date) AS cohort_month,\n    DATE_DIFF('month', DATE_TRUNC('month', c.signup_date), DATE_TRUNC('month', o.order_date)) AS month_number,\n    COUNT(DISTINCT o.customer_id) AS active_customers,\n    ROUND(SUM(o.total_usd), 2) AS cohort_revenue_usd\n  FROM customers c\n  JOIN orders o ON o.customer_id = c.customer_id\n  WHERE o.status = 'completed'\n    AND DATE_TRUNC('month', c.signup_date) = DATE '2023-01-01'\n  GROUP BY 1, 2\n)\nSELECT\n  cohort_month,\n  month_number,\n  active_customers,\n  cohort_revenue_usd,\n  -- TODO: Calcula logo_retention_pct dividiendo 100.0 * active_customers entre FIRST_VALUE(active_customers) OVER (PARTITION BY cohort_month ORDER BY month_number) redondeado a 1 decimal\n  0.0 AS logo_retention_pct\nFROM cohort_activity\nWHERE month_number BETWEEN 0 AND 5\nORDER BY month_number;",
-    "expected": "WITH cohort_activity AS (\n  SELECT\n    DATE_TRUNC('month', c.signup_date) AS cohort_month,\n    DATE_DIFF('month', DATE_TRUNC('month', c.signup_date), DATE_TRUNC('month', o.order_date)) AS month_number,\n    COUNT(DISTINCT o.customer_id) AS active_customers,\n    ROUND(SUM(o.total_usd), 2) AS cohort_revenue_usd\n  FROM customers c\n  JOIN orders o ON o.customer_id = c.customer_id\n  WHERE o.status = 'completed'\n    AND DATE_TRUNC('month', c.signup_date) = DATE '2023-01-01'\n  GROUP BY 1, 2\n)\nSELECT\n  cohort_month,\n  month_number,\n  active_customers,\n  cohort_revenue_usd,\n  ROUND(\n    100.0 * active_customers / FIRST_VALUE(active_customers) OVER (\n      PARTITION BY cohort_month\n      ORDER BY month_number\n    ),\n    1\n  ) AS logo_retention_pct\nFROM cohort_activity\nWHERE month_number BETWEEN 0 AND 5\nORDER BY month_number;",
-    "orderMatters": true,
-    "hints": [
-      "Usa `FIRST_VALUE(active_customers) OVER (PARTITION BY cohort_month ORDER BY month_number)` como denominador para anclar la retención al mes inicial (`month_number = 0`).",
-      "Multiplica por `100.0` antes de dividir y redondea a 1 decimal con `ROUND(..., 1)`.",
-      "Conserva `WHERE month_number BETWEEN 0 AND 5` y `ORDER BY month_number`."
+        id: 'step-preagg-1n',
+        text: 'Preagregar en CTEs independientes el coste de mercancía (order_items x products) y las devoluciones procesadas (refunds) por order_id.',
+      },
+      {
+        id: 'step-relative-age',
+        text: 'Cruzar pedidos completados con su cohorte calculando la edad relativa (qtr_offset) mediante DATEDIFF.',
+      },
+      {
+        id: 'step-censor-ltv',
+        text: 'Enmascarar con NULL los periodos aún no transcurridos (censura por la derecha) y dividir el margen neto acumulado entre el tamaño inicial de la cohorte.',
+      },
     ],
-    "solution": "WITH cohort_activity AS (\n  SELECT\n    DATE_TRUNC('month', c.signup_date) AS cohort_month,\n    DATE_DIFF('month', DATE_TRUNC('month', c.signup_date), DATE_TRUNC('month', o.order_date)) AS month_number,\n    COUNT(DISTINCT o.customer_id) AS active_customers,\n    ROUND(SUM(o.total_usd), 2) AS cohort_revenue_usd\n  FROM customers c\n  JOIN orders o ON o.customer_id = c.customer_id\n  WHERE o.status = 'completed'\n    AND DATE_TRUNC('month', c.signup_date) = DATE '2023-01-01'\n  GROUP BY 1, 2\n)\nSELECT\n  cohort_month,\n  month_number,\n  active_customers,\n  cohort_revenue_usd,\n  ROUND(\n    100.0 * active_customers / FIRST_VALUE(active_customers) OVER (\n      PARTITION BY cohort_month\n      ORDER BY month_number\n    ),\n    1\n  ) AS logo_retention_pct\nFROM cohort_activity\nWHERE month_number BETWEEN 0 AND 5\nORDER BY month_number;",
-    "solutionExplanation": "Determina la edad relativa de la actividad con `DATE_DIFF('month', cohort_month, order_month)` y calcula `logo_retention_pct` dividiendo los clientes activos de cada mes entre `FIRST_VALUE(active_customers)` ordenado por `month_number`."
   },
-  "roleNotes": {
-    "de": "Materializa la fecha inmutable de primera activación (`first_active_date`) en `dim_customers` y construye un calendario denso (Date Spine) en la capa Silver para detectar meses de inactividad sin huecos. Particiona las tablas de actividad mensual por `activity_month` y ordena por `cohort_month` para que los escaneos históricos de 36 meses sean instantáneos. Garantiza que los eventos tardíos o reactivaciones no sobrescriban el `cohort_month` original del usuario.",
-    "da": "Construye matrices triangulares de retención usando `FIRST_VALUE(active_users) OVER (PARTITION BY cohort_month ORDER BY month_number)` y audita la censura por la derecha. Estima curvas de supervivencia Kaplan-Meier y descompone cambios en LTV por canal de adquisición, dispositivo y cohorte de producto. Detecta cuándo el aplanamiento de la curva (asíntota de retención) se desplaza tras un cambio en el flujo de onboarding.",
-    "bi": "Publica mapas de calor (Heatmaps) triangulares de cohortes donde cada fila muestra el tamaño inicial (`N`) y las celdas futuras no vividas se ocultan en blanco en lugar de mostrar `0%`. Estandariza en la Capa Semántica las definiciones de `Logo Retention`, `Gross Revenue Retention (GRR, máx 100%)` y `Net Revenue Retention (NRR)` junto al `CAC Payback` ajustado por margen bruto."
-  },
-  "summary": [
-    "Una cohorte agrupa usuarios que comparten la fecha de un evento fundador (primera compra o registro).",
-    "El crecimiento bruto de usuarios activos puede ocultar una caída severa en la retención de nuevas cohortes.",
-    "Promediar el mes N sin filtrar cohortes que aún no cumplieron N meses introduce sesgo por censura.",
-    "El LTV debe calcularse sobre margen de contribución neto de costos directos, nunca sobre ingreso bruto."
-  ],
-  "flashcards": [
+  sections: [
     {
-      "id": "fc-da3-coh-01",
-      "front": "¿Qué es la censura por la derecha (right censoring) en una matriz de retención por cohortes?",
-      "back": "Es el hecho de que las cohortes recientes aún no han vivido los meses futuros (M3, M6); incluirlas como 0 en el promedio hunde artificialmente la retención."
+      id: 'sec-matrices-triangulares-cohortes',
+      heading: 'Matrices triangulares de retención y edad relativa de cohorte',
+      body: 'Las métricas globales de actividad mezclan clientes veteranos con usuarios recién captados. Si las altas nuevas crecen rápido, el porcentaje total de usuarios activos parece saludable aunque los clientes antiguos abandonen el producto en silencio.\n\nUna **cohorte de adquisición** agrupa a los clientes según el periodo en que realizaron su primera compra completada (`cohort_qtr`). A partir de ese anclaje medimos el paso del tiempo mediante un índice de edad relativa ($k = 0, 1, 2, \\dots$) calculado con `DATEDIFF(\'quarter\', cohort_qtr, order_qtr)`.\n\nAl cruzar cada cohorte en las filas con el trimestre relativo en las columnas obtenemos una **matriz triangular de retención**. El denominador de cada fila permanece fijo en el tamaño original de la cohorte en $k = 0$ (`cohort_size`). En **Mercado Brisa**, las cuatro cohortes trimestrales de `2024` conservan en su tercer trimestre posterior (`ret_q3_pct`) entre el `52,98 %` (`2024-01`) y el `63,54 %` (`2024-10`) de sus compradores iniciales.',
+      example: {
+        language: 'sql',
+        code: `WITH completed_orders AS (
+  SELECT
+    customer_id,
+    DATE_TRUNC('quarter', CAST(order_date AS DATE)) AS order_qtr
+  FROM orders
+  WHERE status = 'completed'
+),
+first_purchase AS (
+  SELECT
+    customer_id,
+    MIN(order_qtr) AS cohort_qtr
+  FROM completed_orders
+  GROUP BY customer_id
+),
+cohort_sizes AS (
+  SELECT
+    cohort_qtr,
+    COUNT(*) AS cohort_size
+  FROM first_purchase
+  WHERE cohort_qtr >= DATE '2024-01-01'
+    AND cohort_qtr < DATE '2025-01-01'
+  GROUP BY cohort_qtr
+),
+cohort_activity AS (
+  SELECT
+    fp.cohort_qtr,
+    DATEDIFF('quarter', fp.cohort_qtr, co.order_qtr) AS qtr_offset,
+    COUNT(DISTINCT co.customer_id) AS active_customers
+  FROM first_purchase fp
+  JOIN completed_orders co ON fp.customer_id = co.customer_id
+  WHERE fp.cohort_qtr >= DATE '2024-01-01'
+    AND fp.cohort_qtr < DATE '2025-01-01'
+    AND DATEDIFF('quarter', fp.cohort_qtr, co.order_qtr) BETWEEN 0 AND 3
+  GROUP BY fp.cohort_qtr, qtr_offset
+)
+SELECT
+  STRFTIME(cs.cohort_qtr, '%Y-%m') AS cohort_quarter,
+  cs.cohort_size,
+  MAX(CASE WHEN ca.qtr_offset = 0 THEN ROUND(100.0 * ca.active_customers / cs.cohort_size, 2) END) AS ret_q0_pct,
+  MAX(CASE WHEN ca.qtr_offset = 1 THEN ROUND(100.0 * ca.active_customers / cs.cohort_size, 2) END) AS ret_q1_pct,
+  MAX(CASE WHEN ca.qtr_offset = 2 THEN ROUND(100.0 * ca.active_customers / cs.cohort_size, 2) END) AS ret_q2_pct,
+  MAX(CASE WHEN ca.qtr_offset = 3 THEN ROUND(100.0 * ca.active_customers / cs.cohort_size, 2) END) AS ret_q3_pct
+FROM cohort_sizes cs
+JOIN cohort_activity ca ON cs.cohort_qtr = ca.cohort_qtr
+GROUP BY cs.cohort_qtr, cs.cohort_size
+ORDER BY cs.cohort_qtr;`,
+        expectedOutput: [
+          { cohort_quarter: '2024-01', cohort_size: 470, ret_q0_pct: 100, ret_q1_pct: 51.49, ret_q2_pct: 58.94, ret_q3_pct: 52.98 },
+          { cohort_quarter: '2024-04', cohort_size: 401, ret_q0_pct: 100, ret_q1_pct: 56.11, ret_q2_pct: 56.11, ret_q3_pct: 61.6 },
+          { cohort_quarter: '2024-07', cohort_size: 218, ret_q0_pct: 100, ret_q1_pct: 58.72, ret_q2_pct: 63.3, ret_q3_pct: 61.93 },
+          { cohort_quarter: '2024-10', cohort_size: 96, ret_q0_pct: 100, ret_q1_pct: 58.33, ret_q2_pct: 69.79, ret_q3_pct: 63.54 },
+        ],
+      },
     },
     {
-      "id": "fc-da3-coh-02",
-      "front": "¿Por qué es peligroso calcular LTV usando ingreso bruto en lugar de margen bruto en un supermercado en línea?",
-      "back": "Porque si el margen bruto es del 25 %, usar ingreso bruto infla 4 veces el LTV y lleva a aprobar costos de adquisición (CAC) que generan pérdidas por cada cliente."
+      id: 'sec-censura-derecha-supervivencia',
+      heading: 'Censura por la derecha y retención neta de ingresos (NRR)',
+      body: 'En análisis de supervivencia llamamos **censura por la derecha** al truncamiento que ocurre cuando la ventana de observación del dataset termina antes de que una cohorte cumpla la edad evaluada.\n\nEn **Mercado Brisa**, el último pedido registrado data del `2025-11-26`. Por tanto, la cohorte captada en `2025-04` aún no ha completado su segundo trimestre posterior (`Q+2`), y la cohorte de `2025-07` ni siquiera ha cerrado `Q+1`. Si rellenas las celdas incompletas con `0` usando `COALESCE(..., 0)` y promedias la columna `Q+3`, hundirás artificialmente la curva de supervivencia de la empresa.\n\nAdemás de contar clientes activos (retención de logotipos), debemos evaluar la **retención neta de ingresos (NRR)**. Una cohorte puede retener al `60 %` de sus compradores pero superar el `100 %` de NRR si quienes permanecen amplían sus pedidos a lotes de mayor valor.',
     },
     {
-      "id": "fc-da3-coh-03",
-      "front": "¿Qué diferencia hay entre retención de usuarios (Logo Retention) y retención neta de ingresos (NRR)?",
-      "back": "Logo Retention mide el porcentaje de clientes que siguen activos (<= 100 %); NRR mide el ingreso retenido más expansiones de la cohorte (puede superar el 100 %)."
-    }
-  ],
-  "glossaryTerms": [
-    "c22-cohort-retention-ltv",
-    "c09-kpi-trees-guardrails"
-  ],
-  "sources": [
-    {
-      "title": "Statsig Documentation — Retention and Cohort Analysis Methodology",
-      "url": "https://docs.statsig.com/pulse/retention/",
-      "publisher": "Statsig",
-      "accessed": "2026-10-29",
-      "supports": "Cálculo de curvas de retención por cohorte y manejo de ventanas completas de observación."
+      id: 'sec-ltv-margen-neto-sin-fanout',
+      heading: 'LTV ajustado por margen neto y devoluciones sin fan-out 1:N',
+      body: 'El valor de vida del cliente (**LTV**) determina cuánto podemos invertir en captación (`CAC`). Calcular el LTV sumando únicamente la facturación bruta (`orders.total_usd`) es un error financiero grave: pagamos adquisición con margen de contribución real, no con ingresos brutos.\n\nPara obtener el **LTV ajustado por margen neto** en **Mercado Brisa** debemos restar dos componentes a los pedidos con `status = \'completed\'`:\n\n1. **Coste de mercancía vendida (COGS)**: multiplicando `qty * unit_cost_usd` entre `order_items` (`42.000` líneas) y `products` (`180` SKUs).\n\n2. **Devoluciones procesadas**: sumando `refund_amount_usd` en `refunds` (`1.450` filas con `status = \'processed\'`).\n\nComo un pedido tiene hasta cuatro líneas en `order_items` y hasta dos devoluciones parciales en `refunds`, hacer un `JOIN` directo entre `orders`, `order_items` y `refunds` provoca una explosión cartesiana (**fan-out `1:N`**) que multiplica `orders.total_usd`. La regla técnica innegociable consiste en preagregar el coste y los reembolsos al grano de `order_id` en CTEs separadas antes de unirlos con `orders`.',
     },
-    {
-      "title": "lifelines Documentation — Survival Analysis and Right-Censored Data (Kaplan-Meier)",
-      "url": "https://lifelines.readthedocs.io/en/latest/Survival%20analysis%20with%20lifelines.html",
-      "publisher": "Cam Davidson-Pilon",
-      "accessed": "2026-10-29",
-      "supports": "Tratamiento estadístico de observaciones censuradas por la derecha en tiempos de vida."
-    },
-    {
-      "title": "DuckDB Documentation — Date Functions (date_trunc, date_diff, intervals)",
-      "url": "https://duckdb.org/docs/sql/functions/date.html",
-      "publisher": "DuckDB Foundation",
-      "accessed": "2026-10-29",
-      "supports": "Funciones de truncamiento y diferencia de fechas para construir matrices de cohortes en SQL."
-    }
   ],
-  "aiNotes": "Los dos errores más comunes son incluir cohortes incompletas como ceros en el promedio del mes k y calcular el LTV con ingresos brutos sin descontar el costo de ventas.",
-  "needsReview": true,
-  "legacyId": "l13-cohorts-retention-ltv",
-  "legacyOrder": 13,
-  "stageId": "stage-5",
-  "subtitle": "Matrices triangulares sin sesgo de censura y cálculo del valor de vida ajustado por margen.",
-  "goal": "Construir matrices de retención por cohorte (Logo vs. Net Dollar Retention), manejar datos censurados por la derecha en análisis de supervivencia y calcular LTV/CAC ajustado por margen bruto.",
-  "pipelineChallenge": {
-    "title": "Economía unitaria y matriz de cohortes",
-    "scenario": "Ordena los pasos entre Ingeniería (DE), Análisis (DA) y BI para construir un sistema de retención de cohortes y LTV/CAC libre de sesgo de supervivencia y de falsos ceros en meses futuros.",
-    "steps": [
+  workedExample: {
+    title: 'Cálculo de LTV bruto frente a LTV neto de margen en Mercado Brisa',
+    description:
+      'Comparamos el LTV bruto frente al LTV neto de margen y devoluciones por segmento de cliente en Mercado Brisa, demostrando por qué el techo de CAC de cafeteria_b2b no puede fijarse en 1.500 USD.',
+    audit:
+      'En cafeteria_b2b el LTV bruto es 2.825,71 USD, pero el LTV neto de margen es 1.439,14 USD. Pagar un CAC de 1.500 USD provocaría una pérdida neta directa de 60,86 USD por cliente captado.',
+    steps: [
       {
-        "id": "step-1",
-        "label": "1. Materializar la fecha fundacional inmutable y el calendario mensual",
-        "role": "DE",
-        "detail": "Persistir `first_paid_month` en `dim_customer` y cruzar con un calendario mensual acotado hasta la fecha actual de corte (`CURRENT_DATE`)."
+        label: 'Paso 1: Preagregar el coste de mercancía (COGS) y las devoluciones al grano de order_id',
+        explanation:
+          'Colapsamos order_items unido con products por order_id para obtener cogs_usd, y colapsamos refunds (filtrando status = \'processed\') por order_id para obtener refunded_usd. Así garantizamos relación 1:1 con orders.',
+        code: `WITH order_cogs AS (
+  SELECT
+    oi.order_id,
+    SUM(oi.qty * p.unit_cost_usd) AS cogs_usd
+  FROM order_items oi
+  JOIN products p ON oi.product_id = p.product_id
+  GROUP BY oi.order_id
+),
+order_refunds AS (
+  SELECT
+    order_id,
+    SUM(refund_amount_usd) AS refunded_usd
+  FROM refunds
+  WHERE status = 'processed'
+  GROUP BY order_id
+)
+SELECT
+  COUNT(*) AS orders_with_cogs,
+  (SELECT COUNT(*) FROM order_refunds) AS orders_with_refunds
+FROM order_cogs;`,
+        expectedOutput: [
+          { orders_with_cogs: 18000, orders_with_refunds: 1150 },
+        ],
       },
       {
-        "id": "step-2",
-        "label": "2. Consolidar ingresos recurrentes netos y costos directos en silver",
-        "role": "DE",
-        "detail": "Unir facturación neta de reembolsos con costos de servidor y pasarela para exponer el margen bruto real por usuario y mes."
+        label: 'Paso 2: Calcular el LTV bruto y el LTV neto por cliente y promediar por segmento',
+        explanation:
+          'Unimos customers con sus pedidos completados y las dos CTEs preagregadas. Restamos COGS y devoluciones al ingreso bruto de cada cliente y agregamos por segment.',
+        code: `WITH order_cogs AS (
+  SELECT
+    oi.order_id,
+    SUM(oi.qty * p.unit_cost_usd) AS cogs_usd
+  FROM order_items oi
+  JOIN products p ON oi.product_id = p.product_id
+  GROUP BY oi.order_id
+),
+order_refunds AS (
+  SELECT
+    order_id,
+    SUM(refund_amount_usd) AS refunded_usd
+  FROM refunds
+  WHERE status = 'processed'
+  GROUP BY order_id
+),
+customer_ltv AS (
+  SELECT
+    c.customer_id,
+    c.segment,
+    COALESCE(SUM(o.total_usd), 0) AS gross_rev_usd,
+    COALESCE(SUM(oc.cogs_usd), 0) AS total_cogs_usd,
+    COALESCE(SUM(orf.refunded_usd), 0) AS total_refunds_usd,
+    COALESCE(SUM(o.total_usd), 0)
+      - COALESCE(SUM(oc.cogs_usd), 0)
+      - COALESCE(SUM(orf.refunded_usd), 0) AS net_margin_usd
+  FROM customers c
+  LEFT JOIN orders o
+    ON c.customer_id = o.customer_id
+   AND o.status = 'completed'
+  LEFT JOIN order_cogs oc ON o.order_id = oc.order_id
+  LEFT JOIN order_refunds orf ON o.order_id = orf.order_id
+  GROUP BY c.customer_id, c.segment
+)
+SELECT
+  segment,
+  COUNT(*) AS customers,
+  ROUND(AVG(gross_rev_usd), 2) AS avg_gross_ltv_usd,
+  ROUND(AVG(net_margin_usd), 2) AS avg_margin_ltv_usd,
+  ROUND(100.0 * SUM(net_margin_usd) / SUM(gross_rev_usd), 2) AS net_margin_pct
+FROM customer_ltv
+GROUP BY segment
+ORDER BY avg_margin_ltv_usd DESC;`,
+        expectedOutput: [
+          { segment: 'cafeteria_b2b', customers: 467, avg_gross_ltv_usd: 2825.71, avg_margin_ltv_usd: 1439.14, net_margin_pct: 50.93 },
+          { segment: 'pro_barista', customers: 966, avg_gross_ltv_usd: 2601.38, avg_margin_ltv_usd: 1295.9, net_margin_pct: 49.82 },
+          { segment: 'retail', customers: 967, avg_gross_ltv_usd: 2520.09, avg_margin_ltv_usd: 1265.62, net_margin_pct: 50.22 },
+        ],
       },
-      {
-        "id": "step-3",
-        "label": "3. Modelar matrices de retención, supervivencia y LTV acumulado en gold",
-        "role": "DA",
-        "detail": "Calcular `logo_retention_pct`, `nrr_pct` y el LTV de margen acumulado con funciones de ventana, manteniendo `NULL` en períodos futuros censurados."
-      },
-      {
-        "id": "step-4",
-        "label": "4. Publicar el mapa triangular y recuperación de CAC en BI",
-        "role": "BI",
-        "detail": "Exponer la matriz triangular con formato condicional y el indicador de meses de recuperación del CAC por cohorte y canal."
-      }
     ],
-    "explanation": "Cuando DE fija el mes de alta inmutable y acota el Date Spine al presente, DA calcula la retención y el margen acumulado respetando la censura por la derecha, y BI presenta la matriz triangular sin promediar meses futuros inexistentes."
   },
-  "relatedLessons": [
+  checks: [
     {
-      "id": "l2-window-functions",
-      "reason": "Las matrices de cohortes dependen directamente de `FIRST_VALUE` y `SUM() OVER` para fijar el denominador del Mes 0 y acumular el LTV."
+      id: 'chk-da3-prod-02-censor',
+      type: 'mcq',
+      prompt:
+        'Al construir una tabla de retención trimestral con corte de datos en noviembre de 2025, ¿cómo debes tratar el trimestre relativo Q+2 de la cohorte adquirida en julio de 2025?',
+      options: [
+        {
+          id: 'a',
+          text: 'Imputar 0 % con COALESCE para que todas las filas tengan cuatro columnas numéricas completas.',
+          correct: false,
+          feedback:
+            'Incorrecto. Rellenar con cero asume que todos los clientes abandonaron en un trimestre que aún no ha ocurrido.',
+        },
+        {
+          id: 'b',
+          text: 'Dejar la celda en NULL porque ese horizonte temporal está censurado por la derecha y aún no se ha observado.',
+          correct: true,
+          feedback:
+            'Correcto. En SQL, AVG() ignora los valores NULL y evita sesgar a la baja la retención media del trimestre Q+2.',
+        },
+        {
+          id: 'c',
+          text: 'Copiar el valor de Q+1 asumiendo que ningún cliente abandonará en el trimestre siguiente.',
+          correct: false,
+          feedback:
+            'Incorrecto. Proyectar retención constante sin datos observados sobreestima artificialmente la supervivencia.',
+        },
+      ],
+      explanation:
+        'La censura por la derecha ocurre cuando el horizonte de evaluación supera la fecha máxima del dataset. Dejar NULL distingue la ausencia de observación de una caída real a cero.',
     },
     {
-      "id": "l6-metrics-simpson",
-      "reason": "El Churn global sufre la Paradoja de Simpson cuando cambia el peso entre cohortes nuevas (alto churn inicial) y cohortes maduras."
+      id: 'chk-da3-prod-02-fanout',
+      type: 'predict-output',
+      prompt:
+        'Un pedido completado tiene total_usd = 100 USD, consta de 3 líneas en order_items y registra 2 devoluciones parciales en refunds. Si ejecutas SUM(o.total_usd) haciendo JOIN directo entre orders, order_items y refunds sin preagregar, ¿qué ingreso bruto suma ese único pedido?',
+      options: [
+        {
+          id: 'a',
+          text: '600 USD (porque el producto cartesiano 3 x 2 genera 6 filas para el mismo pedido)',
+          correct: true,
+          feedback:
+            'Correcto. Las 3 líneas de detalle multiplicadas por las 2 filas de devolución producen 6 filas y multiplican por 6 el total de la cabecera.',
+        },
+        {
+          id: 'b',
+          text: '100 USD (porque DuckDB detecta automáticamente la clave primaria de orders)',
+          correct: false,
+          feedback:
+            'Incorrecto. SUM(o.total_usd) suma el valor en cada fila resultante del JOIN, sin deduplicar por order_id.',
+        },
+        {
+          id: 'c',
+          text: '300 USD (porque solo order_items multiplica las filas de orders)',
+          correct: false,
+          feedback:
+            'Incorrecto. Tanto order_items (3 filas) como refunds (2 filas) tienen relación 1:N con el pedido, generando 3 x 2 = 6 combinaciones.',
+        },
+      ],
+      explanation:
+        'Al unir dos tablas detalle 1:N contra la misma cabecera sin preagregar en CTEs por order_id, se produce un fan-out multiplicativo de 3 x 2 = 6 filas, inflando 100 USD a 600 USD.',
     },
     {
-      "id": "l14-ab-testing-cuped",
-      "reason": "Cuando detectas una caída en la retención M1 de una cohorte, diseñas un experimento A/B controlado para probar mejoras en el onboarding."
-    }
-  ]
+      id: 'chk-da3-prod-02-fill',
+      type: 'fill-code',
+      prompt:
+        'Completa la expresión en DuckDB para calcular cuántos trimestres han transcurrido entre el trimestre de primera compra (fp.cohort_qtr) y el trimestre del pedido actual (co.order_qtr):',
+      template: 'DATEDIFF(___, fp.cohort_qtr, co.order_qtr) AS qtr_offset',
+      blanks: [
+        {
+          id: 'b1',
+          accepted: ["'quarter'", '"quarter"'],
+        },
+      ],
+      explanation:
+        'La función DATEDIFF(\'quarter\', fecha_inicio, fecha_fin) devuelve el número entero de fronteras trimestrales entre la cohorte de origen y el pedido observado.',
+    },
+  ],
+  practice: {
+    type: 'sql',
+    title: 'LTV bruto frente a LTV neto de margen por segmento',
+    language: 'sql',
+    prompt:
+      'Calcula por `segment` en **Mercado Brisa** el total de clientes (`customers`), el LTV bruto medio (`avg_gross_ltv_usd`), el LTV neto de margen medio (`avg_margin_ltv_usd`, restando el coste `qty * unit_cost_usd` de `order_items`/`products` y las devoluciones con `status = \'processed\'` de `refunds` sobre pedidos con `status = \'completed\'`) y el porcentaje de margen neto realizado (`net_margin_pct`), redondeados a 2 decimales y ordenados por `avg_margin_ltv_usd DESC`. Asegúrate de incluir en el denominador a todos los clientes de `customers` (incluso si no tienen pedidos completados) y de evitar el fan-out `1:N`.',
+    starterCode: `WITH order_cogs AS (
+  SELECT
+    oi.order_id,
+    SUM(oi.qty * p.unit_cost_usd) AS cogs_usd
+  FROM order_items oi
+  JOIN products p ON oi.product_id = p.product_id
+  GROUP BY oi.order_id
+),
+order_refunds AS (
+  -- TODO 1: Preagrega refund_amount_usd por order_id filtrando status = 'processed'
+  SELECT
+    order_id,
+    0.0 AS refunded_usd
+  FROM refunds
+  GROUP BY order_id
+),
+customer_ltv AS (
+  SELECT
+    c.customer_id,
+    c.segment,
+    COALESCE(SUM(o.total_usd), 0) AS gross_rev_usd,
+    -- TODO 2: Calcula net_margin_usd restando cogs_usd y refunded_usd a total_usd
+    COALESCE(SUM(o.total_usd), 0) AS net_margin_usd
+  FROM customers c
+  LEFT JOIN orders o
+    ON c.customer_id = o.customer_id
+   AND o.status = 'completed'
+  LEFT JOIN order_cogs oc ON o.order_id = oc.order_id
+  LEFT JOIN order_refunds orf ON o.order_id = orf.order_id
+  GROUP BY c.customer_id, c.segment
+)
+SELECT
+  segment,
+  COUNT(*) AS customers,
+  ROUND(AVG(gross_rev_usd), 2) AS avg_gross_ltv_usd,
+  ROUND(AVG(net_margin_usd), 2) AS avg_margin_ltv_usd,
+  ROUND(100.0 * SUM(net_margin_usd) / SUM(gross_rev_usd), 2) AS net_margin_pct
+FROM customer_ltv
+GROUP BY segment
+ORDER BY avg_margin_ltv_usd DESC;`,
+    expected: `WITH order_cogs AS (
+  SELECT
+    oi.order_id,
+    SUM(oi.qty * p.unit_cost_usd) AS cogs_usd
+  FROM order_items oi
+  JOIN products p ON oi.product_id = p.product_id
+  GROUP BY oi.order_id
+),
+order_refunds AS (
+  SELECT
+    order_id,
+    SUM(refund_amount_usd) AS refunded_usd
+  FROM refunds
+  WHERE status = 'processed'
+  GROUP BY order_id
+),
+customer_ltv AS (
+  SELECT
+    c.customer_id,
+    c.segment,
+    COALESCE(SUM(o.total_usd), 0) AS gross_rev_usd,
+    COALESCE(SUM(oc.cogs_usd), 0) AS total_cogs_usd,
+    COALESCE(SUM(orf.refunded_usd), 0) AS total_refunds_usd,
+    COALESCE(SUM(o.total_usd), 0)
+      - COALESCE(SUM(oc.cogs_usd), 0)
+      - COALESCE(SUM(orf.refunded_usd), 0) AS net_margin_usd
+  FROM customers c
+  LEFT JOIN orders o
+    ON c.customer_id = o.customer_id
+   AND o.status = 'completed'
+  LEFT JOIN order_cogs oc ON o.order_id = oc.order_id
+  LEFT JOIN order_refunds orf ON o.order_id = orf.order_id
+  GROUP BY c.customer_id, c.segment
+)
+SELECT
+  segment,
+  COUNT(*) AS customers,
+  ROUND(AVG(gross_rev_usd), 2) AS avg_gross_ltv_usd,
+  ROUND(AVG(net_margin_usd), 2) AS avg_margin_ltv_usd,
+  ROUND(100.0 * SUM(net_margin_usd) / SUM(gross_rev_usd), 2) AS net_margin_pct
+FROM customer_ltv
+GROUP BY segment
+ORDER BY avg_margin_ltv_usd DESC;`,
+    expectedOutputTable: [
+      { segment: 'cafeteria_b2b', customers: 467, avg_gross_ltv_usd: 2825.71, avg_margin_ltv_usd: 1439.14, net_margin_pct: 50.93 },
+      { segment: 'pro_barista', customers: 966, avg_gross_ltv_usd: 2601.38, avg_margin_ltv_usd: 1295.9, net_margin_pct: 49.82 },
+      { segment: 'retail', customers: 967, avg_gross_ltv_usd: 2520.09, avg_margin_ltv_usd: 1265.62, net_margin_pct: 50.22 },
+    ],
+    orderMatters: true,
+    hints: [
+      'En la CTE order_refunds suma SUM(refund_amount_usd) AS refunded_usd desde refunds incluyendo WHERE status = \'processed\' antes de GROUP BY order_id.',
+      'En customer_ltv calcula COALESCE(SUM(o.total_usd), 0) - COALESCE(SUM(oc.cogs_usd), 0) - COALESCE(SUM(orf.refunded_usd), 0) AS net_margin_usd.',
+      'Mantén el LEFT JOIN desde customers hacia orders (con o.status = \'completed\' en la cláusula ON) para conservar los 2.400 clientes registrados.',
+    ],
+    solution: `WITH order_cogs AS (
+  SELECT
+    oi.order_id,
+    SUM(oi.qty * p.unit_cost_usd) AS cogs_usd
+  FROM order_items oi
+  JOIN products p ON oi.product_id = p.product_id
+  GROUP BY oi.order_id
+),
+order_refunds AS (
+  SELECT
+    order_id,
+    SUM(refund_amount_usd) AS refunded_usd
+  FROM refunds
+  WHERE status = 'processed'
+  GROUP BY order_id
+),
+customer_ltv AS (
+  SELECT
+    c.customer_id,
+    c.segment,
+    COALESCE(SUM(o.total_usd), 0) AS gross_rev_usd,
+    COALESCE(SUM(oc.cogs_usd), 0) AS total_cogs_usd,
+    COALESCE(SUM(orf.refunded_usd), 0) AS total_refunds_usd,
+    COALESCE(SUM(o.total_usd), 0)
+      - COALESCE(SUM(oc.cogs_usd), 0)
+      - COALESCE(SUM(orf.refunded_usd), 0) AS net_margin_usd
+  FROM customers c
+  LEFT JOIN orders o
+    ON c.customer_id = o.customer_id
+   AND o.status = 'completed'
+  LEFT JOIN order_cogs oc ON o.order_id = oc.order_id
+  LEFT JOIN order_refunds orf ON o.order_id = orf.order_id
+  GROUP BY c.customer_id, c.segment
+)
+SELECT
+  segment,
+  COUNT(*) AS customers,
+  ROUND(AVG(gross_rev_usd), 2) AS avg_gross_ltv_usd,
+  ROUND(AVG(net_margin_usd), 2) AS avg_margin_ltv_usd,
+  ROUND(100.0 * SUM(net_margin_usd) / SUM(gross_rev_usd), 2) AS net_margin_pct
+FROM customer_ltv
+GROUP BY segment
+ORDER BY avg_margin_ltv_usd DESC;`,
+    solutionExplanation:
+      'Al preagregar order_cogs y order_refunds por order_id eliminamos el fan-out 1:N. El resultado demuestra que el margen neto realizado representa aproximadamente la mitad del ingreso bruto en cada segmento (50,93 % en cafeteria_b2b, 49,82 % en pro_barista y 50,22 % en retail).',
+  },
+  roleNotes: {
+    de: 'Publica tablas intermedias consolidadas al grano de order_id con el coste de mercancía vendida y las devoluciones ya preagregadas para impedir errores de fan-out en las consultas de los analistas.',
+    da: 'Verifica siempre la fecha máxima de observación antes de agregar cohortes trimestrales y exige descontar tanto el coste unitario de producto como los reembolsos procesados al reportar ratios LTV:CAC.',
+    bi: 'Configura las matrices de cohortes en el tablero para renderizar celdas futuras como espacios en blanco (NULL) en lugar de ceros que distorsionen la escala de color del mapa de calor.',
+  },
+  summary: [
+    'Una matriz triangular de retención agrupa clientes por su primera compra y mide su supervivencia en edades relativas.',
+    'La censura por la derecha exige dejar en NULL los periodos no concluidos para no confundir futuro con abandono.',
+    'La retención neta de ingresos (NRR) complementa la retención de clientes incorporando expansiones y contracciones de gasto.',
+    'El LTV financiero debe calcularse sobre margen neto descontando COGS y devoluciones preagregadas por pedido sin fan-out.',
+  ],
+  flashcards: [
+    {
+      id: 'fc-da3-prod-02-01',
+      front: '¿Qué es la censura por la derecha en una matriz de cohortes y cómo se representa en SQL?',
+      back: 'Es la falta de observación de periodos futuros cuando la edad de la cohorte supera la fecha de corte de los datos; se representa con NULL para no sesgar los promedios.',
+    },
+    {
+      id: 'fc-da3-prod-02-02',
+      front: '¿Por qué no debes unir orders directamente con order_items y refunds al calcular el LTV?',
+      back: 'Porque ambas tablas tienen relación 1:N con orders y provocan un fan-out multiplicativo que infla SUM(orders.total_usd).',
+    },
+    {
+      id: 'fc-da3-prod-02-03',
+      front: '¿Cómo puede una cohorte tener un 60 % de retención de clientes pero superar el 100 % de retención neta de ingresos (NRR)?',
+      back: 'Cuando la expansión de gasto de los clientes que permanecen activos supera los ingresos perdidos por los clientes que abandonaron.',
+    },
+  ],
+  glossaryTerms: [
+    'matriz-retencion-triangular',
+    'ltv-margen-neto',
+    'retencion-neta-ingresos',
+  ],
+  sources: [
+    {
+      title: 'Survival Analysis with lifelines (Kaplan-Meier & Right-Censoring)',
+      url: 'https://lifelines.readthedocs.io/en/latest/Survival%20analysis%20with%20lifelines.html',
+      publisher: 'lifelines',
+      accessed: '2026-10-29',
+      supports: 'Formulación de curvas de supervivencia y tratamiento estadístico de observaciones con censura por la derecha.',
+    },
+    {
+      title: 'Counting Your Customers the Easy Way: An Alternative to the Pareto/NBD Model',
+      url: 'https://www.brucehardie.com/papers/018/fader_et_al_mksc_05.pdf',
+      publisher: 'Marketing Science (Fader, Hardie & Lee)',
+      accessed: '2026-10-29',
+      supports: 'Dinámica de retención y valor de vida del cliente en comercios no contractuales.',
+    },
+    {
+      title: 'Retention — Product Analytics Documentation',
+      url: 'https://posthog.com/docs/product-analytics/retention',
+      publisher: 'PostHog',
+      accessed: '2026-10-29',
+      supports: 'Construcción de tablas triangulares de retención por cohorte y edad relativa.',
+    },
+    {
+      title: 'Window Functions — DuckDB SQL Documentation',
+      url: 'https://duckdb.org/docs/sql/functions/window_functions.html',
+      publisher: 'DuckDB Foundation',
+      accessed: '2026-10-29',
+      supports: 'Agregaciones por partición y funciones analíticas para seguimiento longitudinal de cohortes.',
+    },
+  ],
+  aiNotes:
+    'Recuerda al estudiante que en esta lección trabajamos exclusivamente con las tablas reales de Mercado Brisa (customers, orders, order_items, products, refunds). Si su LTV neto no coincide, revisa si preagregó order_refunds filtrando status = \'processed\' por order_id.',
 };
 
 export default lesson;

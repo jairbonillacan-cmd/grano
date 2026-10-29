@@ -1,0 +1,257 @@
+[
+  {
+    "id": "embudo-conversion-ventana",
+    "term": "Embudo de conversión por ventana",
+    "englishTerm": "Windowed Conversion Funnel",
+    "track": "da",
+    "definition": "Secuencia ordenada de pasos completados en un plazo máximo desde el alta, como comprar en 60 días; se confunde con el embudo abierto sin ventana.",
+    "formula": "C_{1 \\to k}(W) = \\frac{|\\{u : t_1(u) \\le \\dots \\le t_k(u) \\wedge t_k(u) - t_1(u) \\le W\\}|}{|\\{u : t_1(u) \\text{ existe}\\}|}",
+    "relatedLessons": [
+      "da3-producto-01-embudos-conversion-ventana"
+    ],
+    "relatedTerms": [
+      "tasa-conversion-paso",
+      "identidad-retroactiva-eventos"
+    ],
+    "sources": [
+      {
+        "title": "Funnels — Product Analytics Documentation",
+        "url": "https://posthog.com/docs/product-analytics/funnels",
+        "publisher": "PostHog",
+        "accessed": "2026-10-29",
+        "supports": "Definición de ventana de conversión y orden secuencial estricto entre pasos del embudo."
+      }
+    ]
+  },
+  {
+    "id": "tasa-conversion-paso",
+    "term": "Tasa de conversión por paso",
+    "englishTerm": "Step-to-Step Conversion Rate",
+    "track": "da",
+    "definition": "Proporción de usuarios únicos que avanzan del paso previo al actual, como pasar de carrito a compra; se confunde con la conversión global desde inicio.",
+    "formula": "r_{k-1 \\to k} = \\frac{N_k}{N_{k-1}}, \\quad \\text{Abandono}_{k-1 \\to k} = 1 - r_{k-1 \\to k}",
+    "relatedLessons": [
+      "da3-producto-01-embudos-conversion-ventana"
+    ],
+    "relatedTerms": [
+      "embudo-conversion-ventana"
+    ],
+    "sources": [
+      {
+        "title": "Funnels — Product Analytics Documentation",
+        "url": "https://posthog.com/docs/product-analytics/funnels",
+        "publisher": "PostHog",
+        "accessed": "2026-10-29",
+        "supports": "Cálculo de tasas de transición paso a paso e identificación de cuellos de botella por caída relativa."
+      }
+    ]
+  },
+  {
+    "id": "identidad-retroactiva-eventos",
+    "term": "Asociación retroactiva de identidad",
+    "englishTerm": "Retroactive Identity Stitching",
+    "track": "da",
+    "definition": "Vinculación de eventos anónimos previos al alta con el cliente registrado, como visitas anteriores; se confunde con activación post-registro si no filtras por fecha.",
+    "relatedLessons": [
+      "da3-producto-01-embudos-conversion-ventana"
+    ],
+    "relatedTerms": [
+      "embudo-conversion-ventana"
+    ],
+    "sources": [
+      {
+        "title": "Lifecycle Insights — Product Analytics Documentation",
+        "url": "https://posthog.com/docs/product-analytics/lifecycle",
+        "publisher": "PostHog",
+        "accessed": "2026-10-29",
+        "supports": "Separación temporal entre navegación anónima previa al alta y eventos de activación posteriores al registro."
+      }
+    ]
+  },
+  {
+    "id": "matriz-retencion-triangular",
+    "term": "Matriz triangular de retención",
+    "englishTerm": "Triangular Cohort Retention Matrix",
+    "track": "da",
+    "definition": "Tabla de cohortes por edad relativa que deja en NULL los periodos futuros no observados, como trimestres pendientes; se confunde con rellenar ceros sesgados.",
+    "formula": "R(c, k) = \\frac{\\text{Usuarios activos de la cohorte } c \\text{ en el periodo } c + k}{N_{c, 0}}",
+    "relatedLessons": [
+      "da3-producto-02-cohorts-retention-ltv"
+    ],
+    "relatedTerms": [
+      "ltv-margen-neto",
+      "retencion-neta-ingresos"
+    ],
+    "sources": [
+      {
+        "title": "Retention — Product Analytics Documentation",
+        "url": "https://posthog.com/docs/product-analytics/retention",
+        "publisher": "PostHog",
+        "accessed": "2026-10-29",
+        "supports": "Estructura triangular de cohortes por edad relativa con denominador fijo en el periodo cero."
+      },
+      {
+        "title": "Survival Analysis with lifelines",
+        "url": "https://lifelines.readthedocs.io/en/latest/Survival%20analysis%20with%20lifelines.html",
+        "publisher": "lifelines",
+        "accessed": "2026-10-29",
+        "supports": "Tratamiento de observaciones truncadas por censura por la derecha al cierre de la ventana de estudio."
+      }
+    ]
+  },
+  {
+    "id": "ltv-margen-neto",
+    "term": "LTV ajustado por margen neto",
+    "englishTerm": "Net Margin Customer Lifetime Value",
+    "track": "da",
+    "definition": "Valor acumulado del cliente restando coste unitario y devoluciones procesadas, como descontar unit_cost_usd y refunds; se confunde con el ingreso bruto sin costes.",
+    "formula": "\\text{LTV}_{\\text{margen}} = \\frac{1}{|C|} \\sum_{u \\in C} \\left( \\text{Ingresos}_u - \\text{COGS}_u - \\text{Devoluciones}_u \\right)",
+    "relatedLessons": [
+      "da3-producto-02-cohorts-retention-ltv"
+    ],
+    "relatedTerms": [
+      "matriz-retencion-triangular",
+      "retencion-neta-ingresos"
+    ],
+    "sources": [
+      {
+        "title": "Counting Your Customers the Easy Way: An Alternative to the Pareto/NBD Model",
+        "url": "https://www.brucehardie.com/papers/018/fader_et_al_mksc_05.pdf",
+        "publisher": "Marketing Science",
+        "accessed": "2026-10-29",
+        "supports": "Modelado del valor de vida del cliente basado en margen de contribución neto en entornos no contractuales."
+      }
+    ]
+  },
+  {
+    "id": "retencion-neta-ingresos",
+    "term": "Retención neta de ingresos (NRR)",
+    "englishTerm": "Net Revenue Retention (NRR)",
+    "track": "da",
+    "definition": "Porcentaje del ingreso inicial de una cohorte conservado tras expansiones, contracciones y bajas, como superar el 100%; se confunde con retención simple de clientes.",
+    "formula": "\\text{NRR}(c, k) = \\frac{\\text{Ingresos de la cohorte } c \\text{ en } c+k}{\\text{Ingresos de la cohorte } c \\text{ en } c+0}",
+    "relatedLessons": [
+      "da3-producto-02-cohorts-retention-ltv"
+    ],
+    "relatedTerms": [
+      "matriz-retencion-triangular",
+      "ltv-margen-neto"
+    ],
+    "sources": [
+      {
+        "title": "Technical Notes on Customer-Base Analysis",
+        "url": "https://www.brucehardie.com/notes/",
+        "publisher": "Bruce G. S. Hardie",
+        "accessed": "2026-10-29",
+        "supports": "Diferencia entre supervivencia de clientes activos y evolución del gasto monetario por cohorte."
+      }
+    ]
+  },
+  {
+    "id": "segmentacion-rfm",
+    "term": "Segmentación conductual RFM",
+    "englishTerm": "RFM Behavioral Segmentation",
+    "track": "da",
+    "definition": "Clasificación conductual por cuantiles de recencia, frecuencia y gasto, como Campeones o En Riesgo; se confunde con la etiqueta demográfica estática del registro.",
+    "formula": "\\text{Score RFM} = (Q_4(-R),\\; Q_4(F),\\; Q_4(M)) \\in \\{1,2,3,4\\}^3",
+    "relatedLessons": [
+      "da3-producto-03-segmentacion-conductual-rfm"
+    ],
+    "relatedTerms": [
+      "curvas-isovalor-clv",
+      "ltv-margen-neto"
+    ],
+    "sources": [
+      {
+        "title": "RFM and CLV: Using Iso-Value Curves for Customer Base Analysis",
+        "url": "https://www.brucehardie.com/papers/rfm_clv_2005-02-16.pdf",
+        "publisher": "Journal of Marketing Research",
+        "accessed": "2026-10-29",
+        "supports": "Suficiencia estadística de recencia, frecuencia y valor monetario para resumir el historial transaccional."
+      }
+    ]
+  },
+  {
+    "id": "curvas-isovalor-clv",
+    "term": "Curvas de isovalor RFM-CLV",
+    "englishTerm": "RFM Iso-Value Curves",
+    "track": "da",
+    "definition": "Contornos de igual valor futuro en el plano recencia-frecuencia, donde alta frecuencia antigua pierde valor; se confunde con puntuar frecuencia de forma lineal.",
+    "relatedLessons": [
+      "da3-producto-03-segmentacion-conductual-rfm"
+    ],
+    "relatedTerms": [
+      "segmentacion-rfm",
+      "ltv-margen-neto"
+    ],
+    "sources": [
+      {
+        "title": "RFM and CLV: Using Iso-Value Curves for Customer Base Analysis",
+        "url": "https://www.brucehardie.com/papers/rfm_clv_2005-02-16.pdf",
+        "publisher": "Journal of Marketing Research",
+        "accessed": "2026-10-29",
+        "supports": "Interacción no lineal entre frecuencia pasada y recencia para predecir compras futuras."
+      }
+    ]
+  },
+  {
+    "id": "atribucion-ultimo-toque-asof",
+    "term": "Atribución de último toque por ventana",
+    "englishTerm": "Windowed Last-Touch Attribution",
+    "track": "da",
+    "definition": "Asignación del pedido al último evento de campaña previo dentro de una ventana como 24 horas vía ASOF JOIN; se confunde con incrementalidad causal.",
+    "formula": "\\text{Toque}(o) = \\arg\\max_{e \\in E_u : 0 \\le t_o - t_e \\le W} t_e",
+    "relatedLessons": [
+      "da3-producto-04-atribucion-marketing-incrementalidad"
+    ],
+    "relatedTerms": [
+      "incrementalidad-diferencia-en-diferencias"
+    ],
+    "sources": [
+      {
+        "title": "ASOF JOIN — DuckDB SQL Query Syntax",
+        "url": "https://duckdb.org/docs/sql/query_syntax/from.html#asof-join",
+        "publisher": "DuckDB Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Emparejamiento temporal del evento previo más cercano mediante desigualdad sobre timestamps."
+      },
+      {
+        "title": "ASOF JOIN — Snowflake SQL Reference",
+        "url": "https://docs.snowflake.com/en/sql-reference/constructs/asof-join",
+        "publisher": "Snowflake",
+        "accessed": "2026-10-29",
+        "supports": "Semántica formal de unión por proximidad temporal en flujos de eventos y transacciones."
+      }
+    ]
+  },
+  {
+    "id": "incrementalidad-diferencia-en-diferencias",
+    "term": "Incrementalidad por diferencia en diferencias",
+    "englishTerm": "Difference-in-Differences Incrementality",
+    "track": "da",
+    "definition": "Efecto causal estimado restando el cambio pre-post del control al del grupo tratado, como medir gasto incremental; se confunde con ROAS atribuido sin control.",
+    "formula": "\\hat{\\tau}_{\\text{DID}} = (\\bar{Y}_{T,\\text{post}} - \\bar{Y}_{T,\\text{pre}}) - (\\bar{Y}_{C,\\text{post}} - \\bar{Y}_{C,\\text{pre}})",
+    "relatedLessons": [
+      "da3-producto-04-atribucion-marketing-incrementalidad"
+    ],
+    "relatedTerms": [
+      "atribucion-ultimo-toque-asof"
+    ],
+    "sources": [
+      {
+        "title": "Ghost Ads: Improving the Economics of Measuring Online Ad Effectiveness",
+        "url": "https://www.nber.org/papers/w21303",
+        "publisher": "National Bureau of Economic Research",
+        "accessed": "2026-10-29",
+        "supports": "Medición experimental de lift incremental frente al sesgo de selección en atribución publicitaria."
+      },
+      {
+        "title": "Meridian — Open-Source Marketing Mix Modeling and Incrementality",
+        "url": "https://developers.google.com/meridian",
+        "publisher": "Google Developers",
+        "accessed": "2026-10-29",
+        "supports": "Calibración del retorno incremental mediante experimentos causales y diferencias pre-post."
+      }
+    ]
+  }
+]
