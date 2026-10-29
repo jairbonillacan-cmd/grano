@@ -1,0 +1,258 @@
+[
+  {
+    "id": "iceberg-deletion-vectors",
+    "term": "Deletion Vectors (Iceberg v3)",
+    "track": "de",
+    "definition": "Mapa de bits Roaring64 almacenado en archivos Puffin que marca filas eliminadas por posición física sin reescribir el archivo Parquet original bajo estrategia Merge-on-Read.",
+    "formula": "DV_nuevo = bitmap_or(DV_previo, posiciones_borradas)  [<= 1 DV activo por archivo Parquet]",
+    "relatedLessons": [
+      "de3-lakehouse-01-iceberg-v3-medallion",
+      "de3-lakehouse-02-delta-lake-uniform"
+    ],
+    "relatedTerms": [
+      "c18-iceberg-v3",
+      "hidden-partitioning",
+      "write-audit-publish"
+    ],
+    "sources": [
+      {
+        "title": "Apache Iceberg Table Spec (Format Version 3 - Deletion Vectors)",
+        "url": "https://iceberg.apache.org/spec/",
+        "publisher": "Apache Software Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Especificación de Deletion Vectors como bitmaps Roaring64 con a lo sumo un vector activo por archivo Parquet."
+      },
+      {
+        "title": "Apache Iceberg Puffin File Specification",
+        "url": "https://iceberg.apache.org/puffin-spec/",
+        "publisher": "Apache Software Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Estructura binaria del archivo lateral Puffin que encapsula blobs deletion-vector-v1."
+      }
+    ]
+  },
+  {
+    "id": "hidden-partitioning",
+    "term": "Particionado oculto (Hidden Partitioning)",
+    "track": "de",
+    "definition": "Mecanismo de Apache Iceberg que almacena transformaciones de partición en los metadatos para podar archivos automáticamente al filtrar la columna base sin columnas derivadas.",
+    "formula": "partition-spec: [month(order_ts), bucket(16, customer_id)]",
+    "relatedLessons": [
+      "de3-lakehouse-01-iceberg-v3-medallion",
+      "de3-lakehouse-04-costos-bigquery-snowflake-databricks"
+    ],
+    "relatedTerms": [
+      "c18-iceberg-v3",
+      "iceberg-deletion-vectors",
+      "liquid-clustering"
+    ],
+    "sources": [
+      {
+        "title": "Apache Iceberg Partitioning and Hidden Partitioning",
+        "url": "https://iceberg.apache.org/docs/latest/partitioning/",
+        "publisher": "Apache Software Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Transformaciones declarativas en partition-spec y evolución de particionado sin reescribir tablas."
+      }
+    ]
+  },
+  {
+    "id": "write-audit-publish",
+    "term": "Patrón Write-Audit-Publish (WAP)",
+    "track": "de",
+    "definition": "Flujo de calidad en tablas transaccionales que escribe datos nuevos en una rama aislada, ejecuta validaciones automáticas y publica la instantánea solo tras aprobarlas.",
+    "formula": "WRITE (branch = 'audit') -> AUDIT (SQL checks) -> FAST-FORWARD ('main')",
+    "relatedLessons": [
+      "de3-lakehouse-01-iceberg-v3-medallion"
+    ],
+    "relatedTerms": [
+      "c17-medallion-architecture",
+      "c18-iceberg-v3",
+      "iceberg-deletion-vectors"
+    ],
+    "sources": [
+      {
+        "title": "Apache Iceberg Branching and Tagging (WAP Pattern)",
+        "url": "https://iceberg.apache.org/docs/latest/branching/",
+        "publisher": "Apache Software Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Aislamiento de escrituras en ramas secundarias y promoción fast-forward hacia la rama main."
+      }
+    ]
+  },
+  {
+    "id": "delta-transaction-log",
+    "term": "Registro transaccional (_delta_log)",
+    "track": "de",
+    "definition": "Secuencia ordenada de archivos JSON y puntos de control Parquet que registra atómicamente cada cambio de esquema, metadatos y archivos en tablas Delta Lake.",
+    "formula": "Estado(v_n) = Checkpoint(v_k) + sum_{i=k+1..n} Acciones(add, remove, metaData, protocol)",
+    "relatedLessons": [
+      "de3-lakehouse-02-delta-lake-uniform"
+    ],
+    "relatedTerms": [
+      "delta-uniform",
+      "liquid-clustering"
+    ],
+    "sources": [
+      {
+        "title": "Delta Transaction Log Protocol Specification",
+        "url": "https://raw.githubusercontent.com/delta-io/delta/master/PROTOCOL.md",
+        "publisher": "Linux Foundation / Delta Lake",
+        "accessed": "2026-10-29",
+        "supports": "Acciones atómicas del registro _delta_log y compactación de estado en puntos de control Parquet."
+      }
+    ]
+  },
+  {
+    "id": "delta-uniform",
+    "term": "Delta Universal Format (UniForm)",
+    "track": "de",
+    "definition": "Capa de interoperabilidad en Delta Lake que genera asíncronamente metadatos de Apache Iceberg sobre los mismos archivos Parquet físicos sin duplicar el almacenamiento subyacente.",
+    "formula": "Parquet único + _delta_log (Delta) + metadata.json/Avro (IcebergCompatV2)",
+    "relatedLessons": [
+      "de3-lakehouse-02-delta-lake-uniform",
+      "de3-lakehouse-03-catalogos-polaris-unity"
+    ],
+    "relatedTerms": [
+      "delta-transaction-log",
+      "c18-iceberg-v3",
+      "iceberg-rest-catalog"
+    ],
+    "sources": [
+      {
+        "title": "Delta Universal Format (UniForm) Documentation",
+        "url": "https://docs.delta.io/delta-uniform/",
+        "publisher": "Linux Foundation / Delta Lake",
+        "accessed": "2026-10-29",
+        "supports": "Conversión asíncrona de commits Delta hacia metadatos Iceberg mediante IcebergCompatV2."
+      }
+    ]
+  },
+  {
+    "id": "liquid-clustering",
+    "term": "Liquid Clustering",
+    "track": "de",
+    "definition": "Técnica de organización física en Delta Lake basada en curvas espaciales Hilbert que reagrupa archivos incrementalmente sin particiones rígidas ni reescrituras completas de tabla.",
+    "formula": "ALTER TABLE orders CLUSTER BY (country_code, order_date)",
+    "relatedLessons": [
+      "de3-lakehouse-02-delta-lake-uniform",
+      "de3-lakehouse-04-costos-bigquery-snowflake-databricks"
+    ],
+    "relatedTerms": [
+      "delta-transaction-log",
+      "delta-uniform",
+      "hidden-partitioning"
+    ],
+    "sources": [
+      {
+        "title": "Delta Lake Liquid Clustering Documentation",
+        "url": "https://docs.delta.io/delta-clustering/",
+        "publisher": "Linux Foundation / Delta Lake",
+        "accessed": "2026-10-29",
+        "supports": "Agrupación espacial incremental en Z-cubes y evolución de claves sin reescritura histórica."
+      }
+    ]
+  },
+  {
+    "id": "iceberg-rest-catalog",
+    "term": "Catálogo Iceberg REST (Apache Polaris)",
+    "track": "de",
+    "definition": "Interfaz estándar OpenAPI que coordina commits atómicos entre múltiples motores de consulta y emite credenciales temporales delegadas sobre el almacenamiento de objetos en nube.",
+    "formula": "POST /v1/{prefix}/namespaces/{ns}/tables/{table} -> metadata-location + STS vended-credentials",
+    "relatedLessons": [
+      "de3-lakehouse-03-catalogos-polaris-unity",
+      "de3-lakehouse-01-iceberg-v3-medallion"
+    ],
+    "relatedTerms": [
+      "unity-catalog-governance",
+      "c18-iceberg-v3",
+      "delta-uniform"
+    ],
+    "sources": [
+      {
+        "title": "Apache Polaris Open Source REST Catalog for Apache Iceberg",
+        "url": "https://polaris.apache.org/",
+        "publisher": "Apache Software Foundation",
+        "accessed": "2026-10-29",
+        "supports": "Especificación REST OpenAPI para catálogos Iceberg, RBAC y emisión de credenciales delegadas."
+      }
+    ]
+  },
+  {
+    "id": "unity-catalog-governance",
+    "term": "Gobierno unificado (Unity Catalog)",
+    "track": "de",
+    "definition": "Plano de control con jerarquía de tres niveles que centraliza permisos, filtros de fila, máscaras de columna y linaje automático para datos e inteligencia artificial.",
+    "formula": "catalogo.esquema.tabla + ROW FILTER fn() + COLUMN MASK fn()",
+    "relatedLessons": [
+      "de3-lakehouse-03-catalogos-polaris-unity",
+      "de3-lakehouse-02-delta-lake-uniform"
+    ],
+    "relatedTerms": [
+      "iceberg-rest-catalog",
+      "delta-uniform"
+    ],
+    "sources": [
+      {
+        "title": "Unity Catalog Open Source Documentation",
+        "url": "https://unitycatalog.io/",
+        "publisher": "Linux Foundation AI & Data",
+        "accessed": "2026-10-29",
+        "supports": "Espacio de nombres de tres niveles y gobierno abierto sobre tablas y volúmenes."
+      },
+      {
+        "title": "Databricks Unity Catalog Data Governance",
+        "url": "https://docs.databricks.com/aws/en/data-governance/unity-catalog/",
+        "publisher": "Databricks",
+        "accessed": "2026-10-29",
+        "supports": "Seguridad a nivel de fila (RLS), máscaras de columna (CLS) y linaje de columnas."
+      }
+    ]
+  },
+  {
+    "id": "snowflake-micro-partitions",
+    "term": "Micro-particiones y Virtual Warehouses",
+    "track": "de",
+    "definition": "Arquitectura de Snowflake que separa bloques columnares inmutables con metadatos de rango y clústeres de cómputo efímeros facturados por segundo con mínimo de sesenta.",
+    "formula": "Costo_créditos = max(60s, t_activo_s) * (créditos_hora_talla / 3600)",
+    "relatedLessons": [
+      "de3-lakehouse-04-costos-bigquery-snowflake-databricks"
+    ],
+    "relatedTerms": [
+      "bigquery-slots-pruning",
+      "liquid-clustering"
+    ],
+    "sources": [
+      {
+        "title": "Snowflake Understanding Compute Cost",
+        "url": "https://docs.snowflake.com/en/user-guide/cost-understanding-compute",
+        "publisher": "Snowflake",
+        "accessed": "2026-10-29",
+        "supports": "Modelo de facturación de créditos por segundo con mínimo de 60 segundos en Virtual Warehouses."
+      }
+    ]
+  },
+  {
+    "id": "bigquery-slots-pruning",
+    "term": "Slots de BigQuery y poda de escaneo",
+    "track": "de",
+    "definition": "Modelo de ejecución distribuida en BigQuery donde el costo depende de los bytes leídos tras podar particiones o de las unidades virtuales de cómputo reservadas.",
+    "formula": "Costo_OnDemand = TiB_leídos_en_columnas_y_particiones * Tarifa_TiB",
+    "relatedLessons": [
+      "de3-lakehouse-04-costos-bigquery-snowflake-databricks"
+    ],
+    "relatedTerms": [
+      "snowflake-micro-partitions",
+      "hidden-partitioning"
+    ],
+    "sources": [
+      {
+        "title": "Google Cloud BigQuery Pricing",
+        "url": "https://cloud.google.com/bigquery/pricing",
+        "publisher": "Google Cloud",
+        "accessed": "2026-10-29",
+        "supports": "Comparativa entre facturación On-Demand por bytes escaneados y capacidad reservada en Slots."
+      }
+    ]
+  }
+]

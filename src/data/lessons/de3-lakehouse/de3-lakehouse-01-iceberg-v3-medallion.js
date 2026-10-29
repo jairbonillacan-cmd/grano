@@ -1,377 +1,399 @@
-// Lección migrada al esquema v2 mediante scripts/migrate-legacy.mjs
-const lesson = {
-  "id": "de3-lakehouse-01-iceberg-v3-medallion",
-  "moduleId": "de3-lakehouse",
-  "tracks": [
-    "de"
+export const lesson = {
+  id: 'de3-lakehouse-01-iceberg-v3-medallion',
+  moduleId: 'de3-lakehouse',
+  tracks: ['de'],
+  level: 3,
+  order: 1,
+  legacyId: 'l10-iceberg-v3-medallion',
+  legacyOrder: 10,
+  title: 'Apache Iceberg v3 y arquitectura Medallion',
+  subtitle: 'Apache Iceberg v3, vectores de borrado y la arquitectura Medallion',
+  minutes: 30,
+  contentVersion: 2,
+  needsReview: false,
+  prerequisites: ['de2-pipelines-06-contenedores-docker-compose'],
+  hook: 'En Mercado Brisa llegan cada día miles de órdenes desde seis países, pero 1.440 pedidos terminan reembolsados y 1.080 cancelados después del cierre contable. Si tus tablas analíticas residen en archivos Parquet inmutables sobre almacenamiento en la nube, reescribir bloques de varios gigabytes por cada devolución multiplica el gasto de cómputo y bloquea a los lectores concurrentes. ¿Cómo logra Apache Iceberg v3 aplicar borrados en milisegundos, evolucionar particiones sin reescribir archivos históricos y auditar cambios entre las capas Bronce, Plata y Oro?',
+  objectives: [
+    'Distinguir las responsabilidades del árbol de metadatos en Apache Iceberg (catálogo, metadata.json, manifest list y manifest files) para garantizar aislamiento de instantáneas.',
+    'Evaluar el impacto de los Deletion Vectors en archivos Puffin, el linaje por fila (_row_id) y el particionado oculto de la especificación Iceberg v3 frente a la reescritura de Parquet.',
+    'Implementar consultas de reconciliación Medallion (Bronce, Plata y Oro) y auditorías Write-Audit-Publish (WAP) sobre las tablas transaccionales de Mercado Brisa.'
   ],
-  "level": 3,
-  "order": 1,
-  "title": "Tablas abiertas con Apache Iceberg v3",
-  "minutes": 30,
-  "prerequisites": [
-    "de2-formatos-01-columnar-parquet"
-  ],
-  "contentVersion": 1,
-  "hook": "En Mercado Brisa (empresa ficticia), el lago de datos guardaba carpetas sueltas de archivos Parquet en almacenamiento de objetos. Cuando un proceso falló a mitad de escritura y otro trabajo intentó borrar los datos de 400 clientes por solicitud legal, los reportes leyeron archivos incompletos y reescribir 18 TB de Parquet costó horas de cómputo. Al migrar a Apache Iceberg con catálogo transaccional, vectores de borrado y patrón Write-Audit-Publish, las actualizaciones quedaron aisladas y atómicas. ¿Cómo convierte Iceberg archivos inmutables en tablas ACID?",
-  "objectives": [
-    "Trazar la jerarquía de metadatos de Apache Iceberg: catálogo, metadata.json, manifest list, manifest files y archivos Parquet.",
-    "Diferenciar borrados Copy-on-Write frente a Merge-on-Read con vectores de borrado (deletion vectors) en Iceberg v3.",
-    "Aplicar la arquitectura Medallion (Bronze, Silver, Gold) junto al patrón Write-Audit-Publish (WAP) antes de exponer datos."
-  ],
-  "sections": [
+  sections: [
     {
-      "id": "capas-bronze-silver-y-gold-responsabilidades-tec",
-      "heading": "Capas bronze, silver y gold: responsabilidades técnicas y semánticas",
-      "body": "Organizar un Open Lakehouse no consiste en copiar tablas sin criterio, sino en establecer contratos de confianza progresivos a través de tres capas:\n• Capa Bronze (Cruda e Inmutable): Aterriza los eventos exactamente como llegaron desde CDC (Debezium), Kafka o APIs externas, añadiendo metadatos técnicos (`_ingested_at`, `_source_file`, `_cdc_op`). Nunca se borra ni se sobrescribe la historia cruda; si descubrimos un error de lógica seis meses después, podemos reprocesar Silver desde Bronze sin pedir datos de nuevo al equipo de backend.\n• Capa Silver (Limpia, Tipada, Deduplicada y Conformada): Aquí Ingeniería de Datos (DE) aplica deduplicación determinista (`QUALIFY ROW_NUMBER()`), estandariza zonas horarias a UTC, valida tipos y modela entidades de negocio claras (Tablas de Hechos y Dimensiones SCD Tipo 2). Es el entorno de trabajo principal de Análisis de Datos (DA) y Ciencia de Datos.\n• Capa Gold (Gobernada y Optimizada para Decisión): Contiene modelos dimensionales listos para consumo, tablas pre-agregadas y métricas certificadas con reglas de negocio aplicadas. Es la capa que alimenta la Capa Semántica y los tableros de Business Intelligence (BI) en modo Direct Lake / Zero-Copy.",
-      "interactive": {
-        "component": "iceberg-v3-snapshot-explorer",
-        "caption": "Simulador interactivo: Tablas abiertas con Apache Iceberg v3"
+      id: 'arbol-metadatos-iceberg',
+      heading: 'Árbol de metadatos en Apache Iceberg: del catálogo al Parquet',
+      body: 'Un lago de datos clásico que agrupa archivos Parquet en directorios carece de atomicidad. Si un proceso falla a mitad de escritura, las consultas leen archivos incompletos. **Apache Iceberg** resuelve este problema separando la ubicación física de los archivos de su estado lógico mediante un árbol jerárquico de cuatro niveles.\n\nEn la cima, el **catálogo** mantiene un puntero atómico hacia el archivo `metadata.json` activo. Este documento define el esquema por identificador numérico (`field-id`), las especificaciones de partición y el historial de instantáneas (`snapshots`). Cada instantánea apunta a una **manifest list** en formato Avro que resume los rangos de partición. A su vez, esa lista referencia múltiples *manifest files* donde se guardan las rutas de cada archivo Parquet junto con sus límites `lower_bound` y `upper_bound` por columna.\n\nEn **Mercado Brisa**, mientras la capa **Bronce** conserva las 18.000 órdenes crudas tal como llegan, la promoción hacia Plata y **Oro** ocurre publicando una nueva instantánea atómica en el catálogo sin bloquear a los lectores concurrentes.',
+      interactive: {
+        component: 'medallion-flow',
+        caption: 'Flujo transaccional Medallion (Bronce, Plata y Oro) gobernado por instantáneas de Apache Iceberg v3.'
+      },
+      example: {
+        language: 'sql',
+        code: `SELECT
+  status,
+  COUNT(*) AS order_count,
+  ROUND(SUM(total_usd), 2) AS gross_usd
+FROM orders
+GROUP BY status
+ORDER BY order_count DESC;`,
+        expectedOutput: [
+          { status: 'completed', order_count: 14760, gross_usd: 6269462.42 },
+          { status: 'refunded', order_count: 1440, gross_usd: 605025.58 },
+          { status: 'cancelled', order_count: 1080, gross_usd: 489003.49 },
+          { status: 'pending', order_count: 720, gross_usd: 306326.28 }
+        ]
       }
     },
     {
-      "id": "metadatos-en-apache-iceberg-del-catalogo-al-arch",
-      "heading": "Metadatos en Apache Iceberg: del catálogo al archivo de datos",
-      "body": "Un conjunto de archivos Parquet por sí solo no sabe qué archivos pertenecen a una transacción válida ni cuáles están siendo escritos en este instante. Apache Iceberg resuelve esto introduciendo una jerarquía de metadatos inmutable en tres niveles:\n1) Catálogo REST (Apache Polaris, Unity Catalog, Nessie o Gravitino): Mantiene la referencia atómica (puntero CAS — Compare-And-Swap) hacia el archivo `metadata.json` vigente de cada tabla.\n2) Metadata File (`v42.metadata.json`) y Manifest List (`snap-8912.avro`): El archivo de metadatos registra el esquema de la tabla, la especificación de particionado y el historial de Snapshots. Cada Snapshot apunta a una *Manifest List*, la cual contiene estadísticas de rango por partición que permiten descartar directorios enteros en milisegundos.\n3) Manifest Files y Data Files: Cada *Manifest File* lista los archivos físicos de datos (`.parquet`, `.vortex` o `.lance`) junto con los límites mínimos y máximos (`lower_bounds` / `upper_bounds`) y conteos de nulos de cada columna. Así, el motor analítico (DuckDB, Spark, Trino) poda el 95%+ de los archivos leyendo solo metadatos antes de abrir un solo archivo Parquet.",
-      "example": {
-        "language": "sql",
-        "code": "-- 1. Creación de tabla Apache Iceberg v3 con Hidden Partitioning y tipo VARIANT\nCREATE TABLE polaris_cat.silver.orders_v3 (\n  order_id STRING NOT NULL,\n  customer_id BIGINT NOT NULL,\n  event_ts TIMESTAMPTZ NOT NULL,\n  order_status STRING,\n  net_amount_usd DECIMAL(12, 2),\n  telemetry_payload VARIANT\n)\nUSING iceberg\nPARTITIONED BY (days(event_ts), bucket(16, customer_id))\nTBLPROPERTIES (\n  'format-version' = '3',\n  'write.delete.mode' = 'merge-on-read',\n  'write.update.mode' = 'merge-on-read'\n);\n\n-- 2. Actualización atómica instantánea (escribe un Deletion Vector en archivo .puffin)\nUPDATE polaris_cat.silver.orders_v3\nSET order_status = 'REFUNDED', net_amount_usd = 0.00\nWHERE order_id = 'ORD-88410';\n\n-- 3. Consulta analítica combinando extracción VARIANT y Time Travel reproducible\nSELECT\n  telemetry_payload:device.os::STRING AS device_os,\n  SUM(net_amount_usd) AS revenue_actual_usd,\n  (SELECT SUM(net_amount_usd)\n   FROM polaris_cat.silver.orders_v3\n   FOR SYSTEM_TIME AS OF CURRENT_TIMESTAMP - INTERVAL '24' HOUR) AS revenue_hace_24h_usd\nFROM polaris_cat.silver.orders_v3\nWHERE event_ts >= TIMESTAMP '2026-10-01 00:00:00Z'\nGROUP BY 1;",
-        "expectedOutput": [
+      id: 'iceberg-v3-deletion-vectors-puffin',
+      heading: 'Novedades de Iceberg v3: Deletion Vectors en Puffin y linaje',
+      body: 'Actualizar o borrar registros sobre Parquet exige elegir entre dos estrategias. Con **Copy-on-Write (CoW)**, borrar una sola orden obliga a reescribir el archivo Parquet entero. Con **Merge-on-Read (MoR)**, el archivo original permanece intacto y las bajas se registran aparte para reconciliarse al leer.\n\nEn la versión 2 de Iceberg, múltiples borrados generaban decenas de archivos de borrado posicional que degradaban la lectura. La especificación **Apache Iceberg v3** introduce **Deletion Vectors (DVs)**: mapas de bits comprimidos (*Roaring bitmaps* de 64 bits) almacenados en archivos laterales Puffin. La regla v3 garantiza a lo sumo un vector de borrado activo por archivo de datos. Si ocurre otro `DELETE`, el motor fusiona el bitmap anterior con las nuevas posiciones.\n\nAdemás, Iceberg v3 incorpora **linaje por fila** mediante las columnas internas `_row_id` y `_last_updated_sequence_number`. También añade el tipo semiestructurado `variant`, precisión `timestamp_ns` y valores por defecto (`initial-default`, `write-default`) que permiten añadir columnas sin tocar archivos históricos.',
+      example: {
+        language: 'sql',
+        code: `SELECT
+  COUNT(*) AS bronze_total_orders,
+  COUNT(*) FILTER (WHERE status IN ('refunded', 'cancelled')) AS dv_marked_rows,
+  COUNT(*) FILTER (WHERE status = 'completed') AS silver_valid_orders,
+  ROUND(SUM(total_usd) FILTER (WHERE status = 'completed'), 2) AS silver_net_usd
+FROM orders;`,
+        expectedOutput: [
           {
-            "device_os": "iOS 19.1",
-            "revenue_actual_usd": "$842,190.00 (Snapshot #104 atómico)",
-            "revenue_hace_24h_usd": "$842,540.00 (Snapshot #98 vía Time Travel)"
+            bronze_total_orders: 18000,
+            dv_marked_rows: 2520,
+            silver_valid_orders: 14760,
+            silver_net_usd: 6269462.42
           }
         ]
       }
     },
     {
-      "id": "vectores-de-borrado-linaje-de-filas-y-tipo-varia",
-      "heading": "Vectores de borrado, linaje de filas y tipo VARIANT en Iceberg",
-      "body": "La especificación v3 de Apache Iceberg (`format-version = 3`) consolida tres avances fundamentales para cargas modernas de baja latencia:\n• Deletion Vectors (DVs) en Archivos Puffin: En versiones antiguas, borrar o actualizar filas en modo *Merge-on-Read* generaba múltiples archivos pequeños de borrado posicional que degradaban las lecturas. En Iceberg v3 se emplean **Deletion Vectors**: mapas de bits comprimidos (*Roaring Bitmaps*) almacenados dentro de archivos laterales `.puffin`. Iceberg v3 garantiza que exista como máximo un Deletion Vector activo por cada archivo de datos Parquet, reduciendo drásticamente el costo de unir borrados en tiempo de lectura.\n• Tipo de Dato Nativo `VARIANT`: Permite almacenar payloads semi-estructurados (JSON de eventos móviles, telemetría IoT o respuestas de LLMs) descomponiendo automáticamente (*shredding*) las sub-columnas frecuentes en formato columnar tipado. Obtienes la flexibilidad de un documento sin esquema con la velocidad de escaneo y compresión de Parquet.\n• Row-Level Lineage Nativo (`_row_id` y `_last_updated_sequence_number`): Cada fila recibe un identificador estable y número de secuencia que permite a motores como SQLMesh, Spark o Flink calcular exactamente qué filas cambiaron entre dos snapshots sin hacer costosos `FULL OUTER JOIN`."
+      id: 'particionado-oculto-evolucion-layout',
+      heading: 'Particionado oculto y evolución de layout sin reescritura física',
+      body: 'En las tablas Hive tradicionales, particionar por mes obligaba a crear una columna física `order_month` y exigía que cada analista recordara incluirla en el `WHERE`. Si un usuario filtraba solo por `order_ts`, el motor escaneaba toda la tabla.\n\n**Apache Iceberg** implementa **particionado oculto (*hidden partitioning*)**: el archivo `metadata.json` guarda la transformación matemática aplicada a la columna original, como `month(order_ts)`, `day(order_ts)`, `bucket(16, customer_id)` o `truncate(2, country_code)`. Cuando el analista escribe `WHERE order_ts >= TIMESTAMP \'2025-01-01\'`, Iceberg calcula internamente qué particiones mensuales corresponden y poda los manifiestos irrelevantes.\n\nSi el volumen de **Mercado Brisa** crece y el equipo decide cambiar el particionado de mensual a diario, Iceberg registra un nuevo `partition-spec` en los metadatos (*split planning*). Los archivos Parquet de 2023 y 2024 conservan el `spec-id` mensual, mientras los datos nuevos se escriben con el `spec-id` diario sin migrar terabytes de almacenamiento.',
+      example: {
+        language: 'sql',
+        code: `SELECT
+  EXTRACT(YEAR FROM order_ts) AS order_year,
+  COUNT(*) AS completed_orders,
+  COUNT(DISTINCT DATE_TRUNC('month', order_ts)) AS hidden_month_partitions,
+  ROUND(SUM(total_usd), 2) AS net_revenue_usd
+FROM orders
+WHERE status = 'completed'
+GROUP BY EXTRACT(YEAR FROM order_ts)
+ORDER BY order_year;`,
+        expectedOutput: [
+          { order_year: 2023, completed_orders: 1981, hidden_month_partitions: 12, net_revenue_usd: 851117.35 },
+          { order_year: 2024, completed_orders: 6497, hidden_month_partitions: 12, net_revenue_usd: 2731516.5 },
+          { order_year: 2025, completed_orders: 6282, hidden_month_partitions: 11, net_revenue_usd: 2686828.57 }
+        ]
+      }
     },
     {
-      "id": "particionado-oculto-evolucion-de-esquema-y-patro",
-      "heading": "Particionado oculto, evolución de esquema y patrón WAP",
-      "body": "En los antiguos Data Lakes estilo Hive, si particionabas por día tenías que crear una columna física `event_day_str = \"2026-10-28\"` y rezar para que ningún analista olvidara incluirla en su `WHERE` (si filtraban solo por `event_ts`, el motor escaneaba toda la tabla). Con **Hidden Partitioning** en Iceberg, declaras `PARTITIONED BY (days(event_ts), bucket(16, customer_id))`: el usuario filtra naturalmente por `WHERE event_ts >= TIMESTAMP '2026-10-01'` e Iceberg calcula y poda las particiones automáticamente.\nAdemás, con **Partition Evolution**, puedes cambiar la estrategia de particionado de mensual (`months(event_ts)`) a diaria (`days(event_ts)`) con una operación de metadatos instantánea: los terabytes antiguos permanecen intactos con el layout mensual y los nuevos se escriben por día.\nFinalmente, el soporte de ramas a nivel de catálogo permite el patrón **Write-Audit-Publish (WAP)**: el pipeline escribe el nuevo lote en una rama aislada (`audit_branch`), ejecuta validaciones estadísticas y de contratos, y solo ejecuta un `fast-forward merge` hacia la rama `main` cuando el 100% de las pruebas pasan."
+      id: 'arquitectura-medallion-patron-wap',
+      heading: 'Arquitectura Medallion y patrón Write-Audit-Publish (WAP)',
+      body: 'La **arquitectura Medallion** organiza el Lakehouse en tres niveles de calidad: **Bronce** almacena la ingesta cruda e inmutable; **Plata** aplica deduplicación, vectores de borrado y tipado estricto; y Oro entrega agregaciones de negocio listas para BI. Sin embargo, publicar directamente en Plata u Oro expone a los usuarios al riesgo de leer lotes con anomalías silenciosas.\n\nGracias al soporte de ramas (*branches*) y etiquetas (*tags*) en el árbol de instantáneas de Iceberg, implementamos el patrón **Write-Audit-Publish (WAP)**. Primero, en la etapa **Write**, el pipeline escribe los nuevos registros sobre una rama aislada llamada `audit_branch` sin mover el puntero `main`. Segundo, en la etapa **Audit**, se ejecutan pruebas SQL automáticas contra `audit_branch` para verificar invariantes de negocio. Finalmente, si la auditoría aprueba, el catálogo ejecuta un *fast-forward* del puntero `main` hacia la instantánea validada.\n\nAl auditar el catálogo de productos de **Mercado Brisa**, una validación WAP detecta un SKU inactivo con precio negativo (`list_price_usd < 0`), bloqueando su paso a producción.',
+      example: {
+        language: 'sql',
+        code: `SELECT
+  p.is_active,
+  CASE WHEN p.list_price_usd <= 0 THEN 'NEGATIVE_PRICE' ELSE 'VALID_PRICE' END AS price_audit,
+  COUNT(DISTINCT p.product_id) AS sku_count,
+  COUNT(oi.order_item_id) AS line_items_count,
+  ROUND(COALESCE(SUM(oi.line_total_usd), 0), 2) AS line_total_usd
+FROM products p
+LEFT JOIN order_items oi ON p.product_id = oi.product_id
+GROUP BY p.is_active, price_audit
+ORDER BY sku_count DESC;`,
+        expectedOutput: [
+          { is_active: true, price_audit: 'VALID_PRICE', sku_count: 170, line_items_count: 39894, line_total_usd: 6338369.18 },
+          { is_active: false, price_audit: 'VALID_PRICE', sku_count: 9, line_items_count: 2106, line_total_usd: 344095.13 },
+          { is_active: false, price_audit: 'NEGATIVE_PRICE', sku_count: 1, line_items_count: 0, line_total_usd: 0 }
+        ]
+      }
     }
   ],
-  "workedExample": {
-    "title": "Ejemplo guiado: Tablas abiertas con Apache Iceberg v3",
-    "description": "Compara el antipatrón de sobrescribir archivos Parquet sueltos en S3 frente a operar una tabla transaccional Apache Iceberg v3 con Deletion Vectors, VARIANT y Time Travel:",
-    "audit": "",
-    "steps": [
+  workedExample: {
+    title: 'Auditoría de impacto de Deletion Vectors por región en Mercado Brisa',
+    description: 'El equipo de finanzas de Mercado Brisa nota una discrepancia entre las ventas brutas registradas en la capa Bronce y el ingreso neto liquidado en la capa Plata.',
+    audit: 'En las cuatro regiones, exactamente 2.520 pedidos (14% del volumen bruto) corresponden a reembolsos o cancelaciones marcados mediante Deletion Vectors, dejando 14.760 órdenes completadas por 6.269.462,42 USD.',
+    steps: [
       {
-        "label": "Antipatrón: sobrescritura de Parquet sueltos sin catálogo",
-        "explanation": "Compara el antipatrón de sobrescribir archivos Parquet sueltos en S3 frente a operar una tabla transaccional Apache Iceberg v3 con Deletion Vectors, VARIANT y Time Travel:",
-        "code": "-- PELIGRO: Sobrescribir archivos en S3 sin capa transaccional ACID.\n-- 1) Los dashboards de BI que consulten durante la escritura fallan o ven datos duplicados/incompletos.\n-- 2) Borrar 1 pedido obliga a reescribir todo el archivo Parquet completo.\n-- 3) El campo JSON 'raw_payload' guardado como VARCHAR obliga a parsear texto fila por fila.\nCOPY (\n  SELECT * FROM raw_orders WHERE order_id <> 'ORD-88410'\n) TO 's3://novapay-lake/silver/orders/*.parquet' (FORMAT PARQUET, OVERWRITE true);",
-        "expectedOutput": [
-          {
-            "lecturas_concurrentes_bi": "ERROR FileNotFound / Datos a mitad de carga",
-            "costo_borrar_1_fila": "Reescritura de 512 MB en S3 (6.8 seg)",
-            "time_travel_auditoria": "Imposible (archivos anteriores destruidos)"
-          }
+        label: 'Paso 1 — Cruzar tiendas y órdenes separando vectores de borrado y ventas netas',
+        explanation: 'Agrupamos por la región de la tienda y usamos cláusulas FILTER para aislar en una sola pasada las órdenes marcadas en archivos Puffin (refunded y cancelled) frente a las órdenes vigentes (completed).',
+        code: `SELECT
+  s.region,
+  COUNT(*) AS bronze_orders,
+  COUNT(*) FILTER (WHERE o.status IN ('refunded', 'cancelled')) AS dv_deleted_orders,
+  COUNT(*) FILTER (WHERE o.status = 'completed') AS silver_completed_orders,
+  ROUND(SUM(o.total_usd) FILTER (WHERE o.status = 'completed'), 2) AS gold_net_revenue_usd
+FROM stores s
+JOIN orders o ON s.store_id = o.store_id
+GROUP BY s.region
+ORDER BY gold_net_revenue_usd DESC;`,
+        expectedOutput: [
+          { region: 'Cono Sur', bronze_orders: 6001, dv_deleted_orders: 840, silver_completed_orders: 4920, gold_net_revenue_usd: 2059786.39 },
+          { region: 'Andina', bronze_orders: 6000, dv_deleted_orders: 840, silver_completed_orders: 4921, gold_net_revenue_usd: 1990554.12 },
+          { region: 'Iberia', bronze_orders: 3428, dv_deleted_orders: 480, silver_completed_orders: 2811, gold_net_revenue_usd: 1348369.68 },
+          { region: 'Norteamérica', bronze_orders: 2571, dv_deleted_orders: 360, silver_completed_orders: 2108, gold_net_revenue_usd: 870752.23 }
         ]
       },
       {
-        "label": "Solución óptima: tabla Apache Iceberg v3 con vectores de borrado",
-        "explanation": "Compara ahora la consulta corregida y verifica cómo las filas y totales coinciden con la auditoría.",
-        "code": "-- 1. Creación de tabla Apache Iceberg v3 con Hidden Partitioning y tipo VARIANT\nCREATE TABLE polaris_cat.silver.orders_v3 (\n  order_id STRING NOT NULL,\n  customer_id BIGINT NOT NULL,\n  event_ts TIMESTAMPTZ NOT NULL,\n  order_status STRING,\n  net_amount_usd DECIMAL(12, 2),\n  telemetry_payload VARIANT\n)\nUSING iceberg\nPARTITIONED BY (days(event_ts), bucket(16, customer_id))\nTBLPROPERTIES (\n  'format-version' = '3',\n  'write.delete.mode' = 'merge-on-read',\n  'write.update.mode' = 'merge-on-read'\n);\n\n-- 2. Actualización atómica instantánea (escribe un Deletion Vector en archivo .puffin)\nUPDATE polaris_cat.silver.orders_v3\nSET order_status = 'REFUNDED', net_amount_usd = 0.00\nWHERE order_id = 'ORD-88410';\n\n-- 3. Consulta analítica combinando extracción VARIANT y Time Travel reproducible\nSELECT\n  telemetry_payload:device.os::STRING AS device_os,\n  SUM(net_amount_usd) AS revenue_actual_usd,\n  (SELECT SUM(net_amount_usd)\n   FROM polaris_cat.silver.orders_v3\n   FOR SYSTEM_TIME AS OF CURRENT_TIMESTAMP - INTERVAL '24' HOUR) AS revenue_hace_24h_usd\nFROM polaris_cat.silver.orders_v3\nWHERE event_ts >= TIMESTAMP '2026-10-01 00:00:00Z'\nGROUP BY 1;",
-        "expectedOutput": [
-          {
-            "device_os": "iOS 19.1",
-            "revenue_actual_usd": "$842,190.00 (Snapshot #104 atómico)",
-            "revenue_hace_24h_usd": "$842,540.00 (Snapshot #98 vía Time Travel)"
-          }
-        ]
+        label: 'Paso 2 — Evaluar la proporción de registros filtrados por Deletion Vectors',
+        explanation: 'En las cuatro regiones de Mercado Brisa, el 14% de los pedidos brutos (2.520 de 18.000) corresponden a reembolsos o cancelaciones. Mantenerlos en un único Deletion Vector por archivo Parquet evita reescribir los bloques donde residen las 14.760 órdenes completadas.'
+      },
+      {
+        label: 'Paso 3 — Publicar la instantánea auditada hacia la capa Oro',
+        explanation: 'Una vez verificado que la suma regional de gold_net_revenue_usd cuadra con los 6.269.462,42 USD de la capa Plata, el catálogo promueve la rama de auditoría hacia main mediante un cambio atómico de puntero.'
       }
     ]
   },
-  "checks": [
+  checks: [
     {
-      "id": "c1",
-      "type": "mcq",
-      "prompt": "En una tabla Apache Iceberg v3 de 50 TB con modo Merge-on-Read activado, llega una solicitud para actualizar el estado de 2,500 pedidos repartidos en 80 archivos Parquet. ¿Qué hace exactamente Iceberg v3 en el momento del UPDATE?",
-      "options": [
+      id: 'chk-1',
+      type: 'mcq',
+      prompt: '¿Qué ventaja técnica aportan los Deletion Vectors (DVs) en archivos Puffin de Apache Iceberg v3 frente a los archivos de borrado posicional de Iceberg v2?',
+      options: [
         {
-          "id": "a",
-          "text": "Escribe los 2,500 registros actualizados en un nuevo archivo Parquet pequeño y genera/actualiza un Deletion Vector (bitmap Roaring en un archivo Puffin) por cada archivo afectado para marcar las posiciones antiguas como borradas, publicando un nuevo Snapshot sin reescribir los 80 archivos Parquet.",
-          "correct": true,
-          "feedback": "Exacto. Los Deletion Vectors en archivos Puffin de Iceberg v3 marcan mediante un bitmap las posiciones de fila invalidadas en milisegundos, delegando la reescritura física a un trabajo de compactación en segundo plano."
+          id: 'a',
+          text: 'Reescriben de inmediato el archivo Parquet original en cada operación DELETE para evitar lecturas combinadas.',
+          correct: false,
+          feedback: 'Incorrecto. Eso describe la estrategia Copy-on-Write (CoW), no los Deletion Vectors bajo Merge-on-Read.'
         },
         {
-          "id": "b",
-          "text": "Bloquea todas las consultas de BI durante 45 minutos mientras descarga, descomprime, modifica y vuelve a subir los 80 archivos Parquet completos a S3.",
-          "correct": false,
-          "feedback": "Eso describiría una estrategia Copy-on-Write mal optimizada y sin aislamiento de snapshots. Con Merge-on-Read y Deletion Vectors v3 la operación es casi instantánea y no bloquea a los lectores."
+          id: 'b',
+          text: 'Consolidan las posiciones borradas en a lo sumo un bitmap Roaring64 activo por archivo Parquet, evitando reconciliar decenas de archivos de borrado al leer.',
+          correct: true,
+          feedback: 'Correcto. Iceberg v3 garantiza como máximo un Deletion Vector activo por archivo de datos al fusionar el bitmap previo con las nuevas bajas.'
         },
         {
-          "id": "c",
-          "text": "Modifica directamente los bytes internos en mitad de los archivos Parquet existentes en S3 usando edición in-place.",
-          "correct": false,
-          "feedback": "El almacenamiento de objetos (S3/GCS/ADLS) y los archivos Parquet son estrictamente inmutables: nunca se editan bytes in-place."
+          id: 'c',
+          text: 'Eliminan la necesidad de mantener el archivo metadata.json y delegan el control de transacciones al sistema de archivos.',
+          correct: false,
+          feedback: 'Incorrecto. El archivo metadata.json y el catálogo siguen siendo indispensables para la atomicidad en Iceberg v3.'
+        },
+        {
+          id: 'd',
+          text: 'Convierten todos los archivos Parquet al formato Avro para permitir actualizaciones en sitio.',
+          correct: false,
+          feedback: 'Incorrecto. Los datos permanecen en archivos columnares inmutables como Parquet; solo el bitmap se guarda en el archivo Puffin.'
         }
       ],
-      "explanation": "Exacto. Los Deletion Vectors en archivos Puffin de Iceberg v3 marcan mediante un bitmap las posiciones de fila invalidadas en milisegundos, delegando la reescritura física a un trabajo de compactación en segundo plano."
+      explanation: 'En Iceberg v3, los Deletion Vectors almacenan un bitmap Roaring64 en un archivo Puffin y aseguran que exista como máximo un vector activo por archivo Parquet, reduciendo la amplificación de lectura en cargas Merge-on-Read.'
     },
     {
-      "id": "c2",
-      "type": "mcq",
-      "prompt": "Necesitas eliminar 150 filas por derecho al olvido (GDPR) repartidas en 80 archivos Parquet de 512 MB cada uno en una tabla Apache Iceberg con baja latencia de escritura. ¿Qué estrategia minimiza los bytes escritos en el momento del DELETE?",
-      "options": [
+      id: 'chk-2',
+      type: 'mcq',
+      prompt: 'Una tabla Iceberg está particionada mediante `month(order_ts)`. ¿Cómo debe escribir su consulta un analista para aprovechar la poda de particiones?',
+      options: [
         {
-          "id": "a",
-          "text": "Merge-on-Read con vectores de borrado (deletion vectors) y compactación asíncrona posterior.",
-          "correct": true,
-          "feedback": "Correcto: escribe únicamente mapas de bits indicando las posiciones borradas y programa la reescritura física fuera de la ruta crítica."
+          id: 'a',
+          text: 'Debe crear una columna física adicional llamada `order_month` e incluirla obligatoriamente en el filtro WHERE.',
+          correct: false,
+          feedback: 'Incorrecto. Crear columnas derivadas físicas es un requisito heredado de Hive que el particionado oculto de Iceberg elimina.'
         },
         {
-          "id": "b",
-          "text": "Copy-on-Write reescribiendo los 80 archivos Parquet de 512 MB en el acto.",
-          "correct": false,
-          "feedback": "Incorrecto: Copy-on-Write obligaría a leer y reescribir ~40 GB de datos solo para quitar 150 filas."
+          id: 'b',
+          text: 'Debe filtrar directamente sobre la columna base `order_ts` (por ejemplo, `WHERE order_ts >= TIMESTAMP \'2025-01-01\'`), dejando que Iceberg aplique la relación con la partición.',
+          correct: true,
+          feedback: 'Correcto. El particionado oculto traduce los predicados sobre la columna base hacia los rangos del partition-spec.'
         },
         {
-          "id": "c",
-          "text": "Renombrar manualmente los archivos Parquet en el bucket S3.",
-          "correct": false,
-          "feedback": "Incorrecto: modificar archivos fuera del catálogo de Iceberg corrompe las referencias de los manifest files."
+          id: 'c',
+          text: 'Debe transformar la columna a texto con `WHERE SUBSTR(CAST(order_ts AS VARCHAR), 1, 7) = \'2025-01\'`.',
+          correct: false,
+          feedback: 'Incorrecto. Envolver la columna en funciones de cadena opacas impide que el planificador derive el rango del partition-spec.'
+        },
+        {
+          id: 'd',
+          text: 'Debe especificar manualmente la ruta del archivo manifest list en la cláusula FROM.',
+          correct: false,
+          feedback: 'Incorrecto. El motor resuelve la instantánea y los manifiestos a través del catálogo sin exponer rutas internas en el SQL.'
         }
       ],
-      "explanation": "Merge-on-Read desacopla el costo de escritura inmediata del costo de mantenimiento físico, que luego se resuelve mediante trabajos periódicos de compactación."
+      explanation: 'El particionado oculto almacena la transformación en el partition-spec de metadata.json, por lo que filtrar directamente por la columna base order_ts permite podar manifiestos sin columnas auxiliares.'
     },
     {
-      "id": "c3",
-      "type": "mcq",
-      "prompt": "¿Qué protege el patrón Write-Audit-Publish (WAP) al actualizar la tabla `gold.daily_revenue` en Iceberg?",
-      "options": [
+      id: 'chk-3',
+      type: 'mcq',
+      prompt: 'En el patrón Write-Audit-Publish (WAP) sobre Apache Iceberg, ¿qué ocurre si la consulta de auditoría detecta un SKU con `list_price_usd < 0` en la rama `audit_branch`?',
+      options: [
         {
-          "id": "a",
-          "text": "Escribe los datos nuevos en una rama o snapshot no publicado, valida reconciliación y nulos, y solo entonces hace fast-forward de main.",
-          "correct": true,
-          "feedback": "Correcto: si alguna prueba de calidad falla, los lectores de main jamás llegan a ver los datos defectuosos."
+          id: 'a',
+          text: 'Los consumidores de la rama `main` leen el precio negativo hasta que se ejecute un DELETE manual.',
+          correct: false,
+          feedback: 'Incorrecto. Los lectores de main están aislados de los commits realizados en audit_branch.'
         },
         {
-          "id": "b",
-          "text": "Publica los datos primero en producción y envía un correo si un test falla una hora después.",
-          "correct": false,
-          "feedback": "Incorrecto: auditar después de publicar expone métricas erróneas en los tableros durante el intervalo de fallo."
+          id: 'b',
+          text: 'El pipeline aborta la promoción (fast-forward) hacia `main`, dejando intacta la instantánea de producción para todos los usuarios.',
+          correct: true,
+          feedback: 'Correcto. Al fallar la validación en la rama aislada, el puntero main nunca avanza hacia la instantánea defectuosa.'
         },
         {
-          "id": "c",
-          "text": "Bloquea todas las lecturas de BI mientras dura la carga.",
-          "correct": false,
-          "feedback": "Incorrecto: gracias al aislamiento por instantáneas, los lectores siguen consultando la versión previa sin bloqueos."
+          id: 'c',
+          text: 'Iceberg borra automáticamente todas las instantáneas históricas de la tabla para liberar espacio.',
+          correct: false,
+          feedback: 'Incorrecto. Las instantáneas previas se conservan hasta que se ejecute una expiración controlada (expire_snapshots).'
+        },
+        {
+          id: 'd',
+          text: 'El catálogo bloquea las lecturas sobre la rama `main` hasta que el archivo Parquet sea reparado.',
+          correct: false,
+          feedback: 'Incorrecto. Las lecturas sobre main continúan sin bloqueo leyendo la última instantánea válida.'
         }
       ],
-      "explanation": "Al separar la escritura física del cambio atómico de referencia en el catálogo, WAP impide que datos sin auditar lleguen a los consumidores."
+      explanation: 'El patrón WAP aísla la escritura en una rama secundaria; si las reglas de calidad fallan, no se realiza el fast-forward hacia main y producción nunca ve los datos corruptos.'
     }
   ],
-  "practice": {
-    "type": "fill-blanks",
-    "title": "Esquema Iceberg v3 y viaje temporal",
-    "language": "sql",
-    "prompt": "Completa las 3 piezas clave de esta sentencia SQL sobre el catálogo Apache Iceberg v3 para: 1) declarar la columna semi-estructurada con el tipo nativo de Iceberg v3, 2) activar la versión 3 de la especificación en `TBLPROPERTIES`, y 3) consultar el estado histórico exacto de la tabla con la cláusula estándar de Time Travel.",
-    "starterCode": "CREATE TABLE polaris.silver.checkout_events (\n  event_id UUID NOT NULL,\n  customer_id BIGINT NOT NULL,\n  event_ts TIMESTAMPTZ NOT NULL,\n  gateway_metadata {{blank_1}},\n  amount_usd DECIMAL(10,2)\n)\nUSING iceberg\nPARTITIONED BY (days(event_ts))\nTBLPROPERTIES (\n  'format-version' = '{{blank_2}}',\n  'write.update.mode' = 'merge-on-read'\n);\n\n-- Auditar los ingresos exactos registrados al cierre del 20 de producción:\nSELECT SUM(amount_usd) AS audited_revenue_usd\nFROM polaris.silver.checkout_events\n{{blank_3}} TIMESTAMP '2026-10-20 23:59:59Z';",
-    "expected": "CREATE TABLE polaris.silver.checkout_events (\n  event_id UUID NOT NULL,\n  customer_id BIGINT NOT NULL,\n  event_ts TIMESTAMPTZ NOT NULL,\n  gateway_metadata {{blank_1}},\n  amount_usd DECIMAL(10,2)\n)\nUSING iceberg\nPARTITIONED BY (days(event_ts))\nTBLPROPERTIES (\n  'format-version' = '{{blank_2}}',\n  'write.update.mode' = 'merge-on-read'\n);\n\n-- Auditar los ingresos exactos registrados al cierre del 20 de producción:\nSELECT SUM(amount_usd) AS audited_revenue_usd\nFROM polaris.silver.checkout_events\n{{blank_3}} TIMESTAMP '2026-10-20 23:59:59Z';",
-    "orderMatters": true,
-    "hints": [
-      "TIPO_SEMI_ESTRUCTURADO: En Iceberg v3 (2026), ¿qué tipo de dato nativo reemplaza a los strings JSON planos permitiendo sub-columnarización automática?",
-      "VERSION: ¿Qué número de versión de formato de tabla habilita los Deletion Vectors en archivos Puffin, Row-Level Lineage y el tipo VARIANT?",
-      "CLAUSULA_TIME_TRAVEL: Escribe la cláusula SQL estándar de 4 palabras para viajar en el tiempo a una marca temporal pasada."
+  practice: {
+    type: 'sql',
+    title: 'Reconciliación Medallion por región sin fan-out en Mercado Brisa',
+    language: 'sql',
+    prompt: 'Construye la consulta de reconciliación Medallion por región (`region`) uniendo `stores`, `orders` y `order_items` (agregado previamente por `order_id` para evitar fan-out). Devuelve `region`, el conteo total de órdenes en Bronce (`bronze_orders`), las órdenes completadas en Plata (`silver_completed_orders`), el ingreso bruto en Bronce (`bronze_gross_usd`), el ingreso neto de órdenes completadas en Plata (`silver_net_usd`) y el total de unidades vendidas en órdenes completadas (`gold_completed_units`), todo redondeado a 2 decimales donde aplique y ordenado por `silver_net_usd DESC`.',
+    starterCode: `-- Reconciliación Medallion (Bronce -> Plata -> Oro) por región
+-- Corrige las métricas silver_completed_orders, silver_net_usd y gold_completed_units aplicando el filtro de órdenes completadas.
+WITH items_by_order AS (
+  SELECT
+    order_id,
+    SUM(qty) AS order_units
+  FROM order_items
+  GROUP BY order_id
+)
+SELECT
+  s.region,
+  COUNT(*) AS bronze_orders,
+  COUNT(*) AS silver_completed_orders,
+  ROUND(SUM(o.total_usd), 2) AS bronze_gross_usd,
+  ROUND(SUM(o.total_usd), 2) AS silver_net_usd,
+  SUM(ibo.order_units) AS gold_completed_units
+FROM stores s
+JOIN orders o ON s.store_id = o.store_id
+LEFT JOIN items_by_order ibo ON o.order_id = ibo.order_id
+GROUP BY s.region
+ORDER BY silver_net_usd DESC;`,
+    expected: `WITH items_by_order AS (
+  SELECT
+    order_id,
+    SUM(qty) AS order_units
+  FROM order_items
+  GROUP BY order_id
+)
+SELECT
+  s.region,
+  COUNT(*) AS bronze_orders,
+  COUNT(*) FILTER (WHERE o.status = 'completed') AS silver_completed_orders,
+  ROUND(SUM(o.total_usd), 2) AS bronze_gross_usd,
+  ROUND(SUM(o.total_usd) FILTER (WHERE o.status = 'completed'), 2) AS silver_net_usd,
+  SUM(ibo.order_units) FILTER (WHERE o.status = 'completed') AS gold_completed_units
+FROM stores s
+JOIN orders o ON s.store_id = o.store_id
+LEFT JOIN items_by_order ibo ON o.order_id = ibo.order_id
+GROUP BY s.region
+ORDER BY silver_net_usd DESC;`,
+    orderMatters: true,
+    hints: [
+      'Preagrega order_items por order_id usando SUM(qty) en la CTE items_by_order para que cada fila de orders conserve su granularidad al sumar total_usd.',
+      'Usa COUNT(*) FILTER (WHERE o.status = \'completed\') para calcular silver_completed_orders.',
+      'Aplica ROUND(SUM(o.total_usd) FILTER (WHERE o.status = \'completed\'), 2) para silver_net_usd y SUM(ibo.order_units) FILTER (WHERE o.status = \'completed\') para gold_completed_units.'
     ],
-    "solution": "CREATE TABLE polaris.silver.checkout_events (\n  event_id UUID NOT NULL,\n  customer_id BIGINT NOT NULL,\n  event_ts TIMESTAMPTZ NOT NULL,\n  gateway_metadata {{blank_1}},\n  amount_usd DECIMAL(10,2)\n)\nUSING iceberg\nPARTITIONED BY (days(event_ts))\nTBLPROPERTIES (\n  'format-version' = '{{blank_2}}',\n  'write.update.mode' = 'merge-on-read'\n);\n\n-- Auditar los ingresos exactos registrados al cierre del 20 de producción:\nSELECT SUM(amount_usd) AS audited_revenue_usd\nFROM polaris.silver.checkout_events\n{{blank_3}} TIMESTAMP '2026-10-20 23:59:59Z';",
-    "solutionExplanation": "Uso del tipo VARIANT en Iceberg Configuración de versión 3 en tabla Reproducibilidad analítica mediante viaje temporal",
-    "blanks": [
-      {
-        "id": "blank_1",
-        "placeholder": "TIPO_SEMI_ESTRUCTURADO",
-        "acceptedAnswers": [
-          "VARIANT",
-          "variant"
-        ],
-        "hint": "En Iceberg v3 (2026), ¿qué tipo de dato nativo reemplaza a los strings JSON planos permitiendo sub-columnarización automática?",
-        "hints": [
-          "Nivel 1 (Concepto): Es el nuevo tipo de dato de la especificación Apache Iceberg v3 diseñado para almacenar JSON semi-estructurado con shredding columnar.",
-          "Nivel 2 (Sintaxis): Empieza con V y tiene 7 letras.",
-          "Nivel 3 (Solución): Escribe VARIANT"
-        ]
-      },
-      {
-        "id": "blank_2",
-        "placeholder": "VERSION",
-        "acceptedAnswers": [
-          "3",
-          "v3"
-        ],
-        "hint": "¿Qué número de versión de formato de tabla habilita los Deletion Vectors en archivos Puffin, Row-Level Lineage y el tipo VARIANT?",
-        "hints": [
-          "Nivel 1 (Concepto): Corresponde a la tercera generación de la especificación de tablas Apache Iceberg.",
-          "Nivel 2 (Sintaxis): Es un único dígito numérico entero.",
-          "Nivel 3 (Solución): Escribe 3"
-        ]
-      },
-      {
-        "id": "blank_3",
-        "placeholder": "CLAUSULA_TIME_TRAVEL",
-        "acceptedAnswers": [
-          "FOR SYSTEM_TIME AS OF",
-          "for system_time as of",
-          "TIMESTAMP AS OF"
-        ],
-        "hint": "Escribe la cláusula SQL estándar de 4 palabras para viajar en el tiempo a una marca temporal pasada.",
-        "hints": [
-          "Nivel 1 (Concepto): Es la cláusula SQL:2011 / Iceberg que indica al motor que resuelva el Snapshot vigente en ese instante del tiempo del sistema.",
-          "Nivel 2 (Sintaxis): Estructura: FOR SYSTEM_TIME ... ...",
-          "Nivel 3 (Solución): Escribe FOR SYSTEM_TIME AS OF"
-        ]
-      }
-    ],
-    "expectedOutputTable": [
-      {
-        "snapshot_id": "88492019482",
-        "format_version": "v3 (Deletion Vectors + VARIANT)",
-        "audited_revenue_usd": "$1,294,810.50",
-        "isolation_status": "100% Reproducible"
-      }
-    ],
-    "rubricCriteria": [
-      {
-        "criterion": "Uso del tipo VARIANT en Iceberg",
-        "title": "Uso del tipo VARIANT en Iceberg",
-        "description": "Declara correctamente columnas semi-estructuradas con VARIANT para habilitar sub-columnarización y evitar el parseo lento de strings JSON.",
-        "points": 35,
-        "role": "DE"
-      },
-      {
-        "criterion": "Configuración de versión 3 en tabla",
-        "title": "Configuración de versión 3 en tabla",
-        "description": "Configura format-version = 3 con merge-on-read para que las actualizaciones generen Deletion Vectors binarios en archivos Puffin.",
-        "points": 35,
-        "role": "DE"
-      },
-      {
-        "criterion": "Reproducibilidad analítica mediante viaje temporal",
-        "title": "Reproducibilidad analítica mediante viaje temporal",
-        "description": "Emplea FOR SYSTEM_TIME AS OF para auditar estados pasados de la tabla sin alterar las vistas de BI en producción.",
-        "points": 30,
-        "role": "DA"
-      }
+    solution: `WITH items_by_order AS (
+  SELECT
+    order_id,
+    SUM(qty) AS order_units
+  FROM order_items
+  GROUP BY order_id
+)
+SELECT
+  s.region,
+  COUNT(*) AS bronze_orders,
+  COUNT(*) FILTER (WHERE o.status = 'completed') AS silver_completed_orders,
+  ROUND(SUM(o.total_usd), 2) AS bronze_gross_usd,
+  ROUND(SUM(o.total_usd) FILTER (WHERE o.status = 'completed'), 2) AS silver_net_usd,
+  SUM(ibo.order_units) FILTER (WHERE o.status = 'completed') AS gold_completed_units
+FROM stores s
+JOIN orders o ON s.store_id = o.store_id
+LEFT JOIN items_by_order ibo ON o.order_id = ibo.order_id
+GROUP BY s.region
+ORDER BY silver_net_usd DESC;`,
+    solutionExplanation: 'La CTE preagrega las unidades por pedido evitando duplicar filas de orders al hacer JOIN; luego FILTER (WHERE o.status = \'completed\') aísla las órdenes y montos netos de las capas Plata y Oro frente al bruto de Bronce.',
+    expectedOutputTable: [
+      { region: 'Cono Sur', bronze_orders: 6001, silver_completed_orders: 4920, bronze_gross_usd: 2517001.37, silver_net_usd: 2059786.39, gold_completed_units: 23467 },
+      { region: 'Andina', bronze_orders: 6000, silver_completed_orders: 4921, bronze_gross_usd: 2434901.41, silver_net_usd: 1990554.12, gold_completed_units: 22502 },
+      { region: 'Iberia', bronze_orders: 3428, silver_completed_orders: 2811, bronze_gross_usd: 1651332.57, silver_net_usd: 1348369.68, gold_completed_units: 15211 },
+      { region: 'Norteamérica', bronze_orders: 2571, silver_completed_orders: 2108, bronze_gross_usd: 1066582.42, silver_net_usd: 870752.23, gold_completed_units: 9870 }
     ]
   },
-  "roleNotes": {
-    "de": "Define tablas con `format-version = 3`, configura `write.delete.mode = merge-on-read` con Deletion Vectors para upserts rápidos desde CDC/Flink y programa trabajos asíncronos de compactación (`rewrite_data_files`) y expiración de snapshots. Implementa el flujo Write-Audit-Publish (WAP) sobre ramas del Catálogo REST (Polaris / Unity) y utiliza credenciales efímeras (*Vended Credentials*) para controlar el acceso al almacenamiento de objetos.",
-    "da": "Utiliza `FOR SYSTEM_TIME AS OF` y `FOR SYSTEM_VERSION AS OF` (Time Travel) para reproducir al 100% los datos exactos con los que se presentó un informe ejecutivo o se entrenó un modelo predictivo. Extrae atributos anidados desde columnas `VARIANT` (`payload:checkout.payment_method::STRING`) con velocidad columnar y crea ramas ligeras (*Zero-Copy branches*) para experimentar limpiezas sin duplicar almacenamiento.",
-    "bi": "Conecta los tableros ejecutivos directamente a las tablas Gold de Apache Iceberg mediante arquitecturas **Direct Lake / Zero-Copy**, eliminando los extractos propietarios desactualizados. Confía en que ningún comité ejecutivo verá tablas a medio cargar gracias al aislamiento transaccional de los Snapshots y la publicación atómica WAP."
+  roleNotes: {
+    de: 'Configura write.delete.mode = merge-on-read con format-version = 3 para que las bajas generen Deletion Vectors en Puffin y programa trabajos periódicos de compactación y expire_snapshots.',
+    da: 'Filtra siempre directamente sobre las columnas de fecha o marca temporal base (como order_ts) para activar el particionado oculto y consulta las instantáneas por ID cuando necesites reproducibilidad.',
+    bi: 'Conecta tus modelos semánticos únicamente a la rama principal (main) de la capa Oro, asegurando que los reportes consuman instantáneas que superaron las pruebas Write-Audit-Publish.'
   },
-  "summary": [
-    "Apache Iceberg aporta transacciones ACID y aislamiento de instantáneas sobre archivos Parquet inmutables.",
-    "El catálogo mantiene el puntero atómico al archivo metadata.json vigente de cada tabla.",
-    "Los vectores de borrado marcan filas eliminadas en mapas de bits sin reescribir archivos de datos.",
-    "El patrón Write-Audit-Publish escribe en una rama aislada, ejecuta pruebas y avanza el puntero principal."
+  summary: [
+    'Apache Iceberg garantiza transacciones ACID mediante un árbol jerárquico que va desde el catálogo y metadata.json hasta las manifest lists y manifest files.',
+    'La especificación Iceberg v3 introduce Deletion Vectors en archivos Puffin (a lo sumo uno activo por archivo Parquet) y linaje nativo por fila (_row_id).',
+    'El particionado oculto almacena transformaciones en los metadatos y permite evolucionar el layout físico sin reescribir archivos históricos.',
+    'El patrón Write-Audit-Publish (WAP) aísla la ingesta en ramas secundarias y solo promueve la instantánea a producción tras superar auditorías SQL.'
   ],
-  "flashcards": [
+  flashcards: [
     {
-      "id": "fc-de3-ice-01",
-      "front": "¿Por qué nunca debes listar directorios en S3 (`ls s3://...`) para descubrir qué archivos pertenecen a una tabla Iceberg?",
-      "back": "Porque en S3 pueden coexistir archivos de instantáneas pasadas o escrituras en curso; solo el árbol que cuelga del metadata.json actual define la tabla."
+      id: 'fc-1',
+      front: '¿Qué estructura almacena un Deletion Vector en Apache Iceberg v3 y cuál es su invariante por archivo de datos?',
+      back: 'Almacena un bitmap Roaring de 64 bits dentro de un archivo Puffin y garantiza que exista a lo sumo un Deletion Vector activo por archivo Parquet.'
     },
     {
-      "id": "fc-de3-ice-02",
-      "front": "¿Qué ventaja aportan los vectores de borrado (Merge-on-Read) frente a Copy-on-Write ante borrados frecuentes?",
-      "back": "Evitan reescribir archivos Parquet de cientos de megabytes por borrar unas pocas filas; escriben un bitmap ligero y difieren la reescritura a la compactación."
+      id: 'fc-2',
+      front: '¿Qué diferencia existe entre una manifest list y un manifest file en Apache Iceberg?',
+      back: 'La manifest list indexa una instantánea completa con rangos de partición por manifiesto, mientras el manifest file lista archivos Parquet individuales y sus estadísticas min/max por columna.'
     },
     {
-      "id": "fc-de3-ice-03",
-      "front": "¿Qué es el particionado oculto (hidden partitioning) en Apache Iceberg?",
-      "back": "Iceberg calcula internamente la partición (mes, día, bucket) a partir de la columna timestamp sin exigir que el usuario añada columnas artificiales en el WHERE."
+      id: 'fc-3',
+      front: '¿En qué consiste el particionado oculto (hidden partitioning) de Iceberg?',
+      back: 'En almacenar la función de partición (como month o bucket) en metadata.json para que el motor derive el filtro de partición directamente desde la columna base.'
+    },
+    {
+      id: 'fc-4',
+      front: '¿Cuáles son las tres etapas del patrón Write-Audit-Publish (WAP)?',
+      back: 'Escribir los datos en una rama aislada (audit_branch), ejecutar pruebas de calidad sobre esa rama y promover el puntero main (fast-forward) si pasan.'
     }
   ],
-  "glossaryTerms": [
-    "c17-medallion-architecture",
-    "c18-iceberg-v3"
+  glossaryTerms: [
+    'c17-medallion-architecture',
+    'c18-iceberg-v3',
+    'iceberg-deletion-vectors',
+    'hidden-partitioning',
+    'write-audit-publish'
   ],
-  "sources": [
+  sources: [
     {
-      "title": "Apache Iceberg Official Specification — Table Format v2 and v3",
-      "url": "https://iceberg.apache.org/spec/",
-      "publisher": "Apache Software Foundation",
-      "accessed": "2026-10-29",
-      "supports": "Jerarquía de metadatos, aislamiento de instantáneas, vectores de borrado y evolución de esquema."
+      title: 'Apache Iceberg Table Spec (Format Version 3)',
+      url: 'https://iceberg.apache.org/spec/',
+      publisher: 'Apache Software Foundation',
+      accessed: '2026-10-29',
+      supports: 'Especificación del árbol de metadatos Iceberg, Deletion Vectors, Row Lineage (_row_id) y tipos v3.'
     },
     {
-      "title": "Apache Iceberg Documentation — Partitioning and Hidden Partitioning",
-      "url": "https://iceberg.apache.org/docs/latest/partitioning/",
-      "publisher": "Apache Software Foundation",
-      "accessed": "2026-10-29",
-      "supports": "Transformaciones de partición declarativas y evolución de diseño de partición sin reescribir historia."
+      title: 'Apache Iceberg Puffin File Specification',
+      url: 'https://iceberg.apache.org/puffin-spec/',
+      publisher: 'Apache Software Foundation',
+      accessed: '2026-10-29',
+      supports: 'Formato de archivo lateral Puffin para almacenar bitmaps Roaring64 de Deletion Vectors e índices.'
     },
     {
-      "title": "Apache Iceberg Documentation — Branching and Tagging (Write-Audit-Publish)",
-      "url": "https://iceberg.apache.org/docs/latest/branching/",
-      "publisher": "Apache Software Foundation",
-      "accessed": "2026-10-29",
-      "supports": "Uso de ramas a nivel de metadatos para validar calidad antes de publicar cambios."
+      title: 'Apache Iceberg Partitioning and Hidden Partitioning',
+      url: 'https://iceberg.apache.org/docs/latest/partitioning/',
+      publisher: 'Apache Software Foundation',
+      accessed: '2026-10-29',
+      supports: 'Particionado oculto y evolución del partition-spec sin reescribir archivos Parquet históricos.'
+    },
+    {
+      title: 'Apache Iceberg Branching and Tagging (WAP)',
+      url: 'https://iceberg.apache.org/docs/latest/branching/',
+      publisher: 'Apache Software Foundation',
+      accessed: '2026-10-29',
+      supports: 'Ramas a nivel de instantánea para implementar el patrón de calidad Write-Audit-Publish.'
     }
   ],
-  "aiNotes": "Las confusiones frecuentes son pensar que Iceberg es un motor de consultas (es un formato de tabla abierto leído por DuckDB, Spark, Trino o Snowflake) o creer que Bronze debe transformar y borrar campos crudos.",
-  "needsReview": true,
-  "legacyId": "l10-iceberg-v3-medallion",
-  "legacyOrder": 10,
-  "stageId": "stage-4",
-  "subtitle": "Metadatos transaccionales sobre almacenamiento de objetos, vectores de borrado y particionamiento oculto.",
-  "goal": "Aplicar una arquitectura Medallion (Bronze, Silver, Gold) sobre Apache Iceberg v3 utilizando Deletion Vectors en archivos Puffin, el tipo nativo VARIANT para datos semi-estructurados, Hidden Partitioning y el patrón Write-Audit-Publish (WAP).",
-  "pipelineChallenge": {
-    "title": "Ciclo de escritura, auditoría y publicación",
-    "scenario": "Ordena los 5 pasos arquitectónicos para ingerir, transformar, auditar y publicar un nuevo lote de pedidos en el Lakehouse garantizando que ningún dashboard de BI lea datos corruptos o incompletos:",
-    "steps": [
-      {
-        "id": "step-1-bronze-append",
-        "label": "1. Ingesta inmutable de eventos crudos CDC en la tabla Bronze de Iceberg con metadatos _ingested_at",
-        "role": "DE",
-        "detail": "Preserva la evidencia original exacta recibida desde Kafka/Debezium para permitir reprocesamiento histórico."
-      },
-      {
-        "id": "step-2-wap-branch",
-        "label": "2. Creación de rama aislada Zero-Copy (audit_branch) en el Catálogo REST y escritura del cambio Silver con Deletion Vectors",
-        "role": "DE",
-        "detail": "Escribe los nuevos archivos Parquet y bitmaps Puffin en una rama separada sin tocar el puntero main que lee BI."
-      },
-      {
-        "id": "step-3-quality-audit",
-        "label": "3. Ejecución de auditorías automáticas de calidad (0% nulos en claves, reconciliación de sumas y Z-score de volumen) sobre audit_branch",
-        "role": "DA",
-        "detail": "Verifica tanto reglas deterministas de esquema como ausencia de anomalías estadísticas antes de exponer los datos."
-      },
-      {
-        "id": "step-4-atomic-publish",
-        "label": "4. Fast-Forward Merge atómico de audit_branch hacia la rama main en el Catálogo REST Apache Polaris",
-        "role": "DE",
-        "detail": "Intercambia el puntero del Snapshot actual en milisegundos mediante una operación Compare-And-Swap (CAS)."
-      },
-      {
-        "id": "step-5-direct-lake-bi",
-        "label": "5. Lectura Zero-Copy desde los dashboards de BI y notebooks de DA apuntando al nuevo Snapshot certificado en main",
-        "role": "BI",
-        "detail": "Los consumidores ven la actualización completa de forma instantánea sin caídas ni estados intermedios."
-      }
-    ],
-    "explanation": "En el patrón Write-Audit-Publish (WAP), la clave es que los datos crudos primero se aseguran en Bronze (1), luego las transformaciones hacia Silver/Gold se escriben en una rama aislada (2), se validan rigurosamente con pruebas deterministas y estadísticas (3), se promueven atómicamente cambiando el puntero en el catálogo REST (4) y finalmente son consumidas por BI y DA sin riesgo de lecturas sucias (5)."
-  },
-  "relatedLessons": [
-    {
-      "id": "l7-columnar-parquet",
-      "reason": "Comprende cómo los archivos Parquet físicos y sus Zone Maps operan debajo del árbol de metadatos de Apache Iceberg v3."
-    },
-    {
-      "id": "l11-dbt-sqlmesh-dag",
-      "reason": "Descubre cómo orquestar las transformaciones de Bronze a Silver y Gold sobre tablas Iceberg usando dbt y SQLMesh."
-    },
-    {
-      "id": "l16-cdc-kafka-streaming",
-      "reason": "Aprende cómo los flujos CDC en tiempo real aterrizan continuamente en tablas Iceberg v3 usando Deletion Vectors."
-    }
-  ]
+  aiNotes: 'Guía al estudiante para distinguir entre archivos de datos Parquet inmutables y archivos Puffin con Deletion Vectors. En la práctica SQL, verifica que comprenda por qué order_items debe preagregarse por order_id antes del JOIN con orders (evitar fan-out al sumar total_usd) y cómo la cláusula FILTER (WHERE o.status = \'completed\') separa las métricas Bronce de las capas Plata y Oro.'
 };
 
 export default lesson;
