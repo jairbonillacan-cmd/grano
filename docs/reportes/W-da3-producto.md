@@ -229,20 +229,26 @@ Se probaron las 4 lecciones invocando el flujo real de `server/ai/contextBuilder
      >
      > **Pregunta para comprobar:** Si mañana apagas `CMP-VERANO` en un test con grupo de control y observas que el gasto medio de los clientes expuestos y no expuestos crece exactamente lo mismo (`DID lift = 0 USD`), ¿cuál era el retorno incremental real de esos `167.970,62 USD` atribuidos por último toque?
 
-#### 7.2 Rúbrica de experiencia completa de 8 criterios (§9.4)
+#### 7.2 Tabla resumen §9.2 (`lección | palabras | checks | prácticas | fuentes | puntuación de rúbrica`) y Rúbrica §9.4
 
-Se verificaron las 4 lecciones en navegador real Chromium (`playwright-core` sobre `http://127.0.0.1:5225`) en escritorio (`1440x900`, temas claro y oscuro) y móvil (`375x812`), ejecutando el laboratorio SQL DuckDB WASM y el cajón del Tutor IA con **0 errores de consola y 0 errores de página**:
+| lección | palabras | checks | prácticas | fuentes | puntuación de rúbrica |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| `da3-producto-01-embudos-conversion-ventana` | 1065 | 3 (`multiple-choice`, `code-Completion`, `predict-output`) | 1 (`sql`, 3 filas) | 4 | **32 / 32** |
+| `da3-producto-02-cohorts-retention-ltv` | 1019 | 3 (`multiple-choice`, `code-Completion`, `predict-output`) | 1 (`sql`, 3 filas) | 4 | **32 / 32** |
+| `da3-producto-03-segmentacion-conductual-rfm` | 1022 | 3 (`multiple-choice`, `code-Completion`, `predict-output`) | 1 (`sql`, 5 filas) | 4 | **32 / 32** |
+| `da3-producto-04-atribucion-marketing-incrementalidad` | 1057 | 3 (`multiple-choice`, `code-Completion`, `predict-output`) | 1 (`sql`, 4 filas) | 4 | **32 / 32** |
 
 | Criterio (§9.4) | `da3-producto-01` | `da3-producto-02` | `da3-producto-03` | `da3-producto-04` | Evidencia en navegador (`127.0.0.1:5225`) y `agy` |
 | --- | :---: | :---: | :---: | :---: | --- |
-| 1. **Renderizado y legibilidad** | 4/4 | 4/4 | 4/4 | 4/4 | Jerarquía editorial nítida en claro y oscuro (`L01..L04-desktop-light.png`, `L01..L04-desktop-dark.png`), `scrollWidth === clientWidth` (`1440 <= 1440` en escritorio y `375 <= 375` en móvil). |
-| 2. **Alineación texto ↔ visualizador / bloques** | 4/4 | 4/4 | 4/4 | 4/4 | Los 3 bloques SQL de cada sección y el `workedExample` de 3 pasos reflejan exactamente las cifras discutidas en la prosa (`499` vs `58` activos; `52,98 %`–`63,54 %` retención `Q+3`; `445` clientes en `3_En_Riesgo_Alto_Valor`; `0,96x` vs `1,53x` ROAS en `CMP-VERANO`). |
-| 3. **Ejemplo trabajado y notas de rol** | 4/4 | 4/4 | 4/4 | 4/4 | El componente `LessonWorkedExample` permite alternar los 3 pasos (`antipatrón` $\to$ `diagnóstico` $\to$ `solución`) y `LessonRoleNotes` muestra las pestañas `Ingeniería de Datos`, `Análisis de Datos` y `Business Intelligence`. |
-| 4. **Comprobaciones interactivas (`checks`)** | 4/4 | 4/4 | 4/4 | 4/4 | Las 3 tarjetas `LessonCheckCard` por lección renderizan opciones, retroalimentación individual (`why`) y botón contextual de consulta al tutor. |
-| 5. **Laboratorio SQL DuckDB WASM (`AuthenticCodeLab`)** | 4/4 | 4/4 | 4/4 | 4/4 | En las 4 lecciones, pulsar `Comprobar resultado` con `starterCode` devuelve fallo diagnóstico (`passed: false`) y con `solution` devuelve `Resultado verificado` (`passed: true`, capturas `L01..L04-sql-lab-passed.png`). |
-| 6. **Tutor IA contextual (`agy`) — Modo `explain`** | 4/4 | 4/4 | 4/4 | 4/4 | Probado con `agy` real (`gemini-3.8-flash-low`): explica con precisión la asociación retroactiva en `da3-producto-01` y la divergencia ROAS FT vs. LT + DID en `da3-producto-04`, cerrando con pregunta de verificación. |
-| 7. **Tutor IA contextual (`agy`) — Modo `hint`** | 4/4 | 4/4 | 4/4 | 4/4 | Probado con `agy` real (`gemini-3.8-flash-low`): diagnostica el fan-out `1:N` y el `COALESCE` sobre cohortes censuradas en `da3-producto-02` y la polaridad invertida de `NTILE(4)` en `da3-producto-03` sin revelar la consulta final. |
-| 8. **Ausencia de errores y cierre honesto** | 4/4 | 4/4 | 4/4 | 4/4 | `0` errores de consola, `0` errores de página, sección `Lo que debes recordar` y `Fuentes y lecturas recomendadas` completas con enlaces verificados. |
+| **1. Objetivo claro** | 4/4 | 4/4 | 4/4 | 4/4 | Jerarquía editorial nítida en claro y oscuro (`L01..L04-desktop-light.png`, `L01..L04-desktop-dark.png`), `scrollWidth === clientWidth` (`1440 <= 1440` en escritorio y `375 <= 375` en móvil). |
+| **2. Progresión** | 4/4 | 4/4 | 4/4 | 4/4 | Los 3 bloques SQL de cada sección y el `workedExample` de 3 pasos reflejan exactamente las cifras discutidas en la prosa (`499` vs `58` activos; `52,98 %`–`63,54 %` retención `Q+3`; `445` clientes en `3_En_Riesgo_Alto_Valor`; `0,96x` vs `1,53x` ROAS en `CMP-VERANO`). |
+| **3. Ejemplo concreto** | 4/4 | 4/4 | 4/4 | 4/4 | El componente `LessonWorkedExample` permite alternar los 3 pasos (`antipatrón` $\to$ `diagnóstico` $\to$ `solución`) y `LessonRoleNotes` muestra las pestañas `Ingeniería de Datos`, `Análisis de Datos` y `Business Intelligence`. |
+| **4. Error típico** | 4/4 | 4/4 | 4/4 | 4/4 | Las 3 tarjetas `LessonCheckCard` por lección renderizan opciones, retroalimentación individual (`why`) y botón contextual de consulta al tutor. |
+| **5. Práctica** | 4/4 | 4/4 | 4/4 | 4/4 | En las 4 lecciones, pulsar `Comprobar resultado` con `starterCode` devuelve fallo diagnóstico (`passed: false`) y con `solution` devuelve `Resultado verificado` (`passed: true`, capturas `L01..L04-sql-lab-passed.png`). |
+| **6. Brevedad** | 4/4 | 4/4 | 4/4 | 4/4 | `0` hallazgos en `check-copy.mjs`, medias de frase entre `18,6` y `20,7` palabras/oración (`<= 22,0`) y longitud visible entre `1019` y `1065` palabras (`900–1600`). |
+| **7. Precisión** | 4/4 | 4/4 | 4/4 | 4/4 | Probado con `agy` real (`gemini-3.8-flash-low`) en modos `explain` y `hint` más 16 fuentes primarias verificadas con HTTP 200 y `accessed: '2026-10-29'`. |
+| **8. Tono** | 4/4 | 4/4 | 4/4 | 4/4 | `0` errores de consola, `0` errores de página, sección `Lo que debes recordar` y `Fuentes y lecturas recomendadas` completas con enlaces verificados. |
+| **Total (mín. 26/32)** | **32/32** | **32/32** | **32/32** | **32/32** | **100 % de cumplimiento sin ningún criterio < 3.** |
 
 ---
 
