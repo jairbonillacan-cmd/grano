@@ -15,7 +15,7 @@ export function LessonCheckCard({
 
   // Estado local para checks tipo 'order' o 'fill-code'
   const [orderList, setOrderList] = useState(() =>
-    Array.isArray(check.items) ? check.items.map((it, idx) => (typeof it === 'string' ? { id: `it-${idx}`, text: it } : it)) : []
+    Array.isArray(check.items) ? check.items.map((it, idx) => (typeof it === 'string' ? { id: `it-${idx}`, text: it, origIdx: idx } : { ...it, origIdx: idx })) : []
   );
   const [fillValue, setFillValue] = useState(() => savedAnswer?.textValue || '');
 
@@ -72,9 +72,7 @@ export function LessonCheckCard({
   const handleVerifyOrder = () => {
     const expectedOrder = check.correctOrder || orderList.map((it) => it.id);
     const currentOrder = orderList.map((it) => it.id);
-    const correct =
-      expectedOrder.length === currentOrder.length &&
-      expectedOrder.every((id, i) => id === currentOrder[i]);
+    const correct = expectedOrder.length === orderList.length && expectedOrder.every((exp, i) => { const cur = orderList[i]; return exp === cur.id || exp === cur.text || exp === cur.origIdx; });
 
     onAnswer(check.id, {
       answered: true,
@@ -87,11 +85,28 @@ export function LessonCheckCard({
   const handleVerifyFillCode = (e) => {
     e.preventDefault();
     const cleanInput = String(fillValue || '').trim().toLowerCase();
-    const accepted = Array.isArray(check.acceptedAnswers)
+    const blanks = Array.isArray(check.blanks) ? check.blanks : [];
+    let accepted = Array.isArray(check.acceptedAnswers)
       ? check.acceptedAnswers.map((a) => String(a).trim().toLowerCase())
       : check.correctAnswer
         ? [String(check.correctAnswer).trim().toLowerCase()]
         : [];
+    if (accepted.length === 0 && blanks.length > 0) {
+      if (blanks.length === 1 && Array.isArray(blanks[0].accepted)) {
+        accepted = blanks[0].accepted.map((a) => String(a).trim().toLowerCase());
+      } else {
+        const parts = cleanInput.split(/\s*[,;|]\s*|\s+/).filter(Boolean);
+        const multiMatch =
+          parts.length >= blanks.length &&
+          blanks.every((b, idx) =>
+            (b.accepted || []).some((a) => String(a).trim().toLowerCase() === parts[idx])
+          );
+        const firstBlankAccepted = (blanks[0]?.accepted || []).map((a) =>
+          String(a).trim().toLowerCase()
+        );
+        accepted = multiMatch ? [cleanInput] : firstBlankAccepted;
+      }
+    }
     const correct = accepted.length > 0 ? accepted.includes(cleanInput) : cleanInput.length > 0;
 
     onAnswer(check.id, {
@@ -128,7 +143,7 @@ export function LessonCheckCard({
           <span className="lp-check-card__num tabular">
             Comprobación {index + 1} de {total}
           </span>
-          <span className="lp-check-card__type" style={{ color: 'var(--text-2)' }}>{typeBadgeLabel}</span>
+          <span className="lp-check-card__type">{typeBadgeLabel}</span>
         </div>
         <span
           className={`lp-check-card__status${
@@ -147,9 +162,9 @@ export function LessonCheckCard({
         {formatInlineText(check.prompt, `chk-prompt-${check.id}`)}
       </h3>
 
-      {check.code ? (
+      {check.code || check.template ? (
         <pre className="lp-check-card__code">
-          <code>{check.code}</code>
+          <code>{check.code || check.template}</code>
         </pre>
       ) : null}
 

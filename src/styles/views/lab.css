@@ -901,3 +901,38 @@
   align-items: center;
   gap: var(--sp-1);
 }
+
+.code-token-bank__label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-1);
+  color: var(--ink-2);
+  align-self: center;
+  margin-right: var(--sp-2);
+}
+.sql-inline-icon {
+  vertical-align: text-bottom;
+  margin-right: 0.375rem;
+}
+.sql-inline-chevron {
+  vertical-align: middle;
+  margin-right: 0.25rem;
+}
+.sql-empty-cell {
+  text-align: center;
+  padding: var(--sp-4);
+  color: var(--ink-3);
+}
+.practice-solved-pill {
+  color: var(--ok);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.practice-panel-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.sql-lab-engine-pill {
+  color: var(--text-2);
+}

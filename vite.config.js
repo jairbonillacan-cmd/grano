@@ -1,16 +1,14 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { granoAiPlugin } from './server/ai/routes.js';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), granoAiPlugin()],
   server: {
-    port: 5173,
-    open: true,
-    proxy: {
-      '/api': {
-        target: 'http://127.0.0.1:8787',
-        changeOrigin: true,
-      },
+    port: 5174,
+    host: '127.0.0.1',
+    fs: {
+      allow: ['..'],
     },
   },
   worker: {
@@ -24,35 +22,35 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          const normalized = id.replace(/\\/g, '/')
+          const normalized = id.replace(/\\/g, '/');
 
           if (normalized.includes('node_modules')) {
             if (normalized.includes('@duckdb')) {
-              return undefined
+              return undefined;
             }
             if (normalized.includes('lucide-react')) {
-              return 'vendor-icons'
+              return 'vendor-icons';
             }
             if (
               normalized.includes('/react/') ||
               normalized.includes('/react-dom/') ||
               normalized.includes('/scheduler/')
             ) {
-              return 'vendor-react'
+              return 'vendor-react';
             }
-            return 'vendor-libs'
+            return 'vendor-libs';
           }
 
           if (normalized.includes('/src/data/stages/')) {
-            return 'curriculum-stages'
+            return 'curriculum-stages';
           }
 
           if (normalized.includes('/src/data/glossary')) {
-            return 'data-glossary'
+            return 'data-glossary';
           }
 
           if (normalized.includes('/src/data/flashcards')) {
-            return 'data-flashcards'
+            return 'data-flashcards';
           }
 
           if (
@@ -60,34 +58,34 @@ export default defineConfig({
             normalized.includes('/src/data/capstones') ||
             normalized.includes('/src/data/learningPath2026')
           ) {
-            return 'data-catalog'
+            return 'data-catalog';
           }
 
           if (normalized.includes('/src/data/lessons/')) {
             if (normalized.includes('/src/data/lessons/c0-')) {
-              return 'data-lessons-c0'
+              return 'data-lessons-c0';
             }
             if (normalized.includes('/src/data/lessons/c1-')) {
-              return 'data-lessons-c1'
+              return 'data-lessons-c1';
             }
             if (
               normalized.includes('/src/data/lessons/c2-') ||
               normalized.includes('/src/data/lessons/de2-')
             ) {
-              return 'data-lessons-c2-de2'
+              return 'data-lessons-c2-de2';
             }
             if (
               normalized.includes('/src/data/lessons/da2-') ||
               normalized.includes('/src/data/lessons/bi2-')
             ) {
-              return 'data-lessons-da2-bi2'
+              return 'data-lessons-da2-bi2';
             }
             if (
               normalized.includes('/src/data/lessons/de3-') ||
               normalized.includes('/src/data/lessons/da3-') ||
               normalized.includes('/src/data/lessons/bi3-')
             ) {
-              return 'data-lessons-tier3'
+              return 'data-lessons-tier3';
             }
             if (
               normalized.includes('/src/data/lessons/de4-') ||
@@ -95,18 +93,18 @@ export default defineConfig({
               normalized.includes('/src/data/lessons/bi4-') ||
               normalized.includes('/src/data/lessons/x4-')
             ) {
-              return 'data-lessons-tier4'
+              return 'data-lessons-tier4';
             }
-            return 'data-lessons-index'
+            return 'data-lessons-index';
           }
 
           if (normalized.includes('/src/components/visualizers/')) {
-            return 'visualizers'
+            return 'visualizers';
           }
 
-          return undefined
+          return undefined;
         },
       },
     },
   },
-})
+});

@@ -33,11 +33,7 @@ export function Skeleton({
           <span
             key={idx}
             className="ui-skeleton ui-skeleton--line"
-            style={{
-              width: idx === lines - 1 ? '68%' : width || '100%',
-              height,
-              ...style,
-            }}
+            style={{ '--sk-w': idx === lines - 1 ? '68%' : width || '100%', '--sk-h': height }}
           />
         ))}
       </div>
@@ -50,7 +46,7 @@ export function Skeleton({
   return (
     <span
       className={classes}
-      style={{ width, height, ...style }}
+      style={{ '--sk-w': width, '--sk-h': height }}
       aria-hidden="true"
     />
   )

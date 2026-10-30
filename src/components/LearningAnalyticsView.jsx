@@ -511,7 +511,7 @@ export function LearningAnalyticsView({
                     <div className="progress-vbar__track" aria-hidden="true">
                       <div
                         className="progress-vbar__fill"
-                        style={{ height: `${heightPct}%` }}
+                        style={{ '--value': `${heightPct}%` }}
                       />
                     </div>
                     <span className="progress-vbar__label">{day.short}</span>
@@ -553,7 +553,7 @@ export function LearningAnalyticsView({
                     <div className="progress-hbar__track" aria-hidden="true">
                       <div
                         className="progress-hbar__fill"
-                        style={{ width: `${widthPct}%` }}
+                        style={{ '--value': `${widthPct}%` }}
                       />
                     </div>
                   </div>
@@ -676,7 +676,7 @@ export function LearningAnalyticsView({
               <div className="progress-level-bar" aria-hidden="true">
                 <div
                   className="progress-level-bar__fill"
-                  style={{ width: `${lvl.pct}%` }}
+                  style={{ '--value': `${lvl.pct}%` }}
                 />
               </div>
 

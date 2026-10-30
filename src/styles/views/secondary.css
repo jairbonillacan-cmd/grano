@@ -1831,3 +1831,11 @@
     min-width: 0;
   }
 }
+
+.progress-vbar__fill {
+  height: var(--value, 0%);
+}
+.progress-hbar__fill,
+.progress-level-bar__fill {
+  width: var(--value, 0%);
+}

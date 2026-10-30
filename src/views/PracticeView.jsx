@@ -197,12 +197,12 @@ export function PracticeView({ initialLessonId = null, onSelectLesson = null }) 
                       }}
                       data-testid={`exercise-item-${lesson.id}`}
                     >
-                      <div className="practice-exercise-item-meta" style={{ color: 'var(--text-2)' }}>
+                      <div className="practice-exercise-item-meta">
                         <span>
                           L{idx + 1} · {isSql ? 'SQL DuckDB' : 'Código'}
                         </span>
                         {isSolved && (
-                          <span style={{ color: 'var(--ok)', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <span className="practice-solved-pill">
                             <CheckCircle2 size={12} />
                             Resuelto
                           </span>
@@ -238,9 +238,9 @@ export function PracticeView({ initialLessonId = null, onSelectLesson = null }) 
           )}
 
           <section className="practice-panel-card" aria-label="Esquema Mercado Brisa">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div className="practice-panel-header-row">
               <h2 className="practice-panel-heading">
-                <Database size={13} style={{ verticalAlign: 'text-bottom', marginRight: '0.375rem' }} />
+                <Database size={13} className="sql-inline-icon" />
                 Esquema Mercado Brisa (13 tablas)
               </h2>
             </div>
@@ -258,13 +258,13 @@ export function PracticeView({ initialLessonId = null, onSelectLesson = null }) 
                     >
                       <span>
                         {isOpen ? (
-                          <ChevronDown size={13} style={{ verticalAlign: 'middle', marginRight: '0.25rem' }} />
+                          <ChevronDown size={13} className="sql-inline-chevron" />
                         ) : (
-                          <ChevronRight size={13} style={{ verticalAlign: 'middle', marginRight: '0.25rem' }} />
+                          <ChevronRight size={13} className="sql-inline-chevron" />
                         )}
                         {tbl.name}
                       </span>
-                      <span className="schema-table-rows-badge" style={{ color: 'var(--text-2)' }}>
+                      <span className="schema-table-rows-badge">
                         {tbl.rowCount.toLocaleString('es-ES')} filas
                       </span>
                     </button>

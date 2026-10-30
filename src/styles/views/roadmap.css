@@ -760,3 +760,7 @@ button.roadmap-lesson-row.is-existing:focus-visible {
     padding-left: 2rem;
   }
 }
+
+.roadmap-progress-strip__fill {
+  width: var(--value, 0%);
+}

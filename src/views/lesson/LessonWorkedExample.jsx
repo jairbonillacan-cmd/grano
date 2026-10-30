@@ -45,7 +45,7 @@ export function ExpectedOutputTable({ expectedOutput, keyPrefix = 'out' }) {
     <div className="lp-output-block">
       <div className="lp-output-block__head">
         <span className="lp-output-block__label">Resultado en motor SQL</span>
-        <span className="lp-output-block__meta tabular" style={{ color: 'var(--text-2)' }}>
+        <span className="lp-output-block__meta tabular">
           {rows.length} {rows.length === 1 ? 'fila' : 'filas'}
         </span>
       </div>
@@ -264,7 +264,7 @@ export function LessonWorkedExample({ workedExample, onAskTutor }) {
           <div className="lp-code-example">
             <div className="lp-code-example__bar">
               <span className="lp-code-example__lang">SQL</span>
-              <span className="lp-code-example__step-tag tabular" style={{ color: 'var(--text-2)' }}>
+              <span className="lp-code-example__step-tag tabular">
                 Paso {safeIdx + 1} de {steps.length}
               </span>
             </div>

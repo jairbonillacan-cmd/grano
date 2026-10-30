@@ -396,7 +396,7 @@ export function CapstoneProjectsView({
 
         <div className="project-card__specs">
           <div className="project-spec-block">
-            <span className="project-spec-block__label" style={{ color: 'var(--text-2)' }}>
+            <span className="project-spec-block__label">
               <Database size={13} aria-hidden="true" />
               <span>Tablas de Mercado Brisa</span>
             </span>
@@ -410,7 +410,7 @@ export function CapstoneProjectsView({
           </div>
 
           <div className="project-spec-block">
-            <span className="project-spec-block__label" style={{ color: 'var(--text-2)' }}>
+            <span className="project-spec-block__label">
               <FileCode2 size={13} aria-hidden="true" />
               <span>Entregable esperado</span>
             </span>

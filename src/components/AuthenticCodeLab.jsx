@@ -247,15 +247,7 @@ export function AuthenticCodeLab({
 
       {activeBlank && (
         <div className="code-token-bank" data-testid="blank-token-bank">
-          <span
-            style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: 'var(--fs-1)',
-              color: 'var(--ink-2)',
-              alignSelf: 'center',
-              marginRight: 'var(--sp-2)',
-            }}
-          >
+          <span className="code-token-bank__label">
             Opciones para {activeBlank.id.replace('blank_', 'hueco ')}:
           </span>
           {(activeBlank.options || []).map((opt) => (
@@ -276,7 +268,7 @@ export function AuthenticCodeLab({
         <div className="sql-lab-actions-left">
           <button
             type="button"
-            className="sql-btn sql-btn-primary" style={{ backgroundColor: '#9a3412', color: '#ffffff' }}
+            className="sql-btn sql-btn-primary"
             onClick={handleVerifyBlanks}
             data-testid="verify-blanks-btn"
           >

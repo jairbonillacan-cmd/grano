@@ -420,7 +420,7 @@ export function RoadmapView({
           >
             <div
               className="roadmap-progress-strip__fill"
-              style={{ width: `${routeStats.pct}%` }}
+              style={{ '--value': `${routeStats.pct}%` }}
             />
           </div>
         </div>
@@ -567,7 +567,7 @@ export function RoadmapView({
                             {mod.estimatedMinutes} min
                           </span>
                           <span
-                            className={`roadmap-status-badge roadmap-status-badge--${mod.moduleStatus}`} style={mod.moduleStatus === 'pending' ? { color: 'var(--text-2)' } : undefined}
+                            className={`roadmap-status-badge roadmap-status-badge--${mod.moduleStatus}`}
                           >
                             {statusLabel}
                           </span>
@@ -696,7 +696,7 @@ export function RoadmapView({
                                           {lesson.minutes} min
                                         </span>
                                         <span
-                                          className={`roadmap-status-badge roadmap-status-badge--${lesson.computedStatus}`} style={lesson.computedStatus === 'pending' ? { color: 'var(--text-2)' } : undefined}
+                                          className={`roadmap-status-badge roadmap-status-badge--${lesson.computedStatus}`}
                                         >
                                           {lessonStatusLabel}
                                         </span>

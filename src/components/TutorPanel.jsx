@@ -828,7 +828,7 @@ export function TutorPanel({
               title={`Modelo rápido: ${fastModelId}`}
             >
               <span>Rápido</span>
-              <span className="tutor-model-segmented__id tabular" style={{ color: 'var(--text-2)' }}>Flash</span>
+              <span className="tutor-model-segmented__id tabular">Flash</span>
             </button>
             <button
               type="button"
@@ -840,7 +840,7 @@ export function TutorPanel({
               title={`Modelo profundo: ${deepModelId}`}
             >
               <span>Profundo</span>
-              <span className="tutor-model-segmented__id tabular" style={{ color: 'var(--text-2)' }}>Argon</span>
+              <span className="tutor-model-segmented__id tabular">Argon</span>
             </button>
           </div>
 

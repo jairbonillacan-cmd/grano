@@ -671,9 +671,9 @@ export function LessonPlayer({
                 </span>
                 <span className="lp-syllabus-link__label">{item.label}</span>
                 {item.meta ? (
-                  <span className="lp-syllabus-link__meta tabular" style={{ color: 'var(--text-2)' }}>{item.meta}</span>
+                  <span className="lp-syllabus-link__meta tabular">{item.meta}</span>
                 ) : item.hasInteractive ? (
-                  <span className="lp-syllabus-link__tag" style={{ color: 'var(--text-2)' }}>Lab</span>
+                  <span className="lp-syllabus-link__tag">Lab</span>
                 ) : null}
               </button>
             </li>

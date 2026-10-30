@@ -55,7 +55,7 @@ export function ProgressBar({
       <div className="ui-progress__track">
         <div
           className="ui-progress__fill ui-progress-bar__fill"
-          style={{ width: `${pct}%`, '--value': `${pct}%` }}
+          style={{ '--value': `${pct}%` }}
         />
       </div>
     </div>

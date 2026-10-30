@@ -549,3 +549,7 @@
     display: none;
   }
 }
+
+.home-week-cell__swatch {
+  background-color: var(--cell-bg, var(--sunken));
+}

@@ -549,7 +549,7 @@ export function HomeView({
                         className="home-next-row__btn"
                         onClick={() => onOpenLesson?.(lesson.stageId, lesson.id)}
                       >
-                        <span className="home-next-row__code tabular" style={{ color: 'var(--text-2)' }}>
+                        <span className="home-next-row__code tabular">
                           L{String(lesson.order).padStart(2, '0')}
                         </span>
                         <span className="home-next-row__main">
@@ -618,7 +618,7 @@ export function HomeView({
                     <span className="home-week-cell__day">{day.short}</span>
                     <span
                       className="home-week-cell__swatch"
-                      style={{ backgroundColor: cellBg }}
+                      style={{ '--cell-bg': cellBg }}
                       aria-hidden="true"
                     />
                     <span className="home-week-cell__mins tabular">

@@ -424,7 +424,7 @@ export function GlossaryAndGraphView({ onOpenLesson }) {
                     >
                       <div className="glossary-list__top">
                         <span className="glossary-list__term">{item.term}</span>
-                        <span className="glossary-list__badge tabular" style={{ color: 'var(--text-2)' }}>
+                        <span className="glossary-list__badge tabular">
                           {item.lessonCount}{' '}
                           {item.lessonCount === 1 ? 'lección' : 'lecciones'}
                         </span>

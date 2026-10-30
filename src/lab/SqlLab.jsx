@@ -272,7 +272,7 @@ export function SqlLab({
                 : 'Preparando el motor SQL…'}
             </span>
           )}
-          {engineState.status === 'idle' && <span style={{ color: 'var(--text-2)' }}>Motor SQL en espera</span>}
+          {engineState.status === 'idle' && <span>Motor SQL en espera</span>}
           {engineState.status === 'error' && <span>Error al iniciar DuckDB</span>}
         </div>
       </header>
@@ -288,14 +288,14 @@ export function SqlLab({
         <div className="sql-lab-actions-left">
           <button
             type="button"
-            className="sql-btn sql-btn-primary" style={{ backgroundColor: '#9a3412', color: '#ffffff' }}
+            className="sql-btn sql-btn-primary"
             onClick={() => handleExecute(code)}
             disabled={isRunning}
             data-testid="sql-run-btn"
           >
             <Play size={14} />
             <span>Ejecutar consulta</span>
-            <kbd className="sql-kbd-hint" style={{ backgroundColor: 'rgba(0, 0, 0, 0.28)', color: '#ffffff' }}>Ctrl+Enter</kbd>
+            <kbd className="sql-kbd-hint">Ctrl+Enter</kbd>
           </button>
 
           {hasGradingTarget && (
@@ -395,7 +395,7 @@ export function SqlLab({
         <div className="sql-error-box" role="alert" data-testid="sql-error-box">
           <div className="sql-error-header">
             <span>
-              <AlertTriangle size={14} style={{ verticalAlign: 'text-bottom', marginRight: '0.375rem' }} />
+              <AlertTriangle size={14} className="sql-inline-icon" />
               Error de ejecución en DuckDB
             </span>
           </div>
@@ -499,7 +499,7 @@ export function SqlLab({
                   <tr>
                     <td
                       colSpan={Math.max(1, queryResult.columns.length)}
-                      style={{ textAlign: 'center', padding: 'var(--sp-4)', color: 'var(--ink-3)' }}
+                      className="sql-empty-cell"
                     >
                       La consulta se ejecutó sin errores pero devolvió 0 filas.
                     </td>

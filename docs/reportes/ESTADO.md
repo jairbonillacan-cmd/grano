@@ -52,5 +52,5 @@
 | Fase 3 (Cierre) | `E1` · Editor de estilo y glosario global | `ebf9dc05-f99e-40af-96eb-cbed59be44c6` | Fusionada (`E1.md` D.3 OK) | `fb268a3` | Ninguno |
 | Fase 4 | `Q1` · Pruebas automatizadas | `66eb6319-9886-4f2d-ac19-44224b817a8d` | Fusionada (`Q1.md` D.3 OK) | `bdea13a` | Ninguno |
 | Fase 4 | `Q2` · Accesibilidad y rendimiento | `2dddc770-3673-4519-a545-30376ee68e78` | Fusionada (`Q2.md` D.3 OK) | `49e97b8` | Ninguno |
-| Fase 4 | `Q3` · Revisión visual y pulido | `1f3892c6-3cbe-4010-863a-fe292a77e668` | En curso (`../ING-Q3`) | — | Auditoría D.3 |
-| Fase 4 | `FINAL` · Cierre y recorrido manual | Orquestador | Pendiente (`Q1`–`Q3`) | — | Espera fusión `Q1`–`Q3` |
+| Fase 4 | `Q3` · Revisión visual y pulido | `1f3892c6-3cbe-4010-863a-fe292a77e668` | Fusionada (`Q3.md` D.3 OK) | `7c7c1ee` | Ninguno |
+| Fase 4 | `FINAL` · Cierre y recorrido manual (`v2.0.0-grano`) | Orquestador | Completada (`FINAL.md` D.3 OK) | `main` (`v2.0.0-grano`) | Ninguno |
