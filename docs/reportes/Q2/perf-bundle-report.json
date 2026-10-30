@@ -1,0 +1,421 @@
+{
+  "generatedAt": "2026-10-30T16:33:56.930Z",
+  "bundle": {
+    "baselineEntry": {
+      "entryFile": "dist/assets/index-BRXuSryY.js",
+      "rawBytes": 4627190,
+      "rawKB": 4627.19,
+      "gzipBytes": 1253590,
+      "gzipKB": 1253.59
+    },
+    "optimizedEntry": {
+      "file": "dist/assets/index-D9mQZJJz.js",
+      "name": "index-D9mQZJJz.js",
+      "ext": ".js",
+      "rawBytes": 455541,
+      "rawKB": 455.54,
+      "gzipBytes": 132520,
+      "gzipKB": 132.52
+    },
+    "entryUnder250KBGzip": true,
+    "duckdbExcludedFromEntry": true,
+    "reductionGzipPercent": 89.43,
+    "totalJsChunks": 25,
+    "jsChunksOver500KBRaw": [
+      {
+        "file": "dist/assets/data-lessons-tier4-CuzXatCG.js",
+        "name": "data-lessons-tier4-CuzXatCG.js",
+        "ext": ".js",
+        "rawBytes": 816427,
+        "rawKB": 816.43,
+        "gzipBytes": 210755,
+        "gzipKB": 210.75
+      },
+      {
+        "file": "dist/assets/vendor-libs-DhVyzSjz.js",
+        "name": "vendor-libs-DhVyzSjz.js",
+        "ext": ".js",
+        "rawBytes": 662179,
+        "rawKB": 662.18,
+        "gzipBytes": 196159,
+        "gzipKB": 196.16
+      },
+      {
+        "file": "dist/assets/data-lessons-tier3-CVQqiWzK.js",
+        "name": "data-lessons-tier3-CVQqiWzK.js",
+        "ext": ".js",
+        "rawBytes": 657626,
+        "rawKB": 657.63,
+        "gzipBytes": 172468,
+        "gzipKB": 172.47
+      },
+      {
+        "file": "dist/assets/data-lessons-c1-C4T4EML2.js",
+        "name": "data-lessons-c1-C4T4EML2.js",
+        "ext": ".js",
+        "rawBytes": 512865,
+        "rawKB": 512.87,
+        "gzipBytes": 138566,
+        "gzipKB": 138.57
+      },
+      {
+        "file": "dist/assets/data-lessons-da2-bi2-CjbDi9PE.js",
+        "name": "data-lessons-da2-bi2-CjbDi9PE.js",
+        "ext": ".js",
+        "rawBytes": 524746,
+        "rawKB": 524.75,
+        "gzipBytes": 133761,
+        "gzipKB": 133.76
+      }
+    ],
+    "jsChunks": [
+      {
+        "file": "dist/assets/data-lessons-tier4-CuzXatCG.js",
+        "name": "data-lessons-tier4-CuzXatCG.js",
+        "ext": ".js",
+        "rawBytes": 816427,
+        "rawKB": 816.43,
+        "gzipBytes": 210755,
+        "gzipKB": 210.75
+      },
+      {
+        "file": "dist/assets/vendor-libs-DhVyzSjz.js",
+        "name": "vendor-libs-DhVyzSjz.js",
+        "ext": ".js",
+        "rawBytes": 662179,
+        "rawKB": 662.18,
+        "gzipBytes": 196159,
+        "gzipKB": 196.16
+      },
+      {
+        "file": "dist/assets/duckdb-browser-mvp.worker-BEKIasyR.js",
+        "name": "duckdb-browser-mvp.worker-BEKIasyR.js",
+        "ext": ".js",
+        "rawBytes": 839642,
+        "rawKB": 839.64,
+        "gzipBytes": 193871,
+        "gzipKB": 193.87
+      },
+      {
+        "file": "dist/assets/duckdb-browser-eh.worker-CwdVMcbT.js",
+        "name": "duckdb-browser-eh.worker-CwdVMcbT.js",
+        "ext": ".js",
+        "rawBytes": 773223,
+        "rawKB": 773.22,
+        "gzipBytes": 188713,
+        "gzipKB": 188.71
+      },
+      {
+        "file": "dist/assets/data-lessons-tier3-CVQqiWzK.js",
+        "name": "data-lessons-tier3-CVQqiWzK.js",
+        "ext": ".js",
+        "rawBytes": 657626,
+        "rawKB": 657.63,
+        "gzipBytes": 172468,
+        "gzipKB": 172.47
+      },
+      {
+        "file": "dist/assets/data-lessons-c1-C4T4EML2.js",
+        "name": "data-lessons-c1-C4T4EML2.js",
+        "ext": ".js",
+        "rawBytes": 512865,
+        "rawKB": 512.87,
+        "gzipBytes": 138566,
+        "gzipKB": 138.57
+      },
+      {
+        "file": "dist/assets/data-lessons-da2-bi2-CjbDi9PE.js",
+        "name": "data-lessons-da2-bi2-CjbDi9PE.js",
+        "ext": ".js",
+        "rawBytes": 524746,
+        "rawKB": 524.75,
+        "gzipBytes": 133761,
+        "gzipKB": 133.76
+      },
+      {
+        "file": "dist/assets/index-D9mQZJJz.js",
+        "name": "index-D9mQZJJz.js",
+        "ext": ".js",
+        "rawBytes": 455541,
+        "rawKB": 455.54,
+        "gzipBytes": 132520,
+        "gzipKB": 132.52
+      },
+      {
+        "file": "dist/assets/data-lessons-c2-de2-DnNnkSAR.js",
+        "name": "data-lessons-c2-de2-DnNnkSAR.js",
+        "ext": ".js",
+        "rawBytes": 478504,
+        "rawKB": 478.5,
+        "gzipBytes": 127741,
+        "gzipKB": 127.74
+      },
+      {
+        "file": "dist/assets/data-glossary-C0t-idug.js",
+        "name": "data-glossary-C0t-idug.js",
+        "ext": ".js",
+        "rawBytes": 376515,
+        "rawKB": 376.51,
+        "gzipBytes": 112511,
+        "gzipKB": 112.51
+      },
+      {
+        "file": "dist/assets/data-lessons-c0-Bd7bbl_p.js",
+        "name": "data-lessons-c0-Bd7bbl_p.js",
+        "ext": ".js",
+        "rawBytes": 389732,
+        "rawKB": 389.73,
+        "gzipBytes": 110894,
+        "gzipKB": 110.89
+      },
+      {
+        "file": "dist/assets/curriculum-stages-ipPFzs71.js",
+        "name": "curriculum-stages-ipPFzs71.js",
+        "ext": ".js",
+        "rawBytes": 277298,
+        "rawKB": 277.3,
+        "gzipBytes": 91131,
+        "gzipKB": 91.13
+      },
+      {
+        "file": "dist/assets/data-flashcards-DeNxmlAF.js",
+        "name": "data-flashcards-DeNxmlAF.js",
+        "ext": ".js",
+        "rawBytes": 276990,
+        "rawKB": 276.99,
+        "gzipBytes": 77618,
+        "gzipKB": 77.62
+      },
+      {
+        "file": "dist/assets/vendor-react-Bg9W9dCp.js",
+        "name": "vendor-react-Bg9W9dCp.js",
+        "ext": ".js",
+        "rawBytes": 223175,
+        "rawKB": 223.18,
+        "gzipBytes": 69070,
+        "gzipKB": 69.07
+      },
+      {
+        "file": "dist/assets/visualizers-DMgglNrG.js",
+        "name": "visualizers-DMgglNrG.js",
+        "ext": ".js",
+        "rawBytes": 86434,
+        "rawKB": 86.43,
+        "gzipBytes": 24027,
+        "gzipKB": 24.03
+      },
+      {
+        "file": "dist/assets/data-catalog-DyE6_eGf.js",
+        "name": "data-catalog-DyE6_eGf.js",
+        "ext": ".js",
+        "rawBytes": 42173,
+        "rawKB": 42.17,
+        "gzipBytes": 14430,
+        "gzipKB": 14.43
+      },
+      {
+        "file": "dist/assets/SqlLab-DgaX4402.js",
+        "name": "SqlLab-DgaX4402.js",
+        "ext": ".js",
+        "rawBytes": 27305,
+        "rawKB": 27.3,
+        "gzipBytes": 8752,
+        "gzipKB": 8.75
+      },
+      {
+        "file": "dist/assets/duckdb-browser-8zDNZzJQ.js",
+        "name": "duckdb-browser-8zDNZzJQ.js",
+        "ext": ".js",
+        "rawBytes": 27413,
+        "rawKB": 27.41,
+        "gzipBytes": 7013,
+        "gzipKB": 7.01
+      },
+      {
+        "file": "dist/assets/vendor-icons-BGmmCSPL.js",
+        "name": "vendor-icons-BGmmCSPL.js",
+        "ext": ".js",
+        "rawBytes": 30906,
+        "rawKB": 30.91,
+        "gzipBytes": 6807,
+        "gzipKB": 6.81
+      },
+      {
+        "file": "dist/assets/PracticeView-jH81LSru.js",
+        "name": "PracticeView-jH81LSru.js",
+        "ext": ".js",
+        "rawBytes": 8739,
+        "rawKB": 8.74,
+        "gzipBytes": 3015,
+        "gzipKB": 3.02
+      },
+      {
+        "file": "dist/assets/data-lessons-index-DfKLb830.js",
+        "name": "data-lessons-index-DfKLb830.js",
+        "ext": ".js",
+        "rawBytes": 4556,
+        "rawKB": 4.56,
+        "gzipBytes": 2145,
+        "gzipKB": 2.15
+      },
+      {
+        "file": "dist/assets/duckdb-browser-mvp.worker-OVGk25oM.js",
+        "name": "duckdb-browser-mvp.worker-OVGk25oM.js",
+        "ext": ".js",
+        "rawBytes": 78,
+        "rawKB": 0.08,
+        "gzipBytes": 98,
+        "gzipKB": 0.1
+      },
+      {
+        "file": "dist/assets/duckdb-browser-eh.worker-uihJacP0.js",
+        "name": "duckdb-browser-eh.worker-uihJacP0.js",
+        "ext": ".js",
+        "rawBytes": 77,
+        "rawKB": 0.08,
+        "gzipBytes": 97,
+        "gzipKB": 0.1
+      },
+      {
+        "file": "dist/assets/duckdb-mvp-C1nnjKAv.js",
+        "name": "duckdb-mvp-C1nnjKAv.js",
+        "ext": ".js",
+        "rawBytes": 65,
+        "rawKB": 0.07,
+        "gzipBytes": 85,
+        "gzipKB": 0.09
+      },
+      {
+        "file": "dist/assets/duckdb-eh-D4sWbnDL.js",
+        "name": "duckdb-eh-D4sWbnDL.js",
+        "ext": ".js",
+        "rawBytes": 64,
+        "rawKB": 0.06,
+        "gzipBytes": 84,
+        "gzipKB": 0.08
+      }
+    ],
+    "cssAssets": [
+      {
+        "file": "dist/assets/index-usXKYlfg.css",
+        "name": "index-usXKYlfg.css",
+        "ext": ".css",
+        "rawBytes": 236598,
+        "rawKB": 236.6,
+        "gzipBytes": 31752,
+        "gzipKB": 31.75
+      }
+    ],
+    "wasmAssets": [
+      {
+        "file": "dist/assets/duckdb-mvp-DQDXaYzB.wasm",
+        "name": "duckdb-mvp-DQDXaYzB.wasm",
+        "ext": ".wasm",
+        "rawBytes": 41325187,
+        "rawKB": 41325.19,
+        "gzipBytes": 9215786,
+        "gzipKB": 9215.79
+      },
+      {
+        "file": "dist/assets/duckdb-eh-CfdE9-rk.wasm",
+        "name": "duckdb-eh-CfdE9-rk.wasm",
+        "ext": ".wasm",
+        "rawBytes": 35913747,
+        "rawKB": 35913.75,
+        "gzipBytes": 8090177,
+        "gzipKB": 8090.18
+      }
+    ]
+  },
+  "runtimeViews": [
+    {
+      "view": "home",
+      "label": "Hoy",
+      "metrics": {
+        "ttfbMs": 9.9,
+        "fcpMs": 628,
+        "lcpMs": 628,
+        "cls": 0.0066,
+        "tbtMs": 0,
+        "domContentLoadedMs": 424.6,
+        "loadEventMs": 425.6,
+        "jsRequestsCount": 16
+      },
+      "scores": {
+        "performance": 99,
+        "accessibility": 100,
+        "bestPractices": 100
+      },
+      "diagnostics": {
+        "consoleErrors": [],
+        "pageErrors": [],
+        "failedResponses": [],
+        "hasDoctype": true,
+        "hasCharset": true,
+        "allowsZoom": true
+      }
+    },
+    {
+      "view": "roadmap",
+      "label": "Ruta",
+      "metrics": {
+        "ttfbMs": 2.1,
+        "fcpMs": 472,
+        "lcpMs": 472,
+        "cls": 0.011,
+        "tbtMs": 0,
+        "domContentLoadedMs": 230.1,
+        "loadEventMs": 230.6,
+        "jsRequestsCount": 16
+      },
+      "scores": {
+        "performance": 99,
+        "accessibility": 100,
+        "bestPractices": 100
+      },
+      "diagnostics": {
+        "consoleErrors": [],
+        "pageErrors": [],
+        "failedResponses": [],
+        "hasDoctype": true,
+        "hasCharset": true,
+        "allowsZoom": true
+      }
+    },
+    {
+      "view": "lesson",
+      "label": "Lección",
+      "metrics": {
+        "ttfbMs": 2.4,
+        "fcpMs": 836,
+        "lcpMs": 836,
+        "cls": 0.0592,
+        "tbtMs": 6,
+        "domContentLoadedMs": 338.3,
+        "loadEventMs": 339,
+        "jsRequestsCount": 23
+      },
+      "scores": {
+        "performance": 97,
+        "accessibility": 100,
+        "bestPractices": 100
+      },
+      "diagnostics": {
+        "consoleErrors": [],
+        "pageErrors": [],
+        "failedResponses": [],
+        "hasDoctype": true,
+        "hasCharset": true,
+        "allowsZoom": true
+      }
+    }
+  ],
+  "summary": {
+    "entryUnder250KBGzip": true,
+    "duckdbExcludedFromEntry": true,
+    "allViewsLcpUnder1500ms": true,
+    "allViewsPerfOver90": true,
+    "allViewsA11yOver95": true,
+    "allViewsBestPracticesOver95": true
+  }
+}

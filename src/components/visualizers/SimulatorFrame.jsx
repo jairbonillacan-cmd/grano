@@ -118,7 +118,7 @@ export function SimSegmented({
             key={String(opt.value)}
             type="button"
             aria-pressed={isActive}
-            className={`sim-segmented__btn ${activeClass}`.trim()}
+            className={`sim-segmented__btn ${activeClass}`.trim()} style={isActive ? { backgroundColor: 'var(--surface-1)', color: 'var(--text-1)', borderColor: 'var(--accent)', fontWeight: 600 } : undefined}
             onClick={() => onChange(opt.value)}
             onKeyDown={(e) => handleKeyDown(e, idx)}
           >

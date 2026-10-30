@@ -125,7 +125,7 @@ export function PipelineOrderChallenge({ lessonId = null, challenge, onComplete 
         <div className="sql-lab-actions-left">
           <button
             type="button"
-            className="sql-btn sql-btn-primary"
+            className="sql-btn sql-btn-primary" style={{ backgroundColor: '#9a3412', color: '#ffffff' }}
             onClick={handleCheckOrder}
             data-testid="verify-order-btn"
           >

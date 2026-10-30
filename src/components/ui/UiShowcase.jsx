@@ -161,7 +161,7 @@ export function UiShowcase() {
         </div>
       </header>
 
-      <div className="ui-showcase__grid">
+      <main className="ui-showcase__grid" aria-label="Catálogo de componentes">
         <Card
           title="1. Button e IconButton"
           subtitle="5 variantes, 3 tamaños (28/34/40px) y estado loading sin alterar el ancho"
@@ -221,7 +221,7 @@ export function UiShowcase() {
             </div>
 
             <div className="ui-showcase__row">
-              <span className="ui-showcase__inline-label">IconButton (siempre con Tooltip):</span>
+              <span className="ui-showcase__inline-label" style={{ color: 'var(--text-2)' }}>IconButton (siempre con Tooltip):</span>
               <IconButton
                 size="sm"
                 variant="ghost"
@@ -301,15 +301,15 @@ export function UiShowcase() {
             </div>
 
             <div className="ui-showcase__row">
-              <span className="ui-showcase__inline-label">Atajos de teclado:</span>
+              <span className="ui-showcase__inline-label" style={{ color: 'var(--text-2)' }}>Atajos de teclado:</span>
               <Kbd>Ctrl</Kbd>
               <span>+</span>
               <Kbd>Enter</Kbd>
-              <span className="ui-showcase__inline-label">Paleta:</span>
+              <span className="ui-showcase__inline-label" style={{ color: 'var(--text-2)' }}>Paleta:</span>
               <Kbd>Ctrl</Kbd>
               <span>+</span>
               <Kbd>K</Kbd>
-              <span className="ui-showcase__inline-label">Cerrar:</span>
+              <span className="ui-showcase__inline-label" style={{ color: 'var(--text-2)' }}>Cerrar:</span>
               <Kbd>Esc</Kbd>
               <Tooltip content="Foco visible con anillo de 2px y cierre mediante Escape">
                 <Button size="sm" variant="ghost">
@@ -320,11 +320,11 @@ export function UiShowcase() {
 
             <div className="ui-showcase__skeleton-demo">
               <div className="ui-showcase__skeleton-col">
-                <span className="ui-showcase__inline-label">Vista inmediata (muestra):</span>
+                <span className="ui-showcase__inline-label" style={{ color: 'var(--text-2)' }}>Vista inmediata (muestra):</span>
                 <Skeleton immediate lines={2} />
               </div>
               <div className="ui-showcase__skeleton-col" key={skeletonCycle}>
-                <span className="ui-showcase__inline-label">Diferido (delayMs = 300):</span>
+                <span className="ui-showcase__inline-label" style={{ color: 'var(--text-2)' }}>Diferido (delayMs = 300):</span>
                 <Skeleton delayMs={300} lines={2} />
               </div>
             </div>
@@ -365,7 +365,7 @@ export function UiShowcase() {
             </div>
 
             <div className="ui-showcase__row">
-              <span className="ui-showcase__inline-label">Segmented (radiogroup):</span>
+              <span className="ui-showcase__inline-label" style={{ color: 'var(--text-2)' }}>Segmented (radiogroup):</span>
               <Segmented
                 ariaLabel="Granularidad temporal"
                 value={activeSegment}
@@ -613,7 +613,7 @@ export function UiShowcase() {
             </div>
           </div>
         </Card>
-      </div>
+      </main>
 
       <Dialog
         open={dialogOpen}

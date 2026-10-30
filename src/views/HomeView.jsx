@@ -549,7 +549,7 @@ export function HomeView({
                         className="home-next-row__btn"
                         onClick={() => onOpenLesson?.(lesson.stageId, lesson.id)}
                       >
-                        <span className="home-next-row__code tabular">
+                        <span className="home-next-row__code tabular" style={{ color: 'var(--text-2)' }}>
                           L{String(lesson.order).padStart(2, '0')}
                         </span>
                         <span className="home-next-row__main">

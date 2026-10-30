@@ -410,21 +410,21 @@ export function GlossaryAndGraphView({ onOpenLesson }) {
             className="glossary-list-pane"
             aria-label="Índice alfabético de términos"
           >
-            <ul className="glossary-list" role="listbox" aria-label="Términos del glosario">
+            <ul className="glossary-list" aria-label="Términos del glosario">
               {filteredTerms.map((item) => {
                 const isSelected = activeTerm?.id === item.id;
                 return (
-                  <li key={item.id} className="glossary-list__li" role="option" aria-selected={isSelected}>
+                  <li key={item.id} className="glossary-list__li">
                     <button
                       type="button"
                       className={`glossary-list__item ${
                         isSelected ? 'is-active' : ''
                       }`.trim()}
-                      onClick={() => setSelectedId(item.id)}
+                      onClick={() => setSelectedId(item.id)} aria-pressed={isSelected}
                     >
                       <div className="glossary-list__top">
                         <span className="glossary-list__term">{item.term}</span>
-                        <span className="glossary-list__badge tabular">
+                        <span className="glossary-list__badge tabular" style={{ color: 'var(--text-2)' }}>
                           {item.lessonCount}{' '}
                           {item.lessonCount === 1 ? 'lección' : 'lecciones'}
                         </span>
@@ -493,7 +493,7 @@ export function GlossaryAndGraphView({ onOpenLesson }) {
                 <h3 className="glossary-detail__label">
                   Ejemplo de código y sintaxis
                 </h3>
-                <pre className="glossary-code-block">
+                <pre className="glossary-code-block" tabIndex={0} aria-label="Ejemplo de código y sintaxis">
                   <code>{activeTerm.codeExample}</code>
                 </pre>
               </section>
