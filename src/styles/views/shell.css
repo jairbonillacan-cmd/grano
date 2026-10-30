@@ -223,7 +223,15 @@
   padding: 0 var(--sp-2);
 }
 
-.app-topbar__right .ui-menu { min-width: 16rem; white-space: nowrap; }
+.app-topbar__right .ui-menu {
+  min-width: 0;
+}
+
+.app-topbar__right .ui-menu__popover {
+  min-width: 15.5rem;
+  white-space: nowrap;
+}
+
 .app-topbar__user-label {
   font-size: var(--fs-2);
   font-weight: 500;
@@ -401,17 +409,17 @@
   position: absolute;
   top: 0.0625rem;
   right: 0.0625rem;
-  right: 0.0625rem;
   min-width: 1rem;
   height: 1rem;
   padding: 0 0.1875rem;
   border-radius: 999px;
   background-color: var(--brand);
   color: var(--surface);
+  border: 1px solid var(--surface);
   font-family: var(--font-mono);
   font-size: 0.625rem;
   font-weight: 600;
-  line-height: 1rem;
+  line-height: 0.875rem;
   text-align: center;
 }
 
@@ -999,8 +1007,16 @@
     display: none;
   }
 
-  .app-topbar__right .ui-menu { min-width: 16rem; white-space: nowrap; }
-.app-topbar__user-label {
+  .app-topbar__right .ui-menu {
+    min-width: 0;
+  }
+
+  .app-topbar__right .ui-menu__popover {
+    min-width: 15.5rem;
+    white-space: nowrap;
+  }
+
+  .app-topbar__user-label {
     display: none;
   }
 
@@ -1167,5 +1183,15 @@
 
   .app-topbar__search-placeholder {
     display: none;
+  }
+
+  .app-topbar__ai-label {
+    display: none;
+  }
+
+  .app-topbar__ai-status {
+    width: var(--btn-h-sm, 1.75rem);
+    justify-content: center;
+    padding: 0;
   }
 }
