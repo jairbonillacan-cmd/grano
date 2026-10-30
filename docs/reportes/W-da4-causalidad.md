@@ -139,19 +139,19 @@
   - Ejecuté `check-content.mjs`, `check-copy.mjs`, la verificación de prácticas en DuckDB, la prueba real del tutor `agy` (`buildContextPrompt` + `runAgyPrompt`), las capturas en Playwright sobre Vite en el puerto `5228`, la inspección visual con `read_file` y el build de producción (`npm run build`).
   - Evalué cada lección con las dos rúbricas de 8 criterios (0–4): §9.2 (calidad pedagógica y técnica) y §9.4 (integración con la plataforma).
 
-#### Tabla de autoevaluación §9.2 — Calidad pedagógica y técnica (escala 0–4, mínimo 28/32 y ningún criterio < 3)
+#### Tabla resumen §9.2 (`lección | palabras | checks | prácticas | fuentes | puntuación de rúbrica`)
 
-| Lección | 1. Claridad del gancho (`hook`) | 2. Rigor conceptual y fuentes | 3. Progresión de secciones | 4. Calidad de ejemplos SQL | 5. Caso guiado (`workedExample`) | 6. Comprobaciones (`checks`) | 7. Práctica aplicada (`practice`) | 8. Notas por rol y síntesis | **Total (/32)** |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| `da4-causalidad-01-diferencias-en-diferencias-did` | 4 | 4 | 4 | 4 | 4 | 4 | 4 | 4 | **32 / 32** |
-| `da4-causalidad-02-regresion-discontinua-rdd` | 4 | 4 | 4 | 4 | 4 | 4 | 4 | 4 | **32 / 32** |
-| `da4-causalidad-03-control-sintetico-emparejamiento` | 4 | 4 | 4 | 4 | 4 | 4 | 4 | 4 | **32 / 32** |
-| `da4-causalidad-04-memo-analitico-supuestos` | 4 | 4 | 4 | 4 | 4 | 4 | 4 | 4 | **32 / 32** |
-| `da4-causalidad-05-presentacion-direccion-decisiones` | 4 | 4 | 4 | 4 | 4 | 4 | 4 | 4 | **32 / 32** |
+| lección | palabras | checks | prácticas | fuentes | puntuación de rúbrica |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| `da4-causalidad-01-diferencias-en-diferencias-did` | 1482 | 4 (`mcq`, `predict-output`) | 1 (`sql`, 2 filas) | 4 | **32 / 32** |
+| `da4-causalidad-02-regresion-discontinua-rdd` | 1557 | 4 (`mcq`, `predict-output`) | 1 (`sql`, 2 filas) | 4 | **32 / 32** |
+| `da4-causalidad-03-control-sintetico-emparejamiento` | 1449 | 4 (`mcq`, `predict-output`) | 1 (`sql`, 5 filas) | 4 | **32 / 32** |
+| `da4-causalidad-04-memo-analitico-supuestos` | 1361 | 4 (`mcq`, `predict-output`) | 1 (`sql`, 6 filas) | 4 | **32 / 32** |
+| `da4-causalidad-05-presentacion-direccion-decisiones` | 1155 | 3 (`mcq`, `predict-output`) | 1 (`sql`, 6 filas) | 4 | **32 / 32** |
 
-#### Tabla de autoevaluación §9.4 — Integración con la plataforma y copy (escala 0–4, mínimo 28/32 y ningún criterio < 3)
+#### Tabla de autoevaluación §9.4 — Rúbrica de 8 criterios en escala 0–4 (mínimo 28/32 y ningún criterio < 3)
 
-| Lección | 1. Esquema Zod (`check-content`) | 2. Limpieza anti-slop (`check-copy`) | 3. Ritmo y frases (`<= 22` pal/frase) | 4. Tablas reales en DuckDB-WASM | 5. Calificador SQL (`sqlGrader`) | 6. Términos de glosario y flashcards | 7. Contexto de tutor IA (`aiNotes`) | 8. Renderizado visual claro/oscuro/móvil | **Total (/32)** |
+| Lección | 1. Objetivo claro (0–4) | 2. Progresión (0–4) | 3. Ejemplo concreto (0–4) | 4. Error típico (0–4) | 5. Práctica (0–4) | 6. Brevedad (0–4) | 7. Precisión (0–4) | 8. Tono (0–4) | **Total (/32)** |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | `da4-causalidad-01-diferencias-en-diferencias-did` | 4 | 4 | 4 | 4 | 4 | 4 | 4 | 4 | **32 / 32** |
 | `da4-causalidad-02-regresion-discontinua-rdd` | 4 | 4 | 4 | 4 | 4 | 4 | 4 | 4 | **32 / 32** |
