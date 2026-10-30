@@ -449,7 +449,7 @@ export const MODULES = [
       { title: 'Arquitectura y modelo de costos en BigQuery, Snowflake y Databricks', minutes: 25 },
     ],
     {
-      prompt: 'Operar una tabla transaccional Apache Iceberg v3 con vectores de borrado, evolución de particiones y viaje en el tiempo.',
+      prompt: 'Operar una tabla transaccional Apache Iceberg v3 con vectores de borrado, evolución de particiones y consultas históricas (Time Travel).',
       dataset: 'Mercado Brisa (`orders`, `order_items` y `events`)',
       deliverable: 'Script SQL con creación de tabla Iceberg v3, actualización `MERGE`, consulta `FOR SYSTEM_TIME AS OF` y estimación de costos cloud.',
     }
@@ -681,7 +681,7 @@ export const MODULES = [
     'bi',
     2,
     'Lenguaje DAX con rigor',
-    'Escribir medidas DAX legibles y rápidas dominando contextos de evaluación, transición con CALCULATE e inteligencia de tiempo.',
+    'Escribir medidas DAX legibles y rápidas aplicando contextos de evaluación, transición con CALCULATE e inteligencia de tiempo.',
     ['bi2-modelo-semantico'],
     [
       { title: 'Contexto de fila y contexto de filtro: los dos pilares de evaluación en DAX', minutes: 25 },

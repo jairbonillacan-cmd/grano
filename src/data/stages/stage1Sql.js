@@ -12,11 +12,11 @@ export const STAGE_1_LESSONS = [
     goal: 'Identificar la granularidad (grain) de cualquier tabla, diagnosticar relaciones 1:N y N:M (Chasm Trap) y evitar que un JOIN infle métricas financieras o de conteo.',
     visualType: 'join-fanout-visualizer',
     storyContext:
-      'Caso real en NovaPay: Tenemos dos tablas en producción: `orders` (1 fila por pedido único, incluye el costo de envío total `shipping_fee_usd` y el importe total `order_total_usd`) y `order_items` (1 fila por cada SKU dentro del pedido). Un analista las une con un JOIN directo para un reporte ejecutivo y anuncia que los ingresos por envío subieron un 142%. Finanzas audita el balance y descubre que el dinero no existe en el banco. ¿Qué ocurrió exactamente dentro del motor SQL?',
+      'Escenario en Mercado Brisa (empresa ficticia): Tenemos dos tablas en producción: `orders` (1 fila por pedido único, incluye el costo de envío total `shipping_fee_usd` y el importe total `order_total_usd`) y `order_items` (1 fila por cada SKU dentro del pedido). Un analista las une con un JOIN directo para un reporte ejecutivo y anuncia que los ingresos por envío subieron un 142%. Finanzas audita el balance y comprueba que el dinero no existe en el banco. ¿Qué ocurrió exactamente dentro del motor SQL?',
     sections: [
       {
         heading: 'Qué es la granularidad (grain) y por qué define el contrato de una tabla',
-        body: 'Antes de escribir una sola línea de SQL o arrastrar una métrica en una herramienta de BI, debes formular y responder una pregunta innegociable: "¿Qué representa exactamente una fila física en esta tabla?". Eso es la granularidad (o grain) y equivale a su clave primaria real.\nEn la tabla `orders`, una fila es un pedido único (`order_id`). En `order_items`, una fila es una línea de producto dentro de un pedido (`order_id + product_id`). Cuando cruzas tablas sin declarar mentalmente el grain de entrada y el grain de salida esperado, pierdes el control matemático de tus agregaciones.',
+        body: 'Antes de escribir una sola línea de SQL o arrastrar una métrica en una herramienta de BI, responde una pregunta obligatoria: "¿Qué representa exactamente una fila física en esta tabla?". Esa respuesta es el **grano** (granularidad) de la tabla y equivale a su clave primaria real.\nEn la tabla `orders`, una fila es un pedido único (`order_id`). En `order_items`, una fila es una línea de producto dentro de un pedido (`order_id + product_id`). Cuando cruzas tablas sin declarar el grano de entrada y el grano de salida esperado, pierdes el control matemático de tus agregaciones.',
       },
       {
         heading: 'Anatomía del fan-out (1:N) y del chasm trap (N:1:M)',
@@ -59,7 +59,7 @@ export const STAGE_1_LESSONS = [
     },
     relatedLessons: [
       { id: 'l2-window-functions', reason: 'Aprende a usar funciones de ventana para prorratear importes o deduplicar filas antes de un JOIN.' },
-      { id: 'l3-asof-lateral-ctes', reason: 'Domina el diseño de CTEs modulares y cruces temporales que mantienen la cardinalidad exacta.' },
+      { id: 'l3-asof-lateral-ctes', reason: 'Aplica el diseño de CTEs modulares y cruces temporales que mantienen la cardinalidad exacta.' },
     ],
     playground: {
       description: 'Compara la consulta ingenua (que duplica importes de cabecera por cada ítem del pedido) contra la arquitectura con CTE pre-agregada:',
@@ -243,10 +243,10 @@ GROUP BY o.customer_id;`,
     level: 'Fundamentos',
     bloomLevel: 'apply',
     coreFocus: ['DE', 'DA', 'BI'],
-    goal: 'Dominar `OVER (PARTITION BY ... ORDER BY ...)`, elegir correctamente entre marcos `ROWS` y `RANGE`, y filtrar funciones de ventana con `QUALIFY`.',
+    goal: 'Escribir `OVER (PARTITION BY ... ORDER BY ...)`, elegir correctamente entre marcos `ROWS` y `RANGE`, y filtrar funciones de ventana con `QUALIFY`.',
     visualType: 'window-function-stepper',
     storyContext:
-      'Caso real en CloudPulse SaaS: El webhook de facturación envía eventos duplicados cuando la red parpadea y, además, el comité directivo necesita clasificar cada mes de cada cliente en "Alta Nueva", "Expansión (Upgrade)", "Contracción (Downgrade)" o "Renovación Plana" comparando su ingreso recurrente (`mrr_usd`) contra el mes inmediato anterior. Con `GROUP BY` perderías el detalle temporal; con subconsultas anidadas el código se vuelve ilegible. Aquí entran las Window Functions y `QUALIFY`.',
+      'Escenario en CloudPulse SaaS (empresa ficticia): El webhook de facturación envía eventos duplicados cuando la red parpadea y, además, el comité directivo necesita clasificar cada mes de cada cliente en "Alta Nueva", "Expansión (Upgrade)", "Contracción (Downgrade)" o "Renovación Plana" comparando su ingreso recurrente (`mrr_usd`) contra el mes inmediato anterior. Con `GROUP BY` perderías el detalle temporal; con subconsultas anidadas el código se vuelve ilegible. Aquí entran las Window Functions y `QUALIFY`.',
     sections: [
       {
         heading: 'Estructura de OVER (PARTITION BY ... ORDER BY ...)',
@@ -480,10 +480,10 @@ FROM daily_store_sales;`,
     level: 'Intermedio',
     bloomLevel: 'apply',
     coreFocus: ['DE', 'DA', 'BI'],
-    goal: 'Implementar cruces Point-in-Time sin fuga de datos del futuro mediante `ASOF JOIN`, dominar subconsultas correlacionadas con `LATERAL` y estructurar pipelines SQL con CTEs modulares.',
+    goal: 'Implementar cruces Point-in-Time sin fuga de datos del futuro mediante `ASOF JOIN`, aplicar subconsultas correlacionadas con `LATERAL` y estructurar pipelines SQL con CTEs modulares.',
     visualType: 'asof-join-timeline',
     storyContext:
-      'Caso real en Finanzas y Atribución de NovaPay: Un cliente realiza un pago en pesos mexicanos a las `10:14:22.410`. Las tasas de cambio oficiales (`fx_rates`) se actualizan en momentos irregulares (`09:58:00`, `10:12:05`, `10:19:40`). Si haces un `INNER JOIN` por igualdad de timestamp, pierdes el 99.9% de los pagos porque los milisegundos no coinciden. Y si haces un `JOIN` con `fx_ts <= payment_ts`, obtienes cientos de tasas pasadas por cada pago (Fan-Out masivo). ¿Cómo obtienes exactamente la tasa vigente a las `10:12:05` en una sola operación ultrarrápida?',
+      'Escenario en Finanzas y Atribución de NovaPay (empresa ficticia): Un cliente realiza un pago en pesos mexicanos a las `10:14:22.410`. Las tasas de cambio oficiales (`fx_rates`) se actualizan en momentos irregulares (`09:58:00`, `10:12:05`, `10:19:40`). Si haces un `INNER JOIN` por igualdad de timestamp, pierdes el 99.9% de los pagos porque los milisegundos no coinciden. Y si haces un `JOIN` con `fx_ts <= payment_ts`, obtienes cientos de tasas pasadas por cada pago (Fan-Out masivo). ¿Cómo obtienes exactamente la tasa vigente a las `10:12:05` en una sola operación?',
     sections: [
       {
         heading: 'Exactitud punto en el tiempo (point-in-time correctness)',
@@ -499,7 +499,7 @@ FROM daily_store_sales;`,
       },
       {
         heading: 'Estructura de CTEs modulares: importación, limpieza, preparación y salida',
-        body: 'Las subconsultas anidadas de 200 líneas se leen de adentro hacia afuera y son imposibles de depurar en equipo. El estándar de Ingeniería Analítica en 2026 organiza toda consulta compleja en bloques CTE (`WITH ...`) lineales de arriba hacia abajo:\n1) **Import / Scoped CTEs**: Seleccionan solo las columnas y particiones de fechas necesarias de las tablas origen.\n2) **Clean / Deduplicate CTEs**: Estandarizan tipos, zonas horarias (`UTC`) y deduplican con `QUALIFY`.\n3) **Business Logic / Point-in-Time CTEs**: Ejecutan los `ASOF JOIN` o pre-agregaciones sin Fan-Out.\n4) **Final SELECT**: Proyecta el contrato de salida limpio y listo para tests o visualización.',
+        body: 'Las subconsultas anidadas de 200 líneas se leen de adentro hacia afuera y dificultan la depuración en equipo. La convención de **CTEs modulares** en ingeniería analítica organiza toda consulta compleja en bloques (`WITH ...`) lineales de arriba hacia abajo:\n1) CTEs de importación (`import`): Seleccionan solo las columnas y particiones de fechas necesarias de las tablas origen.\n2) CTEs de limpieza (`clean`): Estandarizan tipos, zonas horarias (`UTC`) y deduplican con `QUALIFY`.\n3) CTEs de lógica de negocio: Ejecutan los `ASOF JOIN` o pre-agregaciones sin Fan-Out.\n4) Proyección final (`SELECT`): Expone el contrato de salida limpio y listo para pruebas o visualización.',
       },
     ],
     triadPerspectives: {

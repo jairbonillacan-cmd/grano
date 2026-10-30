@@ -15,7 +15,7 @@ export const STAGE_4_LESSONS = [
     goal: 'Aplicar una arquitectura Medallion (Bronze, Silver, Gold) sobre Apache Iceberg v3 utilizando Deletion Vectors en archivos Puffin, el tipo nativo VARIANT para datos semi-estructurados, Hidden Partitioning y el patrón Write-Audit-Publish (WAP).',
     visualType: 'iceberg-v3-snapshot-explorer',
     storyContext:
-      'En NovaPay almacenábamos 18,000 archivos Parquet sueltos en carpetas de Amazon S3 (`s3://novapay-data/orders/`). Esa arquitectura sufría tres fallos críticos en producción: 1) Cuando un job de ingesta fallaba a mitad de camino, los dashboards ejecutivos de BI leían datos parcialmente escritos y mostraban caídas falsas del 60% en ventas; 2) Cuando por normativa GDPR o contracargos debíamos actualizar o borrar 400 pedidos del último año, teníamos que reescribir archivos Parquet enteros de 512 MB; 3) Los webhooks móviles enviaban payloads JSON cambiantes que rompían el esquema cada semana. Al migrar a Apache Iceberg v3 con un Catálogo REST (Apache Polaris), las lecturas sucias desaparecieron, las actualizaciones pasaron a tardar milisegundos con Deletion Vectors y el JSON se consulta a velocidad columnar con el tipo VARIANT.',
+      'En NovaPay (empresa ficticia) almacenábamos 18,000 archivos Parquet sueltos en carpetas de Amazon S3 (`s3://novapay-data/orders/`). Esa arquitectura sufría tres fallos críticos en producción: 1) Cuando un job de ingesta fallaba a mitad de camino, los dashboards ejecutivos de BI leían datos parcialmente escritos y mostraban caídas falsas del 60% en ventas; 2) Cuando por normativa GDPR o contracargos debíamos actualizar o borrar 400 pedidos del último año, teníamos que reescribir archivos Parquet enteros de 512 MB; 3) Los webhooks móviles enviaban payloads JSON cambiantes que rompían el esquema cada semana. Al migrar a Apache Iceberg v3 con un Catálogo REST (Apache Polaris), las lecturas sucias desaparecieron, las actualizaciones pasaron a tardar milisegundos con Deletion Vectors y el JSON se consulta a velocidad columnar con el tipo VARIANT.',
     sections: [
       {
         heading: 'Capas bronze, silver y gold: responsabilidades técnicas y semánticas',
@@ -27,7 +27,7 @@ export const STAGE_4_LESSONS = [
       },
       {
         heading: 'Vectores de borrado, linaje de filas y tipo semiestructurado VARIANT en Iceberg v3',
-        body: 'La especificación v3 de Apache Iceberg (`format-version = 3`) consolida tres avances fundamentales para cargas modernas de baja latencia:\n• Deletion Vectors (DVs) en Archivos Puffin: En versiones antiguas, borrar o actualizar filas en modo *Merge-on-Read* generaba múltiples archivos pequeños de borrado posicional que degradaban las lecturas. En Iceberg v3 se emplean **Deletion Vectors**: mapas de bits comprimidos (*Roaring Bitmaps*) almacenados dentro de archivos laterales `.puffin`. Iceberg v3 garantiza que exista como máximo un Deletion Vector activo por cada archivo de datos Parquet, reduciendo drásticamente el costo de unir borrados en tiempo de lectura.\n• Tipo de Dato Nativo `VARIANT`: Permite almacenar payloads semi-estructurados (JSON de eventos móviles, telemetría IoT o respuestas de LLMs) descomponiendo automáticamente (*shredding*) las sub-columnas frecuentes en formato columnar tipado. Obtienes la flexibilidad de un documento sin esquema con la velocidad de escaneo y compresión de Parquet.\n• Row-Level Lineage Nativo (`_row_id` y `_last_updated_sequence_number`): Cada fila recibe un identificador estable y número de secuencia que permite a motores como SQLMesh, Spark o Flink calcular exactamente qué filas cambiaron entre dos snapshots sin hacer costosos `FULL OUTER JOIN`.',
+        body: 'La especificación v3 de Apache Iceberg (`format-version = 3`) incorpora tres avances técnicos para cargas analíticas y transaccionales:\n• **Deletion Vectors (DVs)** en archivos Puffin: en versiones previas, borrar o actualizar filas en modo *Merge-on-Read* generaba múltiples archivos de borrado posicional que ralentizaban las lecturas. Iceberg v3 almacena mapas de bits comprimidos (*Roaring Bitmaps*) en archivos laterales `.puffin` y mantiene como máximo un vector activo por archivo Parquet.\n• Tipo de dato nativo **`VARIANT`**: almacena estructuras semi-estructuradas (JSON de eventos o telemetría) separando automáticamente (*shredding*) las subcolumnas frecuentes en formato columnar tipado.\n• Linaje por fila (`_row_id` y `_last_updated_sequence_number`): asigna un identificador estable y número de secuencia por registro para calcular cambios incrementales entre instantáneas sin ejecutar `FULL OUTER JOIN`.',
       },
       {
         heading: 'Particionamiento oculto, evolución de esquema y patrón write-audit-publish',
@@ -64,7 +64,7 @@ export const STAGE_4_LESSONS = [
       },
       {
         id: 'l11-dbt-sqlmesh-dag',
-        reason: 'Descubre cómo orquestar las transformaciones de Bronze a Silver y Gold sobre tablas Iceberg usando dbt y SQLMesh.',
+        reason: 'Aprende a orquestar las transformaciones de Bronze a Silver y Gold sobre tablas Iceberg usando dbt y SQLMesh.',
       },
       {
         id: 'l16-cdc-kafka-streaming',
@@ -131,9 +131,9 @@ GROUP BY 1;`,
       ],
     },
     codeChallenge: {
-      title: 'Esquema Iceberg v3 y viaje temporal',
+      title: 'Esquema Iceberg v3 y consultas históricas (Time Travel)',
       instruction:
-        'Completa las 3 piezas clave de esta sentencia SQL sobre el catálogo Apache Iceberg v3 para: 1) declarar la columna semi-estructurada con el tipo nativo de Iceberg v3, 2) activar la versión 3 de la especificación en `TBLPROPERTIES`, y 3) consultar el estado histórico exacto de la tabla con la cláusula estándar de Time Travel.',
+        'Completa las 3 cláusulas de esta sentencia SQL sobre el catálogo Apache Iceberg v3 para: 1) declarar la columna semi-estructurada con el tipo nativo de Iceberg v3, 2) activar la versión 3 de la especificación en `TBLPROPERTIES`, y 3) consultar el estado histórico exacto de la tabla con la cláusula estándar de Time Travel.',
       templateCode: `CREATE TABLE polaris.silver.checkout_events (
   event_id UUID NOT NULL,
   customer_id BIGINT NOT NULL,
@@ -157,7 +157,7 @@ FROM polaris.silver.checkout_events
           id: 'blank_1',
           placeholder: 'TIPO_SEMI_ESTRUCTURADO',
           acceptedAnswers: ['VARIANT', 'variant'],
-          hint: 'En Iceberg v3 (2026), ¿qué tipo de dato nativo reemplaza a los strings JSON planos permitiendo sub-columnarización automática?',
+          hint: 'En la especificación Apache Iceberg v3, ¿qué tipo de dato nativo reemplaza a los strings JSON planos permitiendo sub-columnarización automática?',
           hints: [
             'Nivel 1 (Concepto): Es el nuevo tipo de dato de la especificación Apache Iceberg v3 diseñado para almacenar JSON semi-estructurado con shredding columnar.',
             'Nivel 2 (Sintaxis): Empieza con V y tiene 7 letras.',
@@ -211,8 +211,8 @@ FROM polaris.silver.checkout_events
           role: 'DE',
         },
         {
-          criterion: 'Reproducibilidad analítica mediante viaje temporal',
-          title: 'Reproducibilidad analítica mediante viaje temporal',
+          criterion: 'Reproducibilidad analítica mediante Time Travel',
+          title: 'Reproducibilidad analítica mediante Time Travel',
           description: 'Emplea FOR SYSTEM_TIME AS OF para auditar estados pasados de la tabla sin alterar las vistas de BI en producción.',
           points: 30,
           role: 'DA',
@@ -307,7 +307,7 @@ FROM polaris.silver.checkout_events
     sections: [
       {
         heading: 'De procedimientos almacenados a grafos modulares (staging, intermediate y marts)',
-        body: 'El principio central de la ingeniería de transformación moderna (popularizado por **dbt** y evolucionado por **SQLMesh**) es que toda transformación debe ser una sentencia `SELECT` declarativa, pura, idempotente y versionada en Git. El motor construye automáticamente el **DAG (Grafo Acíclico Dirigido)** de dependencias y lo organiza en tres capas disciplinadas:\n• **Staging (`stg_`)**: Relación 1:1 con las tablas fuente de Bronze. Solo renombra columnas al estándar de la empresa, aplica conversiones de tipos (`CAST`), limpia strings vacíos y deduplica por clave primaria. Cero joins complejos ni agregaciones.\n• **Intermediate (`int_`)**: Piezas modulares de lógica de negocio que unen múltiples modelos de Staging, resuelven intervalos temporales SCD2 o prorratean importes antes de exponerlos.\n• **Marts / Gold (`fct_` y `dim_`)**: Tablas de Hechos y Dimensiones listas para las áreas de negocio (`finance`, `product`, `growth`) y conectadas a la Capa Semántica.',
+        body: 'El principio de la transformación declarativa con dbt y SQLMesh es que cada modelo sea una sentencia `SELECT` idempotente y versionada en Git. El motor construye el **DAG (Grafo Acíclico Dirigido)** de dependencias y lo organiza en tres capas:\n• Staging (`stg_`): relación 1:1 con las tablas fuente de Bronze. Solo renombra columnas al estándar interno, aplica conversiones de tipos (`CAST`), limpia textos vacíos y deduplica por clave primaria.\n• Intermediate (`int_`): bloques modulares que unen modelos de Staging, resuelven intervalos temporales SCD2 o prorratean importes antes de exponerlos.\n• Marts / Gold (`fct_` y `dim_`): tablas de hechos y dimensiones listas para las áreas de negocio (`finance`, `product`, `growth`) y conectadas a la Capa Semántica.',
       },
       {
         heading: 'Modelos incrementales clásicos frente al seguimiento de estado por intervalos',
@@ -315,7 +315,7 @@ FROM polaris.silver.checkout_events
       },
       {
         heading: 'Análisis sintáctico de SQL mediante AST (SQLGlot) y linaje de columnas',
-        body: 'Una plantilla Jinja tradicional trata tu consulta SQL como texto plano: no sabe si cambiaste un comentario, añadiste una columna nueva o alteraste la fórmula de un `WHERE`. En cambio, **SQLMesh** incorpora **SQLGlot**, un parser y transpilador que convierte cada consulta SQL en un **Árbol Sintáctico Abstracto (AST)** antes de enviarla a la base de datos.\nGracias al AST, la plataforma:\n• Detecta errores de sintaxis, tipos incompatibles y referencias a columnas inexistentes en milisegundos localmente, antes de gastar un centavo en el almacén cloud.\n• Construye **Linaje a Nivel de Columna (Column-Level Lineage)** automático a través de decenas de tablas.\n• Clasifica semánticamente cada cambio en tu Pull Request como **Breaking** (modificaste la lógica de un filtro o de una columna usada por 10 tablas hijas) vs. **Non-Breaking / Forward-Only** (solo añadiste una columna nueva al final que ninguna tabla hija usa todavía, por lo que no hace falta recalcular las 10 tablas hijas).',
+        body: 'Una plantilla Jinja tradicional trata la consulta SQL como texto plano: no distingue si cambiaste un comentario, añadiste una columna o modificaste un predicado `WHERE`. En cambio, SQLMesh utiliza **SQLGlot** para convertir cada consulta en un **Árbol Sintáctico Abstracto (AST)** antes de enviarla al motor.\nCon el análisis del AST, la herramienta:\n• Detecta errores de sintaxis, tipos incompatibles y columnas inexistentes localmente antes de ejecutar en la nube.\n• Construye linaje a nivel de columna (`Column-Level Lineage`) a través del grafo de modelos.\n• Clasifica cada cambio en un Pull Request como *Breaking* (cambia la lógica de una columna usada por tablas hijas) frente a *Non-Breaking* (añade una columna nueva sin obligar a recalcular las tablas dependientes).',
       },
       {
         heading: 'Entornos virtuales de datos mediante vistas y promoción sin recálculo',
@@ -597,19 +597,19 @@ WHERE event_ts BETWEEN @start_ts AND {{blank_3}};`,
     sections: [
       {
         heading: 'Estructura de un contrato de datos bajo el estándar ODCS',
-        body: 'Durante años, los equipos de Ingeniería de Datos funcionaron como "bomberos a las 3:00 AM": un desarrollador de backend renombraba un campo en PostgreSQL o en un evento de Kafka, se iba a dormir tranquilo porque sus tests de aplicación pasaban, y cuatro horas después explotaban 50 modelos de dbt y los tableros del CEO.\nLos **Data Contracts** aplican el principio **Shift-Left** (mover la calidad hacia el origen). Bajo el estándar abierto de la industria **ODCS v3.0 (Open Data Contract Standard)** de Bitol / Linux Foundation, un contrato es un archivo YAML versionado en Git que firma tres garantías entre el productor del microservicio y los consumidores de datos:\n1) **Esquema y Semántica**: Nombres de columnas, tipos lógicos/físicos, claves primarias, clasificación PII (datos personales) y descripción exacta de negocio.\n2) **Reglas de Calidad de Datos (Quality Checks)**: Invariantes ejecutables (ej. `mrr_cents >= 0`, `null_count(customer_id) = 0`, valores permitidos en enumeraciones).\n3) **Acuerdos de Nivel de Servicio (SLAs)**: Frescura máxima permitida (*latency: 15 minutes*), disponibilidad, ventana de retención y propietario responsable (`owner`) con canal de alerta.',
+        body: 'Cuando un servicio de backend renombra un campo en PostgreSQL o en Kafka sin previo aviso, sus pruebas unitarias locales pueden pasar mientras decenas de modelos analíticos y tableros fallan horas después.\nLos **Data Contracts** aplican validación preventiva en el origen (*Shift-Left*). Bajo el estándar abierto **ODCS v3.0 (Open Data Contract Standard)**, un contrato es un archivo YAML versionado en Git que establece tres compromisos entre el equipo productor y los consumidores:\n1) Esquema y semántica: nombres de columnas, tipos físicos, claves primarias, clasificación de datos personales (PII) y definición de negocio.\n2) Reglas de calidad (`Quality Checks`): invariantes verificables como `mrr_cents >= 0` o `null_count(customer_id) = 0`.\n3) Acuerdos de nivel de servicio (`SLAs`): frescura máxima permitida, ventana de retención y equipo responsable (`owner`).',
       },
       {
         heading: 'Validación del contrato en integración continua y corte de circuito en ingesta',
-        body: 'Un Data Contract que vive en un PDF o en una wiki que nadie lee es inútil. En una arquitectura moderna 2026, el archivo ODCS v3 se ejecuta automáticamente en dos puntos de control:\n• **En el CI/CD del Productor (GitHub Actions / GitLab CI)**: Cuando un ingeniero de software abre un Pull Request que modifica el esquema de base de datos o el protobuf/JSON del evento emitido, el linter de contratos compara el cambio contra `contract_billing_v3.yaml`. Si elimina una columna requerida o viola la compatibilidad hacia atrás sin incrementar la versión mayor y notificar a los consumidores en el grafo OpenLineage, el chequeo de CI bloquea el merge antes de llegar a producción.\n• **En la Frontera de Ingesta (Circuit Breaker / Dead-Letter Queue)**: Durante la ingesta hacia el Lakehouse Iceberg, las filas o lotes que violen las aserciones críticas del contrato se desvían a una tabla de cuarentena (*quarantine / DLQ*) o detienen la publicación de la rama WAP, protegiendo al 100% las tablas Silver y Gold.',
+        body: 'Un contrato de datos estático en un documento PDF queda desactualizado rápido. En un pipeline automatizado, el archivo ODCS v3 se valida en dos puntos de control:\n• En el **CI/CD del productor** (GitHub Actions / GitLab CI): cuando un desarrollador abre un Pull Request que modifica el esquema de salida, el validador compara el cambio contra `contract_billing_v3.yaml`. Si elimina una columna requerida o rompe la compatibilidad sin subir la versión mayor, el chequeo bloquea la fusión antes de llegar a producción.\n• En la **frontera de ingesta** (`Circuit Breaker / Dead-Letter Queue`): durante la carga hacia Iceberg, los lotes que incumplen las reglas del contrato se desvían a cuarentena o detienen la publicación de la rama WAP, manteniendo íntegras las tablas Silver y Gold.',
       },
       {
         heading: 'Componentes de la capa semántica en MetricFlow y Cube: entidades, dimensiones y medidas',
-        body: 'Si los Data Contracts protegen la entrada al Lakehouse, la **Capa Semántica Unificada** (implementada con **dbt Semantic Layer / MetricFlow** o **Cube**) protege la salida hacia las decisiones de negocio. En lugar de escribir SQL manual en cada herramienta de visualización, declaras un grafo semántico compuesto por cuatro bloques:\n• **Semantic Models**: Conectan un modelo Gold/Silver (`ref(\'fct_orders\')`) con su dimensión de tiempo predeterminada (`agg_time_dimension: order_date`).\n• **Entities (Claves del Grafo)**: Declaran cuál es la entidad `primary` de la tabla (ej. `order_id`), cuáles son `unique` y cuáles son `foreign` (ej. `customer_id`). Así el motor conoce la cardinalidad exacta (`1:1`, `1:N`) de toda tu empresa.\n• **Dimensions**: Atributos por los cuales se filtra o agrupa (`categorical` como `country_code`, `plan_tier`; o `time` con granularidades día/semana/mes/trimestre).\n• **Measures y Metrics**: Las *Measures* son agregaciones base sobre una tabla (`sum`, `count_distinct`), mientras que las *Metrics* son los KPIs de negocio expuestos al usuario final: métricas `simple`, `ratio` (`numerador / denominador` calculados por separado), `cumulative` (MTD, YTD, ventanas móviles) o `derived` (fórmulas compuestas como `NRR` o `LTV / CAC`).',
+        body: 'Mientras los contratos de datos resguardan la entrada al Lakehouse, la **Capa Semántica Unificada** (implementada con MetricFlow o Cube) gobierna la salida hacia las consultas de negocio. En lugar de duplicar fórmulas SQL en cada tablero, se declara un grafo semántico con cuatro elementos:\n• Modelos semánticos (`Semantic Models`): vinculan una tabla Gold o Silver (`ref(\'fct_orders\')`) con su dimensión temporal principal (`agg_time_dimension: order_date`).\n• Entidades (`Entities`): declaran la clave `primary` (ej. `order_id`), las claves `unique` y las claves `foreign` (ej. `customer_id`), definiendo la cardinalidad entre tablas.\n• Dimensiones (`Dimensions`): atributos de corte y filtrado (`country_code`, `plan_tier` o granularidades de fecha).\n• Medidas y métricas (`Measures` y `Metrics`): agregan las columnas base y exponen indicadores de tipo `simple`, `ratio`, `cumulative` o `derived`.',
       },
       {
         heading: 'Prevención de fan-out en el motor semántico y consumo desde BI, código y agentes',
-        body: '¿Qué ocurre cuando un usuario en BI o un Agente de IA pide cruzar una métrica de `fct_orders` (nivel pedido) con una dimensión de otra tabla o con una métrica de `fct_marketing_spend` (nivel campaña diaria)?\nSi un humano escribe ese SQL a prisa, suele hacer un `JOIN` directo que multiplica el presupuesto de marketing por el número de pedidos (**Fan-Out Trap**). En cambio, el compilador de **MetricFlow / Cube** inspecciona los tipos de entidad (`primary` vs `foreign`): agrega primero cada tabla a su granularidad segura en subconsultas/CTEs separadas y recién después une los resultados por las dimensiones solicitadas. Si el usuario pide un cruce matemáticamente inválido, la Capa Semántica lo rechaza con una explicación clara en lugar de inventar un número falso.\nAdemás, en 2026 la Capa Semántica expone interfaces nativas para todos los consumidores: **JDBC / Arrow Flight SQL** para Power BI, Tableau y Evidence.dev; **SDK de Python** para que los analistas (DA) partan de las métricas oficiales en Polars/Marimo; y **Servidor MCP (Model Context Protocol)** para que agentes como Google AI Ultra consulten métricas certificadas con precisión determinista.',
+        body: '¿Qué ocurre cuando un usuario de BI o un agente de IA solicita cruzar una métrica de `fct_orders` (grano de pedido) con una métrica de `fct_marketing_spend` (grano de campaña diaria)?\nUna consulta manual con `JOIN` directo multiplica el gasto de marketing por el número de pedidos (`Fan-Out`). En cambio, el compilador de **MetricFlow / Cube** inspecciona las entidades primarias y foráneas: agrega primero cada tabla a su grano válido en CTEs separadas y luego une los resultados por las dimensiones compartidas. Si se solicita un cruce sin relación válida, rechaza la consulta con un error explícito.\nLa capa semántica expone interfaces para todos los clientes: JDBC y Arrow Flight SQL para herramientas de BI, SDK de Python para análisis en Polars y un **Servidor MCP** para consultas desde agentes de IA.',
       },
     ],
     triadPerspectives: {
@@ -646,7 +646,7 @@ WHERE event_ts BETWEEN @start_ts AND {{blank_3}};`,
       },
       {
         id: 'l18-mcp-semantic-ai-rag',
-        reason: 'Descubre cómo exponer esta misma Capa Semántica a agentes de IA mediante un Servidor MCP para lograr Text-to-Semantic-Layer sin alucinaciones.',
+        reason: 'Aprende a exponer esta misma Capa Semántica a agentes de IA mediante un Servidor MCP para lograr Text-to-Semantic-Layer sin alucinaciones.',
       },
     ],
     playground: {
@@ -851,7 +851,7 @@ metrics:
     pipelineChallenge: {
       title: 'Cadena gobernada del microservicio a BI',
       scenario:
-        'Ordena en todas sus etapas los 5 eslabones de una arquitectura gobernada en 2026 cuando el equipo de producto lanza una nueva funcionalidad de suscripciones y quiere analizarla en BI y en el Agente IA:',
+        'Ordena en todas sus etapas los 5 eslabones de una arquitectura gobernada cuando el equipo de producto lanza una nueva funcionalidad de suscripciones y quiere analizarla en BI y en el Agente IA:',
       steps: [
         {
           id: 'step-1-odcs-contract-ci',
