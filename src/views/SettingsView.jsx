@@ -290,7 +290,7 @@ export function SettingsView({ onNavigate, onBack }) {
                         aria-hidden="true"
                       />
                       <span className="settings-track-option__name">{t.name}</span>
-                      <span className="settings-track-option__code">{t.short}</span>
+                      <span className="settings-track-option__code" style={{ color: 'var(--text-2)' }}>{t.short}</span>
                     </div>
                     <p className="settings-track-option__summary">{t.summary}</p>
                   </button>

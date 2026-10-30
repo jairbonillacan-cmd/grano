@@ -45,14 +45,14 @@ export function ExpectedOutputTable({ expectedOutput, keyPrefix = 'out' }) {
     <div className="lp-output-block">
       <div className="lp-output-block__head">
         <span className="lp-output-block__label">Resultado en motor SQL</span>
-        <span className="lp-output-block__meta tabular">
+        <span className="lp-output-block__meta tabular" style={{ color: 'var(--text-2)' }}>
           {rows.length} {rows.length === 1 ? 'fila' : 'filas'}
         </span>
       </div>
       <div
         className="md-table-scroll"
         role="region"
-        aria-label="Tabla de salida esperada"
+        aria-label={`Tabla de salida esperada (${keyPrefix})`}
         tabIndex={0}
       >
         <table className="md-table lp-output-table">
@@ -264,7 +264,7 @@ export function LessonWorkedExample({ workedExample, onAskTutor }) {
           <div className="lp-code-example">
             <div className="lp-code-example__bar">
               <span className="lp-code-example__lang">SQL</span>
-              <span className="lp-code-example__step-tag tabular">
+              <span className="lp-code-example__step-tag tabular" style={{ color: 'var(--text-2)' }}>
                 Paso {safeIdx + 1} de {steps.length}
               </span>
             </div>

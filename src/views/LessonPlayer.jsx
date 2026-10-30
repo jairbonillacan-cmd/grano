@@ -473,7 +473,7 @@ export function LessonPlayer({
           sectionId: activeSectionId,
         });
         setTimeout(() => {
-          const input = document.querySelector('.tutor-input-textarea');
+          const input = document.querySelector('#tutor-question-textarea, .tutor-panel__textarea, .tutor-input-textarea');
           if (input) input.focus();
         }, 60);
         return;
@@ -671,9 +671,9 @@ export function LessonPlayer({
                 </span>
                 <span className="lp-syllabus-link__label">{item.label}</span>
                 {item.meta ? (
-                  <span className="lp-syllabus-link__meta tabular">{item.meta}</span>
+                  <span className="lp-syllabus-link__meta tabular" style={{ color: 'var(--text-2)' }}>{item.meta}</span>
                 ) : item.hasInteractive ? (
-                  <span className="lp-syllabus-link__tag">Lab</span>
+                  <span className="lp-syllabus-link__tag" style={{ color: 'var(--text-2)' }}>Lab</span>
                 ) : null}
               </button>
             </li>
@@ -737,7 +737,7 @@ export function LessonPlayer({
             <button
               type="button"
               className="lp-topbar__btn lp-topbar__btn--icon"
-              aria-label="Atajos de teclado de la lección"
+              aria-label="Atajos de teclado de la lección (?)"
               title="Atajos de teclado (?)"
               onClick={() => setIsShortcutsOpen(true)}
             >

@@ -45,7 +45,7 @@ export function Callout({
   const role = resolvedTone === 'bad' || resolvedTone === 'warn' ? 'alert' : 'note'
 
   return (
-    <aside className={classes} style={mergedStyle} role={role} {...rest}>
+    <div className={classes} style={mergedStyle} role={role} {...rest}>
       {Icon ? (
         <span className="ui-callout__icon" aria-hidden="true">
           <Icon size={16} strokeWidth={1.75} />
@@ -56,7 +56,7 @@ export function Callout({
         {children ? <div className="ui-callout__content">{children}</div> : null}
         {actions ? <div className="ui-callout__actions">{actions}</div> : null}
       </div>
-    </aside>
+    </div>
   )
 }
 

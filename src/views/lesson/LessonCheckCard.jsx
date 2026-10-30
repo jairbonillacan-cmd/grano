@@ -128,7 +128,7 @@ export function LessonCheckCard({
           <span className="lp-check-card__num tabular">
             Comprobación {index + 1} de {total}
           </span>
-          <span className="lp-check-card__type">{typeBadgeLabel}</span>
+          <span className="lp-check-card__type" style={{ color: 'var(--text-2)' }}>{typeBadgeLabel}</span>
         </div>
         <span
           className={`lp-check-card__status${

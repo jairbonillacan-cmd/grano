@@ -260,7 +260,7 @@ export function SqlLab({
                 ? 'is-error'
                 : 'is-loading'
           }`}
-          data-testid="sql-engine-status"
+          data-testid="sql-engine-status" style={engineState.status === 'loading' ? { color: 'var(--text-1)' } : undefined}
         >
           {engineState.status === 'ready' && (
             <span>Motor SQL listo ({engineState.coldInitMs} ms)</span>
@@ -272,7 +272,7 @@ export function SqlLab({
                 : 'Preparando el motor SQL…'}
             </span>
           )}
-          {engineState.status === 'idle' && <span>Motor SQL en espera</span>}
+          {engineState.status === 'idle' && <span style={{ color: 'var(--text-2)' }}>Motor SQL en espera</span>}
           {engineState.status === 'error' && <span>Error al iniciar DuckDB</span>}
         </div>
       </header>
@@ -288,14 +288,14 @@ export function SqlLab({
         <div className="sql-lab-actions-left">
           <button
             type="button"
-            className="sql-btn sql-btn-primary"
+            className="sql-btn sql-btn-primary" style={{ backgroundColor: '#9a3412', color: '#ffffff' }}
             onClick={() => handleExecute(code)}
             disabled={isRunning}
             data-testid="sql-run-btn"
           >
             <Play size={14} />
             <span>Ejecutar consulta</span>
-            <kbd className="sql-kbd-hint">Ctrl+Enter</kbd>
+            <kbd className="sql-kbd-hint" style={{ backgroundColor: 'rgba(0, 0, 0, 0.28)', color: '#ffffff' }}>Ctrl+Enter</kbd>
           </button>
 
           {hasGradingTarget && (

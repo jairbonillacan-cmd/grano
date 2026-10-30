@@ -122,7 +122,7 @@ function GlossaryInlineTerm({ entry, matchedText }) {
         tabIndex={0}
         className="lp-glossary-term"
         aria-expanded={open}
-        aria-label={`Término de glosario: ${entry.term}`}
+        aria-label={`${matchedText} — Término de glosario: ${entry.term}`}
         onClick={(e) => {
           e.stopPropagation();
           setPinned((prev) => !prev);

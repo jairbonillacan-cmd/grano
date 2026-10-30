@@ -152,7 +152,7 @@ export function PracticeView({ initialLessonId = null, onSelectLesson = null }) 
       </header>
 
       <div className="practice-workspace-grid">
-        <aside className="practice-sidebar">
+        <aside className="practice-sidebar" aria-label="Explorador de ejercicios y esquema">
           {workspaceMode === 'catalog' ? (
             <section className="practice-panel-card" aria-label="Ejercicios por lección">
               <h2 className="practice-panel-heading">Ejercicios del currículo</h2>
@@ -197,7 +197,7 @@ export function PracticeView({ initialLessonId = null, onSelectLesson = null }) 
                       }}
                       data-testid={`exercise-item-${lesson.id}`}
                     >
-                      <div className="practice-exercise-item-meta">
+                      <div className="practice-exercise-item-meta" style={{ color: 'var(--text-2)' }}>
                         <span>
                           L{idx + 1} · {isSql ? 'SQL DuckDB' : 'Código'}
                         </span>
@@ -264,7 +264,7 @@ export function PracticeView({ initialLessonId = null, onSelectLesson = null }) 
                         )}
                         {tbl.name}
                       </span>
-                      <span className="schema-table-rows-badge">
+                      <span className="schema-table-rows-badge" style={{ color: 'var(--text-2)' }}>
                         {tbl.rowCount.toLocaleString('es-ES')} filas
                       </span>
                     </button>
@@ -298,7 +298,7 @@ export function PracticeView({ initialLessonId = null, onSelectLesson = null }) 
           </section>
         </aside>
 
-        <main>
+        <div className="practice-main-pane" role="region" aria-label="Área de trabajo del laboratorio">
           {workspaceMode === 'free' ? (
             <SqlLab
               key="free-sql-lab"
@@ -325,7 +325,7 @@ export function PracticeView({ initialLessonId = null, onSelectLesson = null }) 
               embeddedInPracticeView={true}
             />
           )}
-        </main>
+        </div>
       </div>
     </div>
   );

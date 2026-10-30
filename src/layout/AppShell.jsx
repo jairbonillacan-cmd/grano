@@ -562,7 +562,7 @@ export function AppShell({
         aria-current={isActive ? 'page' : undefined}
         aria-label={
           showDueBadge
-            ? `${label} (${effectiveDueCount} tarjetas pendientes)`
+            ? (isEffectiveCollapsed ? `${label} ${effectiveDueCount > 99 ? '99+' : effectiveDueCount} tarjetas pendientes` : undefined)
             : label
         }
       >
@@ -574,7 +574,7 @@ export function AppShell({
         </span>
 
         {!isEffectiveCollapsed && showDueBadge && (
-          <span className="app-sidebar__badge tabular">
+          <span className="app-sidebar__badge tabular" aria-hidden="true">
             {effectiveDueCount > 99 ? '99+' : effectiveDueCount}
           </span>
         )}
@@ -648,7 +648,7 @@ export function AppShell({
             type="button"
             className="app-topbar__search"
             onClick={handleOpenPalette}
-            aria-label="Buscar lecciones, módulos, términos del glosario o acciones (Ctrl+K)"
+            aria-label="Buscar lecciones, módulos o glosario… Ctrl+K"
           >
             <span className="app-topbar__search-lead">
               <Search size={16} strokeWidth={1.75} aria-hidden="true" />
@@ -854,7 +854,7 @@ export function AppShell({
                 aria-current={viewMode === id ? 'page' : undefined}
                 aria-label={
                   showDueBadge
-                    ? `${label} (${effectiveDueCount} tarjetas pendientes)`
+                    ? (isEffectiveCollapsed ? `${label} ${effectiveDueCount > 99 ? '99+' : effectiveDueCount} tarjetas pendientes` : undefined)
                     : label
                 }
               >
