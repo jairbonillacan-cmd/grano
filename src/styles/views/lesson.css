@@ -24,8 +24,6 @@
 }
 
 .lesson-player {
-  --code-bg: #16181d;
-  --code-ink: #f2f0ec;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
@@ -34,23 +32,29 @@
   color: var(--ink);
 }
 
-[data-theme="dark"] .lesson-player {
-  --code-bg: #0d0f13;
-  --code-ink: #e8e6e1;
-}
-
 /* ==========================================================================
    1. BARRA SUPERIOR COMPACTA + 1 ÚNICO INDICADOR DE PROGRESO (2px)
    ========================================================================== */
 
 .lp-topbar {
   position: sticky;
-  top: 3.5rem;
+  top: calc(var(--topbar-h, 3.25rem) + 0.375rem);
   z-index: 32;
   background-color: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--r-2);
-  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.lp-topbar::before {
+  content: '';
+  position: absolute;
+  left: -0.25rem;
+  right: -0.25rem;
+  bottom: calc(100% + 1px);
+  height: 0.625rem;
+  background-color: var(--bg);
+  pointer-events: none;
 }
 
 .lp-topbar__row {
@@ -132,6 +136,8 @@
 .lp-topbar__progress {
   width: 100%;
   line-height: 0;
+  overflow: hidden;
+  border-radius: 0 0 calc(var(--r-2) - 1px) calc(var(--r-2) - 1px);
 }
 
 .lp-topbar__progress .ui-progress {
@@ -161,8 +167,8 @@
   width: 13.75rem;
   flex-shrink: 0;
   position: sticky;
-  top: 7.25rem;
-  max-height: calc(100vh / var(--zoom, 1) - 8rem);
+  top: calc(var(--topbar-h, 3.25rem) + 4rem);
+  max-height: calc(100vh / var(--zoom, 1) - var(--topbar-h, 3.25rem) - 4.75rem);
   overflow-y: auto;
   background-color: var(--surface);
   border: 1px solid var(--line);
@@ -280,7 +286,7 @@
   padding: 0.0625rem 0.375rem;
   border-radius: var(--r-1);
   background-color: var(--sunken);
-  color: var(--ink-3);
+  color: var(--text-2);
   flex-shrink: 0;
 }
 
@@ -298,7 +304,7 @@
 
 @media (min-width: 1200px) {
   .lp-reading-col {
-    min-width: 40rem;
+    min-width: min(40rem, 100%);
   }
 }
 
@@ -500,7 +506,7 @@
   display: flex;
   flex-direction: column;
   gap: 1.125rem;
-  scroll-margin-top: 8.5rem;
+  scroll-margin-top: calc(var(--topbar-h, 3.25rem) + 4.25rem);
   padding-top: 0.5rem;
 }
 
@@ -817,7 +823,7 @@
 .lp-code-example__step-tag {
   font-family: var(--font-mono);
   font-size: var(--fs-1);
-  color: var(--ink-3);
+  color: var(--text-2);
 }
 
 .lp-code-example__actions {
@@ -884,7 +890,7 @@
 .lp-output-block__meta {
   font-family: var(--font-mono);
   font-size: var(--fs-1);
-  color: var(--ink-3);
+  color: var(--text-2);
 }
 
 .md-table-scroll {
@@ -906,6 +912,7 @@
   border-collapse: collapse;
   font-family: var(--font-sans);
   font-size: var(--fs-2);
+  font-variant-numeric: tabular-nums;
   color: var(--ink);
 }
 
@@ -923,6 +930,7 @@
 
 .md-table__td {
   padding: 0.5rem 0.75rem;
+  min-width: 6.5rem;
   border-bottom: 1px solid var(--line);
   color: var(--ink);
   vertical-align: top;
@@ -1241,7 +1249,7 @@
   padding: 0.0625rem 0.375rem;
   border-radius: var(--r-1);
   background-color: var(--sunken);
-  color: var(--ink-3);
+  color: var(--text-2);
 }
 
 .lp-check-card__status {
@@ -1733,13 +1741,13 @@
 }
 
 .lp-btn--primary {
-  background-color: var(--brand);
-  border: 1px solid var(--brand);
-  color: #ffffff;
+  background-color: var(--ink);
+  border: 1px solid var(--ink);
+  color: var(--surface);
 }
 
-[data-theme="dark"] .lp-btn--primary {
-  color: #0b0d10;
+.lp-btn--primary:hover {
+  opacity: 0.92;
 }
 
 .lp-btn--secondary {
@@ -1889,10 +1897,14 @@
 
 @media (max-width: 767px) {
   .lp-topbar {
-    top: 0;
+    top: calc(var(--topbar-h, 3.25rem) + 0.25rem);
   }
 
   .lp-topbar__center {
+    display: none;
+  }
+
+  .lp-topbar__btn:not(.lp-topbar__btn--icon) .ui-kbd {
     display: none;
   }
 

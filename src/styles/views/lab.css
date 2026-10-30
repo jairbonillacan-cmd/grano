@@ -1,18 +1,8 @@
 /* ==========================================================================
    Grano — Laboratorio SQL, Práctica Guiada y Desafíos Interactivos (T10)
    Solo tokens de tokens.css y unidades rem. Cero gradientes, cero pop/shake.
+   Usa la animación canónica `row-stagger` de `animations.css` (presupuesto global ≤ 6 @keyframes).
    ========================================================================== */
-
-@keyframes sqlRowFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(0.25rem);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 
 /* Superficie oscura de código (--code-bg es #1C1B19 tanto en modo claro como oscuro en tokens.css) */
 .sql-editor-host,
@@ -118,7 +108,7 @@
 .sql-lab-engine-pill.is-loading {
   border-color: var(--warn);
   background: color-mix(in oklab, var(--warn) 12%, var(--surface));
-  color: var(--warn);
+  color: var(--text-1);
 }
 
 .sql-lab-engine-pill.is-error {
@@ -173,14 +163,13 @@
 }
 
 .sql-btn-primary {
-  background: var(--brand);
-  color: #FFFFFF;
-  border-color: var(--brand);
+  background-color: #9a3412;
+  color: #ffffff;
+  border-color: #9a3412;
 }
 
 .sql-btn-primary:hover:not(:disabled) {
-  background: var(--brand-deep);
-  border-color: var(--brand-deep);
+  opacity: 0.92;
 }
 
 .sql-btn-secondary {
@@ -210,8 +199,8 @@
   font-size: var(--fs-1);
   padding: 0.125rem 0.375rem;
   border-radius: var(--r-1);
-  background: rgba(255, 255, 255, 0.18);
-  color: inherit;
+  background-color: rgba(0, 0, 0, 0.28);
+  color: #ffffff;
 }
 
 /* Error panel */
@@ -333,7 +322,7 @@
 }
 
 .sql-results-table tr:nth-child(-n + 12) {
-  animation: sqlRowFadeIn var(--dur-1) var(--ease-out) both;
+  animation: row-stagger var(--dur-1) var(--ease-out) both;
 }
 
 .sql-results-table tr:hover td {
@@ -469,9 +458,9 @@
   display: flex;
   flex-direction: column;
   gap: var(--sp-5);
-  padding: var(--sp-5) var(--sp-6);
+  padding: 0;
   width: 100%;
-  max-width: 84rem;
+  max-width: 67.5rem;
   margin: 0 auto;
   box-sizing: border-box;
   container-type: inline-size;
@@ -531,8 +520,8 @@
 
 .practice-workspace-grid {
   display: grid;
-  grid-template-columns: 18rem minmax(0, 1fr);
-  gap: var(--sp-5);
+  grid-template-columns: 16.5rem minmax(0, 1fr);
+  gap: var(--sp-4);
   align-items: start;
 }
 
@@ -671,7 +660,7 @@
   justify-content: space-between;
   font-family: var(--font-mono);
   font-size: var(--fs-1);
-  color: var(--ink-3);
+  color: var(--text-2);
 }
 
 .practice-exercise-item-title {
@@ -721,7 +710,7 @@
 .schema-table-rows-badge {
   font-size: var(--fs-1);
   font-weight: 400;
-  color: var(--ink-3);
+  color: var(--text-2);
   font-variant-numeric: tabular-nums;
 }
 

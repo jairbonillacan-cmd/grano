@@ -1872,7 +1872,7 @@ button.ui-chip:focus-visible {
 .ui-showcase__inline-label {
   font-size: var(--fs-1);
   font-weight: 500;
-  color: var(--ink-3);
+  color: var(--text-2);
 }
 
 .ui-showcase__tab-panel {

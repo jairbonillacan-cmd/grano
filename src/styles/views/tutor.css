@@ -1,29 +1,8 @@
 /* ==========================================================================
    TUTOR PANEL & FUNCIONES IA (src/components/TutorPanel.jsx, src/components/tutor/*)
    Cumple §4.1–§4.7 de PLAN_GEMINI_4_ARGON.md y DESIGN.md.
+   Usa la animación canónica `view-fade` de `animations.css` (presupuesto global ≤ 6 @keyframes).
    ========================================================================== */
-
-@keyframes tutor-slide-in-right {
-  from {
-    opacity: 0;
-    transform: translateX(1rem);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes tutor-slide-in-up {
-  from {
-    opacity: 0;
-    transform: translateY(1rem);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 
 /* Botón del header cuando la IA no está disponible (§8 T11 Paso 4) */
 .app-topbar__tutor-btn[data-ai-unavailable="true"] {
@@ -46,13 +25,13 @@
   display: flex;
   flex-direction: column;
   z-index: 44;
-  animation: tutor-slide-in-right var(--dur-3, 260ms) var(--ease-out) both;
+  animation: view-fade var(--dur-2, 160ms) var(--ease-out) both;
 }
 
 /* >= 1600 px: columna fija 380 px; el contenido principal se recoloca sin bajar de 640 px */
 @media (min-width: 1600px) {
   .app-shell:has(.tutor-panel-slot) .app-main {
-    padding-right: 23.75rem;
+    padding-right: calc(23.75rem + var(--sp-6));
   }
 }
 
@@ -64,8 +43,8 @@
   }
 }
 
-/* 1024–1279 px: panel superpuesto de 360 px con --shadow-pop */
-@media (min-width: 1024px) and (max-width: 1279px) {
+/* 900–1279 px: panel superpuesto de 360 px con --shadow-pop */
+@media (min-width: 900px) and (max-width: 1279px) {
   .tutor-panel-slot {
     width: 22.5rem; /* 360 px */
     box-shadow: var(--shadow-pop);
@@ -76,29 +55,29 @@
   display: none;
 }
 
-/* < 1024 px: hoja inferior a pantalla completa */
-@media (max-width: 1023px) {
+/* < 900 px: hoja inferior a pantalla completa (§4.7) */
+@media (max-width: 899px) {
   .tutor-panel-slot {
-    top: 0;
+    top: auto;
     left: 0;
     right: 0;
     bottom: 0;
     width: 100%;
-    height: calc(100dvh / var(--zoom, 1));
-    max-height: calc(100dvh / var(--zoom, 1));
+    height: calc(88dvh / var(--zoom, 1));
+    max-height: calc(88dvh / var(--zoom, 1));
     border-left: none;
-    border-top: 1px solid var(--line);
-    border-radius: 0;
+    border-top: 1px solid var(--line-strong);
+    border-radius: var(--r-3) var(--r-3) 0 0;
     box-shadow: var(--shadow-pop);
     z-index: 65;
-    animation: tutor-slide-in-up var(--dur-3, 260ms) var(--ease-out) both;
+    animation: view-fade var(--dur-2, 160ms) var(--ease-out) both;
   }
 
   .tutor-backdrop {
     display: block;
     position: fixed;
     inset: 0;
-    background-color: rgb(0 0 0 / 0.28);
+    background-color: rgb(18 18 17 / 0.44);
     z-index: 60;
   }
 }
@@ -135,7 +114,7 @@
   flex-shrink: 0;
 }
 
-@media (max-width: 1023px) {
+@media (max-width: 899px) {
   .tutor-panel__handle {
     display: block;
   }
@@ -275,7 +254,7 @@
 .tutor-model-segmented__id {
   font-family: var(--font-mono);
   font-size: var(--fs-1);
-  color: var(--ink-3);
+  color: var(--text-2);
 }
 
 .tutor-panel__active-model {
@@ -569,6 +548,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: var(--sp-2);
   padding: var(--sp-1) var(--sp-3);
   background-color: rgb(255 255 255 / 0.05);
@@ -586,6 +566,7 @@
 .tutor-code-block__actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--sp-1);
 }
 
