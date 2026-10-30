@@ -96,7 +96,7 @@ for (const m of MODULES) {
   if (!m.title || typeof m.title !== 'string') {
     errors.push(`${m.id}: falta title`);
   } else {
-    if (m.title.includes('2026')) errors.push(`${m.id}: title no debe incluir "2026" (Apéndice B)`);
+    if (m.title.includes('2026')) errors.push(`${m.id}: title no debe incluir "2026"`);
     if (EMOJI_REGEX.test(m.title)) errors.push(`${m.id}: title contiene emojis prohibidos`);
   }
 

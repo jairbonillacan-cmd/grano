@@ -1,5 +1,5 @@
 /* ==========================================================================
-   ROADMAP VIEW — TU RUTA POR NIVELES, MÓDULOS Y ÁREAS (T8 · §3.3)
+   ROADMAP VIEW — TU RUTA POR NIVELES, MÓDULOS Y ÁREAS
    Estética: Editorial Cálido + Precisión Suiza. Solo unidades rem y tokens.
    ========================================================================== */
 
@@ -343,7 +343,7 @@
   outline-offset: -2px;
 }
 
-/* Columna izquierda: número + patrón de grano 3x3 (§4.6) */
+/* Columna izquierda: número + patrón de grano 3x3 */
 .roadmap-module__index {
   display: flex;
   align-items: center;
@@ -698,7 +698,7 @@ button.roadmap-lesson-row.is-existing:focus-visible {
   background-color: var(--surface);
 }
 
-/* Densidad compacta (§4.5) */
+/* Densidad compacta */
 [data-density='compact'] .roadmap-module__row,
 [data-resolved-density='compact'] .roadmap-module__row {
   padding: 0.5rem 0.75rem;

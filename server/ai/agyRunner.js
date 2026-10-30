@@ -302,7 +302,7 @@ export function resolveAndValidateModel(requestedModel, allowedModels = FALLBACK
 }
 
 /**
- * Traduce cualquier fallo del proceso `agy` a la tabla exacta del Apéndice C.6.
+ * Traduce cualquier fallo del proceso `agy` a la tabla exacta.
  * Prohibido devolver respuestas falsas o pre-escritas.
  */
 export function classifyCliError(err) {

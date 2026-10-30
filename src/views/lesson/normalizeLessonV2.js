@@ -54,7 +54,7 @@ export function resolvePrerequisiteMeta(prereqId) {
 
 /**
  * Normaliza una lección (v2 o adaptada legacy) garantizando todos los campos
- * del esquema v2 (Apéndice A) y priorizando la definición canónica v2 de LESSONS_BY_ID
+ * del esquema v2 y priorizando la definición canónica v2 de LESSONS_BY_ID
  * sobre la adaptación legacy de `LESSONS`, respetando overrides explícitos.
  */
 export function normalizeLessonV2(rawLesson) {

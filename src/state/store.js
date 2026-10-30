@@ -792,7 +792,7 @@ export function clearTutorThread(lessonId = undefined) {
 }
 
 /**
- * Acción efímera (NO persistida en `grano:v1`): abre el tutor con contexto desde T9, T10 o T12.
+ * Acción efímera (NO persistida en `grano:v1`): abre el tutor con contexto desde una lección, el laboratorio o una vista secundaria.
  */
 export function openTutor(context = {}) {
   const safeContext =

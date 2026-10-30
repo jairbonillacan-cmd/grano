@@ -1,6 +1,6 @@
 /* ==========================================================================
-   VIEWS / SIMULATORS.CSS — T13 Consolidación visual de los 18 simuladores
-   Paleta disciplinada (§4.1), marco común <SimulatorFrame>, @container queries,
+   VIEWS / SIMULATORS.CSS — Consolidación visual de los 18 simuladores
+   Paleta disciplinada, marco común <SimulatorFrame>, @container queries,
    cero estilos en línea (data-pct) y tokens canónicos de tokens.css.
    ========================================================================== */
 
@@ -184,7 +184,7 @@
   background-color: var(--surface);
 }
 
-/* Lectura viva inferior (.sim-live-readout) — Paso 2 */
+/* Lectura viva inferior (.sim-live-readout) */
 .sim-live-readout {
   display: flex;
   align-items: baseline;
@@ -561,7 +561,7 @@
 .sim-table tbody tr:nth-child(7) { --row-index: 6; }
 .sim-table tbody tr:nth-child(8) { --row-index: 7; }
 
-/* Estados semánticos de filas (§4.1: datos en --ink, resaltado en --brand, error en --bad, correcto en --ok) */
+/* Estados semánticos de filas (datos en --ink, resaltado en --brand, error en --bad, correcto en --ok) */
 .sim-table tbody tr.row-clickable {
   cursor: pointer;
   transition: background-color var(--dur-1) var(--ease-out);
@@ -690,7 +690,7 @@
   color: var(--bad);
 }
 
-/* @container query (< 520px / 32.5rem) — Paso 5 */
+/* @container query (< 520px / 32.5rem) */
 @container (max-width: 32.5rem) {
   .sim-frame__header {
     padding: 0.625rem 0.75rem;

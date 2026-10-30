@@ -1,5 +1,5 @@
 // Etiqueta heredada para compatibilidad de vistas en migración; expone contenido textual sin capturar foco.
-// @deprecated Usar Chip o texto tabular en su lugar; se eliminará cuando T12/T13 migren sus vistas.
+// @deprecated Usar Chip o texto tabular en su lugar; se eliminará cuando se migren sus vistas.
 import React from 'react'
 import { resolveStageToken } from './stageTheme.js'
 

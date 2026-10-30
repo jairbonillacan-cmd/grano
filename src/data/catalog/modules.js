@@ -1,5 +1,5 @@
 // Catálogo oficial de módulos de la ruta curricular de Grano (tronco común + áreas DE, DA, BI; niveles 0 a 4).
-// Investigado, corregido y validado por T3 (ver docs/curriculo/fuentes.md, brechas.md y cambios-catalogo.md).
+// Investigado, corregido y validado (ver docs/curriculo/fuentes.md, brechas.md y cambios-catalogo.md).
 //
 // Cada módulo incluye:
 // - id, track, level, title, goal (verbo medible en infinitivo), prerequisites

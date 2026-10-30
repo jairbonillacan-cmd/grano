@@ -1,6 +1,6 @@
 /**
  * Puente de compatibilidad hacia `src/engine/review.js` (FSRS).
- * Se mantiene mientras las vistas de la Fase 2 (T12) actualizan sus imports.
+ * Se mantiene por compatibilidad con imports antiguos.
  */
 export {
   BOX_INTERVALS_DAYS,

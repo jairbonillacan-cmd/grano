@@ -61,7 +61,7 @@ const VIEWS = args.views
 const CAPTURE_SIMS =
   args.sims !== 'false' && (!args.views || VIEWS.includes('simulator'));
 
-// 15 simuladores canónicos por arquetipo (§5.5 / Apéndice E.1)
+// 15 simuladores canónicos por arquetipo
 const SIMULATOR_ARCHETYPES = [
   { slug: 'join-grain', lessonId: 'l1-joins-fanout' },
   { slug: 'window-frames', lessonId: 'l2-window-functions' },
@@ -409,7 +409,7 @@ for (const size of SIZES) {
       includeNewHome: STATE_MODE !== 'progress',
     });
 
-    // Si estamos en modo auto y la resolución es 1920x1080, capturar también densidad compacta explícita (Apéndice E.1)
+    // Si estamos en modo auto y la resolución es 1920x1080, capturar también densidad compacta explícita
     if (DENSITY_ARG === 'auto' && size.label === '1920x1080') {
       jobs.push({
         size,

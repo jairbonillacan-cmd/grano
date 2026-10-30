@@ -59,7 +59,7 @@ export function cleanControlChars(value) {
 let cachedCatalogData = null;
 
 /**
- * Carga las lecciones desde `src/data/lessons/index.js` (cuando T4 esté presente)
+ * Carga las lecciones desde `src/data/lessons/index.js` (si existe)
  * y mantiene fallback a `src/data/learningPath2026.js` + `src/data/catalog/modules.js`.
  */
 export async function loadCurriculumData({ forceReload = false } = {}) {

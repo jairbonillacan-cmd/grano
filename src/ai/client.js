@@ -762,7 +762,7 @@ export async function getModels({ signal, fetchImpl = fetch } = {}) {
   }
 }
 
-// ── Funciones IA especializadas para el resto de la app (Paso 7) ──
+// ── Funciones IA especializadas para el resto de la app ──
 
 /**
  * Explica por qué falló un check o una consulta SQL (`explain-error`).

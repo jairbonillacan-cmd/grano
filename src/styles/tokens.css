@@ -1,10 +1,10 @@
-/* Grano — tokens canónicos de diseño (§4 de PLAN_GEMINI_4_ARGON.md y DESIGN.md).
+/* Grano — tokens canónicos de diseño.
    Un solo acento de marca (--brand), tinta neutra para la interfaz y tres colores de área
    usados únicamente como marcadores pequeños (--track-de, --track-da, --track-bi). */
 
 :root,
 [data-theme="light"] {
-  /* Tipografía (§4.2) */
+  /* Tipografía */
   --font-display: 'Newsreader Variable', Georgia, serif;
   --font-serif: 'Newsreader Variable', Georgia, serif;
   --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
@@ -31,7 +31,7 @@
   --ls-snug: -0.01em;
   --ls-caps: 0.06em;
 
-  /* Color — Modo claro (§4.1) */
+  /* Color — Modo claro */
   --bg: #FAFAF9;
   --surface: #FFFFFF;
   --sunken: #F4F4F2;
@@ -63,7 +63,7 @@
   --focus: #C2410C;
   --focus-ring: 0 0 0 2px var(--focus);
 
-  /* Espaciado en múltiplos de 4 px expresados en rem (§4.3) */
+  /* Espaciado en múltiplos de 4 px expresados en rem */
   --sp-1: 0.25rem;     /* 4 px */
   --sp-2: 0.5rem;      /* 8 px */
   --sp-3: 0.75rem;      /* 12 px */
@@ -75,13 +75,13 @@
   --sp-12: 3rem;       /* 48 px */
   --sp-16: 4rem;       /* 64 px */
 
-  /* Radios y profundidad (§4.3) */
+  /* Radios y profundidad */
   --r-1: 4px;
   --r-2: 6px;
   --r-3: 10px;
   --shadow-pop: 0 8px 24px rgb(0 0 0 / .12), 0 1px 2px rgb(0 0 0 / .08);
 
-  /* Movimiento (§4.6) */
+  /* Movimiento */
   --ease-out: cubic-bezier(.2, .8, .2, 1);
   --ease-in: cubic-bezier(.4, 0, 1, 1);
   --ease-move: cubic-bezier(.65, 0, .35, 1);
@@ -92,7 +92,7 @@
   --dur-4: 420ms;
   --dur-fast: 120ms;
 
-  /* Escala y dimensiones base de densidad (§4.5) */
+  /* Escala y dimensiones base de densidad */
   --ui-scale: 1;
   --topbar-h: 3.25rem;   /* 52 px */
   --btn-h-sm: 1.75rem;   /* 28 px */
@@ -100,7 +100,7 @@
   --btn-h-lg: 2.5rem;    /* 40 px */
 }
 
-/* Modo oscuro (sistema), salvo que se fuerce claro (§4.1) */
+/* Modo oscuro (sistema), salvo que se fuerce claro */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #121211;
@@ -138,7 +138,7 @@
   }
 }
 
-/* Modo oscuro explícito (§4.1) */
+/* Modo oscuro explícito */
 [data-theme="dark"] {
   --bg: #121211;
   --surface: #1A1A18;
@@ -174,7 +174,7 @@
   --shadow-pop: 0 8px 24px rgb(0 0 0 / .45), 0 1px 2px rgb(0 0 0 / .3);
 }
 
-/* Densidad compacta (§4.5): reduce espaciado (--sp-* × 0.75), barra superior (52 -> 44 px),
+/* Densidad compacta: reduce espaciado (--sp-* × 0.75), barra superior (52 -> 44 px),
    botones md (34 -> 30 px) e interlineado de lectura (1.6 -> 1.5). */
 [data-density="compact"],
 [data-resolved-density="compact"] {
@@ -211,7 +211,7 @@
   }
 }
 
-/* Escala de la interfaz (§4.5): define --ui-scale y --zoom sobre <html> */
+/* Escala de la interfaz: define --ui-scale y --zoom sobre <html> */
 html {
   --ui-scale: 1;
   --zoom: 1;

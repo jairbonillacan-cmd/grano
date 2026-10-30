@@ -1,5 +1,5 @@
 // Vistas de respaldo del shell para 'settings' y 'review' cuando App.jsx aún no las enruta directamente.
-// Cuando T12 y el orquestador conectan SettingsView y SpacedRepetitionView en App.jsx, AppShell renderiza el hijo de App.jsx.
+// Cuando SettingsView y SpacedRepetitionView están conectadas en App.jsx, AppShell renderiza el hijo de App.jsx.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Download,

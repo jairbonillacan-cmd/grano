@@ -757,7 +757,7 @@ export function TutorPanel({
         {politeAnnouncement}
       </div>
 
-      {/* Cabecera según §4.7 */}
+      {/* Cabecera */}
       <header className="tutor-panel__header">
         <div className="tutor-panel__header-top">
           <div className="tutor-panel__title-wrap">
@@ -1340,7 +1340,7 @@ export function TutorPanel({
             </div>
           )}
 
-          {/* Sugerencias contextuales (máximo 3, Paso 5) */}
+          {/* Sugerencias contextuales (máximo 3) */}
           <div
             className="tutor-panel__suggestions"
             aria-label="Sugerencias contextuales"

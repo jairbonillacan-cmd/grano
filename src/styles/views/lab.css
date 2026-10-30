@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Grano — Laboratorio SQL, Práctica Guiada y Desafíos Interactivos (T10)
+   Grano — Laboratorio SQL, Práctica Guiada y Desafíos Interactivos
    Solo tokens de tokens.css y unidades rem. Cero gradientes, cero pop/shake.
    Usa la animación canónica `row-stagger` de `animations.css` (presupuesto global ≤ 6 @keyframes).
    ========================================================================== */
@@ -452,7 +452,7 @@
 }
 
 /* ==========================================================================
-   PracticeView (Paso 7) — Catálogo de ejercicios + SQL libre + Explorador
+   PracticeView — Catálogo de ejercicios + SQL libre + Explorador
    ========================================================================== */
 .practice-view {
   display: flex;

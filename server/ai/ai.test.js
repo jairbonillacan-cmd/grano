@@ -442,7 +442,7 @@ describe('Puente IA v2 (server/ai)', () => {
   });
 
   // ── 6. Clasificación de errores honestos C.6 ───────────────────
-  it('18. classifyCliError devuelve exactamente los códigos, mensajes y fix del Apéndice C.6', () => {
+  it('18. classifyCliError devuelve exactamente los códigos, mensajes y fix esperados', () => {
     expect(classifyCliError({ code: 'ENOENT' })).toEqual({
       code: 'AGY_NOT_FOUND',
       message: 'No encuentro Antigravity (agy) en este equipo.',

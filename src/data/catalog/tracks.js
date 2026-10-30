@@ -1,5 +1,5 @@
 // Áreas de la ruta curricular de Grano (tronco común + 3 especializaciones).
-// Refinado y validado por T3 (ver docs/curriculo/fuentes.md y docs/curriculo/cambios-catalogo.md).
+// Refinado y validado (ver docs/curriculo/fuentes.md y docs/curriculo/cambios-catalogo.md).
 
 const CORE_WORK_TASKS = [
   'Inspeccionar una tabla desconocida y definir con precisión qué representa cada fila (su grano).',

@@ -151,7 +151,7 @@ async function main() {
     }
     seenLessonIds.add(lesson.id);
 
-    // 2. Validación de esquema Zod (Apéndice A)
+    // 2. Validación de esquema Zod
     const parsed = validateLesson(lesson);
     if (!parsed.success) {
       for (const issue of parsed.error.issues) {

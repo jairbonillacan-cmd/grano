@@ -1,5 +1,5 @@
 // Shell principal de Grano: barra superior, navegación lateral colapsable, barra inferior móvil (< 900px),
-// control de densidad/escala (§4.5) con atajos globales (Ctrl +/-/0) y paleta de comandos (Ctrl+K).
+// control de densidad/escala con atajos globales (Ctrl +/-/0) y paleta de comandos (Ctrl+K).
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   Home,
@@ -230,7 +230,7 @@ export function AppShell({
     };
   }, [prefs.aiEnabled, prefs.aiModelFast, prefs.aiModelDeep]);
 
-  // Resolución de densidad y sincronización de data-density y data-scale en <html> (§4.5)
+  // Resolución de densidad y sincronización de data-density y data-scale en <html>
   const isCompactResolved = useMemo(() => {
     if (prefs.density === 'compact') return true;
     if (prefs.density === 'comfortable') return false;
@@ -251,7 +251,7 @@ export function AppShell({
     root.setAttribute('data-reduced-motion', prefs.reducedMotion || 'system');
   }, [prefs.theme, prefs.density, prefs.scale, prefs.reducedMotion, isCompactResolved]);
 
-  // Atajos globales Ctrl + / Ctrl =, Ctrl -, Ctrl 0 cuando el foco no está en un editor (§4.5)
+  // Atajos globales Ctrl + / Ctrl =, Ctrl -, Ctrl 0 cuando el foco no está en un editor
   useEffect(() => {
     const handleKeyDown = (event) => {
       if (!(event.ctrlKey || event.metaKey) || event.altKey) return;

@@ -6,3 +6,9 @@ tests/screenshots/
 docs/reportes/capturas/**/*.png
 .env.local
 *.log
+
+# Documentos internos: solo en la máquina local
+PLAN_GEMINI_*.md
+docs/reportes/
+docs/auditoria/
+docs/archivo/

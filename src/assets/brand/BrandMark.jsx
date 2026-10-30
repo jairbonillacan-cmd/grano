@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 
-// Logo de Grano (§3.2): cuadrícula de 3×3 celdas cuadradas con una sola celda rellena
+// Logo de Grano: cuadrícula de 3×3 celdas cuadradas con una sola celda rellena
 // en la fila 2, columna 3. Representa "una fila, una celda: el grano de una tabla".
 const CELL = 6;
 const GAP = 2;

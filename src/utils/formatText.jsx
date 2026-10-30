@@ -75,7 +75,7 @@ function buildGlossaryLookup(priorityTermIds = []) {
 }
 
 /**
- * Popover interactivo para términos del glosario en línea (Paso 6).
+ * Popover interactivo para términos del glosario en línea.
  */
 function GlossaryInlineTerm({ entry, matchedText }) {
   const [hovered, setHovered] = useState(false);
@@ -432,7 +432,7 @@ function renderMarkdownTableBlock(tableLines, keyPrefix, options) {
 }
 
 /**
- * Renderiza Markdown estructurado (Apéndice A):
+ * Renderiza Markdown estructurado:
  * párrafos, listas ul/ol, bloques de código ```sql/python, tablas | col | col |,
  * citas >, encabezados ### y términos de glosario opcionales.
  */
@@ -615,7 +615,7 @@ export function renderStructuredMarkdown(text, keyPrefix = 'md', options = {}) {
 
 /**
  * Renderiza el cuerpo de una sección educativa (prosa de lección).
- * Soporta todo el subconjunto Markdown de Apéndice A + glosario en línea.
+ * Soporta todo el subconjunto Markdown + glosario en línea.
  */
 export function renderProseBody(body, keyPrefix = 'prose', options = {}) {
   return renderStructuredMarkdown(body, keyPrefix, {

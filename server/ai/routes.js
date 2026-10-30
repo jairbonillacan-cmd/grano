@@ -968,7 +968,7 @@ export function createAiRoutes({
     }
   };
 
-  // 5. POST /api/ai/query (Compatibilidad legacy para src/App.jsx hasta que T11 migre a /api/ai/chat)
+  // 5. POST /api/ai/query (Compatibilidad legacy para clientes que aún no usan /api/ai/chat)
   const handleLegacyQuery = async (req, res) => {
     setJsonSecurityHeaders(res);
 

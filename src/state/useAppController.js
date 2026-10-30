@@ -234,7 +234,7 @@ export function useAppController() {
     }
   }, [viewMode, currentLesson.id, currentLesson.title, prefs]);
 
-  // Puente para controles aún no migrados en AppShell y TrackPathView (hasta T7 y T8)
+  // Puente para controles aún no migrados en AppShell y TrackPathView
   useEffect(() => {
     if (typeof document === 'undefined') return undefined;
 

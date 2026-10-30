@@ -105,7 +105,7 @@ export function UiShowcase() {
       <header className="ui-showcase__header">
         <div className="ui-showcase__brand">
           <div className="ui-showcase__eyebrow">
-            <Chip track="de">T6 · Componentes base y movimiento</Chip>
+            <Chip track="de">Componentes base y movimiento</Chip>
             <span className="ui-showcase__meta">Instrumento técnico · Tokens canónicos</span>
           </div>
           <h1 className="ui-showcase__title">Sistema de Componentes Grano</h1>

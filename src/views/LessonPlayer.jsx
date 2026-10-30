@@ -111,7 +111,7 @@ export function LessonPlayer({
     typeof window !== 'undefined' ? window.innerWidth : 1440
   );
 
-  // Estado para selección de texto -> botón flotante "Preguntar" (Paso 5)
+  // Estado para selección de texto -> botón flotante "Preguntar"
   const [selectionPopup, setSelectionPopup] = useState(null);
 
   const readingColRef = useRef(null);
@@ -355,7 +355,7 @@ export function LessonPlayer({
     [lessonId, activeSectionId, onOpenTutor, onAskTutor]
   );
 
-  // Paso 5 — Selección de texto -> botón flotante "Preguntar"
+  // Selección de texto -> botón flotante "Preguntar"
   useEffect(() => {
     const handleSelectionCheck = () => {
       if (typeof window === 'undefined' || !window.getSelection) return;
@@ -413,7 +413,7 @@ export function LessonPlayer({
     };
   }, []);
 
-  // Paso 7 — Atajos de teclado de la lección (J/K, T, /, ?)
+  // Atajos de teclado de la lección (J/K, T, /, ?)
   useEffect(() => {
     const handleKeyDown = (e) => {
       const target = e.target;
@@ -978,13 +978,13 @@ export function LessonPlayer({
             />
           ) : null}
 
-          {/* Bloque 4: Paso 4 — Perspectiva por rol ("Desde tu área") */}
+          {/* Bloque 4: Perspectiva por rol ("Desde tu área") */}
           <LessonRoleNotes
             roleNotes={lesson.roleNotes}
             profileTrack={profile?.track}
           />
 
-          {/* Bloque 5: Paso 3 — Comprobaciones integradas en el flujo */}
+          {/* Bloque 5: Comprobaciones integradas en el flujo */}
           {Array.isArray(lesson.checks) && lesson.checks.length > 0 ? (
             <section
               id="sec-comprobaciones"
@@ -1256,7 +1256,7 @@ export function LessonPlayer({
             />
           </section>
 
-          {/* Pie de lección con regla honesta de completado (Paso 8) */}
+          {/* Pie de lección con regla honesta de completado */}
           <footer className="lp-footer" aria-label="Cierre y navegación de lección">
             <div className="lp-completion-box">
               <div className="lp-completion-box__info">
@@ -1418,7 +1418,7 @@ export function LessonPlayer({
         </article>
       </div>
 
-      {/* Paso 5 — Botón flotante "Preguntar" al seleccionar texto */}
+      {/* Botón flotante "Preguntar" al seleccionar texto */}
       {selectionPopup ? (
         <div
           className="lp-selection-popover"
@@ -1459,7 +1459,7 @@ export function LessonPlayer({
         {renderSyllabusNav(() => setIsMobileSyllabusOpen(false))}
       </Sheet>
 
-      {/* Paso 7 — Diálogo de atajos de teclado (?) */}
+      {/* Diálogo de atajos de teclado (?) */}
       <Dialog
         open={isShortcutsOpen}
         onClose={() => setIsShortcutsOpen(false)}

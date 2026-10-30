@@ -200,7 +200,7 @@ async function generateMercadoBrisa() {
   const productRows = [];
   for (let pid = 1; pid <= 180; pid++) {
     if (pid === 180) {
-      // Intentional anomaly required by §5.3: 1 test product with negative price (-9.99)
+      // Intentional anomaly: 1 test product with negative price (-9.99)
       const pObj = {
         product_id: 180,
         sku: 'SKU-TEST-NEG',
@@ -322,7 +322,7 @@ async function generateMercadoBrisa() {
     const email = `cliente${cid}@mercadobrisa.example`;
     const cSpec = countrySpecs[cid % countrySpecs.length];
     const city = cSpec.cities[cid % cSpec.cities.length];
-    // Intentional NULL or incomplete postal codes per §5.3
+    // Intentional NULL or incomplete postal codes
     let postalCode = `${cSpec.postalPrefix}${String((cid * 17) % 1000).padStart(3, '0')}`;
     if (cid % 11 === 0) {
       postalCode = null;

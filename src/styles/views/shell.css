@@ -1,6 +1,6 @@
 /* ==========================================================================
    APPSHELL, NAVEGACIÓN, DENSIDAD/ESCALA Y PALETA DE COMANDOS (Ctrl+K)
-   Todas las dimensiones tipográficas y de espaciado usan rem y tokens de §4.
+   Todas las dimensiones tipográficas y de espaciado usan rem y tokens
    ========================================================================== */
 
 .app-shell {
@@ -474,7 +474,7 @@
 }
 
 /* ==========================================================================
-   3. WORKSPACE, MAIN Y CONTRATO DE ANCHURA DEL TUTOR (§4.7)
+   3. WORKSPACE, MAIN Y CONTRATO DE ANCHURA DEL TUTOR
    ========================================================================== */
 
 .app-workspace {
@@ -497,7 +497,7 @@
   min-width: 0;
 }
 
-/* Contrato §4.7 para el panel del Tutor IA */
+/* Contrato de anchura para el panel del Tutor IA */
 .tutor-panel-slot {
   position: fixed;
   top: var(--topbar-h, 3.25rem);
@@ -548,7 +548,7 @@
 }
 
 /* ==========================================================================
-   4. AVISO DISCRETO DE ESCALA (§4.5)
+   4. AVISO DISCRETO DE ESCALA
    ========================================================================== */
 
 .app-scale-notice {
@@ -1130,7 +1130,7 @@
     bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
   }
 
-  /* Tutor como hoja inferior a pantalla completa en < 900px (§4.7) */
+  /* Tutor como hoja inferior a pantalla completa en < 900px */
   .tutor-panel-slot {
     top: auto;
     left: 0;

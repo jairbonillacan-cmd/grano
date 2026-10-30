@@ -43,7 +43,7 @@ function wordBoundaryRegex(patternSource) {
   return new RegExp(`(?<![\\p{L}\\p{N}_])(?:${patternSource})(?![\\p{L}\\p{N}_])`, 'giu');
 }
 
-// Reglas del Apéndice B.2
+// Reglas
 const PROHIBITED_RULES = [
   {
     id: 'clave (adjetivo)',
@@ -147,7 +147,7 @@ function scanFile(filePath) {
     const trimmed = line.trim();
     if (!trimmed || isCommentLine(trimmed)) return;
 
-    // 1. Términos prohibidos del Apéndice B.2
+    // 1. Términos prohibidos
     for (const rule of PROHIBITED_RULES) {
       rule.regex.lastIndex = 0;
       let match;

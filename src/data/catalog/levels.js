@@ -1,5 +1,5 @@
 // Niveles de la ruta curricular de Grano (0 Cimientos a 4 Experto).
-// Refinado y validado por T3 (ver docs/curriculo/fuentes.md y docs/curriculo/cambios-catalogo.md).
+// Refinado y validado (ver docs/curriculo/fuentes.md y docs/curriculo/cambios-catalogo.md).
 
 export const LEVELS = [
   {

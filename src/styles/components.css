@@ -5,7 +5,7 @@
    ========================================================================== */
 
 /* --------------------------------------------------------------------------
-   1. BUTTON (.ui-btn) — §4.4
+   1. BUTTON (.ui-btn)
    -------------------------------------------------------------------------- */
 .ui-btn {
   position: relative;
@@ -73,7 +73,7 @@
   width: 100%;
 }
 
-/* Variantes (§4.4):
+/* Variantes:
    primary: fondo --ink, texto --surface, hover opacity: 0.9
    secondary: fondo --surface, texto --ink, borde 1px solid --line-control, hover --sunken
    ghost: fondo transparente, texto --ink-2, hover --sunken y texto --ink

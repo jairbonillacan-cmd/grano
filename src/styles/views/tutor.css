@@ -1,17 +1,17 @@
 /* ==========================================================================
    TUTOR PANEL & FUNCIONES IA (src/components/TutorPanel.jsx, src/components/tutor/*)
-   Cumple §4.1–§4.7 de PLAN_GEMINI_4_ARGON.md y DESIGN.md.
+   Cumple DESIGN.md.
    Usa la animación canónica `view-fade` de `animations.css` (presupuesto global ≤ 6 @keyframes).
    ========================================================================== */
 
-/* Botón del header cuando la IA no está disponible (§8 T11 Paso 4) */
+/* Botón del header cuando la IA no está disponible */
 .app-topbar__tutor-btn[data-ai-unavailable="true"] {
   opacity: 0.55;
   border-style: dashed;
   color: var(--ink-3);
 }
 
-/* Slot lateral del panel según anchura (§4.7) */
+/* Slot lateral del panel según anchura */
 .tutor-panel-slot {
   position: fixed;
   top: var(--topbar-h, 3.25rem);
@@ -55,7 +55,7 @@
   display: none;
 }
 
-/* < 900 px: hoja inferior a pantalla completa (§4.7) */
+/* < 900 px: hoja inferior a pantalla completa */
 @media (max-width: 899px) {
   .tutor-panel-slot {
     top: auto;
@@ -407,7 +407,7 @@
   color: var(--ink-2);
 }
 
-/* Mensaje del usuario: alineado a la derecha en --sunken (§8 T11 Paso 3) */
+/* Mensaje del usuario: alineado a la derecha en --sunken */
 .tutor-msg-user {
   align-self: flex-end;
   max-width: 88%;
@@ -458,7 +458,7 @@
   word-break: break-word;
 }
 
-/* Mensaje del tutor: alineado a la izquierda SIN burbuja (§8 T11 Paso 3) */
+/* Mensaje del tutor: alineado a la izquierda SIN burbuja */
 .tutor-msg-assistant {
   align-self: flex-start;
   width: 100%;
@@ -524,7 +524,7 @@
   color: var(--ink);
 }
 
-/* Cursor de bloque fino al final durante el streaming (§8 T11 Paso 4) */
+/* Cursor de bloque fino al final durante el streaming */
 .tutor-stream-cursor {
   display: inline-block;
   width: 0.4375rem;
@@ -857,7 +857,7 @@
   overflow: auto;
 }
 
-/* Sugerencias contextuales (máximo 3, Paso 5) */
+/* Sugerencias contextuales (máximo 3) */
 .tutor-panel__suggestions {
   display: flex;
   flex-wrap: wrap;
