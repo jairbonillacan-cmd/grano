@@ -12,7 +12,7 @@ export const STAGE_3_LESSONS = [
     goal: 'Comprender la arquitectura física de un archivo Apache Parquet v2 (Row Groups, Column Chunks, Data Pages, Zone Maps y Split-Block Bloom Filters) y cómo el ordenamiento físico permite saltar hasta el 98% del I/O.',
     visualType: 'row-vs-columnar-storage',
     storyContext:
-      'Caso real en RetailStream: La tabla de eventos `fact_telemetry` tiene 60 columnas y 100 millones de filas (120 GB sin comprimir). El dashboard ejecutivo de BI solo necesita ejecutar `SELECT country_code, SUM(revenue_usd) FROM fact_telemetry WHERE event_date = \'2026-10-28\'`. En una réplica PostgreSQL orientada a filas, el disco lee los 120 GB completos porque cada fila guarda las 60 columnas contiguas. Al migrar a Parquet v2 ordenado por fecha y con Bloom Filters, la consulta lee apenas 42 MB y responde en 80 milisegundos.',
+      'Escenario en RetailStream (empresa ficticia): La tabla de eventos `fact_telemetry` tiene 60 columnas y 100 millones de filas (120 GB sin comprimir). El dashboard ejecutivo de BI solo necesita ejecutar `SELECT country_code, SUM(revenue_usd) FROM fact_telemetry WHERE event_date = \'2026-10-28\'`. En una réplica PostgreSQL orientada a filas, el disco lee los 120 GB completos porque cada fila guarda las 60 columnas contiguas. Al migrar a Parquet v2 ordenado por fecha y con Bloom Filters, la consulta lee apenas 42 MB y responde en 80 milisegundos.',
     sections: [
       {
         heading: 'Almacenamiento por filas (NSM) frente a formato híbrido columnar (PAX)',
@@ -24,7 +24,7 @@ export const STAGE_3_LESSONS = [
       },
       {
         heading: 'Zone maps, índice de páginas y efecto del ordenamiento físico',
-        body: 'En el **Footer** del archivo Parquet y en el **ColumnIndex** de cada página se guardan estadísticas exactas por bloque: `min_value`, `max_value` y `null_count` (conocidos como **Zone Maps**). Cuando ejecutas `WHERE event_date = \'2026-10-28\'` (**Predicate Pushdown**), el motor lee primero el Footer de pocos kilobytes: si un Row Group reporta `min = 2026-10-01` y `max = 2026-10-05`, el motor salta esos 128 MB sin siquiera solicitarlos a S3/GCS (**Data Skipping**).\nAtención al matiz crítico: si insertas datos en orden aleatorio respecto a `event_date`, todos los Row Groups tendrán `min = 2026-01-01` y `max = 2026-10-28`, inutilizando por completo los Zone Maps. Ordenar físicamente (`ORDER BY event_date, country_code` o curvas espaciales **Z-Order / Hilbert** cuando filtras por varias dimensiones) es lo que activa el salto de bloques.',
+        body: 'En el pie (`Footer`) del archivo Parquet y en el índice de página se guardan estadísticas por bloque: `min_value`, `max_value` y `null_count`, conocidas como **Zone Maps**. Cuando ejecutas `WHERE event_date = \'2026-10-28\'` (empujado de predicados), el motor inspecciona primero esos metadatos: si un Row Group reporta `min = 2026-10-01` y `max = 2026-10-05`, el lector descarta esos 128 MB sin descargarlos de S3 o GCS (**Data Skipping**).\nSi insertas datos en orden aleatorio respecto a `event_date`, todos los Row Groups tendrán `min = 2026-01-01` y `max = 2026-10-28`, anulando el filtrado por metadatos. Ordenar físicamente la tabla (`ORDER BY event_date, country_code` o curvas Z-Order al filtrar por varias columnas) agrupa los valores y habilita el salto de bloques.',
       },
       {
         heading: 'Filtros de Bloom por bloques y el problema de los archivos pequeños',
@@ -35,7 +35,7 @@ export const STAGE_3_LESSONS = [
       DE: {
         title: 'Qué construye y optimiza ingeniería (DE)',
         points: [
-          'Configura compresión `ZSTD` (mejor balance ratio/velocidad en 2026 que Snappy o Gzip) y ordena las tablas (`ORDER BY` o `Z-ORDER`) por las claves de filtro más frecuentes antes de escribir Parquet.',
+          'Configura compresión `ZSTD` (mejor equilibrio entre ratio y velocidad de lectura que Snappy o Gzip) y ordena las tablas (`ORDER BY` o `Z-ORDER`) por las claves de filtro más frecuentes antes de escribir Parquet.',
           'Habilita `bloom_filter_columns` sobre llaves de alta cardinalidad (`user_id`, `order_id`, `trace_id`) y ejecuta jobs de compactación para mantener archivos entre 128 MB y 512 MB.',
           'Garantiza tipos numéricos y temporales nativos (`TIMESTAMP`, `DECIMAL(12,2)`, `INT32`) en lugar de guardar todo como `VARCHAR` que arruina los Zone Maps.',
         ],
@@ -59,7 +59,7 @@ export const STAGE_3_LESSONS = [
     },
     relatedLessons: [
       { id: 'l4-star-schema-obt', reason: 'Comprende por qué las tablas anchas (One Big Table) comprimen tan bien gracias a Dictionary Encoding y RLE en Parquet.' },
-      { id: 'l8-arrow-lance-vortex', reason: 'Descubre qué ocurre cuando los bloques de Parquet pasan del disco a la memoria RAM con Apache Arrow y SIMD.' },
+      { id: 'l8-arrow-lance-vortex', reason: 'Comprende qué ocurre cuando los bloques de Parquet pasan del disco a la memoria RAM con Apache Arrow y SIMD.' },
       { id: 'l10-iceberg-v3-medallion', reason: 'Aprende cómo Apache Iceberg v3 coordina miles de archivos Parquet con transacciones ACID y Deletion Vectors.' },
     ],
     playground: {
@@ -137,7 +137,7 @@ GROUP BY country_code;`,
           id: 'b2',
           placeholder: 'Algoritmo de compresión moderno',
           acceptedAnswers: ['ZSTD', "'ZSTD'"],
-          hint: 'En 2026 el estándar recomendado por su ratio de compresión y velocidad de descompresión es `ZSTD` (Zstandard).',
+          hint: 'El algoritmo estándar recomendado por su ratio de compresión y velocidad de descompresión en Parquet es `ZSTD` (Zstandard).',
         },
         {
           id: 'b3',
@@ -243,23 +243,23 @@ GROUP BY country_code;`,
     goal: 'Analizar el layout de memoria columnar de Apache Arrow (Zero-Copy e IPC/Flight), comprender por qué la ejecución vectorizada SIMD multiplica por 20x el rendimiento en CPU, y evaluar cuándo usar Parquet v2 frente a Lance o Vortex.',
     visualType: 'arrow-zero-copy-sim',
     storyContext:
-      'Caso real en QuantBio AI: Un pipeline lee 40 millones de transacciones en DuckDB, las pasa a Python (Polars) para ingeniería de variables, y luego alimenta un motor de inferencia y un servidor de visualización BI. En la arquitectura antigua basada en conectores JDBC/ODBC y `pandas.DataFrame`, el 78% del tiempo total de CPU y el 65% de la RAM se desperdiciaban serializando, copiando y convirtiendo bytes de un formato a otro. Al estandarizar sobre Apache Arrow Zero-Copy y almacenar vectores multimodales en formato Lance, el intercambio entre motores bajó a 0.2 milisegundos con 0 bytes copiados.',
+      'Escenario en QuantBio AI (empresa ficticia): Un pipeline lee 40 millones de transacciones en DuckDB, las pasa a Python (Polars) para ingeniería de variables, y luego alimenta un motor de inferencia y un servidor de visualización BI. En la arquitectura antigua basada en conectores JDBC/ODBC y `pandas.DataFrame`, el 78% del tiempo total de CPU y el 65% de la RAM se desperdiciaban serializando, copiando y convirtiendo bytes de un formato a otro. Al estandarizar sobre Apache Arrow Zero-Copy y almacenar vectores multimodales en formato Lance, el intercambio entre motores bajó a 0.2 milisegundos con 0 bytes copiados.',
     sections: [
       {
         heading: 'Costo de serialización y memoria compartida con Apache Arrow',
-        body: 'Mientras que Parquet es el estándar para guardar datos comprimidos en **disco**, **Apache Arrow** es el estándar universal para representar tablas columnares en **memoria RAM**.\nAntes de Arrow, cada herramienta tenía un diseño de memoria incompatible: pasar datos de un motor SQL a Python, de ahí a R o a un motor de visualización obligaba a serializar y deserializar fila por fila, consumiendo hasta el 80% del tiempo de CPU.\nCon Apache Arrow, los datos se organizan en buffers contiguos estandarizados en RAM (un buffer de **Validity Bitmap** para nulos, un buffer de **Offsets** para longitudes variables y un buffer de **Values**). Gracias a la **Arrow C Data Interface** (en el mismo proceso) y a **Arrow Flight RPC / ADBC** (por red), DuckDB, Polars, PyArrow y DataFusion leen exactamente el mismo puntero de memoria RAM sin copiar un solo byte (**Zero-Copy**).',
+        body: 'Mientras que Parquet guarda datos comprimidos en disco, **Apache Arrow** define el formato estándar para representar tablas columnares en memoria RAM.\nAntes de Arrow, cada herramienta usaba una estructura interna incompatible: pasar datos de un motor SQL a Python o R obligaba a serializar y deserializar fila por fila, consumiendo hasta el 80% del tiempo de CPU.\nCon Apache Arrow, los datos se disponen en búferes contiguos en RAM (un bitmap de validez para nulos, un búfer de desplazamientos y un búfer de valores). Mediante la interfaz `Arrow C Data` en el mismo proceso y `Arrow Flight / ADBC` por red, DuckDB, Polars y PyArrow leen el mismo puntero de memoria sin copiar bytes (**Zero-Copy**).',
       },
       {
         heading: 'Jerarquía de caché del procesador y ejecución vectorizada SIMD',
-        body: '¿Por qué un bucle tradicional o una base orientada a filas desperdicia un procesador moderno? Porque al evaluar `price * (1 - discount)` fila por fila, el CPU salta entre direcciones de memoria dispersas (*pointer chasing*), provocando fallos constantes de caché (**Cache Misses**) y predicciones erróneas de salto (**Branch Mispredictions**).\nLos motores columnares modernos (DuckDB, Polars, Velox, DataFusion) procesan datos en **vectores columnares de 1,024 o 2,048 valores contiguos** que caben íntegros dentro de la caché ultrarrápida **L1/L2** del núcleo. Sobre esos buffers contiguos de Arrow, el compilador aplica instrucciones **SIMD (Single Instruction, Multiple Data)** como AVX-512 o ARM NEON: en un único ciclo de reloj, el procesador multiplica o filtra 8 o 16 números de 64 bits en paralelo.',
+        body: 'Evaluar una expresión como `price * (1 - discount)` fila por fila obliga al procesador a saltar entre direcciones de memoria dispersas, causando fallos de caché (`Cache Misses`) y penalizaciones en la predicción de saltos.\nLos motores con **ejecución vectorizada** (DuckDB, Polars, Velox, DataFusion) procesan lotes columnares de 1,024 o 2,048 valores contiguos que caben dentro de la caché L1/L2 del núcleo. Sobre esos búferes alineados de Arrow, el compilador aplica instrucciones **SIMD (Single Instruction, Multiple Data)** como AVX-512 o ARM NEON para multiplicar o filtrar 8 o 16 números de 64 bits en un solo ciclo de reloj.',
       },
       {
         heading: 'Limitaciones de Parquet en cargas multimodales y diseño de Lance y Vortex',
-        body: 'Aunque Parquet v2 es imbatible para escaneos analíticos clásicos de tablas estructuradas, fue diseñado en 2013 y sufre en tres cargas de trabajo modernas de 2026:\n1) **Acceso aleatorio puntual (`Random Access O(1)`)**: Para leer la fila #482,910 en Parquet debes localizar y descomprimir una página entera de varios megabytes.\n2) **Columnas anchas y Embeddings IA**: Guardar vectores de 1,536 dimensiones (`float32`), imágenes o textos largos para entrenar LLMs hace que los Row Groups de Parquet se fragmenten y el Footer explote en tamaño.\nAquí entran dos formatos abiertos de nueva generación totalmente compatibles con Apache Arrow:\n- **Lance**: Formato columnar diseñado para IA multimodal, búsqueda vectorial (HNSW/DiskANN nativo) y acceso aleatorio en tiempo constante $O(1)$. Calcula los desplazamientos de byte exactos sin descomprimir bloques vecinos, siendo hasta 100x más rápido que Parquet al recuperar lotes aleatorios para entrenamiento o RAG.\n- **Vortex** (incubado en Linux Foundation): Formato columnar extensible con **compresión ligera en cascada** (*BtrBlocks / FastLanes*) que permite evaluar filtros directamente sobre los datos comprimidos en RAM y GPU sin pagar el costo de descompresión previa.',
+        body: 'Aunque Parquet v2 es muy eficiente en escaneos analíticos de tablas estructuradas, presenta limitaciones en dos cargas de trabajo de IA y lectura puntual:\n1) Acceso aleatorio puntual (`O(1)`): para leer la fila #482,910 en Parquet hay que localizar y descomprimir una página completa.\n2) Columnas anchas y vectores: guardar embeddings de 1,536 dimensiones (`float32`), imágenes o textos largos fragmenta los Row Groups y agranda el pie del archivo.\nDos formatos columnares compatibles con Apache Arrow resuelven estos casos:\n- **Lance**: formato columnar diseñado para búsqueda vectorial (HNSW/DiskANN) y acceso aleatorio en tiempo constante $O(1)$, calculando desplazamientos exactos de byte sin descomprimir bloques vecinos.\n- **Vortex**: formato columnar extensible con compresión en cascada (*BtrBlocks / FastLanes*) que evalúa filtros directamente sobre datos comprimidos en RAM y GPU.',
       },
       {
         heading: 'Criterios de elección entre Parquet, Lance y Vortex',
-        body: '- Usa **Apache Parquet v2 (sobre Iceberg v3)** para tu Lakehouse analítico central: tablas de hechos y dimensiones (Bronze/Silver/Gold), agregaciones SQL masivas y reportes de Business Intelligence.\n- Usa **Lance** cuando tu tabla combine columnas analíticas con **embeddings vectoriales**, documentos largos, audio/imagen para pipelines de IA/RAG o cuando necesites recuperar miles de filas específicas por índice en milisegundos.\n- Usa **Vortex** cuando tengas tablas con miles de columnas dispersas, esquemas altamente anidados o pipelines de alto rendimiento que transfieren datos comprimidos directamente a memoria Arrow o GPUs.',
+        body: '- Usa **Apache Parquet** (sobre Iceberg v3) para el Lakehouse analítico central: tablas de hechos y dimensiones (Bronze, Silver y Gold), agregaciones SQL y reportes de Business Intelligence.\n- Usa **Lance** cuando la tabla combine columnas analíticas con vectores de embeddings, documentos largos o audio/imagen para pipelines de RAG, o cuando necesites recuperar miles de filas por índice en milisegundos.\n- Usa **Vortex** cuando operes tablas con miles de columnas dispersas, esquemas anidados o pipelines que transfieren datos comprimidos hacia memoria Arrow o GPUs.',
       },
     ],
     triadPerspectives: {
@@ -280,7 +280,7 @@ GROUP BY country_code;`,
         ],
       },
       BI: {
-        title: 'Qué potencia business intelligence (BI)',
+        title: 'Qué acelera business intelligence (BI)',
         points: [
           'Alimenta motores BI en el navegador y servidores de métricas mediante **Arrow IPC Streams**, eliminando el parseo lento de archivos JSON gigantes en los dashboards.',
           'Permite que tableros ejecutivos crucen métricas estructuradas de ventas con clasificaciones semánticas de tickets de soporte almacenadas en columnas vectoriales.',
@@ -471,23 +471,23 @@ resultado = df.with_columns(
     goal: 'Aplicar la API Lazy de Polars (`scan_parquet`) junto con el motor SQL paralelizado de DuckDB 1.x para procesar datasets mayores que la RAM, y estructurar análisis reproducibles en cuadernos reactivos con Marimo.',
     visualType: 'row-vs-columnar-storage',
     storyContext:
-      'Caso real en Finanzas de AndesTech: Un job diario que procesaba 45 GB de transacciones corría en un clúster distribuido de 8 nodos porque el script original en `pandas` moría con `MemoryError` en un servidor individual. Además, el análisis exploratorio del equipo vivía en un archivo `.ipynb` donde las celdas se habían ejecutado en orden `1 → 5 → 2 → 4`, produciendo un reporte imposible de reproducir. Al migrar el pipeline a Polars Lazy + DuckDB 1.x en un solo contenedor de 16 GB de RAM y los análisis a cuadernos reactivos **Marimo**, la factura cloud cayó un 82% y el job pasó de 18 minutos a 24 segundos.',
+      'Escenario en Finanzas de AndesTech (empresa ficticia): Un proceso diario que transformaba 45 GB de transacciones corría en un clúster distribuido de 8 nodos porque el script original en `pandas` fallaba con `MemoryError` en un servidor individual. Además, el análisis exploratorio del equipo vivía en un archivo `.ipynb` donde las celdas se habían ejecutado en orden `1 → 5 → 2 → 4`, produciendo un reporte imposible de reproducir. Al migrar el pipeline a Polars Lazy + DuckDB 1.x en un solo contenedor de 16 GB de RAM y los análisis a cuadernos reactivos Marimo, la factura cloud cayó un 82% y el proceso pasó de 18 minutos a 24 segundos.',
     sections: [
       {
         heading: 'Escalamiento vertical en un nodo: cuándo no hace falta un clúster distribuido',
-        body: 'Durante una década se asumió que cualquier dataset de más de 5 GB requería un clúster distribuido (Spark, Presto) con toda su complejidad de red, serialización JVM y tiempos de arranque. Pero el hardware cambió: hoy una sola instancia en la nube o estación de trabajo lee discos NVMe a **7 GB/s** y cuenta con entre 16 y 64 núcleos con instrucciones SIMD.\nPara el **90% de las cargas analíticas corporativas** (datasets activos de hasta 100 GB – 500 GB por ejecución), un motor columnar in-process escrito en C++ o Rust (**DuckDB 1.x** o **Polars**) corriendo en un solo nodo es más rápido, más simple de depurar y hasta un 85% más barato porque elimina el *Network Shuffle* entre servidores.',
+        body: 'Durante años se asumió que cualquier dataset de más de 5 GB requería un clúster distribuido con sobrecarga de red, serialización JVM y tiempos de arranque de varios minutos. Hoy una estación de trabajo o instancia individual lee discos NVMe a 7 GB/s y dispone de entre 16 y 64 núcleos con instrucciones SIMD.\nPara la mayoría de las cargas analíticas (datasets activos de hasta 100 GB–500 GB por ejecución), los **motores columnares en un solo nodo** escritos en C++ o Rust (DuckDB y Polars) son más rápidos, fáciles de depurar y económicos porque eliminan la redistribución por red (*Network Shuffle*) entre servidores.',
       },
       {
         heading: 'Paralelismo guiado por fragmentos (morsel-driven) y volcado a disco en DuckDB',
-        body: '**DuckDB** es un motor SQL OLAP embebido (corre dentro de tu proceso Python, Node, R o directamente en el navegador vía **DuckDB-Wasm** sin instalar servidores). Su arquitectura se basa en **Morsel-Driven Parallelism**: divide el trabajo en fragmentos de ~100,000 filas (*morsels*) que reparte dinámicamente entre todos los hilos del CPU evitando bloqueos.\nSi una consulta (un `GROUP BY` o `JOIN` masivo) supera la memoria RAM disponible, el gestor de buffers de DuckDB 1.x vuelca automáticamente las particiones intermedias a disco (**Out-of-Core Spilling**) y las procesa en streaming, permitiéndote agregar un archivo Parquet de 120 GB en una portátil con solo 16 GB de RAM.',
+        body: '**DuckDB** es un motor SQL analítico embebido que corre dentro del proceso de Python, Node, R o en el navegador vía DuckDB-Wasm sin requerir servidores externos. Su ejecución aplica **Morsel-Driven Parallelism**: divide las tablas en fragmentos de ~100,000 filas (*morsels*) que reparte dinámicamente entre los hilos de CPU.\nSi una consulta (`GROUP BY` o `JOIN` grande) supera la memoria RAM disponible, el gestor de búferes vuelca las particiones intermedias a disco (`Out-of-Core Spilling`) y las procesa por lotes, permitiendo agregar un archivo Parquet de 120 GB en un equipo con 16 GB de RAM.',
       },
       {
         heading: 'Evaluación inmediata frente a evaluación perezosa en Polars',
-        body: 'En `pandas` (o en Polars modo Eager `pl.read_parquet()`), cada línea de código se ejecuta de inmediato a ciegas: primero carga toda la tabla en RAM, luego filtra, luego borra columnas, creando múltiples copias pesadas en el camino.\nEn **Polars Lazy API (`pl.scan_parquet()`)**, escribir `.filter(...)`, `.with_columns(...)` y `.select(...)` no toca ni un byte del disco: construye un **Grafo Lógico de Consulta**. Cuando finalmente llamas a `.collect(engine="streaming")`, el optimizador de consultas de Polars:\n1) Empuja los filtros `WHERE` hasta el lector Parquet (**Predicate Pushdown**).\n2) Descarta todas las columnas que no se usan al final (**Projection Pushdown**).\n3) Fusiona expresiones en una sola pasada por lotes en streaming.',
+        body: 'En `pandas` (o en Polars modo ansioso con `pl.read_parquet()`), cada operación se ejecuta de inmediato: primero carga toda la tabla en RAM, luego filtra y después descarta columnas, creando copias intermedias.\nEn **Polars Lazy API** (`pl.scan_parquet()`), encadenar `.filter(...)`, `.with_columns(...)` y `.select(...)` construye primero un **plan lógico de consulta**. Al invocar `.collect(engine="streaming")`, el optimizador:\n1) Empuja los filtros `WHERE` hasta el lector Parquet (`Predicate Pushdown`).\n2) Lee del disco solo las columnas usadas al final (`Projection Pushdown`).\n3) Fusiona las expresiones en una pasada en streaming.',
       },
       {
         heading: 'Cuadernos reactivos como grafos acíclicos en Marimo',
-        body: 'El talón de Aquiles de los notebooks tradicionales (`.ipynb`) en Análisis de Datos y BI es el **estado oculto**: si defines `umbral = 100` en la Celda 1, calculas `clientes_vip` en la Celda 2, y luego cambias `umbral = 500` en la Celda 1 sin volver a ejecutar la Celda 2, la pantalla muestra números contradictorios. Además, los archivos `.ipynb` son bloques JSON gigantes con imágenes incrustadas que producen conflictos imposibles de revisar en `git diff`.\n**Marimo** resuelve ambos problemas de raíz:\n- **Reactividad determinista (DAG de celdas)**: Marimo analiza qué variables define y consume cada celda. Cuando cambias un parámetro o un slider interactivo en una celda, Marimo **re-ejecuta automáticamente en orden topológico todas las celdas dependientes** (igual que una hoja de cálculo reactiva o un DAG de dbt).\n- **Archivos `.py` puros versionables en Git**: Un notebook Marimo se guarda como un script Python limpio (`.py`), ejecutable como pipeline desde la terminal (`python analisis.py`), como app interactiva (`marimo run analisis.py`) y 100% auditable en Pull Requests.',
+        body: 'El problema habitual de los cuadernos tradicionales (`.ipynb`) en análisis de datos es el **estado oculto**: si defines `umbral = 100` en la celda 1, calculas `clientes_vip` en la celda 2 y luego cambias `umbral = 500` en la celda 1 sin reejecutar la celda 2, la salida queda inconsistente. Además, los archivos `.ipynb` guardan JSON con salidas binarias difíciles de revisar en `git diff`.\n**Marimo** resuelve ambos puntos:\n- Reactividad determinista (DAG de celdas): analiza qué variables define y consume cada celda y reejecuta automáticamente en orden topológico las celdas dependientes.\n- Archivos `.py` puros versionables en Git: cada cuaderno se guarda como un script Python ejecutable desde la terminal (`python analisis.py`) o como aplicación interactiva (`marimo run analisis.py`).',
       },
     ],
     triadPerspectives: {
@@ -529,7 +529,7 @@ resultado = df.with_columns(
 import pandas as pd
 
 df_all = pd.read_parquet("s3://lakehouse/silver/eventos_80gb.parquet")
-df_filtered = df_all[df_all["event_year"] == 2026]
+df_filtered = df_all[df_all["event_date"] >= "2026-01-01"]
 df_clean = df_filtered[["region", "channel", "net_revenue_usd"]]
 res = df_clean.groupby(["region", "channel"])["net_revenue_usd"].sum()`,
       badResult: [
@@ -548,7 +548,7 @@ import duckdb
 
 lf_eventos = (
     pl.scan_parquet("s3://lakehouse/silver/eventos_80gb.parquet")
-    .filter(pl.col("event_year") == 2026)
+    .filter(pl.col("event_date") >= "2026-01-01")
     .select(["region", "channel", "net_revenue_usd"])
 )
 
