@@ -1,0 +1,331 @@
+{
+  "version": 1,
+  "profile": {
+    "track": "bi",
+    "startLevel": 0,
+    "onboarded": true,
+    "createdAt": "2026-10-24T09:45:00.000Z"
+  },
+  "prefs": {
+    "theme": "light",
+    "density": "comfortable",
+    "scale": 1,
+    "aiEnabled": true,
+    "reducedMotion": "system",
+    "sidebarCollapsed": false
+  },
+  "progress": {
+    "lessons": {
+      "c0-datos-01-tipos-dato": {
+        "status": "completed",
+        "stepIndex": 2,
+        "sectionId": "cinco-tipos-basicos-y-su-contrato",
+        "checks": {
+          "c1": {
+            "optionId": "a",
+            "correct": true,
+            "attempts": 1,
+            "answeredAt": "2026-10-24T10:15:00.000Z"
+          },
+          "c2": {
+            "optionId": "a",
+            "correct": true,
+            "attempts": 1,
+            "answeredAt": "2026-10-24T10:18:00.000Z"
+          }
+        },
+        "practice": {
+          "solved": true,
+          "codeSolved": true,
+          "pipelineSolved": false,
+          "lastCode": "SELECT product_id, CAST(list_price_usd AS DECIMAL(10, 2)) AS precio_usd FROM products WHERE is_active = true;",
+          "updatedAt": "2026-10-24T10:25:00.000Z"
+        },
+        "startedAt": "2026-10-24T10:00:00.000Z",
+        "completedAt": "2026-10-24T10:26:00.000Z",
+        "updatedAt": "2026-10-24T10:26:00.000Z"
+      },
+      "c0-datos-02-null-vacio": {
+        "status": "completed",
+        "stepIndex": 2,
+        "sectionId": "diferencia-entre-null-cero-y-vacio",
+        "checks": {
+          "c1": {
+            "optionId": "a",
+            "correct": true,
+            "attempts": 1,
+            "answeredAt": "2026-10-25T09:12:00.000Z"
+          },
+          "c2": {
+            "optionId": "a",
+            "correct": true,
+            "attempts": 2,
+            "answeredAt": "2026-10-25T09:16:00.000Z"
+          }
+        },
+        "practice": {
+          "solved": true,
+          "codeSolved": true,
+          "pipelineSolved": false,
+          "lastCode": "SELECT customer_id, COALESCE(segment, 'Sin segmento') AS segmento FROM customers;",
+          "updatedAt": "2026-10-25T09:24:00.000Z"
+        },
+        "startedAt": "2026-10-25T09:00:00.000Z",
+        "completedAt": "2026-10-25T09:25:00.000Z",
+        "updatedAt": "2026-10-25T09:25:00.000Z"
+      },
+      "c0-datos-03-formatos-archivo": {
+        "status": "completed",
+        "stepIndex": 2,
+        "sectionId": "csv-y-excel-archivos-orientados-a-filas",
+        "checks": {
+          "c1": {
+            "optionId": "a",
+            "correct": true,
+            "attempts": 1,
+            "answeredAt": "2026-10-26T11:10:00.000Z"
+          }
+        },
+        "practice": {
+          "solved": true,
+          "codeSolved": true,
+          "pipelineSolved": false,
+          "lastCode": "SELECT order_id, status FROM orders WHERE status = 'completed';",
+          "updatedAt": "2026-10-26T11:22:00.000Z"
+        },
+        "startedAt": "2026-10-26T10:55:00.000Z",
+        "completedAt": "2026-10-26T11:23:00.000Z",
+        "updatedAt": "2026-10-26T11:23:00.000Z"
+      },
+      "c0-datos-04-utf8-separadores": {
+        "status": "completed",
+        "stepIndex": 2,
+        "sectionId": "utf8-y-mojibake",
+        "checks": {
+          "c1": {
+            "optionId": "a",
+            "correct": true,
+            "attempts": 1,
+            "answeredAt": "2026-10-27T08:40:00.000Z"
+          }
+        },
+        "practice": {
+          "solved": true,
+          "codeSolved": true,
+          "pipelineSolved": false,
+          "lastCode": "SELECT store_id, city FROM stores ORDER BY store_id;",
+          "updatedAt": "2026-10-27T08:50:00.000Z"
+        },
+        "startedAt": "2026-10-27T08:30:00.000Z",
+        "completedAt": "2026-10-27T08:51:00.000Z",
+        "updatedAt": "2026-10-27T08:51:00.000Z"
+      },
+      "c0-datos-05-tablas-grano": {
+        "status": "completed",
+        "stepIndex": 2,
+        "sectionId": "filas-columnas-y-claves",
+        "checks": {
+          "c1": {
+            "optionId": "a",
+            "correct": true,
+            "attempts": 1,
+            "answeredAt": "2026-10-27T09:15:00.000Z"
+          }
+        },
+        "practice": {
+          "solved": true,
+          "codeSolved": true,
+          "pipelineSolved": false,
+          "lastCode": "SELECT COUNT(*) AS total_filas, COUNT(DISTINCT order_id) AS pedidos_unicos FROM orders;",
+          "updatedAt": "2026-10-27T09:28:00.000Z"
+        },
+        "startedAt": "2026-10-27T09:00:00.000Z",
+        "completedAt": "2026-10-27T09:30:00.000Z",
+        "updatedAt": "2026-10-27T09:30:00.000Z"
+      },
+      "c0-hojas-01-tablas-referencias": {
+        "status": "known",
+        "stepIndex": 0,
+        "sectionId": null,
+        "checks": {},
+        "practice": {
+          "solved": false,
+          "codeSolved": false,
+          "pipelineSolved": false,
+          "lastCode": "",
+          "updatedAt": null
+        },
+        "startedAt": "2026-10-27T10:00:00.000Z",
+        "completedAt": "2026-10-27T10:00:00.000Z",
+        "updatedAt": "2026-10-27T10:00:00.000Z"
+      },
+      "c1-sql-base-01-select-from-where": {
+        "status": "completed",
+        "stepIndex": 2,
+        "sectionId": null,
+        "checks": {
+          "chk-c1-sql-01-orden": {
+            "optionId": "a",
+            "correct": true,
+            "attempts": 1,
+            "answeredAt": "2026-10-28T14:20:00.000Z"
+          }
+        },
+        "practice": {
+          "solved": true,
+          "codeSolved": true,
+          "pipelineSolved": false,
+          "lastCode": "SELECT order_id, customer_id, total_usd FROM orders WHERE status = 'completed';",
+          "updatedAt": "2026-10-28T14:35:00.000Z"
+        },
+        "startedAt": "2026-10-28T14:05:00.000Z",
+        "completedAt": "2026-10-28T14:36:00.000Z",
+        "updatedAt": "2026-10-28T14:36:00.000Z"
+      },
+      "c1-sql-joins-02-grano-fanout": {
+        "status": "completed",
+        "stepIndex": 3,
+        "sectionId": "que-es-el-grano-de-una-tabla-y-por-que-define-su",
+        "checks": {
+          "c1": {
+            "optionId": "b",
+            "correct": true,
+            "attempts": 1,
+            "answeredAt": "2026-10-29T16:10:00.000Z"
+          },
+          "c2": {
+            "optionId": "a",
+            "correct": true,
+            "attempts": 2,
+            "answeredAt": "2026-10-29T16:15:00.000Z"
+          },
+          "c3": {
+            "optionId": "b",
+            "correct": true,
+            "attempts": 1,
+            "answeredAt": "2026-10-29T16:18:00.000Z"
+          }
+        },
+        "practice": {
+          "solved": true,
+          "codeSolved": true,
+          "pipelineSolved": false,
+          "lastCode": "WITH items_por_pedido AS (\n  SELECT order_id, SUM(quantity) AS total_unidades\n  FROM order_items\n  GROUP BY order_id\n)\nSELECT o.order_id, o.total_usd, i.total_unidades\nFROM orders o\nJOIN items_por_pedido i ON o.order_id = i.order_id;",
+          "updatedAt": "2026-10-29T16:30:00.000Z"
+        },
+        "startedAt": "2026-10-29T15:50:00.000Z",
+        "completedAt": "2026-10-29T16:32:00.000Z",
+        "updatedAt": "2026-10-29T16:32:00.000Z"
+      },
+      "c2-dimensional-02-star-schema-obt": {
+        "status": "in_progress",
+        "stepIndex": 1,
+        "sectionId": "sec-estrella-vs-copo-nieve",
+        "checks": {
+          "chk-l4-q1": {
+            "optionId": "a",
+            "correct": false,
+            "attempts": 1,
+            "answeredAt": "2026-10-30T08:15:00.000Z"
+          }
+        },
+        "practice": {
+          "solved": false,
+          "codeSolved": false,
+          "pipelineSolved": false,
+          "lastCode": "",
+          "updatedAt": null
+        },
+        "startedAt": "2026-10-30T08:00:00.000Z",
+        "completedAt": null,
+        "updatedAt": "2026-10-30T08:15:00.000Z"
+      }
+    },
+    "projects": {
+      "project-c0-datos": {
+        "completed": true,
+        "completedAt": "2026-10-27T09:45:00.000Z",
+        "repoUrl": "https://github.com/alumna-brisa/grano-c0-datos-auditoria",
+        "notes": "Inspección de tipos y grano sobre orders, customers y products de Mercado Brisa."
+      },
+      "project-c1-sql-joins": {
+        "completed": true,
+        "completedAt": "2026-10-29T17:10:00.000Z",
+        "repoUrl": "https://github.com/alumna-brisa/grano-c1-reconciliacion-joins",
+        "notes": "Pre-agregación en CTEs para eliminar fan-out entre orders, order_items y refunds."
+      }
+    },
+    "diagnostic": {
+      "recommendedStage": 1,
+      "targetRole": "BI",
+      "diagnosticScore": 72,
+      "completedAt": "2026-10-24T09:50:00.000Z"
+    },
+    "studyMinutesByDay": {
+      "2026-10-24": 35,
+      "2026-10-25": 30,
+      "2026-10-26": 28,
+      "2026-10-27": 45,
+      "2026-10-28": 40,
+      "2026-10-29": 50,
+      "2026-10-30": 20
+    }
+  },
+  "review": {
+    "cards": {
+      "fc-01": {
+        "due": "2026-10-29T12:00:00.000Z",
+        "stability": 4.25,
+        "difficulty": 5.1,
+        "elapsed_days": 2,
+        "scheduled_days": 4,
+        "reps": 2,
+        "lapses": 0,
+        "state": 2,
+        "last_review": "2026-10-25T12:00:00.000Z"
+      },
+      "fc-02": {
+        "due": "2026-10-30T08:00:00.000Z",
+        "stability": 3.1,
+        "difficulty": 5.8,
+        "elapsed_days": 1,
+        "scheduled_days": 3,
+        "reps": 1,
+        "lapses": 0,
+        "state": 2,
+        "last_review": "2026-10-27T08:00:00.000Z"
+      },
+      "fc-04": {
+        "due": "2026-11-03T10:00:00.000Z",
+        "stability": 8.4,
+        "difficulty": 4.6,
+        "elapsed_days": 4,
+        "scheduled_days": 8,
+        "reps": 3,
+        "lapses": 0,
+        "state": 2,
+        "last_review": "2026-10-26T10:00:00.000Z"
+      }
+    }
+  },
+  "tutor": {
+    "threads": {
+      "c1-sql-joins-02-grano-fanout": [
+        {
+          "id": "msg-fixture-1",
+          "role": "user",
+          "content": "¿Por qué no basta con poner DISTINCT después de unir orders con order_items?",
+          "mode": "free-question",
+          "createdAt": "2026-10-29T16:05:00.000Z"
+        },
+        {
+          "id": "msg-fixture-2",
+          "role": "assistant",
+          "content": "Porque `SELECT DISTINCT` sobre el resultado del JOIN no impide que `SUM(o.total_usd)` sume el total de la cabecera una vez por cada línea de producto. Para conservar el grano 1 fila = 1 pedido debes pre-agregar `order_items` por `order_id` en una CTE antes de cruzar.",
+          "mode": "free-question",
+          "createdAt": "2026-10-29T16:05:04.000Z"
+        }
+      ]
+    }
+  }
+}

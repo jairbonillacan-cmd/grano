@@ -17,7 +17,9 @@
     "check:sql": "node scripts/check-sql.mjs",
     "check": "npm run check:catalog && npm run check:content && npm run check:copy && npm run check:contrast && npm run check:sql",
     "shots": "node scripts/shots.mjs",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:e2e": "node tests/e2e/run-e2e.mjs",
+    "test:e2e:ai": "node tests/e2e/run-e2e-ai.mjs"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.4",
