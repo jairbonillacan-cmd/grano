@@ -34,35 +34,35 @@ export const lesson = {
             "day_of_week": 1,
             "day_name": "Lunes",
             "pedidos": 14,
-            "ingresos_usd": 5476.33
+            "ingresos_usd": 7350.06
           },
           {
             "calendar_date": "2024-01-02",
             "day_of_week": 2,
             "day_name": "Martes",
-            "pedidos": 14,
-            "ingresos_usd": 6814.3
+            "pedidos": 15,
+            "ingresos_usd": 4966.21
           },
           {
             "calendar_date": "2024-01-03",
             "day_of_week": 3,
             "day_name": "Miércoles",
-            "pedidos": 11,
-            "ingresos_usd": 4651.27
+            "pedidos": 12,
+            "ingresos_usd": 5787.59
           },
           {
             "calendar_date": "2024-01-04",
             "day_of_week": 4,
             "day_name": "Jueves",
             "pedidos": 15,
-            "ingresos_usd": 5832.19
+            "ingresos_usd": 5113.58
           },
           {
             "calendar_date": "2024-01-05",
             "day_of_week": 5,
             "day_name": "Viernes",
-            "pedidos": 13,
-            "ingresos_usd": 5218.44
+            "pedidos": 15,
+            "ingresos_usd": 5417.34
           }
         ]
       }
@@ -188,6 +188,46 @@ export const lesson = {
             "tendencia_7d": 7773.79,
             "estacionalidad_dia": 91.3,
             "residuo_usd": 5175.47
+          },
+          {
+            "calendar_date": "2024-05-18",
+            "day_name": "Sábado",
+            "ingresos_usd": 13067.04,
+            "tendencia_7d": 7586.96,
+            "estacionalidad_dia": 314.83,
+            "residuo_usd": 5165.25
+          },
+          {
+            "calendar_date": "2024-04-17",
+            "day_name": "Miércoles",
+            "ingresos_usd": 11516.52,
+            "tendencia_7d": 6722.6,
+            "estacionalidad_dia": -322.27,
+            "residuo_usd": 5116.19
+          },
+          {
+            "calendar_date": "2024-08-06",
+            "day_name": "Martes",
+            "ingresos_usd": 12363.56,
+            "tendencia_7d": 7418.49,
+            "estacionalidad_dia": 91.3,
+            "residuo_usd": 4853.77
+          },
+          {
+            "calendar_date": "2024-10-21",
+            "day_name": "Lunes",
+            "ingresos_usd": 13180.56,
+            "tendencia_7d": 8579.73,
+            "estacionalidad_dia": -6.05,
+            "residuo_usd": 4606.88
+          },
+          {
+            "calendar_date": "2024-07-17",
+            "day_name": "Miércoles",
+            "ingresos_usd": 11912.49,
+            "tendencia_7d": 7821.1,
+            "estacionalidad_dia": -322.27,
+            "residuo_usd": 4413.66
           }
         ]
       }

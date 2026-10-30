@@ -171,11 +171,13 @@ export function normalizeLessonV2(rawLesson) {
             : [];
 
   const sources =
-    Array.isArray(baseV2?.sources) && baseV2.sources.length > 0
-      ? baseV2.sources
-      : Array.isArray(rawLesson.sources)
-        ? rawLesson.sources
-        : [];
+    hasExplicitOverride && 'sources' in winOverride
+      ? winOverride.sources
+      : Array.isArray(baseV2?.sources) && baseV2.sources.length > 0
+        ? baseV2.sources
+        : Array.isArray(rawLesson.sources)
+          ? rawLesson.sources
+          : [];
 
   const glossaryTerms =
     Array.isArray(baseV2?.glossaryTerms) && baseV2.glossaryTerms.length > 0

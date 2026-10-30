@@ -35,5 +35,19 @@
 | Fase 3 (Ola B) | `W-de2-pipelines` (6 lecciones) | `35ef7ba6-ff44-4389-8f9e-ff6d9246939e` | Fusionada (`W-de2-pipelines.md` D.3 OK) | `8f853b5` | Ninguno |
 | Fase 3 (Ola B) | `W-c2-dimensional` (5 lecciones) | `fc158661-a087-4e4c-9fbe-17906d904365` | Fusionada (`W-c2-dimensional.md` D.3 OK) | `dafa63b` | Ninguno |
 | Fase 3 (Ola B) | `W-de2-formatos` (5 lecciones) | `a139a401-b1d4-4aee-baf5-911697a46c27` | Fusionada (`W-de2-formatos.md` D.3 OK) | `2c9aea5` | Ninguno |
-| Fase 3 (Ola C) | `W-*` (13 módulos Niveles 3–4: 60 lecciones), `F1`, `E1` | En lanzamiento | En curso | — | Ola C → `F1` + `E1` |
+| Fase 3 (Ola C) | `W-de3-transformacion` (4 lecciones) | `742c577b-5811-4ff7-96d5-ab1e544d6f89` | Fusionada (`W-de3-transformacion.md` D.3 OK) | `409427a` | Ninguno |
+| Fase 3 (Ola C) | `W-de3-lakehouse` (4 lecciones) | `86e92074-d0a5-4d30-9f57-67b87594f47e` | Fusionada (`W-de3-lakehouse.md` D.3 OK) | `387039f` | Ninguno |
+| Fase 3 (Ola C) | `W-x4-ia-datos` (4 lecciones) | `c3790924-563a-4781-9b88-e69bc8bf16b4` | Fusionada (`W-x4-ia-datos.md` D.3 OK) | `4049708` | Ninguno |
+| Fase 3 (Ola C) | `W-bi3-gobierno` (5 lecciones) | `eb7df23a-1607-4b67-be8f-3306d9ba61f8` | Fusionada (`W-bi3-gobierno.md` D.3 OK) | `ceb96d5` | Ninguno |
+| Fase 3 (Ola C) | `W-bi3-dashboards` (5 lecciones) | `2cb57322-b570-4821-889c-2110796a481a` | Fusionada (`W-bi3-dashboards.md` D.3 OK) | `70baa70` | Ninguno |
+| Fase 3 (Ola C) | `W-de4-plataforma` (6 lecciones) | `f52fa3ae-c320-4d19-acfb-25e1a39892fe` | Fusionada (`W-de4-plataforma.md` D.3 OK) | `f1afc95` | Ninguno |
+| Fase 3 (Ola C) | `W-da4-modelos` (5 lecciones) | `02409d2f-ecab-4b90-835d-26b7db01832f` | Fusionada (`W-da4-modelos.md` D.3 OK) | `261488b` | Ninguno |
+| Fase 3 (Ola C) | `W-de4-streaming` (5 lecciones) | `ec59f9dc-9d8a-4e0e-8872-fb06b95cf846` | Fusionada (`W-de4-streaming.md` D.3 OK) | `722028c` | Ninguno |
+| Fase 3 (Ola C) | `W-bi4-operacion` (5 lecciones) | `e45d6d9b-ab35-421c-9a0f-1fbc4e568dc1` | Fusionada (`W-bi4-operacion.md` D.3 OK) | `449a329` | Ninguno |
+| Fase 3 (Ola C) | `W-x4-carrera` (3 lecciones) | `77ed9962-3939-4c28-a71f-e59d8e84cce0` | Fusionada (`W-x4-carrera.md` D.3 OK) | `1d404ed` | Ninguno |
+| Fase 3 (Ola C) | `W-da3-experimentos` (5 lecciones) | `8c2f23ef-327b-46b1-9c47-8162a22e3526` | Fusionada (`W-da3-experimentos.md` D.3 OK) | `18160f5` | Ninguno |
+| Fase 3 (Ola C) | `W-da3-producto` (4 lecciones) | `580e7f53-6209-4e65-8b44-b3e1c2c2aeda` | Fusionada (`W-da3-producto.md` D.3 OK) | `b6344a0` | Ninguno |
+| Fase 3 (Ola C) | `W-da4-causalidad` (5 lecciones) | `078672a8-85e1-463d-b9cf-c8e49d5f1866` | Fusionada (`W-da4-causalidad.md` D.3 OK) | `d30fa2c` | Ninguno |
+| Fase 3 (Cierre) | `F1` · Verificador técnico y de fuentes | `f5b2a432-9695-4190-b234-120702dfd613` | En curso (`../ING-F1`) | — | Auditoría D.3 |
+| Fase 3 (Cierre) | `E1` · Editor de estilo y glosario global | `ebf9dc05-f99e-40af-96eb-cbed59be44c6` | En curso (`../ING-E1`) | — | Auditoría D.3 |
 | Fase 4 | `Q1`, `Q2`, `Q3`, `FINAL` | Pendiente (Fase 3) | Pendiente | — | Espera cierre de Fase 3 |

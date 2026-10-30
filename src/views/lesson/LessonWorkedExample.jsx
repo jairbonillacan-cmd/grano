@@ -223,7 +223,7 @@ export function LessonWorkedExample({ workedExample, onAskTutor }) {
             >
               <span className="lp-worked-tab__num tabular">0{idx + 1}</span>
               <span className="lp-worked-tab__label">
-                {step.label || `Paso ${idx + 1}`}
+                {step.label || step.title || `Paso ${idx + 1}`}
               </span>
             </button>
           );
@@ -233,7 +233,7 @@ export function LessonWorkedExample({ workedExample, onAskTutor }) {
       <div className="lp-worked-panel" role="tabpanel">
         <div className="lp-worked-panel__header">
           <h3 className="lp-worked-panel__title">
-            {currentStep.label || `Paso ${safeIdx + 1}`}
+            {currentStep.label || currentStep.title || `Paso ${safeIdx + 1}`}
           </h3>
           {onAskTutor && currentStep.code ? (
             <button

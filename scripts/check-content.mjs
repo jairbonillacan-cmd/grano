@@ -193,8 +193,8 @@ async function main() {
       } catch {
         lessonErrors.push(`Source #${idx + 1} tiene URL inválida (${src.url})`);
       }
-      if (!src.accessed || !/^\d{4}-\d{2}-\d{2}$/.test(src.accessed)) {
-        lessonErrors.push(`Source #${idx + 1} requiere fecha accessed YYYY-MM-DD`);
+      if (!src.accessed || !/^2026-\d{2}-\d{2}$/.test(src.accessed)) {
+        lessonErrors.push(`Source #${idx + 1} requiere fecha accessed 2026-MM-DD`);
       }
     }
 
