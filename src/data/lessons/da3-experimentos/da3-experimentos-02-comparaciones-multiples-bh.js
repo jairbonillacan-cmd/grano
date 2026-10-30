@@ -3,7 +3,7 @@ export const lesson = {
   v2Id: 'da3-experimentos-02-comparaciones-multiples-bh',
   moduleId: 'da3-experimentos',
   track: 'da',
-  tracks: ['da', 'ds'],
+  tracks: ['da'],
   level: 3,
   order: 2,
   contentVersion: 2,
@@ -12,7 +12,7 @@ export const lesson = {
   minutes: 25,
   needsReview: false,
   prerequisites: [
-    'da2-inferencia',
+
     'da3-experimentos-01-ab-testing-cuped',
   ],
   learningObjectives: [
