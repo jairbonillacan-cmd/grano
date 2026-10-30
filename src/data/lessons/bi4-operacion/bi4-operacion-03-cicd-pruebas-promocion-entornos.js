@@ -13,7 +13,7 @@ export const lesson = {
   ],
   contentVersion: 1,
 
-  hook: 'Un viernes por la tarde, un desarrollador fusiona una rama en el repositorio de BI de Mercado Brisa y publica el modelo en el espacio de trabajo de producción. El lunes, finanzas detecta que el importe cobrado (`payments`) supera en más de 73,000 USD al total facturado (`orders`) de 2024 porque alguien unió la tabla de pagos sin deduplicar reintentos capturados; además, una medida quedó apuntando al esquema de pruebas. ¿Cómo construir un pipeline CI/CD que bloquee errores de metadatos, ejecute pruebas automáticas de reconciliación numérica y promueva entre entornos con reglas parametrizadas?',
+  hook: 'Un viernes por la tarde, alguien fusiona una rama en el repositorio de BI de Mercado Brisa y publica el modelo en producción. El lunes, finanzas detecta que el importe cobrado (`payments`) supera en 73,949.98 USD al total facturado (`orders`) de 2024 porque se unió la tabla de pagos sin deduplicar reintentos capturados. ¿Cómo construir un pipeline CI/CD que bloquee errores de metadatos, ejecute pruebas automáticas de reconciliación y promueva entre entornos con reglas parametrizadas?',
 
   objectives: [
     'Diseñar las tres puertas de un pipeline de integración continua (CI) para BI: validación sintáctica TMDL, análisis estático con Best Practice Analyzer (BPA) y pruebas de reconciliación SQL.',
@@ -74,7 +74,7 @@ ORDER BY c.year ASC;`,
     },
     {
       id: 'reglas-estaticas-bpa-linea-comandos',
-      heading: 'Automatización de reglas estáticas BPA en GitHub Actions o Azure DevOps',
+      heading: 'Automatización de reglas BPA en GitHub Actions o Azure DevOps',
       body: 'Revisar a mano cientos de columnas e indicadores en cada Pull Request consume horas y deja pasar descuidos. El archivo `bpa-rules.json` codifica los estándares del equipo como expresiones dinámicas. Estas reglas inspeccionan el árbol de metadatos del modelo tabular en segundos.\n\nPor ejemplo, una regla de severidad alta (`Error`) comprueba que toda columna terminada en `_id` tenga `IsHidden == true` y `SummarizeBy == "None"`. Otra regla exige que toda medida visible posea `FormatString` y `Description` no vacíos. En el flujo de CI, el ejecutor carga la carpeta `*.SemanticModel/definition` y evalúa el lote de reglas. Si aparece al menos una infracción de nivel error, la fusión se bloquea y el autor recibe el listado de objetos por corregir.',
       example: {
         language: 'yaml',
