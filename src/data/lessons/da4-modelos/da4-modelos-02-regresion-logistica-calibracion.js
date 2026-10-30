@@ -1,4 +1,4 @@
-export const lesson = {
+﻿export const lesson = {
   "id": "da4-modelos-02-regresion-logistica-calibracion",
   "moduleId": "da4-modelos",
   "tracks": [
@@ -332,28 +332,28 @@ export const lesson = {
       "title": "statsmodels — Regression with Discrete Dependent Variable (Logit and Odds Ratios)",
       "url": "https://www.statsmodels.org/stable/discretemod.html",
       "publisher": "statsmodels Developers",
-      "accessed": "2025-10-15",
+      "accessed": "2026-04-20",
       "supports": "Formulación del modelo logit, estimación de máxima verosimilitud y cálculo de razones de momios."
     },
     {
       "title": "scikit-learn User Guide — Probability Calibration and Brier Score",
       "url": "https://scikit-learn.org/stable/modules/calibration.html",
       "publisher": "scikit-learn Developers",
-      "accessed": "2025-10-15",
+      "accessed": "2026-04-20",
       "supports": "Curvas de calibración por intervalos y evaluación cuadrática mediante el puntaje de Brier."
     },
     {
       "title": "scikit-learn User Guide — Logistic Regression",
       "url": "https://scikit-learn.org/stable/modules/linear_model.html",
       "publisher": "scikit-learn Developers",
-      "accessed": "2025-10-15",
+      "accessed": "2026-04-20",
       "supports": "Función sigmoide, log-pérdida y propiedades de las probabilidades predichas en regresión logística."
     },
     {
       "title": "James, Witten, Hastie, Tibshirani & Taylor — An Introduction to Statistical Learning (ISLP, Ch. 4 Classification)",
       "url": "https://www.statlearning.com/",
       "publisher": "Springer",
-      "accessed": "2025-10-15",
+      "accessed": "2026-04-20",
       "supports": "Interpretación de momios, clasificación binaria y ajuste de umbrales con costes asimétricos."
     }
   ],

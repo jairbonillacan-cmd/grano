@@ -1,4 +1,4 @@
-export const lesson = {
+﻿export const lesson = {
   "id": "da4-modelos-01-regresion-lineal-multiple",
   "moduleId": "da4-modelos",
   "tracks": [
@@ -399,28 +399,28 @@ export const lesson = {
       "title": "DuckDB Documentation — Aggregate Functions (REGR_SLOPE, REGR_INTERCEPT, REGR_R2)",
       "url": "https://duckdb.org/docs/stable/sql/functions/aggregates.html",
       "publisher": "DuckDB Foundation",
-      "accessed": "2025-10-15",
+      "accessed": "2026-04-20",
       "supports": "Sintaxis y orden de argumentos (y, x) de las funciones de regresión lineal agregada en SQL."
     },
     {
       "title": "statsmodels — Ordinary Least Squares (OLS) and Regression Diagnostics",
       "url": "https://www.statsmodels.org/stable/regression.html",
       "publisher": "statsmodels Developers",
-      "accessed": "2025-10-15",
+      "accessed": "2026-04-20",
       "supports": "Estimación por mínimos cuadrados ordinarios, análisis de residuos y pruebas de homocedasticidad."
     },
     {
       "title": "statsmodels — variance_inflation_factor (Multicollinearity Diagnostics)",
       "url": "https://www.statsmodels.org/stable/generated/statsmodels.stats.outliers_influence.variance_inflation_factor.html",
       "publisher": "statsmodels Developers",
-      "accessed": "2025-10-15",
+      "accessed": "2026-04-20",
       "supports": "Definición matemática e interpretación del factor de inflación de la varianza (VIF)."
     },
     {
       "title": "James, Witten, Hastie, Tibshirani & Taylor — An Introduction to Statistical Learning (ISLP, Ch. 3 Linear Regression)",
       "url": "https://www.statlearning.com/",
       "publisher": "Springer",
-      "accessed": "2025-10-15",
+      "accessed": "2026-04-20",
       "supports": "Interpretación ceteris paribus de pendientes múltiples, colinealidad y diagnóstico de errores."
     }
   ],

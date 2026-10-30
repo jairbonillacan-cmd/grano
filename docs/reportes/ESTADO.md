@@ -48,6 +48,9 @@
 | Fase 3 (Ola C) | `W-da3-experimentos` (5 lecciones) | `8c2f23ef-327b-46b1-9c47-8162a22e3526` | Fusionada (`W-da3-experimentos.md` D.3 OK) | `18160f5` | Ninguno |
 | Fase 3 (Ola C) | `W-da3-producto` (4 lecciones) | `580e7f53-6209-4e65-8b44-b3e1c2c2aeda` | Fusionada (`W-da3-producto.md` D.3 OK) | `b6344a0` | Ninguno |
 | Fase 3 (Ola C) | `W-da4-causalidad` (5 lecciones) | `078672a8-85e1-463d-b9cf-c8e49d5f1866` | Fusionada (`W-da4-causalidad.md` D.3 OK) | `d30fa2c` | Ninguno |
-| Fase 3 (Cierre) | `F1` · Verificador técnico y de fuentes | `f5b2a432-9695-4190-b234-120702dfd613` | En curso (`../ING-F1`) | — | Auditoría D.3 |
-| Fase 3 (Cierre) | `E1` · Editor de estilo y glosario global | `ebf9dc05-f99e-40af-96eb-cbed59be44c6` | En curso (`../ING-E1`) | — | Auditoría D.3 |
-| Fase 4 | `Q1`, `Q2`, `Q3`, `FINAL` | Pendiente (Fase 3) | Pendiente | — | Espera cierre de Fase 3 |
+| Fase 3 (Cierre) | `F1` · Verificador técnico y de fuentes | `f5b2a432-9695-4190-b234-120702dfd613` | Fusionada (`F1.md` D.3 OK) | `34296bd` | Ninguno |
+| Fase 3 (Cierre) | `E1` · Editor de estilo y glosario global | `ebf9dc05-f99e-40af-96eb-cbed59be44c6` | Fusionada (`E1.md` D.3 OK) | `fb268a3` | Ninguno |
+| Fase 4 | `Q1` · Pruebas automatizadas | En preparación (`../ING-Q1`) | En curso | — | Auditoría D.3 |
+| Fase 4 | `Q2` · Accesibilidad y rendimiento | En preparación (`../ING-Q2`) | En curso | — | Auditoría D.3 |
+| Fase 4 | `Q3` · Revisión visual y pulido | En preparación (`../ING-Q3`) | En curso | — | Auditoría D.3 |
+| Fase 4 | `FINAL` · Cierre y recorrido manual | Orquestador | Pendiente (`Q1`–`Q3`) | — | Espera fusión `Q1`–`Q3` |

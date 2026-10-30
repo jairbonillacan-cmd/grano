@@ -1,4 +1,4 @@
-export const lesson = {
+﻿export const lesson = {
   "id": "da4-modelos-03-series-temporales-descomposicion",
   "moduleId": "da4-modelos",
   "tracks": [
@@ -473,28 +473,28 @@ export const lesson = {
       "title": "Hyndman & Athanasopoulos — Forecasting: Principles and Practice (fpp3, Ch. 3 Time Series Decomposition)",
       "url": "https://otexts.com/fpp3/decomposition.html",
       "publisher": "OTexts",
-      "accessed": "2025-10-15",
+      "accessed": "2026-04-20",
       "supports": "Componentes de tendencia-ciclo, estacionalidad y residuo en descomposiciones aditivas y multiplicativas."
     },
     {
       "title": "Hyndman & Athanasopoulos — STL Decomposition (Seasonal and Trend decomposition using Loess)",
       "url": "https://otexts.com/fpp3/stl.html",
       "publisher": "OTexts",
-      "accessed": "2025-10-15",
+      "accessed": "2026-04-20",
       "supports": "Método STL para extracción flexible de estacionalidad y resistencia a valores atípicos."
     },
     {
       "title": "DuckDB Documentation — Window Functions and Framing (ROWS BETWEEN)",
       "url": "https://duckdb.org/docs/stable/sql/functions/window_functions.html",
       "publisher": "DuckDB Foundation",
-      "accessed": "2025-10-15",
+      "accessed": "2026-04-20",
       "supports": "Especificación de marcos deslizantes centrados y retrospectivos mediante ROWS BETWEEN."
     },
     {
       "title": "statsmodels — Time Series Analysis (tsa, seasonal_decompose, STL)",
       "url": "https://www.statsmodels.org/stable/tsa.html",
       "publisher": "statsmodels Developers",
-      "accessed": "2025-10-15",
+      "accessed": "2026-04-20",
       "supports": "Implementación de descomposición clásica por medias móviles y descomposición STL en Python."
     }
   ],

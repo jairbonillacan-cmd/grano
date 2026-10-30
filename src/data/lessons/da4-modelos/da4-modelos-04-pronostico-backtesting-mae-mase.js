@@ -1,4 +1,4 @@
-export const lesson = {
+﻿export const lesson = {
   "id": "da4-modelos-04-pronostico-backtesting-mae-mase",
   "moduleId": "da4-modelos",
   "tracks": [
@@ -375,28 +375,28 @@ export const lesson = {
       "title": "Hyndman & Athanasopoulos — Forecasting: Principles and Practice (fpp3, Sec. 5.8 Evaluating Point Forecast Accuracy)",
       "url": "https://otexts.com/fpp3/accuracy.html",
       "publisher": "OTexts",
-      "accessed": "2025-10-15",
+      "accessed": "2026-04-20",
       "supports": "Definición matemática y propiedades de MAE, RMSE y MASE frente a pronósticos ingenuos."
     },
     {
       "title": "Hyndman & Athanasopoulos — Forecasting: Principles and Practice (fpp3, Sec. 5.10 Time Series Cross-Validation)",
       "url": "https://otexts.com/fpp3/tscv.html",
       "publisher": "OTexts",
-      "accessed": "2025-10-15",
+      "accessed": "2026-04-20",
       "supports": "Esquema de evaluación fuera de muestra con origen de pronóstico móvil (backtesting)."
     },
     {
       "title": "scikit-learn User Guide — TimeSeriesSplit Cross-Validation",
       "url": "https://scikit-learn.org/stable/modules/cross_validation.html",
       "publisher": "scikit-learn Developers",
-      "accessed": "2025-10-15",
+      "accessed": "2026-04-20",
       "supports": "Particionado cronológico sin barajado aleatorio para evitar fuga del futuro en series temporales."
     },
     {
       "title": "DuckDB Documentation — Window Functions (LAG, AVG OVER, Framing)",
       "url": "https://duckdb.org/docs/stable/sql/functions/window_functions.html",
       "publisher": "DuckDB Foundation",
-      "accessed": "2025-10-15",
+      "accessed": "2026-04-20",
       "supports": "Cálculo de rezagos con LAG y ventanas deslizantes estrictas con ROWS BETWEEN k PRECEDING AND 1 PRECEDING."
     }
   ],

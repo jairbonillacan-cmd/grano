@@ -1,4 +1,4 @@
-export const lesson = {
+﻿export const lesson = {
   "id": "da4-modelos-05-clustering-segmentacion-perfiles",
   "moduleId": "da4-modelos",
   "tracks": [
@@ -292,21 +292,21 @@ export const lesson = {
       "title": "scikit-learn User Guide — Clustering (KMeans and Silhouette Coefficient)",
       "url": "https://scikit-learn.org/stable/modules/clustering.html",
       "publisher": "scikit-learn Developers",
-      "accessed": "2025-10-15",
+      "accessed": "2026-04-20",
       "supports": "Algoritmo k-medias, inercia intra-grupo y evaluación mediante el coeficiente de silueta."
     },
     {
       "title": "scikit-learn User Guide — Preprocessing Data (StandardScaler and Standardization)",
       "url": "https://scikit-learn.org/stable/modules/preprocessing.html",
       "publisher": "scikit-learn Developers",
-      "accessed": "2025-10-15",
+      "accessed": "2026-04-20",
       "supports": "Escalado de variables a media cero y varianza unitaria antes de aplicar métodos geométricos."
     },
     {
       "title": "James, Witten, Hastie, Tibshirani & Taylor — An Introduction to Statistical Learning (ISLP, Ch. 12 Unsupervised Learning)",
       "url": "https://www.statlearning.com/",
       "publisher": "Springer",
-      "accessed": "2025-10-15",
+      "accessed": "2026-04-20",
       "supports": "Impacto de las unidades de medida en la distancia euclidiana e interpretación práctica de grupos."
     }
   ],
