@@ -1,143 +1,64 @@
 export default {
   id: 'da4-causalidad-05-presentacion-direccion-decisiones',
   moduleId: 'da4-causalidad',
-  track: 'da',
+  title: 'Presentación a dirección y decisiones',
+  subtitle: 'Matrices de decisión ejecutiva, cuantificación de costos de error Tipo I/II, economía de umbrales y monitoreo post-lanzamiento',
+  tracks: ['da'],
   level: 4,
   order: 5,
-  title: 'Presentar a dirección: objeciones y opciones de acción',
-  subtitle:
-    'Presentar a dirección: responder objeciones y traducir incertidumbre en opciones de acción',
-  durationMinutes: 20,
-  prerequisites: [
-    'da4-causalidad-04-memo-analitico-supuestos',
-    'da2-inferencia-05-pruebas-hipotesis-valor-p',
-  ],
-  datasets: [
-    'orders',
-    'stores',
-    'refunds',
-    'experiments',
-    'experiment_assignments',
-  ],
-  hook: {
-    question:
-      'Presentas al comité directivo el resultado del experimento EXP-FREE-SHIP-45: bajar el umbral de envío gratuito a 45 USD eleva el gasto por usuario en +6.22 USD (IC 95 %: [5.19, 7.24] USD, p < 0.001). El director comercial pide desplegarlo hoy a todas las tiendas porque es estadísticamente significativo, pero el director financiero señala que el subsidio logístico cuesta 5.80 USD por usuario. ¿Cómo traduces el intervalo de confianza en escenarios de margen neto y opciones de acción concretas?',
-    context:
-      'Traducción de intervalos de confianza y métricas guardarraíl en matrices de decisión ejecutiva sobre experiments, orders y refunds.',
-  },
+  minutes: 20,
+  prerequisites: ['da4-causalidad-04-memo-analitico-supuestos'],
+  contentVersion: 1,
+  hook: 'Tras presentar tu evaluación de impacto al Comité de Dirección de Mercado Brisa, la directora financiera pregunta cuánto dinero perdemos si escalamos el programa de envío gratis y resulta ser ruido estadístico, o si lo cancelamos cuando en realidad sí era rentable. Un intervalo de confianza por sí solo no toma decisiones de inversión. ¿Cómo traduces la incertidumbre causal, las métricas de guardarrail y el costo operativo en una matriz de decisión ejecutiva con reglas claras?',
   objectives: [
-    'Traducir los límites del intervalo de confianza del 95 % en escenarios financieros conservador, central y optimista netos del costo de equilibrio.',
-    'Auditar métricas guardarraíl (como tasas de reembolso, estado de ejecución y validez SRM) junto a la métrica primaria de ingresos.',
-    'Diseñar una matriz de decisión con reglas explícitas que asignen cada iniciativa a despliegue general, piloto acotado o descarte.',
+    'Traducir efectos causales estimados (ATE, ATT o LATE) a escenarios financieros conservador, central y optimista netos del costo de intervención.',
+    'Auditar métricas de guardarrail (como tasa de reembolsos e ingreso neto posdevolución) para evitar optimizar métricas primarias a costa del margen.',
+    'Construir en DuckDB una matriz de decisión ejecutiva sobre experiments y experiment_assignments que clasifique iniciativas en desplegar, piloto acotado o descartar.'
   ],
   sections: [
     {
-      id: 'significancia-estadistica-vs-rentabilidad',
-      heading: 'Por qué p < 0.05 no basta para aprobar un despliegue comercial',
-      body: 'En una sala de dirección, afirmar que un efecto es *"estadísticamente significativo con $p < 0.001$"* solo responde a una pregunta estrecha: si el cambio observado es distinto de `0.00 USD`. Sin embargo, casi ningún programa comercial tiene costo cero. En `EXP-FREE-SHIP-45`, absorber el envío desde `45 USD` e incrementar el empaque representa un **costo umbral de equilibrio** (*break-even cost*, $C_{\\text{umbral}}$) de `5.80 USD` por cliente.\n\nPara conectar la inferencia estadística con la cuenta de resultados, restamos ese costo unitario a los tres puntos clave del intervalo de confianza del `95 %` ($[\\text{IC}_{\\text{inf}},\\, \\hat{\\tau},\\, \\text{IC}_{\\text{sup}}]$), transformándolos en **tres escenarios financieros de margen neto**:\n\n- **Escenario conservador ($\\text{IC}_{\\text{inf}} - C_{\\text{umbral}}$):** En `EXP-FREE-SHIP-45`, $5.19 - 5.80 = -0.61\\text{ USD}$ por usuario (pérdida neta en el extremo inferior plausible).\n- **Escenario central ($\\hat{\\tau} - C_{\\text{umbral}}$):** $6.22 - 5.80 = +0.42\\text{ USD}$ por usuario.\n- **Escenario optimista ($\\text{IC}_{\\text{sup}} - C_{\\text{umbral}}$):** $7.24 - 5.80 = +1.44\\text{ USD}$ por usuario.\n\nEn contraste, en `EXP-CHECKOUT-1STEP` (costo operativo de `4.50 USD` e IC del `95 %` de `[5.85, 7.89] USD`), incluso el escenario conservador deja una ganancia neta de $5.85 - 4.50 = +1.35\\text{ USD}$ por cliente.',
-      formula: {
-        latex:
-          'M_{\\text{conservador}} = \\text{IC}_{95\\%,\\text{inf}} - C_{\\text{umbral}}, \\quad M_{\\text{central}} = \\hat{\\tau} - C_{\\text{umbral}}, \\quad M_{\\text{optimista}} = \\text{IC}_{95\\%,\\text{sup}} - C_{\\text{umbral}}',
-        explanation:
-          'La regla de decisión compara el extremo inferior del intervalo de confianza contra el costo incremental por unidad antes de autorizar un despliegue general.',
-      },
-      callout: {
-        type: 'KeyIdea',
-        title: 'El límite inferior gobierna el riesgo financiero',
-        body: 'Si la estimación central supera el costo pero el límite inferior del IC 95 % da margen negativo, un despliegue masivo expone a la empresa a pérdidas; la acción racional es un piloto acotado a segmentos de mayor margen.',
-      },
-    },
-    {
-      id: 'metricas-guardarrail-reembolsos',
-      heading: 'Auditoría de métricas guardarraíl: devoluciones e ingreso neto',
-      body: 'Ninguna presentación a dirección está completa si solo muestra la métrica primaria de facturación bruta (`total_usd`). Una promoción agresiva o un cuestionario mal calibrado puede inflar las compras iniciales a costa de disparar las devoluciones semanas después. Por ello, todo comité de decisión evalúa **métricas guardarraíl** (*guardrail metrics*): indicadores de salud operativa, calidad y riesgo que la intervención no debe deteriorar.\n\nEn Mercado Brisa, la tabla `refunds` registra los reembolsos procesados (`status = \'processed\'`). Si comparamos las regiones en 2024 mirando únicamente el ticket bruto de `orders`, la región `Andina` (`398.48 USD`) parece empatada con `Norteamérica` (`398.79 USD`).\n\nSin embargo, al cruzar con el guardarraíl de devoluciones en `refunds`, descubrimos que `Andina` sufre una tasa de reembolso del `8.31 %` con una pérdida media de `20.03 USD` por pedido (frente a `6.41 %` y `16.55 USD` en `Cono Sur`), reduciendo su ingreso neto real a `378.45 USD`. Mostrar el ingreso neto posreembolso anticipa la objeción de operaciones y finanzas.',
-      codeExample: {
+      id: 'sec-efecto-a-valor-financiero',
+      heading: '1. Del estimador estadístico a los escenarios de margen neto',
+      body: `Un comité ejecutivo no asigna presupuesto en desviaciones estándar ni en puntos porcentuales aislados. Decide en **margen incremental neto**, flujo de caja y retorno sobre el capital invertido. El primer paso consiste en traducir el efecto causal estimado (\`efecto_did\`) a valor económico por unidad tratada. Luego se resta el costo umbral de producir la intervención (\`costo_umbral_usd\`).
+
+Además del estimador puntual, debemos propagar los límites del intervalo de confianza del 95 % (\`[ic95_inf, ic95_sup]\`) a la ecuación financiera:
+
+\`margen_neto_escenario = efecto_escenario - costo_umbral_usd\`
+
+Presentamos siempre tres escenarios económicos ante dirección: **conservador** (evaluado en \`ic95_inf\`), **central** (evaluado en \`efecto_did\`) y **optimista** (evaluado en \`ic95_sup\`). Esto transforma la incertidumbre estadística en un lenguaje que finanzas y operaciones comprenden al instante. Permite responder cuál es el resultado financiero en el peor escenario plausible si aprobamos el despliegue general hoy.`,
+      example: {
         language: 'sql',
-        code: `WITH reembolsos AS (
-  SELECT order_id, SUM(refund_amount_usd) AS monto_reembolso
-  FROM refunds
-  WHERE status = 'processed'
-  GROUP BY order_id
-)
-SELECT
-  s.region,
-  ROUND(AVG(o.total_usd), 2) AS ticket_bruto_usd,
-  ROUND(AVG(CASE WHEN r.order_id IS NOT NULL THEN 100.0 ELSE 0.0 END), 2) AS tasa_reembolso_pct,
-  ROUND(AVG(o.total_usd - COALESCE(r.monto_reembolso, 0)), 2) AS ingreso_neto_usd
-FROM orders o
-JOIN stores s ON o.store_id = s.store_id
-LEFT JOIN reembolsos r ON o.order_id = r.order_id
-WHERE o.status = 'completed'
-  AND o.order_date >= '2024-01-01' AND o.order_date < '2025-01-01'
-GROUP BY s.region
-ORDER BY s.region;`,
-        caption:
-          'Cálculo conjunto de métrica primaria (ticket bruto) y guardarraíl de reembolsos por región en 2024.',
-      },
+        code: `SELECT
+  e.experiment_code,
+  ea.variant,
+  COUNT(*) AS usuarios,
+  ROUND(AVG(CASE WHEN ea.converted THEN 100.0 ELSE 0.0 END), 2) AS tasa_conv_pct,
+  ROUND(AVG(ea.post_experiment_spend_usd - ea.pre_experiment_spend_usd), 2) AS delta_gasto_bruto_usd
+FROM experiment_assignments ea
+JOIN experiments e ON ea.experiment_id = e.experiment_id
+WHERE e.experiment_code IN ('EXP-CHECKOUT-1STEP', 'EXP-FREE-SHIP-45')
+GROUP BY e.experiment_code, ea.variant
+ORDER BY e.experiment_code, ea.variant;`,
+        expectedOutput: [
+          { experiment_code: 'EXP-CHECKOUT-1STEP', variant: 'control', usuarios: 800, tasa_conv_pct: 99.13, delta_gasto_bruto_usd: -11.44 },
+          { experiment_code: 'EXP-CHECKOUT-1STEP', variant: 'treatment', usuarios: 800, tasa_conv_pct: 100, delta_gasto_bruto_usd: -4.57 },
+          { experiment_code: 'EXP-FREE-SHIP-45', variant: 'control', usuarios: 800, tasa_conv_pct: 100, delta_gasto_bruto_usd: -13.9 },
+          { experiment_code: 'EXP-FREE-SHIP-45', variant: 'treatment', usuarios: 800, tasa_conv_pct: 100, delta_gasto_bruto_usd: -7.68 }
+        ]
+      }
     },
     {
-      id: 'matriz-opciones-accion',
-      heading: 'Matriz de decisión bajo incertidumbre: tres opciones operativas',
-      body: 'Los ejecutivos no buscan que el analista responda *"faltan datos, sigamos investigando"*; necesitan una **matriz de opciones de acción** gobernada por reglas acordadas de antemano. Al combinar el estado de validez técnica (`srm_p_value` y `status`), el margen neto conservador y el margen neto central, clasificamos cada iniciativa en una de tres rutas:\n\n1. **Opción 1 — Desplegar a toda la red (`1_desplegar_general`):** Se activa cuando el estudio finalizó (`status = \'completed\'`), no presenta sesgo SRM (`srm_p_value >= 0.01`) y el **escenario conservador es positivo o cero** ($\\text{IC}_{95\\%,\\text{inf}} \\ge C_{\\text{umbral}}$). Cumplen esta regla `EXP-CHECKOUT-1STEP`, `EXP-SUB-BUNDLE` y `EXP-QUIZ-ORIGEN`.\n2. **Opción 2 — Piloto acotado o iteración segmentada (`2_piloto_acotado`):** Se activa cuando el estudio es válido y el **escenario central supera el costo** ($\\hat{\\tau} \\ge C_{\\text{umbral}}$), pero el **escenario conservador es negativo** ($\\text{IC}_{95\\%,\\text{inf}} < C_{\\text{umbral}}$). Es el caso exacto de `EXP-FREE-SHIP-45` (`margen_neto_central = +0.42 USD`, pero `margen_neto_conservador = -0.61 USD`).\n3. **Opción 3 — Descartar o esperar cierre (`3_descartar_o_esperar`):** Se aplica si el estimado central no cubre el costo, si el experimento sigue en curso (`EXP-UPSELL-MOLINO`, `status = \'running\'`) o si falló el guardarraíl de validez (`EXP-PUSH-CART`, `srm_p_value = 0.0001`).',
-      visual: {
-        type: 'mermaid',
-        spec: 'flowchart TD\n  START["Evaluar Iniciativa / Experimento"] --> G1{"¿status = completed y\\nsrm_p_value >= 0.01?"}\n  G1 -->|"No (En curso o SRM roto)"| OPT3["3. Descartar o esperar cierre\\n(Ej. EXP-PUSH-CART, EXP-UPSELL-MOLINO)"]\n  G1 -->|"Sí (Válido y completo)"| G2{"¿IC 95% inferior >=\ncosto_umbral_usd?"}\n  G2 -->|"Sí (Margen conservador >= 0)"| OPT1["1. Desplegar general\\n(Ej. EXP-CHECKOUT-1STEP)"]\n  G2 -->|"No"| G3{"¿Estimación central >=\ncosto_umbral_usd?"}\n  G3 -->|"Sí (Central >= 0, Conservador < 0)"| OPT2["2. Piloto acotado / segmentar\\n(Ej. EXP-FREE-SHIP-45)"]\n  G3 -->|"No"| OPT3',
-        caption:
-          'Árbol de decisión ejecutiva que traduce intervalos de confianza y guardarraíles en tres opciones de acción.',
-      },
-    },
-    {
-      id: 'responder-objeciones-ejecutivas',
-      heading: 'Cómo responder a las tres objeciones clásicas del comité',
-      body: 'Al presentar frente a dirección, anticipa y responde con datos de tu tabla de evidencia las tres objeciones recurrentes:\n\n- **Objeción 1 (Finanzas): *"¿Cómo sabemos que el salto de +70.57 USD en Tienda Salamanca no fue simplemente el verano europeo o más publicidad?"***\n  Respuesta con datos: Muestra el placebo preintervención (`+0.05 USD` entre `Q1` y `Q2`), la comparación con el control sintético (`+83.87 USD` en `Q3` que vuelve a `-5.55 USD` al apagar el piloto en `Q4`) y el registro de `marketing_spend` en `Iberia` (`-2.24 USD/día`).\n- **Objeción 2 (Comercial): *"Si el descuento en el umbral de 80 USD funciona, ¿por qué no lo bajamos a 20 USD para todos los pedidos?"***\n  Respuesta con datos: Explica que el RDD estima un **LATE** en `80 USD`; bajar el umbral a `20 USD` subsidia de forma inframarginal a miles de clientes que ya compraban entre `40` y `79 USD` sin incentivo, erosionando `-4.64 USD` de margen por pedido.\n- **Objeción 3 (Producto): *"EXP-PUSH-CART tiene un efecto positivo de +5.77 USD; ¿por qué lo descartas?"***\n  Respuesta con datos: Porque el guardarraíl de asignación falló en Android (`980` controles frente a `620` tratados, `srm_p_value = 0.0001`), por lo que el `+5.77 USD` está contaminado por sesgo de supervivencia.',
-      visual: {
-        type: 'table',
-        spec: {
-          headers: [
-            'Objeción en comité',
-            'Riesgo si se cede sin evidencia',
-            'Respuesta cuantitativa respaldada en SQL',
-          ],
-          rows: [
-            [
-              '"Es pura estacionalidad o inversión en anuncios"',
-              'Descartar un piloto rentable por escepticismo no verificado.',
-              'Placebo Q1-Q2 = +0.05 USD y gasto de marketing en Iberia varió -2.24 USD/día.',
-            ],
-            [
-              '"Bajemos el umbral de descuento a todos los carritos"',
-              'Canibalizar margen en compras inframarginales.',
-              'El RDD mide un LATE en c = 80 USD (-4.64 USD en el corte); no es un ATE global.',
-            ],
-            [
-              '"Lanza EXP-PUSH-CART, su IC 95 % es positivo"',
-              'Desplegar una funcionalidad rota guiados por sesgo de selección.',
-              'Guardarraíl SRM fallido (980 vs. 620 usuarios, p = 0.0001); requiere corregir telemetría.',
-            ],
-          ],
-        },
-        caption:
-          'Guía de respuesta ejecutiva ante objeciones de finanzas, comercial y producto.',
-      },
-      callout: {
-        type: 'tip',
-        title: 'Nunca defiendas un número cuyo guardarraíl falló',
-        body: 'Tu autoridad técnica ante el comité crece cuando eres el primero en vetar una métrica primaria atractiva (como EXP-PUSH-CART) porque su diagnóstico de validez interna se rompió.',
-      },
-    },
-  ],
-  workedExample: {
-    title:
-      'Auditoría de ingreso neto posreembolso por región para responder objeciones de calidad',
-    scenario:
-      'Durante la presentación anual, la gerencia regional de Andina pide el mismo presupuesto de expansión que Cono Sur e Iberia argumentando que su ticket bruto completado (~398.48 USD) supera los 395 USD. Cruzamos orders, stores y refunds en 2024 para mostrar en el comité cómo cambia la evaluación al descontar la métrica guardarraíl de reembolsos procesados.',
-    datasets: ['orders', 'stores', 'refunds'],
-    steps: [
-      {
-        order: 1,
-        explanation:
-          'Agregamos primero en una CTE los reembolsos con status = processed por order_id para evitar duplicar filas de orders en caso de múltiples eventos de devolución.',
-        code: `WITH reembolsos_por_pedido AS (
+      id: 'sec-asimetria-error-y-guardarrailes',
+      heading: '2. Asimetría de errores Tipo I/II y métricas de guardarrail',
+      body: `Las pruebas de hipótesis convencionales fijan por costumbre \`alfa = 0.05\` y \`beta = 0.20\`. En decisiones de negocio reales, los costos de equivocarse rara vez son simétricos. Debemos calibrar la exigencia de evidencia según la irreversibilidad de cada programa:
+
+- **Error Tipo I (falso positivo — escalar una iniciativa deficitaria)**: implica asumir costos hundidos de despliegue, subsidios logísticos o deuda técnica cuando el beneficio neto real es negativo. Es crítico cuando la decisión es **irreversible** o de alto costo unitario.
+- **Error Tipo II (falso negativo — descartar una iniciativa rentable)**: implica perder el margen incremental que habría generado la mejora. Pesa más cuando el cambio es de bajo costo y fácil reversión.
+
+Además, ningún aumento en ticket bruto justifica escalar si deteriora una **métrica de guardarrail**. En Mercado Brisa cruzamos siempre ` + '`orders`' + ` con ` + '`refunds`' + ` para verificar que el aumento en ventas no esté inflado por pedidos que terminan en devoluciones procesadas.`,
+      example: {
+        language: 'sql',
+        code: `WITH reembolsos_pedido AS (
   SELECT
     order_id,
     SUM(refund_amount_usd) AS monto_reembolsado_usd
@@ -145,16 +66,46 @@ ORDER BY s.region;`,
   WHERE status = 'processed'
   GROUP BY order_id
 )
-SELECT COUNT(*) AS pedidos_con_reembolso, ROUND(AVG(monto_reembolsado_usd), 2) AS media_reembolso_usd
-FROM reembolsos_por_pedido;`,
-        output: `pedidos_con_reembolso | media_reembolso_usd
-----------------------+--------------------
-950                   | 253.68`,
-      },
+SELECT
+  s.region,
+  COUNT(*) AS n_pedidos,
+  ROUND(AVG(o.total_usd), 2) AS ticket_bruto_usd,
+  ROUND(AVG(CASE WHEN r.order_id IS NOT NULL THEN 100.0 ELSE 0.0 END), 2) AS tasa_reembolso_pct,
+  ROUND(AVG(o.total_usd - COALESCE(r.monto_reembolsado_usd, 0)), 2) AS ingreso_neto_usd
+FROM orders o
+JOIN stores s ON o.store_id = s.store_id
+LEFT JOIN reembolsos_pedido r ON o.order_id = r.order_id
+WHERE o.status = 'completed'
+  AND o.order_date >= '2024-01-01' AND o.order_date < '2025-01-01'
+GROUP BY s.region
+ORDER BY s.region;`,
+        expectedOutput: [
+          { region: 'Andina', n_pedidos: 2154, ticket_bruto_usd: 398.48, tasa_reembolso_pct: 8.31, ingreso_neto_usd: 378.45 },
+          { region: 'Cono Sur', n_pedidos: 2199, ticket_bruto_usd: 417.93, tasa_reembolso_pct: 6.41, ingreso_neto_usd: 401.38 },
+          { region: 'Iberia', n_pedidos: 1232, ticket_bruto_usd: 479.27, tasa_reembolso_pct: 6.09, ingreso_neto_usd: 460.92 },
+          { region: 'Norteamérica', n_pedidos: 912, ticket_bruto_usd: 398.79, tasa_reembolso_pct: 7.13, ingreso_neto_usd: 382.99 }
+        ]
+      }
+    },
+    {
+      id: 'sec-matriz-decision-ejecutiva',
+      heading: '3. La matriz de decisión bajo incertidumbre y objeciones de dirección',
+      body: `Una presentación ejecutiva culmina con una **matriz de decisión** que vincula la evidencia estadística con reglas de acción acordadas de antemano:
+
+1. **Desplegar a toda la base (` + '`1_desplegar_general`' + `)**: el experimento está completado y libre de SRM (` + '`srm_p_value >= 0.01`' + `), y hasta el escenario **conservador** (\`ic95_inf - costo_umbral_usd >= 0\`) es positivo o igual a cero. Incluso en el límite inferior del IC 95 % la iniciativa cubre su costo umbral.
+2. **Lanzar piloto acotado (` + '`2_piloto_acotado`' + `)**: el escenario **central** (\`efecto_did - costo_umbral_usd >= 0\`) es rentable, pero el escenario conservador cae por debajo de cero (\`ic95_inf - costo_umbral_usd < 0\`). El programa promete valor pero requiere acotar el riesgo en el segmento de mayor propensión o ampliar muestra.
+3. **Descartar o esperar (` + '`3_descartar_o_esperar`' + `)**: el experimento sigue en curso (` + '`status != \'completed\'`' + `), sufrió fallo de validez interna (` + '`srm_p_value < 0.01`' + `), o ni siquiera su estimador central cubre el costo umbral.
+
+Al responder objeciones en el comité, recuerda distinguir entre **ATE** (promedio poblacional) y **LATE** (efecto local en el umbral de 80 USD visto en RDD): un descuento rentable en canastas de 80 USD no debe extrapolarse sin recalibración a canastas de 25 USD.`
+    }
+  ],
+  workedExample: {
+    title: 'Caso guiado: Auditoría de guardarraíles y escenarios financieros para el Comité de Dirección',
+    description: 'Combinamos la auditoría de reembolsos en orders y refunds con la estimación de intervalos de confianza en experiments y experiment_assignments para construir la recomendación ejecutiva.',
+    steps: [
       {
-        order: 2,
-        explanation:
-          'Unimos orders (filtrando pedidos completados de 2024) con stores y hacemos LEFT JOIN con reembolsos_por_pedido para obtener por región el ticket bruto, el reembolso medio prorrateado entre todos los pedidos, la tasa porcentual de pedidos reembolsados y el ingreso neto.',
+        label: 'Paso 1: Auditar la métrica de guardarrail (reembolsos e ingreso neto) por región',
+        explanation: 'Verificamos en los pedidos completados de 2024 cuánto se erosiona el ticket bruto al descontar los reembolsos procesados en cada región comercial.',
         code: `WITH reembolsos_por_pedido AS (
   SELECT
     order_id,
@@ -174,178 +125,150 @@ FROM orders o
 JOIN stores s ON o.store_id = s.store_id
 LEFT JOIN reembolsos_por_pedido r ON o.order_id = r.order_id
 WHERE o.status = 'completed'
-  AND o.order_date >= '2024-01-01'
-  AND o.order_date < '2025-01-01'
+  AND o.order_date >= '2024-01-01' AND o.order_date < '2025-01-01'
 GROUP BY s.region
 ORDER BY s.region;`,
-        output: `region       | n_pedidos | ticket_bruto_usd | reembolso_medio_usd | tasa_reembolso_pct | ingreso_neto_usd
--------------+-----------+------------------+---------------------+--------------------+-----------------
-Andina       | 2154      | 398.48           | 20.03               | 8.31               | 378.45
-Cono Sur     | 2199      | 417.93           | 16.55               | 6.41               | 401.38
-Iberia       | 1232      | 479.27           | 18.35               | 6.09               | 460.92
-Norteamérica | 912       | 398.79           | 15.80               | 7.13               | 382.99`,
+        expectedOutput: [
+          { region: 'Andina', n_pedidos: 2154, ticket_bruto_usd: 398.48, reembolso_medio_usd: 20.03, tasa_reembolso_pct: 8.31, ingreso_neto_usd: 378.45 },
+          { region: 'Cono Sur', n_pedidos: 2199, ticket_bruto_usd: 417.93, reembolso_medio_usd: 16.55, tasa_reembolso_pct: 6.41, ingreso_neto_usd: 401.38 },
+          { region: 'Iberia', n_pedidos: 1232, ticket_bruto_usd: 479.27, reembolso_medio_usd: 18.35, tasa_reembolso_pct: 6.09, ingreso_neto_usd: 460.92 },
+          { region: 'Norteamérica', n_pedidos: 912, ticket_bruto_usd: 398.79, reembolso_medio_usd: 15.8, tasa_reembolso_pct: 7.13, ingreso_neto_usd: 382.99 }
+        ]
       },
       {
-        order: 3,
-        explanation:
-          'Formulamos la recomendación para dirección: Andina presenta la mayor tasa de reembolsos de la compañía (8.31 %, perdiendo 20.03 USD por pedido), por lo que antes de expandir promociones comerciales debe condicionarse el presupuesto a bajar su tasa de devolución al estándar de Cono Sur (6.41 %).',
-        code: `SELECT
-  ROUND(398.48 - 378.45, 2) AS merma_por_reembolso_andina_usd,
-  ROUND(8.31 - 6.41, 2) AS exceso_tasa_reembolso_pp;`,
-        output: `merma_por_reembolso_andina_usd | exceso_tasa_reembolso_pp
--------------------------------+-------------------------
-20.03                          | 1.90`,
-      },
-    ],
-    takeaway:
-      'Cruzar la métrica primaria con el guardarraíl de reembolsos transforma una discusión subjetiva en una condición operativa medible: corregir el exceso de 1.90 puntos porcentuales de devoluciones en Andina antes de escalar el gasto promocional.',
+        label: 'Paso 2: Estimar los límites del IC 95 % del efecto DiD para los 6 experimentos',
+        explanation: 'Calculamos para cada experimento del catálogo el estimador ajustado por gasto preasignación (efecto_did) y sus límites inferior y superior al 95 %.',
+        code: `WITH stats AS (
+  SELECT
+    e.experiment_id,
+    e.experiment_code,
+    e.status,
+    e.srm_p_value,
+    AVG(ea.post_experiment_spend_usd - ea.pre_experiment_spend_usd) FILTER (WHERE ea.variant = 'treatment')
+      - AVG(ea.post_experiment_spend_usd - ea.pre_experiment_spend_usd) FILTER (WHERE ea.variant = 'control') AS efecto_did,
+    SQRT(
+      VAR_SAMP(ea.post_experiment_spend_usd - ea.pre_experiment_spend_usd) FILTER (WHERE ea.variant = 'treatment')
+        / COUNT(*) FILTER (WHERE ea.variant = 'treatment')
+      + VAR_SAMP(ea.post_experiment_spend_usd - ea.pre_experiment_spend_usd) FILTER (WHERE ea.variant = 'control')
+        / COUNT(*) FILTER (WHERE ea.variant = 'control')
+    ) AS se_did
+  FROM experiments e
+  JOIN experiment_assignments ea ON e.experiment_id = ea.experiment_id
+  GROUP BY 1, 2, 3, 4
+)
+SELECT
+  experiment_code,
+  status,
+  ROUND(efecto_did, 2) AS efecto_did_usd,
+  ROUND(efecto_did - 1.96 * se_did, 2) AS ic95_inf_usd,
+  ROUND(efecto_did + 1.96 * se_did, 2) AS ic95_sup_usd
+FROM stats
+ORDER BY experiment_id;`,
+        expectedOutput: [
+          { experiment_code: 'EXP-CHECKOUT-1STEP', status: 'completed', efecto_did_usd: 6.87, ic95_inf_usd: 5.85, ic95_sup_usd: 7.89 },
+          { experiment_code: 'EXP-FREE-SHIP-45', status: 'completed', efecto_did_usd: 6.22, ic95_inf_usd: 5.19, ic95_sup_usd: 7.24 },
+          { experiment_code: 'EXP-SUB-BUNDLE', status: 'completed', efecto_did_usd: 6.55, ic95_inf_usd: 5.5, ic95_sup_usd: 7.6 },
+          { experiment_code: 'EXP-QUIZ-ORIGEN', status: 'completed', efecto_did_usd: 6.51, ic95_inf_usd: 5.47, ic95_sup_usd: 7.55 },
+          { experiment_code: 'EXP-UPSELL-MOLINO', status: 'running', efecto_did_usd: 6.72, ic95_inf_usd: 5.67, ic95_sup_usd: 7.77 },
+          { experiment_code: 'EXP-PUSH-CART', status: 'stopped_srm', efecto_did_usd: 5.77, ic95_inf_usd: 4.72, ic95_sup_usd: 6.82 }
+        ]
+      }
+    ]
   },
   checks: [
     {
-      id: 'check-dir-escenario-conservador',
-      type: 'multiple-choice',
-      prompt:
-        'En el experimento EXP-FREE-SHIP-45, el efecto causal estimado es +6.22 USD con IC del 95 % de [5.19, 7.24] USD, y el costo logístico de equilibrio es 5.80 USD por usuario. ¿Por qué la matriz de decisión recomienda un piloto acotado en vez de un despliegue general?',
+      id: 'chk-da4-05-1',
+      type: 'mcq',
+      prompt: 'En el experimento `EXP-FREE-SHIP-45` (`completed`, sin SRM), el efecto DiD estimado es +6.22 USD por usuario con IC 95 % de [5.19, 7.24] USD. Si el subsidio logístico y operativo tiene un costo umbral de 5.50 USD por usuario, ¿qué acción prescribe la matriz de decisión?',
       options: [
         {
           id: 'a',
-          label:
-            'Porque aunque el escenario central es rentable (+0.42 USD), el escenario conservador (5.19 - 5.80 = -0.61 USD) aún incluye pérdidas netas plausibles.',
+          text: '1_desplegar_general, porque el escenario central (+6.22 USD) supera el costo de 5.50 USD.',
+          correct: false,
+          feedback: 'El despliegue general exige que incluso el límite inferior del IC 95 % (5.19 USD) cubra el costo umbral.'
         },
         {
           id: 'b',
-          label:
-            'Porque el experimento sufrió un fallo de asignación muestral (SRM) con p-valor menor a 0.01.',
+          text: '2_piloto_acotado, porque el margen neto central es positivo (+0.72 USD), pero el escenario conservador en el límite inferior del IC 95 % es negativo (-0.31 USD).',
+          correct: true,
+          feedback: 'Exacto: cuando el escenario central supera el umbral pero el límite inferior queda por debajo (5.19 - 5.50 = -0.31 USD), se recomienda un piloto acotado o extender muestra.'
         },
         {
           id: 'c',
-          label:
-            'Porque el límite superior del intervalo de confianza (7.24 USD) queda por debajo del costo de 5.80 USD.',
-        },
-        {
-          id: 'd',
-          label:
-            'Porque un intervalo de confianza que no cruza el 0.00 USD carece de significancia estadística.',
-        },
+          text: '3_descartar_o_esperar, porque cualquier iniciativa cuyo límite inferior sea menor a +10.00 USD destruye valor.',
+          correct: false,
+          feedback: 'El umbral relevante es el costo del programa (5.50 USD), no un valor arbitrario de 10 USD.'
+        }
       ],
-      correctOptionId: 'a',
-      explanation:
-        'El límite inferior del IC 95 % (5.19 USD) está por debajo del costo umbral (5.80 USD), arrojando un margen conservador de -0.61 USD; por tanto, conviene acotar a segmentos donde el margen supere el costo. Las opciones b, c y d son falsas: el SRM de EXP-FREE-SHIP-45 es válido (p = 0.6194), 7.24 supera 5.80 y el intervalo sí es estadísticamente distinto de cero.',
+      explanation: 'Al restar el costo de 5.50 USD a los tres puntos del intervalo [5.19, 6.22, 7.24], obtenemos escenarios de [-0.31, +0.72, +1.74] USD: rentable en el escenario central pero con riesgo a la baja en el extremo conservador.'
     },
     {
-      id: 'check-dir-objecion-late',
-      type: 'multiple-choice',
-      prompt:
-        'Un directivo propone extender a todos los carritos desde 10 USD el descuento que fue evaluado mediante regresión discontinua en el umbral de 80 USD. ¿Cuál es la respuesta técnica y financiera correcta?',
-      options: [
-        {
-          id: 'a',
-          label:
-            'El RDD solo identifica el efecto local (LATE) en carritos cercanos a 80 USD; aplicarlo desde 10 USD regala margen de forma inframarginal a quienes ya compraban sin descuento.',
-        },
-        {
-          id: 'b',
-          label:
-            'El estimador RDD garantiza matemáticamente el mismo incremento porcentual en cualquier punto entre 10 USD y 500 USD.',
-        },
-        {
-          id: 'c',
-          label:
-            'No puede responderse porque DuckDB no permite filtrar pedidos con subtotal menor a 80 USD.',
-        },
-      ],
-      correctOptionId: 'a',
-      explanation:
-        'Un diseño RDD identifica el efecto local en el punto de corte (c = 80 USD); extrapolarlo hacia abajo convierte en subsidio inframarginal todas las compras que ya superaban el nuevo umbral sin necesidad de promoción. Las opciones b y c son falsas.',
-    },
-    {
-      id: 'check-dir-predict-upsell',
+      id: 'chk-da4-05-2',
       type: 'predict-output',
-      prompt:
-        'El experimento EXP-UPSELL-MOLINO tiene un margen neto conservador positivo (+0.17 USD) y srm_p_value = 0.4889, pero su columna status en la tabla experiments vale \'running\'. Según la regla CASE WHEN de la matriz de decisión, ¿qué opción devuelve la consulta?',
-      code: `SELECT
-  CASE
-    WHEN 0.4889 < 0.01 OR 'running' <> 'completed' THEN '3_descartar_o_esperar'
-    WHEN 0.17 >= 0 THEN '1_desplegar_general'
-    ELSE '2_piloto_acotado'
-  END AS decision_recomendada;`,
+      prompt: 'En 2024 la región Andina registra un ticket bruto medio de 398.48 USD y la región Norteamérica de 398.79 USD. Sin embargo, al cruzar con `refunds`, Andina tiene un reembolso medio de 20.03 USD (tasa de 8.31 %) frente a 15.80 USD en Norteamérica (7.13 %). ¿Cuál es la brecha de ingreso neto posreembolso (Norteamérica menos Andina)?',
       options: [
         {
           id: 'a',
-          label:
-            'Devuelve 3_descartar_o_esperar, porque tomar decisiones definitivas sobre un experimento aún en curso (running) expone a sesgo de parada temprana (peeking).',
+          text: '+0.31 USD; los reembolsos afectan por igual a todas las regiones.',
+          correct: false,
+          feedback: '+0.31 USD es solo la diferencia en ticket bruto antes de descontar devoluciones.'
         },
         {
           id: 'b',
-          label:
-            'Devuelve 1_desplegar_general, porque la rama WHEN 0.17 >= 0 se evalúa antes que la primera condición.',
+          text: '+4.54 USD (382.99 USD frente a 378.45 USD); la mayor tasa de devolución en Andina amplía catorce veces la brecha neta respecto al ticket bruto.',
+          correct: true,
+          feedback: 'Correcto: al descontar los reembolsos procesados, Andina cae a 378.45 USD y Norteamérica a 382.99 USD.'
         },
         {
           id: 'c',
-          label:
-            'Devuelve NULL, porque el operador OR no puede combinar una comparación numérica con una de texto.',
-        },
+          text: '-4.23 USD; Andina supera en ingreso neto a Norteamérica.',
+          correct: false,
+          feedback: 'Andina tiene mayor reembolso medio (20.03 vs 15.80 USD), por lo que su ingreso neto es menor.'
+        }
       ],
-      correctOptionId: 'a',
-      explanation:
-        'En SQL las cláusulas CASE WHEN se evalúan en orden secuencial: como status = running es distinto de completed, la primera condición es verdadera y devuelve 3_descartar_o_esperar, previniendo cierres prematuros. Las opciones b y c son falsas.',
+      explanation: 'Auditar la métrica de guardarrail (reembolsos) revela que dos regiones con ticket bruto casi idéntico (~398.5 USD) difieren en 4.54 USD por pedido en ingreso neto real.'
     },
     {
-      id: 'check-dir-spot-bug',
-      type: 'spot-the-bug',
-      prompt:
-        'Al calcular el ingreso neto tras reembolsos para la presentación ejecutiva, un analista resta directamente r.monto_reembolsado_usd sin usar COALESCE tras un LEFT JOIN con refunds. ¿Qué defecto provoca en el promedio?',
-      code: `SELECT
-  s.region,
-  ROUND(AVG(o.total_usd - r.monto_reembolsado_usd), 2) AS ingreso_neto_usd
-FROM orders o
-JOIN stores s ON o.store_id = s.store_id
-LEFT JOIN reembolsos_por_pedido r ON o.order_id = r.order_id
-WHERE o.status = 'completed'
-GROUP BY s.region;`,
+      id: 'chk-da4-05-3',
+      type: 'mcq',
+      prompt: 'Durante la presentación a dirección, el director comercial propone aplicar el descuento de la Lección 2 (evaluado mediante RDD en el umbral de 80 USD) a todos los carritos desde 20 USD, argumentando que el efecto será idéntico. ¿Qué respuesta técnica es la adecuada?',
       options: [
         {
           id: 'a',
-          label:
-            'En los pedidos sin reembolso, r.monto_reembolsado_usd es NULL, por lo que la resta da NULL y AVG() excluye más del 90 % de los pedidos sanos.',
+          text: 'Aceptar la propuesta porque el estimador RDD identifica el efecto medio poblacional global (ATE) para cualquier monto de compra.',
+          correct: false,
+          feedback: 'El diseño RDD solo identifica el efecto promedio local (LATE) exactamente en la vecindad del punto de corte c = 80 USD.'
         },
         {
           id: 'b',
-          label:
-            'En DuckDB un LEFT JOIN convierte automáticamente todos los valores NULL en ceros, por lo que el código duplica los ingresos.',
+          text: 'Explicar que el diseño RDD estima un efecto local (LATE) en carritos cercanos a 80 USD; extrapolar el subsidio a canastas de 20 USD erosionaría el margen unitario sin evidencia de validez externa.',
+          correct: true,
+          feedback: 'Exacto: transportar un LATE de 80 USD a carritos de 20 USD viola la validez externa y destruye margen porcentual.'
         },
         {
           id: 'c',
-          label:
-            'La cláusula WHERE o.status = completed elimina las filas de la tabla stores antes de agrupar.',
-        },
+          text: 'Afirmar que ningún diseño cuasiexperimental sirve para tomar decisiones comerciales.',
+          correct: false,
+          feedback: 'El diseño RDD es plenamente válido para decidir sobre el umbral de 80 USD o ajustes cercanos a ese corte.'
+        }
       ],
-      correctOptionId: 'a',
-      explanation:
-        'Cualquier operación aritmética con NULL produce NULL (`total_usd - NULL = NULL`), haciendo que `AVG()` calcule el promedio únicamente sobre el ~7 % de pedidos que sufrieron devolución y subestime drásticamente el ingreso neto. Debe usarse `COALESCE(r.monto_reembolsado_usd, 0)`. Las opciones b y c son falsas.',
-    },
+      explanation: 'Comunicar con precisión la diferencia entre el efecto local en el corte (LATE) y el promedio poblacional (ATE) evita extrapolaciones costosas fuera del rango de soporte.'
+    }
   ],
   practice: {
-    id: 'practice-da4-causalidad-05-matriz-decision',
-    title:
-      'Construir la matriz ejecutiva de decisión bajo incertidumbre para los 6 experimentos',
-    prompt:
-      'Construye la tabla final para el comité de dirección cruzando experiments y experiment_assignments. La CTE estimaciones ya calcula para cada experimento: status, srm_p_value, costo_umbral_usd, efecto_did y se_did. Completa el SELECT final para devolver: experiment_code, costo_umbral_usd, margen_neto_conservador (efecto_did - 1.96 * se_did - costo_umbral_usd a 2 decimales), margen_neto_central (efecto_did - costo_umbral_usd a 2 decimales), margen_neto_optimista (efecto_did + 1.96 * se_did - costo_umbral_usd a 2 decimales) y decision_recomendada usando CASE: cuando srm_p_value < 0.01 OR status <> \'completed\' devuelve \'3_descartar_o_esperar\'; cuando (efecto_did - 1.96 * se_did) >= costo_umbral_usd devuelve \'1_desplegar_general\'; cuando efecto_did >= costo_umbral_usd devuelve \'2_piloto_acotado\'; en otro caso \'3_descartar_o_esperar\'. Ordena por experiment_id ASC.',
-    engine: 'duckdb',
-    datasets: ['experiments', 'experiment_assignments'],
-    starterCode: `WITH estimaciones AS (
+    type: 'sql',
+    title: 'Construir la matriz de decisión ejecutiva bajo incertidumbre para los 6 experimentos',
+    language: 'sql',
+    prompt: 'Construye la matriz de decisión ejecutiva uniendo `experiments` y `experiment_assignments`. La CTE `stats` ya calcula para cada experimento: `status`, `srm_p_value`, `costo_umbral_usd` (`5.50` USD para `\'EXP-FREE-SHIP-45\'` y `2.00` USD para el resto), `efecto_did` y `se_did`. Completa el `SELECT` final para devolver: `experiment_code`, `costo_umbral_usd` (a 2 decimales), `margen_neto_conservador` (`(efecto_did - 1.96 * se_did) - costo_umbral_usd` a 2 decimales), `margen_neto_central` (`efecto_did - costo_umbral_usd` a 2 decimales), `margen_neto_optimista` (`(efecto_did + 1.96 * se_did) - costo_umbral_usd` a 2 decimales) y `decision_ejecutiva` (`\'3_descartar_o_esperar\'` si `srm_p_value < 0.01 OR status != \'completed\'`, `\'1_desplegar_general\'` si `(efecto_did - 1.96 * se_did) >= costo_umbral_usd`, `\'2_piloto_acotado\'` si `efecto_did >= costo_umbral_usd AND (efecto_did - 1.96 * se_did) < costo_umbral_usd`, y `\'3_descartar_o_esperar\'` en caso contrario). Ordena por `experiment_id ASC`.',
+    starterCode: `WITH stats AS (
   SELECT
     e.experiment_id,
     e.experiment_code,
     e.status,
     e.srm_p_value,
     CASE
-      WHEN e.experiment_code = 'EXP-CHECKOUT-1STEP' THEN 4.50::DOUBLE
-      WHEN e.experiment_code = 'EXP-FREE-SHIP-45' THEN 5.80::DOUBLE
-      WHEN e.experiment_code = 'EXP-SUB-BUNDLE' THEN 5.00::DOUBLE
-      WHEN e.experiment_code = 'EXP-QUIZ-ORIGEN' THEN 5.20::DOUBLE
-      WHEN e.experiment_code = 'EXP-UPSELL-MOLINO' THEN 5.50::DOUBLE
-      ELSE 4.00::DOUBLE
+      WHEN e.experiment_code = 'EXP-FREE-SHIP-45' THEN 5.50::DOUBLE
+      ELSE 2.00::DOUBLE
     END AS costo_umbral_usd,
     AVG(ea.post_experiment_spend_usd - ea.pre_experiment_spend_usd) FILTER (WHERE ea.variant = 'treatment')
       - AVG(ea.post_experiment_spend_usd - ea.pre_experiment_spend_usd) FILTER (WHERE ea.variant = 'control') AS efecto_did,
@@ -361,25 +284,23 @@ GROUP BY s.region;`,
 )
 SELECT
   experiment_code,
-  costo_umbral_usd,
-  ROUND(efecto_did - 1.96 * se_did - costo_umbral_usd, 2) AS margen_neto_conservador,
-  ROUND(efecto_did - costo_umbral_usd, 2) AS margen_neto_central
-  -- TODO: agrega margen_neto_optimista y decision_recomendada según las reglas del enunciado
-FROM estimaciones
+  ROUND(costo_umbral_usd, 2) AS costo_umbral_usd,
+  -- Reemplaza los ceros y completa la regla CASE de decision_ejecutiva:
+  0.0 AS margen_neto_conservador,
+  0.0 AS margen_neto_central,
+  0.0 AS margen_neto_optimista,
+  'pendiente' AS decision_ejecutiva
+FROM stats
 ORDER BY experiment_id ASC;`,
-    solution: `WITH estimaciones AS (
+    expected: `WITH stats AS (
   SELECT
     e.experiment_id,
     e.experiment_code,
     e.status,
     e.srm_p_value,
     CASE
-      WHEN e.experiment_code = 'EXP-CHECKOUT-1STEP' THEN 4.50::DOUBLE
-      WHEN e.experiment_code = 'EXP-FREE-SHIP-45' THEN 5.80::DOUBLE
-      WHEN e.experiment_code = 'EXP-SUB-BUNDLE' THEN 5.00::DOUBLE
-      WHEN e.experiment_code = 'EXP-QUIZ-ORIGEN' THEN 5.20::DOUBLE
-      WHEN e.experiment_code = 'EXP-UPSELL-MOLINO' THEN 5.50::DOUBLE
-      ELSE 4.00::DOUBLE
+      WHEN e.experiment_code = 'EXP-FREE-SHIP-45' THEN 5.50::DOUBLE
+      ELSE 2.00::DOUBLE
     END AS costo_umbral_usd,
     AVG(ea.post_experiment_spend_usd - ea.pre_experiment_spend_usd) FILTER (WHERE ea.variant = 'treatment')
       - AVG(ea.post_experiment_spend_usd - ea.pre_experiment_spend_usd) FILTER (WHERE ea.variant = 'control') AS efecto_did,
@@ -395,149 +316,136 @@ ORDER BY experiment_id ASC;`,
 )
 SELECT
   experiment_code,
-  costo_umbral_usd,
-  ROUND(efecto_did - 1.96 * se_did - costo_umbral_usd, 2) AS margen_neto_conservador,
+  ROUND(costo_umbral_usd, 2) AS costo_umbral_usd,
+  ROUND((efecto_did - 1.96 * se_did) - costo_umbral_usd, 2) AS margen_neto_conservador,
   ROUND(efecto_did - costo_umbral_usd, 2) AS margen_neto_central,
-  ROUND(efecto_did + 1.96 * se_did - costo_umbral_usd, 2) AS margen_neto_optimista,
+  ROUND((efecto_did + 1.96 * se_did) - costo_umbral_usd, 2) AS margen_neto_optimista,
   CASE
-    WHEN srm_p_value < 0.01 OR status <> 'completed' THEN '3_descartar_o_esperar'
+    WHEN srm_p_value < 0.01 OR status != 'completed' THEN '3_descartar_o_esperar'
     WHEN (efecto_did - 1.96 * se_did) >= costo_umbral_usd THEN '1_desplegar_general'
-    WHEN efecto_did >= costo_umbral_usd THEN '2_piloto_acotado'
+    WHEN efecto_did >= costo_umbral_usd AND (efecto_did - 1.96 * se_did) < costo_umbral_usd THEN '2_piloto_acotado'
     ELSE '3_descartar_o_esperar'
-  END AS decision_recomendada
-FROM estimaciones
+  END AS decision_ejecutiva
+FROM stats
 ORDER BY experiment_id ASC;`,
+    orderMatters: true,
     hints: [
-      'Calcula margen_neto_optimista como ROUND(efecto_did + 1.96 * se_did - costo_umbral_usd, 2).',
-      'En el bloque CASE de decision_recomendada, evalúa primero el guardarraíl: WHEN srm_p_value < 0.01 OR status <> \'completed\' THEN \'3_descartar_o_esperar\'.',
-      'Continúa el CASE con WHEN (efecto_did - 1.96 * se_did) >= costo_umbral_usd THEN \'1_desplegar_general\' WHEN efecto_did >= costo_umbral_usd THEN \'2_piloto_acotado\' ELSE \'3_descartar_o_esperar\' END AS decision_recomendada.',
+      'Calcula los tres márgenes netos restando costo_umbral_usd al límite inferior (efecto_did - 1.96 * se_did), al estimador central (efecto_did) y al límite superior (efecto_did + 1.96 * se_did), envolviendo cada uno en ROUND(..., 2).',
+      'En el CASE de decision_ejecutiva verifica primero la condición de bloqueo: WHEN srm_p_value < 0.01 OR status != \'completed\' THEN \'3_descartar_o_esperar\'.',
+      'Luego evalúa WHEN (efecto_did - 1.96 * se_did) >= costo_umbral_usd THEN \'1_desplegar_general\', seguido de WHEN efecto_did >= costo_umbral_usd AND (efecto_did - 1.96 * se_did) < costo_umbral_usd THEN \'2_piloto_acotado\' ELSE \'3_descartar_o_esperar\'.'
     ],
-    assertions: [
-      { type: 'row-count', expected: 6 },
-      {
-        type: 'column-names',
-        expected: [
-          'experiment_code',
-          'costo_umbral_usd',
-          'margen_neto_conservador',
-          'margen_neto_central',
-          'margen_neto_optimista',
-          'decision_recomendada',
-        ],
-      },
-      {
-        type: 'cell-value',
-        row: 0,
-        column: 'decision_recomendada',
-        expected: '1_desplegar_general',
-      },
-      {
-        type: 'cell-value',
-        row: 1,
-        column: 'margen_neto_conservador',
-        expected: -0.61,
-      },
-      {
-        type: 'cell-value',
-        row: 1,
-        column: 'decision_recomendada',
-        expected: '2_piloto_acotado',
-      },
-    ],
-    expectedOutputTable: {
-      columns: [
-        'experiment_code',
-        'costo_umbral_usd',
-        'margen_neto_conservador',
-        'margen_neto_central',
-        'margen_neto_optimista',
-        'decision_recomendada',
-      ],
-      rows: [
-        ['EXP-CHECKOUT-1STEP', 4.5, 1.35, 2.37, 3.39, '1_desplegar_general'],
-        ['EXP-FREE-SHIP-45', 5.8, -0.61, 0.42, 1.44, '2_piloto_acotado'],
-        ['EXP-SUB-BUNDLE', 5, 0.5, 1.55, 2.6, '1_desplegar_general'],
-        ['EXP-QUIZ-ORIGEN', 5.2, 0.27, 1.31, 2.35, '1_desplegar_general'],
-        ['EXP-UPSELL-MOLINO', 5.5, 0.17, 1.22, 2.27, '3_descartar_o_esperar'],
-        ['EXP-PUSH-CART', 4, 0.72, 1.77, 2.82, '3_descartar_o_esperar'],
-      ],
-    },
+    solution: `WITH stats AS (
+  SELECT
+    e.experiment_id,
+    e.experiment_code,
+    e.status,
+    e.srm_p_value,
+    CASE
+      WHEN e.experiment_code = 'EXP-FREE-SHIP-45' THEN 5.50::DOUBLE
+      ELSE 2.00::DOUBLE
+    END AS costo_umbral_usd,
+    AVG(ea.post_experiment_spend_usd - ea.pre_experiment_spend_usd) FILTER (WHERE ea.variant = 'treatment')
+      - AVG(ea.post_experiment_spend_usd - ea.pre_experiment_spend_usd) FILTER (WHERE ea.variant = 'control') AS efecto_did,
+    SQRT(
+      VAR_SAMP(ea.post_experiment_spend_usd - ea.pre_experiment_spend_usd) FILTER (WHERE ea.variant = 'treatment')
+        / COUNT(*) FILTER (WHERE ea.variant = 'treatment')
+      + VAR_SAMP(ea.post_experiment_spend_usd - ea.pre_experiment_spend_usd) FILTER (WHERE ea.variant = 'control')
+        / COUNT(*) FILTER (WHERE ea.variant = 'control')
+    ) AS se_did
+  FROM experiments e
+  JOIN experiment_assignments ea ON e.experiment_id = ea.experiment_id
+  GROUP BY 1, 2, 3, 4
+)
+SELECT
+  experiment_code,
+  ROUND(costo_umbral_usd, 2) AS costo_umbral_usd,
+  ROUND((efecto_did - 1.96 * se_did) - costo_umbral_usd, 2) AS margen_neto_conservador,
+  ROUND(efecto_did - costo_umbral_usd, 2) AS margen_neto_central,
+  ROUND((efecto_did + 1.96 * se_did) - costo_umbral_usd, 2) AS margen_neto_optimista,
+  CASE
+    WHEN srm_p_value < 0.01 OR status != 'completed' THEN '3_descartar_o_esperar'
+    WHEN (efecto_did - 1.96 * se_did) >= costo_umbral_usd THEN '1_desplegar_general'
+    WHEN efecto_did >= costo_umbral_usd AND (efecto_did - 1.96 * se_did) < costo_umbral_usd THEN '2_piloto_acotado'
+    ELSE '3_descartar_o_esperar'
+  END AS decision_ejecutiva
+FROM stats
+ORDER BY experiment_id ASC;`,
+    solutionExplanation: 'La matriz de decisión clasifica a EXP-CHECKOUT-1STEP, EXP-SUB-BUNDLE y EXP-QUIZ-ORIGEN en 1_desplegar_general (margen neto conservador >= 3.47 USD), asigna EXP-FREE-SHIP-45 a 2_piloto_acotado (central +0.72 USD pero conservador -0.31 USD por su costo logístico de 5.50 USD) y retiene EXP-UPSELL-MOLINO (running) y EXP-PUSH-CART (stopped_srm) en 3_descartar_o_esperar.',
+    expectedOutputTable: [
+      { experiment_code: 'EXP-CHECKOUT-1STEP', costo_umbral_usd: 2, margen_neto_conservador: 3.85, margen_neto_central: 4.87, margen_neto_optimista: 5.89, decision_ejecutiva: '1_desplegar_general' },
+      { experiment_code: 'EXP-FREE-SHIP-45', costo_umbral_usd: 5.5, margen_neto_conservador: -0.31, margen_neto_central: 0.72, margen_neto_optimista: 1.74, decision_ejecutiva: '2_piloto_acotado' },
+      { experiment_code: 'EXP-SUB-BUNDLE', costo_umbral_usd: 2, margen_neto_conservador: 3.5, margen_neto_central: 4.55, margen_neto_optimista: 5.6, decision_ejecutiva: '1_desplegar_general' },
+      { experiment_code: 'EXP-QUIZ-ORIGEN', costo_umbral_usd: 2, margen_neto_conservador: 3.47, margen_neto_central: 4.51, margen_neto_optimista: 5.55, decision_ejecutiva: '1_desplegar_general' },
+      { experiment_code: 'EXP-UPSELL-MOLINO', costo_umbral_usd: 2, margen_neto_conservador: 3.67, margen_neto_central: 4.72, margen_neto_optimista: 5.77, decision_ejecutiva: '3_descartar_o_esperar' },
+      { experiment_code: 'EXP-PUSH-CART', costo_umbral_usd: 2, margen_neto_conservador: 2.72, margen_neto_central: 3.77, margen_neto_optimista: 4.82, decision_ejecutiva: '3_descartar_o_esperar' }
+    ]
   },
   roleNotes: {
-    da: 'Acuerda el costo umbral de equilibrio (costo_umbral_usd) con finanzas antes de mirar los resultados del experimento; fijar la barra después de conocer el intervalo de confianza invita a racionalizaciones oportunistas.',
-    bi: 'En los tableros ejecutivos de decisiones, sustituye las columnas de estadístico t y valor p por las tres columnas de margen neto (conservador, central y optimista) expresadas en dólares por pedido o por usuario.',
-    de: 'Automatiza la unión entre asignaciones experimentales, pedidos y reembolsos procesados para que las métricas guardarraíl de devoluciones se actualicen con la misma latencia que la facturación bruta.',
-    ds: 'Cuando una iniciativa cae en 2_piloto_acotado (como EXP-FREE-SHIP-45), estima efectos heterogéneos por segmento o región para identificar en qué subpoblación el límite inferior del IC 95 % sí supera el costo logístico.',
+    de: 'Automatiza el etiquetado de usuarios en grupos holdout persistentes mediante hashing determinista con sal de largo plazo. Así los despliegues generales mantienen un grupo de control limpio durante meses sin reasignaciones accidentales.',
+    da: 'Sintetiza siempre tu análisis en una matriz de decisión con escenarios conservador, central y optimista netos de costo. Dirección necesita saber cuánto arriesga en el límite inferior del IC 95 % y qué métrica activará una reversión.',
+    bi: 'Construye vistas ejecutivas que integren el ingreso bruto de orders con las devoluciones de refunds y los parámetros de costo de cada iniciativa. Así el comité puede simular distintos umbrales de rentabilidad en vivo.'
   },
   summary: [
-    'Un resultado estadísticamente significativo no justifica por sí solo un lanzamiento si el intervalo de confianza no supera el costo unitario del programa.',
-    'Restar el costo de equilibrio a los límites del IC del 95 % traduce la incertidumbre estadística en escenarios financieros conservador, central y optimista.',
-    'Las métricas guardarraíl, como la tasa de reembolsos en refunds o el chequeo SRM, actúan como candados de seguridad antes de autorizar cualquier despliegue.',
-    'Una matriz de decisión explícita clasifica cada iniciativa en desplegar, acotar a piloto o descartar, blindando al comité frente a objeciones e impulsos.',
+    'Traducir un estimador causal a valor financiero exige evaluar el margen neto en los escenarios conservador, central y optimista.',
+    'La asimetría entre los costos de Error Tipo I y Tipo II define qué umbral de evidencia exigir antes de escalar.',
+    'Una matriz de decisión vincula intervalos de confianza, costos y métricas de guardarrail con tres acciones: desplegar, piloto o descartar.',
+    'Distinguir entre efecto promedio (ATE) y efecto local en el corte (LATE) evita extrapolaciones costosas fuera del rango estudiado.'
   ],
   flashcards: [
     {
-      id: 'fc-dir-01',
-      front: '¿Cómo se calcula el escenario financiero conservador de una intervención comercial?',
-      back: 'Restando el costo unitario de equilibrio (break-even cost) al límite inferior del intervalo de confianza del 95 % del efecto causal estimado.',
+      id: 'fc-da4-05-1',
+      front: '¿Cómo se calculan los tres escenarios financieros (conservador, central y optimista) en una matriz de decisión?',
+      back: 'Restando el costo umbral unitario de la intervención al límite inferior del IC 95 %, a la estimación puntual y al límite superior del IC 95 %.'
     },
     {
-      id: 'fc-dir-02',
-      front: '¿Cuándo recomienda la matriz de decisión un piloto acotado en lugar de un despliegue general?',
-      back: 'Cuando el experimento es internamente válido y su estimación central supera el costo umbral, pero el límite inferior del IC del 95 % aún arroja margen neto negativo.',
+      id: 'fc-da4-05-2',
+      front: '¿Qué representan el Error Tipo I y el Error Tipo II en una decisión de inversión sobre un programa?',
+      back: 'El Error Tipo I (falso positivo) es escalar un programa deficitario asumiendo sus costos hundidos; el Error Tipo II (falso negativo) es descartar un programa rentable perdiendo su margen incremental.'
     },
     {
-      id: 'fc-dir-03',
-      front: '¿Qué función cumplen las métricas guardarraíl (como la tasa de reembolso) en una presentación a dirección?',
-      back: 'Garantizan que el aumento en la métrica primaria de ingresos no se haya obtenido degradando la satisfacción del cliente, el margen neto o la calidad operativa.',
+      id: 'fc-da4-05-3',
+      front: '¿Qué es una métrica de guardarrail (guardrail metric) y cómo se audita en Mercado Brisa?',
+      back: 'Es un indicador operativo o financiero (como la tasa de reembolsos en refunds y el ingreso neto posdevolución) que no debe deteriorarse al mejorar la métrica primaria.'
     },
     {
-      id: 'fc-dir-04',
-      front: '¿Por qué no debe aprobarse el despliegue de un experimento cuyo status es running aunque su IC 95 % actual sea positivo?',
-      back: 'Porque detener o decidir sobre una prueba antes de la fecha de cierre acordada introduce sesgo por inspección repetida (peeking) e infla la tasa de falsos positivos.',
-    },
+      id: 'fc-da4-05-4',
+      front: '¿Cuándo prescribe la matriz de decisión un piloto acotado (2_piloto_acotado) en lugar de un despliegue general?',
+      back: 'Cuando la estimación central supera el costo de equilibrio (margen central >= 0), pero el límite inferior del IC 95 % arroja pérdida neta (margen conservador < 0).'
+    }
   ],
   glossaryTerms: [
     'matriz-de-decision',
-    'principio-de-la-piramide',
-    'diferencias-en-diferencias',
+    'principio-de-la-piramide'
   ],
   sources: [
     {
-      title:
-        'Trustworthy Online Controlled Experiments — Companion Guide and Decision Rules',
+      title: 'Trustworthy Online Controlled Experiments: A Practical Guide to A/B Testing',
       url: 'https://experimentguide.com/',
-      publisher: 'Cambridge University Press / Ron Kohavi, Diane Tang & Ya Xu',
+      publisher: 'Cambridge University Press (Kohavi, Tang & Xu)',
       accessed: '2026-10-29',
-      supports:
-        'Criterios de lanzamiento en comité, métricas guardarraíl y prevención de decisiones sobre experimentos inválidos o inconclusos.',
+      supports: 'Economía de umbrales de decisión, métricas de guardarrail, costos de Error Tipo I/II y grupos holdout de largo plazo.'
     },
     {
-      title: 'The Effect — Chapter 10: Treatment Effects (ATE, ATT, LATE)',
+      title: 'The Effect: An Introduction to Research Design and Causality — Ch. 10 Treatment Effects',
       url: 'https://theeffectbook.net/ch-TreatmentEffects.html',
-      publisher: 'Chapman & Hall / Nick Huntington-Klein',
+      publisher: 'Chapman and Hall/CRC (Nick Huntington-Klein)',
       accessed: '2026-10-29',
-      supports:
-        'Distinción entre efectos locales en el umbral (LATE) y efectos promedio al responder objeciones de escalamiento comercial.',
+      supports: 'Diferencia entre ATE, ATT y LATE al responder objeciones sobre extrapolación de efectos locales.'
     },
     {
-      title:
-        'Causal Inference: The Mixtape — Chapter 4: Potential Outcomes and Heterogeneity',
+      title: 'Causal Inference: The Mixtape — Ch. 4 Potential Outcomes',
       url: 'https://mixtape.scunning.com/04-Potential_Outcomes_and_Randomization.html',
-      publisher: 'Yale University Press / Scott Cunningham',
+      publisher: 'Yale University Press (Scott Cunningham)',
       accessed: '2026-10-29',
-      supports:
-        'Efectos heterogéneos de tratamiento y análisis costo-beneficio por subpoblación.',
+      supports: 'Heterogeneidad de efectos de tratamiento y límites de transporte fuera de la subpoblación tratada.'
     },
     {
-      title: 'DuckDB CASE Statement and Conditional Expressions',
+      title: 'DuckDB SQL Reference — CASE Statement and Conditional Logic',
       url: 'https://duckdb.org/docs/stable/sql/expressions/case',
       publisher: 'DuckDB Foundation',
       accessed: '2026-10-29',
-      supports:
-        'Codificación secuencial de reglas de decisión ejecutiva mediante bloques CASE WHEN en SQL.',
-    },
+      supports: 'Construcción de matrices de decisión y reglas de clasificación condicional en SQL.'
+    }
   ],
-  aiNotes:
-    'Ayuda al estudiante a comprender por qué EXP-FREE-SHIP-45 cae en 2_piloto_acotado (su efecto central +6.22 supera el costo de 5.80 USD, pero su límite inferior 5.19 queda por debajo, dando -0.61 USD) y por qué EXP-UPSELL-MOLINO y EXP-PUSH-CART caen en 3_descartar_o_esperar por el guardarraíl inicial del CASE.',
+  aiNotes: 'Guía al estudiante para conectar el intervalo de confianza con el costo umbral de cada experimento (5.50 USD para EXP-FREE-SHIP-45 y 2.00 USD para los demás). Si pregunta por qué EXP-FREE-SHIP-45 va a piloto acotado mientras EXP-CHECKOUT-1STEP se despliega, hazle comparar sus márgenes netos en el límite inferior del IC 95 % (-0.31 USD vs +3.85 USD).'
 };
