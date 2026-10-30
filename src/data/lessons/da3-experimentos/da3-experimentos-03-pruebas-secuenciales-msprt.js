@@ -3,16 +3,17 @@ export const lesson = {
   v2Id: 'da3-experimentos-03-pruebas-secuenciales-msprt',
   moduleId: 'da3-experimentos',
   track: 'da',
+  tracks: ['da'],
   level: 3,
   order: 3,
+  contentVersion: 2,
   title: 'Pruebas secuenciales (mSPRT) y monitoreo continuo',
   subtitle: 'Pruebas secuenciales (mSPRT) y reglas de parada válidas para monitoreo continuo',
   minutes: 25,
   needsReview: false,
   prerequisites: [
-    'da2-inferencia-04-hipotesis-t-welch-pvalor',
-    'da2-inferencia-06-errores-potencia-tamano-muestra',
     'da3-experimentos-01-ab-testing-cuped',
+    'da3-experimentos-02-comparaciones-multiples-bh',
   ],
   learningObjectives: [
     'Explicar por qué el monitoreo continuo con parada opcional (peeking) infla severamente el error Tipo I en pruebas de horizonte fijo.',
@@ -29,28 +30,28 @@ export const lesson = {
     {
       id: 'peeking-parada-opcional',
       heading: 'El pecado de mirar el tablero y detener antes: Data Peeking',
-      body: `Una prueba $t$ de Welch o $z$ clásica es una prueba de **horizonte fijo**. Su garantía de cometer a lo sumo un $5\\%$ de falsos positivos ($\\alpha = 0.05$) exige fijar de antemano el tamaño muestral $N$ y consultar el estadístico **una única vez** al alcanzar $N$.
+      body: `Una prueba $t$ de Welch o $z$ clásica es una prueba de **horizonte fijo**. Su garantía de cometer a lo sumo un $5\\%$ de falsos positivos ($\\alpha = 0.05$) exige fijar de antemano el tamaño muestral $N$. Además requiere consultar el estadístico **una única vez** al alcanzar $N$.
 
-Sin embargo, en los tableros modernos de experimentación los equipos revisan las métricas acumuladas todos los días. Si aplicamos una regla de **parada opcional** (*data peeking*) que detiene el experimento el primer día $t$ en que $|Z_t| > 1.96$, la trayectoria acumulada se comporta como una caminata aleatoria browniana que tiene múltiples oportunidades de cruzar las bandas fijas por puro azar:
+Sin embargo, en los tableros modernos los equipos revisan las métricas acumuladas todos los días. Si aplicamos una regla de **parada opcional** (*data peeking*) que detiene el experimento el primer día $t$ en que $|Z_t| > 1.96$, la trayectoria acumulada actúa como una caminata aleatoria browniana. Esa caminata tiene múltiples oportunidades de cruzar las bandas fijas por puro azar.
 
-$$\\Pr\\!\\left(\\max_{1 \\le t \\le T} |Z_t| > 1.96 \\;\\middle|\\; H_0\\right) \\gg 0.05$$
+$$\\Pr\\!\\left(\\max_{1 \\le t \\le T} |Z_t| > 1.96 \\;\\middle|\\; H_0\\right) \\gg 0.05.$$
 
-Con $15$ revisiones diarias, la tasa real de falsos positivos supera el $22\\%$; si se inspecciona hora tras hora, rebasa el $40\\%$. En **Mercado Brisa**, al acumular día a día el gasto *pre-experimento* de \`EXP-SUB-BUNDLE\` (\`experiment_id = 3\`, donde el efecto real es cero), el día 1 ($n = 82$) arroja $|z| = 2.112$ y el día 2 ($n = 195$) arroja $|z| = 2.015$. Al día 5 ($n = 498$), la media regresa a $-0.01$ USD ($|z| = 0.006$). Detener la prueba el día 1 o 2 habría proclamado un efecto inexistente.`,
+Con $15$ revisiones diarias, la tasa real de falsos positivos supera el $22\\%$. Si se inspecciona hora tras hora, rebasa el $40\\%$. En **Mercado Brisa**, acumulamos día a día el gasto *pre-experimento* de \`EXP-SUB-BUNDLE\` (\`experiment_id = 3\`), donde el efecto real es cero. El día 1 ($n = 82$) arroja $|z| = 2.112$ y el día 2 ($n = 195$) arroja $|z| = 2.015$. Al día 5 ($n = 498$), la media regresa a $-0.01$ USD ($|z| = 0.006$).`,
     },
     {
       id: 'msprt-razon-verosimilitud',
       heading: 'Prueba secuencial de razón de verosimilitud mezclada (mSPRT)',
-      body: `Para permitir que los equipos monitoreen sus experimentos en cualquier momento sin inflar los falsos positivos, Ramesh Johari, Pete Koomen, Leonid Pekelis y David Walsh (2017) formularon la **prueba secuencial de razón de verosimilitud mezclada** (*Mixture Sequential Probability Ratio Test*, mSPRT).
+      body: `Para monitorear experimentos en cualquier momento sin inflar los falsos positivos, Johari, Koomen, Pekelis y Walsh (2017) formularon la **prueba secuencial de razón de verosimilitud mezclada** (*mSPRT*).
 
-En cada corte temporal $t$, sean $\\hat{\\Delta}_t = \\bar{Y}_{T,t} - \\bar{Y}_{C,t}$ la diferencia acumulada, $V_t = s_{C,t}^2 / n_{C,t} + s_{T,t}^2 / n_{T,t}$ la varianza muestral del estimador y $z_t = \\hat{\\Delta}_t / \\sqrt{V_t}$. En lugar de probar una única alternativa puntual, mSPRT integra la razón de verosimilitud sobre una distribución normal a priori de tamaños de efecto $\\Delta \\sim \\mathcal{N}(0, \\tau^2)$, obteniendo una expresión cerrada:
+En cada corte temporal $t$, sea $\\hat{\\Delta}_t = \\bar{Y}_{T,t} - \\bar{Y}_{C,t}$ la diferencia acumulada. Sea $V_t = s_{C,t}^2 / n_{C,t} + s_{T,t}^2 / n_{T,t}$ la varianza muestral del estimador y $z_t = \\hat{\\Delta}_t / \\sqrt{V_t}$. En lugar de probar una alternativa puntual fija, mSPRT integra la razón de verosimilitud sobre una distribución normal de efectos $\\Delta \\sim \\mathcal{N}(0, \\tau^2)$. Así obtiene una expresión cerrada.
 
-$$\\Lambda_t(\\tau^2) = \\sqrt{\\frac{V_t}{V_t + \\tau^2}}\\,\\exp\\!\\left(\\frac{z_t^2}{2}\\cdot\\frac{\\tau^2}{V_t + \\tau^2}\\right)$$
+$$\\Lambda_t(\\tau^2) = \\sqrt{\\frac{V_t}{V_t + \\tau^2}}\\,\\exp\\!\\left(\\frac{z_t^2}{2}\\cdot\\frac{\\tau^2}{V_t + \\tau^2}\\right).$$
 
-Bajo la hipótesis nula $H_0: \\Delta = 0$, el proceso $\\{\\Lambda_t\\}_{t \\ge 1}$ es una **martingala no negativa** con valor esperado $\\mathbb{E}[\\Lambda_t] = 1$. Por la desigualdad de Ville, la probabilidad de que $\\Lambda_t$ supere el umbral $1 / \\alpha$ en *cualquier* instante $t \\ge 1$ está acotada por $\\alpha$:
+Bajo la hipótesis nula $H_0: \\Delta = 0$, el proceso $\\{\\Lambda_t\\}_{t \\ge 1}$ es una **martingala no negativa** con esperanza $\\mathbb{E}[\\Lambda_t] = 1$. Por la desigualdad de Ville, la probabilidad de que $\\Lambda_t$ supere el umbral $1 / \\alpha$ en algún instante $t \\ge 1$ está acotada por $\\alpha$.
 
-$$\\Pr\\!\\left(\\exists t \\ge 1:\\; \\Lambda_t \\ge \\frac{1}{\\alpha} \\;\\middle|\\; H_0\\right) \\le \\alpha$$
+$$\\Pr\\!\\left(\\exists t \\ge 1:\\; \\Lambda_t \\ge \\frac{1}{\\alpha} \\;\\middle|\\; H_0\\right) \\le \\alpha.$$
 
-Para $\\alpha = 0.05$, basta exigir $\\Lambda_t \\ge 20$ (o equivalentemente un **valor $p$ siempre válido** $p_t^{\\text{seq}} = \\min(1, 1 / \\Lambda_t) \\le 0.05$) para detener la prueba con plena validez estadística.`,
+Para $\\alpha = 0.05$, basta exigir $\\Lambda_t \\ge 20$ para detener la prueba con plena validez estadística. Esto equivale a un **valor $p$ siempre válido** $p_t^{\\text{seq}} = \\min(1, 1 / \\Lambda_t) \\le 0.05$.`,
       example: {
         language: 'sql',
         title: 'Protección de mSPRT frente a falsas alarmas tempranas en la serie A/A de EXP-SUB-BUNDLE',
@@ -102,38 +103,37 @@ SELECT
 FROM estadisticos
 ORDER BY dia
 LIMIT 5;`,
-        expectedOutput: {
-          columns: ['dia', 'n_acum', 'diff_pre_usd', 'z_fijo_abs', 'lambda_msprt', 'decision_fija', 'decision_msprt'],
-          rows: [
-            ['2024-06-01', '82', '13.35', '2.112', '1.85', 'FALSA_ALARMA', 'CONTINUAR'],
-            ['2024-06-02', '195', '7.84', '2.015', '2.173', 'FALSA_ALARMA', 'CONTINUAR'],
-            ['2024-06-03', '304', '2.86', '0.907', '0.716', 'RETENER_H0', 'CONTINUAR'],
-            ['2024-06-04', '393', '-0.68', '0.247', '0.491', 'RETENER_H0', 'CONTINUAR'],
-            ['2024-06-05', '498', '-0.01', '0.006', '0.433', 'RETENER_H0', 'CONTINUAR'],
-          ],
-        },
+        expectedOutput: [
+          { dia: '2024-06-01', n_acum: 82, diff_pre_usd: 13.35, z_fijo_abs: 2.112, lambda_msprt: 1.85, decision_fija: 'FALSA_ALARMA', decision_msprt: 'CONTINUAR' },
+          { dia: '2024-06-02', n_acum: 195, diff_pre_usd: 7.84, z_fijo_abs: 2.015, lambda_msprt: 2.173, decision_fija: 'FALSA_ALARMA', decision_msprt: 'CONTINUAR' },
+          { dia: '2024-06-03', n_acum: 304, diff_pre_usd: 2.86, z_fijo_abs: 0.907, lambda_msprt: 0.716, decision_fija: 'RETENER_H0', decision_msprt: 'CONTINUAR' },
+          { dia: '2024-06-04', n_acum: 393, diff_pre_usd: -0.68, z_fijo_abs: 0.247, lambda_msprt: 0.491, decision_fija: 'RETENER_H0', decision_msprt: 'CONTINUAR' },
+          { dia: '2024-06-05', n_acum: 498, diff_pre_usd: -0.01, z_fijo_abs: 0.006, lambda_msprt: 0.433, decision_fija: 'RETENER_H0', decision_msprt: 'CONTINUAR' },
+        ],
         annotation: 'En los días 1 y 2 el test fijo cae en falsa alarma (|z| > 1.96), pero lambda_msprt apenas llega a 1.850 y 2.173 (<< 20), protegiendo el experimento hasta que el ruido se disipa en el día 5.',
       },
     },
     {
       id: 'secuencias-confianza-sql',
-      heading: 'Secuencias de confianza siempre válidas y agregación acumulada en SQL',
-      body: `Al invertir la desigualdad $\\Lambda_t(\\tau^2) < 1 / \\alpha$, obtenemos la **secuencia de confianza siempre válida** (*Always-Valid Confidence Sequence*, Howard et al., 2021): una banda $\\hat{\\Delta}_t \\pm r_t(\\alpha, \\tau^2)$ cuyo radio en el corte $t$ es:
+      heading: 'Secuencias de confianza y varianza acumulada en SQL',
+      body: `Al invertir la desigualdad $\\Lambda_t(\\tau^2) < 1 / \\alpha$, obtenemos la **secuencia de confianza siempre válida** (*Always-Valid Confidence Sequence*, Howard et al., 2021). Es una banda $\\hat{\\Delta}_t \\pm r_t(\\alpha, \\tau^2)$ cuyo radio en el corte $t$ se calcula en forma cerrada.
 
-$$r_t(\\alpha, \\tau^2) = \\sqrt{V_t\\,\\frac{V_t + \\tau^2}{\\tau^2}\\!\\left(2\\ln\\frac{1}{\\alpha} + \\ln\\frac{V_t + \\tau^2}{V_t}\\right)}$$
+$$r_t(\\alpha, \\tau^2) = \\sqrt{V_t\\,\\frac{V_t + \\tau^2}{\\tau^2}\\!\\left(2\\ln\\frac{1}{\\alpha} + \\ln\\frac{V_t + \\tau^2}{V_t}\\right)}.$$
 
-Observa cómo opera la penalización secuencial cuando la muestra es pequeña ($V_t$ grande frente a $\\tau^2$): el factor $\\sqrt{V_t / (V_t + \\tau^2)}$ en $\\Lambda_t$ amortigua los picos tempranos de $z_t$ y ensancha el radio $r_t$ mucho más allá del intervalo fijo $1.96\\sqrt{V_t}$.
+Observa cómo opera la penalización secuencial cuando la muestra es pequeña ($V_t$ grande frente a $\\tau^2$). El factor $\\sqrt{V_t / (V_t + \\tau^2)}$ en $\\Lambda_t$ amortigua los picos tempranos de $z_t$. Al mismo tiempo, ensancha el radio $r_t$ mucho más allá del intervalo fijo $1.96\\sqrt{V_t}$.
 
-Para calcular la serie acumulada día a día en SQL sin re-escanear la tabla por cada fecha, descomponemos la varianza muestral acumulada usando tres sumas acumuladas con funciones de ventana (\`SUM(...) OVER (ORDER BY dia)\`): el conteo $n_t$, la suma lineal $S_t = \\sum Y_i$ y la suma de cuadrados $Q_t = \\sum Y_i^2$. A partir de ellas, la varianza muestral en el corte $t$ se obtiene de forma exacta como:
+Para calcular la serie acumulada día a día en SQL sin re-escanear la tabla por cada fecha, descomponemos la varianza muestral. Usamos tres sumas acumuladas con funciones de ventana (\`SUM(...) OVER (ORDER BY dia)\`). Esas sumas son el conteo $n_t$, la suma lineal $S_t = \\sum Y_i$ y la suma de cuadrados $Q_t = \\sum Y_i^2$. A partir de ellas obtenemos la varianza muestral exacta en cada corte $t$.
 
-$$s_t^2 = \\frac{Q_t - S_t^2 / n_t}{n_t - 1}$$`,
+$$s_t^2 = \\frac{Q_t - S_t^2 / n_t}{n_t - 1}.$$`,
     },
   ],
   workedExample: {
+    title: 'Monitoreo diario mSPRT en EXP-CHECKOUT-1STEP',
     problem: 'Monitorea los primeros 5 días de EXP-CHECKOUT-1STEP (experiment_id = 1) sobre post_experiment_spend_usd. Primero calcula las sumas acumuladas y el intervalo de confianza fijo (1.96 * EE); luego evalúa el radio de la secuencia de confianza mSPRT (tau^2 = 25, alfa = 0.05) y determina en qué día exacto es válido detener la prueba.',
     steps: [
       {
         title: 'Paso 1: Trayectoria acumulada e intervalo de horizonte fijo en los primeros 5 días',
+        explanation: 'Usamos funciones de ventana sobre agregados diarios para obtener el lift acumulado y el radio de confianza clásico 1.96 * SQRT(V_t).',
         rationale: 'Usamos funciones de ventana sobre agregados diarios para obtener el lift acumulado y el radio de confianza clásico 1.96 * SQRT(V_t).',
         code: `WITH diario AS (
   SELECT
@@ -191,6 +191,7 @@ LIMIT 5;`,
       },
       {
         title: 'Paso 2: Secuencia de confianza mSPRT y regla de parada válida (lambda >= 20)',
+        explanation: 'Contrastamos el radio secuencial mSPRT y la razón de verosimilitud lambda_msprt para identificar cuándo cruza válidamente el umbral 1 / 0.05 = 20.',
         rationale: 'Contrastamos el radio secuencial mSPRT y la razón de verosimilitud lambda_msprt para identificar cuándo cruza válidamente el umbral 1 / 0.05 = 20.',
         code: `WITH diario AS (
   SELECT
@@ -256,27 +257,31 @@ LIMIT 5;`,
   checks: [
     {
       id: 'c1',
-      type: 'multiple-choice',
+      type: 'mcq',
       prompt: '¿Por qué inspeccionar diariamente una prueba t de horizonte fijo y detenerla el primer día en que p < 0.05 invalida el nivel de significancia nominal del 5 %?',
       options: [
         {
           id: 'a',
           text: 'Porque la distribución t de Student solo es válida los fines de semana cuando el tráfico es homogéneo.',
+          correct: false,
           feedback: 'Incorrecto. El problema no depende del día de la semana sino de las múltiples oportunidades de cruzar un umbral fijo.',
         },
         {
           id: 'b',
           text: 'Porque la parada opcional acumula probabilidades de cruce en cada inspección, haciendo que Pr(max_t |Z_t| > 1.96 | H0) supere ampliamente el 5 %.',
+          correct: true,
           feedback: 'Correcto. Al dar múltiples oportunidades de parada a una caminata aleatoria bajo H0, la tasa acumulada de falsos positivos se infla drásticamente.',
         },
         {
           id: 'c',
           text: 'Porque al agregar más usuarios cada día la varianza muestral crece hacia infinito.',
+          correct: false,
           feedback: 'Incorrecto. A medida que crece el tamaño muestral acumulado, la varianza de la media disminuye hacia cero.',
         },
         {
           id: 'd',
           text: 'Porque DuckDB recalcula los identificadores de usuario en cada consulta diaria.',
+          correct: false,
           feedback: 'Incorrecto. La inflación del error Tipo I es una propiedad estadística de la regla de parada, no del motor de base de datos.',
         },
       ],
@@ -285,27 +290,31 @@ LIMIT 5;`,
     },
     {
       id: 'c2',
-      type: 'multiple-choice',
+      type: 'mcq',
       prompt: 'En una prueba secuencial mSPRT configurada con nivel alfa = 0.05, ¿qué condición debe cumplir la razón de verosimilitud mezclada Lambda_t para rechazar H0 en el día t?',
       options: [
         {
           id: 'a',
           text: 'Lambda_t >= 1.96, igual que el cuantil crítico de la distribución normal estándar.',
+          correct: false,
           feedback: 'Incorrecto. 1.96 es el umbral para el estadístico z fijo, no para la razón de verosimilitud Lambda_t.',
         },
         {
           id: 'b',
           text: 'Lambda_t >= 20, dado que por la desigualdad de martingalas de Ville el umbral válido es 1 / alfa = 1 / 0.05 = 20.',
+          correct: true,
           feedback: 'Correcto. Como E[Lambda_t | H0] = 1, exigir Lambda_t >= 1 / alfa = 20 garantiza que la probabilidad de cruce bajo H0 en cualquier t sea a lo sumo 0.05.',
         },
         {
           id: 'c',
           text: 'Lambda_t <= 0.05, porque Lambda_t es sinónimo directo del valor p.',
+          correct: false,
           feedback: 'Incorrecto. El valor p secuencial es el recíproco 1 / Lambda_t; por tanto, p_seq <= 0.05 equivale a Lambda_t >= 20.',
         },
         {
           id: 'd',
           text: 'Lambda_t >= 1.00, que indica que la alternativa es al menos tan verosímil como la hipótesis nula.',
+          correct: false,
           feedback: 'Incorrecto. Un umbral de 1.00 produciría una tasa altísima de falsos positivos bajo monitoreo continuo.',
         },
       ],
@@ -314,27 +323,31 @@ LIMIT 5;`,
     },
     {
       id: 'c3',
-      type: 'multiple-choice',
+      type: 'mcq',
       prompt: 'En el día 1 de EXP-CHECKOUT-1STEP (n = 85), el lift acumulado es +9.23 USD, el radio del intervalo fijo es 7.33 USD y el radio de la secuencia de confianza mSPRT es 12.37 USD. ¿Qué significa esta discrepancia?',
       options: [
         {
           id: 'a',
           text: 'Que el intervalo fijo [1.90, 16.56] subestima la incertidumbre bajo monitoreo continuo, mientras la secuencia de confianza [-3.14, 21.60] aún incluye el cero y exige esperar.',
+          correct: true,
           feedback: 'Correcto. La secuencia de confianza ensancha el radio en muestras pequeñas para proteger la cobertura del 95 % a lo largo de todo el horizonte temporal.',
         },
         {
           id: 'b',
           text: 'Que mSPRT tiene un error de cálculo porque ningún intervalo de confianza puede ser más ancho que 1.96 veces el error estándar.',
+          correct: false,
           feedback: 'Incorrecto. Para mantener cobertura uniforme en todos los tiempos t >= 1, una secuencia de confianza debe ser estrictamente más ancha que el intervalo puntual fijo.',
         },
         {
           id: 'c',
           text: 'Que el experimento debe abortarse por Sample Ratio Mismatch en el primer día.',
+          correct: false,
           feedback: 'Incorrecto. El ancho mayor del intervalo secuencial refleja el ajuste por monitoreo continuo, no un desbalance SRM.',
         },
         {
           id: 'd',
           text: 'Que el efecto real del tratamiento es negativo (-3.14 USD) y nunca llegará a ser significativo.',
+          correct: false,
           feedback: 'Incorrecto. Que la cota inferior inicial sea -3.14 USD solo indica que con n = 85 aún no hay evidencia suficiente; en el día 2 (n = 202) la cota inferior sube a +2.30 USD.',
         },
       ],
@@ -427,28 +440,14 @@ FROM estadisticos
 ORDER BY dia
 LIMIT 6;`,
     solutionExplanation: 'La consulta construye las sumas suficientes acumuladas por día y evalúa la martingala mSPRT: el día 2024-02-01 exige continuar captura (lambda = 4.22 < 20), mientras que desde el 2024-02-02 (lambda = 281.56 >= 20) el experimento cruza válidamente el umbral secuencial.',
-    expectedOutput: {
-      columns: ['dia', 'n_acum', 'lift_acum_usd', 'radio_ic_fijo', 'radio_cs_msprt', 'lambda_msprt', 'decision_msprt'],
-      rows: [
-        ['2024-02-01', '85', '9.23', '7.33', '12.37', '4.22', 'CONTINUAR_CAPTURA'],
-        ['2024-02-02', '202', '9.94', '4.86', '7.64', '281.56', 'PARAR_SIGNIFICATIVO'],
-        ['2024-02-03', '305', '7.16', '4.19', '6.52', '44.73', 'PARAR_SIGNIFICATIVO'],
-        ['2024-02-04', '431', '6.27', '3.47', '5.38', '86.5', 'PARAR_SIGNIFICATIVO'],
-        ['2024-02-05', '536', '7.07', '3.11', '4.82', '2430.59', 'PARAR_SIGNIFICATIVO'],
-        ['2024-02-06', '640', '8.56', '2.84', '4.42', '2573859.6', 'PARAR_SIGNIFICATIVO'],
-      ],
-    },
-    expectedOutputTable: {
-      columns: ['dia', 'n_acum', 'lift_acum_usd', 'radio_ic_fijo', 'radio_cs_msprt', 'lambda_msprt', 'decision_msprt'],
-      rows: [
-        { dia: '2024-02-01', n_acum: 85, lift_acum_usd: 9.23, radio_ic_fijo: 7.33, radio_cs_msprt: 12.37, lambda_msprt: 4.22, decision_msprt: 'CONTINUAR_CAPTURA' },
-        { dia: '2024-02-02', n_acum: 202, lift_acum_usd: 9.94, radio_ic_fijo: 4.86, radio_cs_msprt: 7.64, lambda_msprt: 281.56, decision_msprt: 'PARAR_SIGNIFICATIVO' },
-        { dia: '2024-02-03', n_acum: 305, lift_acum_usd: 7.16, radio_ic_fijo: 4.19, radio_cs_msprt: 6.52, lambda_msprt: 44.73, decision_msprt: 'PARAR_SIGNIFICATIVO' },
-        { dia: '2024-02-04', n_acum: 431, lift_acum_usd: 6.27, radio_ic_fijo: 3.47, radio_cs_msprt: 5.38, lambda_msprt: 86.5, decision_msprt: 'PARAR_SIGNIFICATIVO' },
-        { dia: '2024-02-05', n_acum: 536, lift_acum_usd: 7.07, radio_ic_fijo: 3.11, radio_cs_msprt: 4.82, lambda_msprt: 2430.59, decision_msprt: 'PARAR_SIGNIFICATIVO' },
-        { dia: '2024-02-06', n_acum: 640, lift_acum_usd: 8.56, radio_ic_fijo: 2.84, radio_cs_msprt: 4.42, lambda_msprt: 2573859.6, decision_msprt: 'PARAR_SIGNIFICATIVO' },
-      ],
-    },
+    expectedOutputTable: [
+      { dia: '2024-02-01', n_acum: 85, lift_acum_usd: 9.23, radio_ic_fijo: 7.33, radio_cs_msprt: 12.37, lambda_msprt: 4.22, decision_msprt: 'CONTINUAR_CAPTURA' },
+      { dia: '2024-02-02', n_acum: 202, lift_acum_usd: 9.94, radio_ic_fijo: 4.86, radio_cs_msprt: 7.64, lambda_msprt: 281.56, decision_msprt: 'PARAR_SIGNIFICATIVO' },
+      { dia: '2024-02-03', n_acum: 305, lift_acum_usd: 7.16, radio_ic_fijo: 4.19, radio_cs_msprt: 6.52, lambda_msprt: 44.73, decision_msprt: 'PARAR_SIGNIFICATIVO' },
+      { dia: '2024-02-04', n_acum: 431, lift_acum_usd: 6.27, radio_ic_fijo: 3.47, radio_cs_msprt: 5.38, lambda_msprt: 86.5, decision_msprt: 'PARAR_SIGNIFICATIVO' },
+      { dia: '2024-02-05', n_acum: 536, lift_acum_usd: 7.07, radio_ic_fijo: 3.11, radio_cs_msprt: 4.82, lambda_msprt: 2430.59, decision_msprt: 'PARAR_SIGNIFICATIVO' },
+      { dia: '2024-02-06', n_acum: 640, lift_acum_usd: 8.56, radio_ic_fijo: 2.84, radio_cs_msprt: 4.42, lambda_msprt: 2573859.6, decision_msprt: 'PARAR_SIGNIFICATIVO' },
+    ],
   },
   roleNotes: {
     da: 'Como analista de datos, sustituye las bandas fijas 1.96 * EE en los tableros de seguimiento diario por secuencias de confianza mSPRT para que los gerentes puedan consultar el avance sin disparar falsas alarmas.',
@@ -456,10 +455,10 @@ LIMIT 6;`,
     de: 'Como ingeniero de datos, almacena por experimento y día los tres estadísticos suficientes aditivos (conteo n, suma lineal SUM(y) y suma cuadrática SUM(y^2)) para calcular varianzas acumuladas en milisegundos con funciones de ventana.',
   },
   summary: [
-    'Monitorear continuamente una prueba de horizonte fijo y detenerla cuando p < 0.05 (data peeking) infla de forma grave la tasa de falsos positivos.',
-    'La prueba mSPRT integra la razón de verosimilitud sobre una distribución normal de efectos con varianza de mezcla tau^2.',
-    'Bajo la hipótesis nula, el estadístico Lambda_t es una martingala con media 1 y permite detener la prueba en cualquier instante t en que Lambda_t >= 1 / alfa.',
-    'Las secuencias de confianza siempre válidas son más anchas al inicio del experimento y garantizan cobertura conjunta (1 - alfa) en toda la trayectoria.',
+    'Monitorear una prueba de horizonte fijo y detenerla cuando p < 0.05 infla severamente la tasa de falsos positivos.',
+    'La prueba mSPRT integra la razón de verosimilitud sobre una distribución normal de efectos con varianza tau^2.',
+    'Bajo la hipótesis nula, el estadístico Lambda_t permite detener la prueba en cualquier instante cuando supera 1 / alfa.',
+    'Las secuencias de confianza siempre válidas garantizan cobertura conjunta (1 - alfa) durante toda la trayectoria experimental.',
   ],
   flashcards: [
     {
@@ -487,10 +486,9 @@ LIMIT 6;`,
     'monitoreo-continuo-peeking',
     'prueba-secuencial-msprt',
     'secuencia-confianza-siempre-valida',
-    'error-tipo-i',
   ],
   relatedLessons: [
-    'da2-inferencia-06-errores-potencia-tamano-muestra',
+    'da3-experimentos-01-ab-testing-cuped',
     'da3-experimentos-02-comparaciones-multiples-bh',
     'da3-experimentos-04-enfoque-bayesiano-ab',
   ],

@@ -4,7 +4,7 @@ export const lesson = {
   v2Id: 'da3-experimentos-01-ab-testing-cuped',
   moduleId: 'da3-experimentos',
   track: 'da',
-  tracks: ['da', 'ds'],
+  tracks: ['da'],
   level: 3,
   order: 1,
   legacyOrder: 14,
@@ -14,8 +14,8 @@ export const lesson = {
   minutes: 30,
   needsReview: false,
   prerequisites: [
-    'da2-inferencia',
-    'da3-producto',
+    'da3-producto-02-cohorts-retention-ltv',
+
   ],
   learningObjectives: [
     'Diagnosticar desbalances de asignación (Sample Ratio Mismatch) mediante la prueba chi-cuadrado antes de interpretar métricas de negocio.',
