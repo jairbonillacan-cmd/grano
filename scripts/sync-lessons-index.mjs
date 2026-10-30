@@ -29,7 +29,7 @@ function patchCatalogHelpers() {
   if (modSrc.includes("id: plannedId,\r\n      order,") || modSrc.includes("id: plannedId,\n      order,")) {
     modSrc = modSrc.replace(
       /id:\s*plannedId,\r?\n\s*order,\r?\n\s*title:\s*entry\.title,\r?\n\s*minutes:\s*entry\.minutes\s*\|\|\s*20,\r?\n\s*status:\s*'planned',/,
-      "id: entry.id || plannedId,\n      order,\n      title: entry.title,\n      minutes: entry.minutes || 20,\n      status: entry.status || 'planned',"
+      "id: entry.id || plannedId,\n      order,\n      title: entry.title,\n      minutes: entry.minutes || 20,\n      status: entry.status || 'existing',"
     );
     fs.writeFileSync(MODULES_PATH, modSrc, 'utf8');
   }

@@ -43,9 +43,13 @@ export function TrackPathView({ completedIds = [], onOpenLesson = () => {} }) {
   }, [track]);
 
   const completed = useMemo(() => new Set(completedIds), [completedIds]);
+  const isLessonDone = (l) =>
+    completed.has(l.id) ||
+    (l.v2Id && completed.has(l.v2Id)) ||
+    (l.legacyId && completed.has(l.legacyId));
   const lessons = modules.flatMap((m) => m.lessons);
   const available = lessons.filter((l) => l.status === 'existing');
-  const done = available.filter((l) => completed.has(l.legacyId));
+  const done = available.filter(isLessonDone);
   const choice = CHOICES.find((c) => c.id === track);
 
   const toggleModule = (id) => {
@@ -148,7 +152,7 @@ export function TrackPathView({ completedIds = [], onOpenLesson = () => {} }) {
                   {levelModules.map((m) => {
                     const isOpen = openModules.has(m.id);
                     const ready = m.lessons.filter((l) => l.status === 'existing');
-                    const moduleDone = ready.filter((l) => completed.has(l.legacyId)).length;
+                    const moduleDone = ready.filter(isLessonDone).length;
                     return (
                       <li key={m.id} className="track-path__module" data-track={m.track}>
                         <button
@@ -173,8 +177,8 @@ export function TrackPathView({ completedIds = [], onOpenLesson = () => {} }) {
                           <div className="track-path__module-body">
                             <ol className="track-path__lessons">
                               {m.lessons.map((l) => {
-                                const openId = l.v2Id || l.legacyId || l.id;
-                                const isDone = completed.has(openId);
+                                const openId = l.legacyId || l.v2Id || l.id;
+                                const isDone = isLessonDone(l);
                                 return (
                                   <li key={`${m.id}-${l.id}`}>
                                     {l.status === 'existing' ? (

@@ -111,7 +111,7 @@ function mod(id, track, level, title, goal, prerequisites, lessons, projectSpec)
         order,
         title: entry,
         minutes: 20,
-        status: 'planned',
+        status: 'existing',
       };
     }
     if (entry.legacy) {
@@ -131,7 +131,7 @@ function mod(id, track, level, title, goal, prerequisites, lessons, projectSpec)
       order,
       title: entry.title,
       minutes: entry.minutes || 20,
-      status: entry.status || 'planned',
+      status: entry.status || 'existing',
     };
   });
 

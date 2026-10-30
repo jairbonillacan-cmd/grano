@@ -83,8 +83,11 @@ export function useAppController() {
     const lessonKeys = Object.keys(progress.lessons || {});
     for (let i = lessonKeys.length - 1; i >= 0; i -= 1) {
       const k = lessonKeys[i];
-      if (LESSONS.some((l) => l.id === k)) {
-        return k;
+      const matched = LESSONS.find(
+        (l) => l.id === k || l.v2Id === k || l.catalogId === k || l.legacyId === k
+      );
+      if (matched) {
+        return matched.id;
       }
     }
     return LESSONS[0].id;
@@ -190,7 +193,14 @@ export function useAppController() {
   );
 
   const currentLesson = useMemo(
-    () => LESSONS.find((l) => l.id === activeLessonId) || LESSONS[0],
+    () =>
+      LESSONS.find(
+        (l) =>
+          l.id === activeLessonId ||
+          l.v2Id === activeLessonId ||
+          l.catalogId === activeLessonId ||
+          l.legacyId === activeLessonId
+      ) || LESSONS[0],
     [activeLessonId]
   );
 
@@ -317,8 +327,11 @@ export function useAppController() {
     if (!progress.lessons[activeLessonId]) {
       for (let i = lessonKeys.length - 1; i >= 0; i -= 1) {
         const k = lessonKeys[i];
-        if (LESSONS.some((l) => l.id === k)) {
-          setActiveLessonId(k);
+        const matched = LESSONS.find(
+          (l) => l.id === k || l.v2Id === k || l.catalogId === k || l.legacyId === k
+        );
+        if (matched) {
+          setActiveLessonId(matched.id);
           break;
         }
       }
@@ -326,12 +339,15 @@ export function useAppController() {
   }, [progress.lessons, activeLessonId]);
 
   const openLesson = useCallback((stageOrLessonId, maybeLessonIdOrStep) => {
+    const matchesLesson = (l, id) =>
+      Boolean(id) &&
+      (l.id === id || l.v2Id === id || l.catalogId === id || l.legacyId === id);
     const rawCandidate =
       typeof maybeLessonIdOrStep === 'string'
         ? LESSON_ID_ALIASES[maybeLessonIdOrStep] || maybeLessonIdOrStep
         : null;
     const isSecondArgLesson =
-      Boolean(rawCandidate) && LESSONS.some((l) => l.id === rawCandidate);
+      Boolean(rawCandidate) && LESSONS.some((l) => matchesLesson(l, rawCandidate));
     const rawPrimary = LESSON_ID_ALIASES[stageOrLessonId] || stageOrLessonId;
     const targetId = isSecondArgLesson ? rawCandidate : rawPrimary;
     const explicitStep =
@@ -340,7 +356,7 @@ export function useAppController() {
         ? Math.max(0, Math.floor(maybeLessonIdOrStep))
         : undefined;
 
-    const found = LESSONS.find((l) => l.id === targetId);
+    const found = LESSONS.find((l) => matchesLesson(l, targetId));
     if (found) {
       setActiveLessonId(found.id);
       startLesson(found.id, {
