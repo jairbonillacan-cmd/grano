@@ -388,7 +388,6 @@ export const lesson = {
       "Para null_key_pct multiplica por 100.0 en coma flotante antes de dividir entre COUNT(*) y envuelve todo en ROUND(..., 2).",
       "Añade HAVING SUM(CASE WHEN customer_id IS NULL THEN 1 ELSE 0 END) >= 448 después de GROUP BY event_type, device_type."
     ],
-    "expected": "7 filas (event_type, device_type, total_events, null_key_events, null_key_pct)",
     "expectedOutputTable": [
       {
         "event_type": "page_view",
